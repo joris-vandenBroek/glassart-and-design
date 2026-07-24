@@ -10,6 +10,8 @@ export type ActiviteitType =
   | 'word_klant_aanvraag'
   | 'klant_goedgekeurd'
   | 'klant_afgewezen'
+  | 'klant_gewijzigd'
+  | 'klant_prijsgroep_gewijzigd'
   | 'bestelling_goedgekeurd'
   | 'bestelling_afgewezen'
   | 'materiaalsoort_toegevoegd'
@@ -32,7 +34,8 @@ export type ActiviteitType =
   | 'prijsgroep_verwijderd'
   | 'bedrijfsgegevens_gewijzigd'
   | 'mandje_eigen_maat_toegevoegd'
-  | 'bestelling_prijs_vastgesteld';
+  | 'bestelling_prijs_vastgesteld'
+  | 'bestelling_regel_gewijzigd';
 
 export interface ActiviteitActor {
   id: string | null;

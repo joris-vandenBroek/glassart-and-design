@@ -37,6 +37,7 @@ interface BestellingenSectionProps {
   loadError: string | null;
   onBestellingUpdated: (bestelling: Bestelling) => void;
   onLinePrijsVastgesteld: (bestellingId: string, lineId: string, prijs: number) => void;
+  onLineUpdated: (bestellingId: string, lineId: string, updates: Partial<BestellingLine>) => void;
 }
 
 export function BestellingenSection({
@@ -48,6 +49,7 @@ export function BestellingenSection({
   loadError,
   onBestellingUpdated,
   onLinePrijsVastgesteld,
+  onLineUpdated,
 }: BestellingenSectionProps) {
   const t = useTranslations('beheer');
   const [selectedBestelling, setSelectedBestelling] = useState<Bestelling | null>(null);
@@ -57,6 +59,15 @@ export function BestellingenSection({
     setSelectedBestelling((current) =>
       current && current.id === bestellingId
         ? { ...current, lines: current.lines.map((line) => (line.id === lineId ? { ...line, prijs } : line)) }
+        : current
+    );
+  }
+
+  function handleLineUpdated(bestellingId: string, lineId: string, updates: Partial<BestellingLine>) {
+    onLineUpdated(bestellingId, lineId, updates);
+    setSelectedBestelling((current) =>
+      current && current.id === bestellingId
+        ? { ...current, lines: current.lines.map((line) => (line.id === lineId ? { ...line, ...updates } : line)) }
         : current
     );
   }
@@ -112,6 +123,7 @@ export function BestellingenSection({
           setSelectedBestelling(null);
         }}
         onLinePrijsVastgesteld={handleLinePrijsVastgesteld}
+        onLineUpdated={handleLineUpdated}
       />
     </div>
   );

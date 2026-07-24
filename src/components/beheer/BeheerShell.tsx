@@ -184,6 +184,16 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
     );
   }
 
+  function handleLineUpdated(bestellingId: string, lineId: string, updates: Partial<BestellingLine>) {
+    setRawBestellingen((current) =>
+      (current ?? []).map((row) =>
+        row.id === bestellingId
+          ? { ...row, lines: row.lines.map((line) => (line.id === lineId ? { ...line, ...updates } : line)) }
+          : row
+      )
+    );
+  }
+
   const bestellingen = useMemo(() => {
     if (rawBestellingen === null) return null;
     return rawBestellingen.map((row) => ({
@@ -273,6 +283,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             loadError={bestellingenLoadError}
             onBestellingUpdated={handleBestellingUpdated}
             onLinePrijsVastgesteld={handleLinePrijsVastgesteld}
+            onLineUpdated={handleLineUpdated}
           />
         ) : activeSection === 'materiaalsoorten' ? (
           <MateriaalsoortenSection

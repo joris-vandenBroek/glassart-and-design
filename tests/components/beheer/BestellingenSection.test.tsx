@@ -76,6 +76,7 @@ const BESTELLINGEN: Bestelling[] = [
 function renderSection(overrides: Partial<React.ComponentProps<typeof BestellingenSection>> = {}) {
   const onBestellingUpdated = vi.fn();
   const onLinePrijsVastgesteld = vi.fn();
+  const onLineUpdated = vi.fn();
   render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <BestellingenSection
@@ -87,11 +88,12 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Bestelling
         loadError={null}
         onBestellingUpdated={onBestellingUpdated}
         onLinePrijsVastgesteld={onLinePrijsVastgesteld}
+        onLineUpdated={onLineUpdated}
         {...overrides}
       />
     </NextIntlClientProvider>
   );
-  return { onBestellingUpdated, onLinePrijsVastgesteld };
+  return { onBestellingUpdated, onLinePrijsVastgesteld, onLineUpdated };
 }
 
 beforeEach(() => {
@@ -126,7 +128,7 @@ describe('BestellingenSection', () => {
   it("opens the BestellingModal with the clicked bestelling's resolved kunstwerk data when a row is clicked", () => {
     renderSection();
     fireEvent.click(screen.getByTestId('data-table-row-header-1'));
-    expect(screen.getByTestId('bestelling-modal')).toHaveTextContent('Testbedrijf BV');
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Testbedrijf BV');
     expect(screen.getByTestId('bestelling-modal')).toHaveTextContent('Hotel paneel');
   });
 

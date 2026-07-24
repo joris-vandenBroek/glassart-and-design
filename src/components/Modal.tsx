@@ -10,9 +10,11 @@ interface ModalProps {
   closeLabel: string;
   children: ReactNode;
   wide?: boolean;
+  title?: ReactNode;
+  subtitle?: ReactNode;
 }
 
-export function Modal({ isOpen, onClose, closeLabel, children, wide = false }: ModalProps) {
+export function Modal({ isOpen, onClose, closeLabel, children, wide = false, title, subtitle }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -55,6 +57,12 @@ export function Modal({ isOpen, onClose, closeLabel, children, wide = false }: M
         >
           ×
         </button>
+        {title && (
+          <div data-testid="modal-header" className="mb-4 border-b border-white/10 pb-3 pr-10">
+            <h2 className="text-base font-semibold tracking-wide text-white">{title}</h2>
+            {subtitle && <p className="mt-0.5 text-xs text-white/50">{subtitle}</p>}
+          </div>
+        )}
         {children}
       </div>
     </div>,

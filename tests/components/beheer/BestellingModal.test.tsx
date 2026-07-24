@@ -74,6 +74,7 @@ function renderModal(bestelling: Bestelling | null) {
   const onClose = vi.fn();
   const onUpdated = vi.fn();
   const onLinePrijsVastgesteld = vi.fn();
+  const onLineUpdated = vi.fn();
   render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <BestellingModal
@@ -85,10 +86,11 @@ function renderModal(bestelling: Bestelling | null) {
         onClose={onClose}
         onUpdated={onUpdated}
         onLinePrijsVastgesteld={onLinePrijsVastgesteld}
+        onLineUpdated={onLineUpdated}
       />
     </NextIntlClientProvider>
   );
-  return { onClose, onUpdated, onLinePrijsVastgesteld };
+  return { onClose, onUpdated, onLinePrijsVastgesteld, onLineUpdated };
 }
 
 beforeEach(() => {
@@ -291,6 +293,7 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
                 lines: current.lines.map((line) => (line.id === lineId ? { ...line, prijs } : line)),
               }));
             }}
+            onLineUpdated={vi.fn()}
           />
         </NextIntlClientProvider>
       );
@@ -312,6 +315,83 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
 
     await waitFor(() =>
       expect(screen.getByTestId('bestelling-modal-prijs-input-line-5')).toHaveValue(200)
+    );
+  });
+});
+
+describe('BestellingModal — regel bewerken', () => {
+  it('keeps line fields read-only until Bewerken is clicked, and hides Bewerken for an unresolved kunstwerk', () => {
+    renderModal(BESTELLING);
+    expect(screen.queryByTestId('bestelling-modal-regel-materiaal-line-1')).not.toBeInTheDocument();
+    expect(screen.getByTestId('bestelling-modal-regel-bewerken-line-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-regel-bewerken-line-2')).not.toBeInTheDocument();
+  });
+
+  it('edits a standard-maat line and saves materiaal/maat/prijs/aantal', async () => {
+    updateDocMock.mockResolvedValue(undefined);
+    const { onLineUpdated } = renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-1'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-regel-prijs-line-1'), { target: { value: '180' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-regel-aantal-line-1'), { target: { value: '5' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-opslaan-line-1'));
+
+    await waitFor(() =>
+      expect(updateDocMock).toHaveBeenCalledWith(
+        { collectionName: 'bestelheaders/header-1/bestellines', id: 'line-1' },
+        { materiaalId: 'mat-1', prijs: 180, quantity: 5, maatId: 'maat-1' }
+      )
+    );
+    await waitFor(() =>
+      expect(onLineUpdated).toHaveBeenCalledWith('header-1', 'line-1', {
+        materiaalId: 'mat-1',
+        prijs: 180,
+        quantity: 5,
+        maatId: 'maat-1',
+      })
+    );
+    expect(logActiviteitMock).toHaveBeenCalledWith('bestelling_regel_gewijzigd', {
+      id: 'staff-1',
+      email: 'paul@glassartanddesign.com',
+      naam: 'paul@glassartanddesign.com',
+    });
+    expect(screen.queryByTestId('bestelling-modal-regel-materiaal-line-1')).not.toBeInTheDocument();
+  });
+
+  it('discards edits when Annuleren is clicked', () => {
+    renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-1'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-regel-aantal-line-1'), { target: { value: '9' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-annuleren-line-1'));
+    expect(screen.queryByTestId('bestelling-modal-regel-materiaal-line-1')).not.toBeInTheDocument();
+    expect(screen.getByTestId('bestelling-modal-line-line-1')).toHaveTextContent('×3');
+    expect(updateDocMock).not.toHaveBeenCalled();
+  });
+
+  it('shows breedte/hoogte inputs instead of a maat select for a custom-size line', async () => {
+    updateDocMock.mockResolvedValue(undefined);
+    const { onLineUpdated } = renderModal(BESTELLING_MET_EIGEN_MAAT);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-3'));
+    expect(screen.queryByTestId('bestelling-modal-regel-maat-line-3')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('bestelling-modal-regel-breedte-line-3'), { target: { value: '95' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-regel-hoogte-line-3'), { target: { value: '145' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-regel-prijs-line-3'), { target: { value: '300' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-opslaan-line-3'));
+
+    await waitFor(() =>
+      expect(updateDocMock).toHaveBeenCalledWith(
+        { collectionName: 'bestelheaders/header-2/bestellines', id: 'line-3' },
+        { materiaalId: 'mat-1', prijs: 300, quantity: 1, maatId: '', breedte: 95, hoogte: 145 }
+      )
+    );
+    await waitFor(() =>
+      expect(onLineUpdated).toHaveBeenCalledWith('header-2', 'line-3', {
+        materiaalId: 'mat-1',
+        prijs: 300,
+        quantity: 1,
+        maatId: '',
+        breedte: 95,
+        hoogte: 145,
+      })
     );
   });
 });

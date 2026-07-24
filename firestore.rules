@@ -49,7 +49,8 @@ service cloud.firestore {
       allow create: if request.resource.data.type in
           ['kunstwerk_bekeken','mandje_toegevoegd','bestelling_geplaatst','account_bezocht',
            'word_klant_bezocht','word_klant_aanvraag','klant_goedgekeurd','klant_afgewezen',
-           'bestelling_goedgekeurd','bestelling_afgewezen',
+           'klant_gewijzigd','klant_prijsgroep_gewijzigd',
+           'bestelling_goedgekeurd','bestelling_afgewezen','bestelling_regel_gewijzigd',
            'materiaalsoort_toegevoegd','materiaalsoort_gewijzigd','materiaalsoort_verwijderd',
            'materiaal_toegevoegd','materiaal_gewijzigd','materiaal_verwijderd',
            'maat_toegevoegd','maat_gewijzigd','maat_verwijderd',
@@ -88,11 +89,11 @@ service cloud.firestore {
         allow update: if request.auth != null &&
           exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid)) &&
           request.resource.data.keys().hasOnly(['kunstwerkId', 'maatId', 'materiaalId', 'breedte', 'hoogte', 'prijs', 'quantity']) &&
-          request.resource.data.prijs is number && request.resource.data.prijs > 0 &&
           request.resource.data.kunstwerkId == resource.data.kunstwerkId &&
-          request.resource.data.maatId == resource.data.maatId &&
-          request.resource.data.materiaalId == resource.data.materiaalId &&
-          request.resource.data.quantity == resource.data.quantity;
+          request.resource.data.maatId is string &&
+          request.resource.data.materiaalId is string && request.resource.data.materiaalId.size() > 0 &&
+          (request.resource.data.prijs == null || (request.resource.data.prijs is number && request.resource.data.prijs > 0)) &&
+          request.resource.data.quantity is int && request.resource.data.quantity > 0;
         allow delete: if false;
       }
     }

@@ -92,6 +92,88 @@ describe('KlantModal', () => {
     expect(screen.getByTestId('klant-modal-afwijzen')).toBeInTheDocument();
   });
 
+  it('shows a prijsgroep Opslaan button once Goedgekeurd, and saves just the prijsgroep', async () => {
+    updateDocMock.mockResolvedValue(undefined);
+    const { onUpdated } = renderModal({ ...KLANT, status: 'Goedgekeurd', prijsgroepId: 'pg-1' });
+    expect(screen.getByTestId('klant-modal-prijsgroep-opslaan')).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('klant-modal-prijsgroep'), { target: { value: 'pg-2' } });
+    fireEvent.click(screen.getByTestId('klant-modal-prijsgroep-opslaan'));
+
+    await waitFor(() =>
+      expect(updateDocMock).toHaveBeenCalledWith(
+        { collectionName: 'klanten', id: 'uid-1' },
+        { prijsgroepId: 'pg-2' }
+      )
+    );
+    await waitFor(() =>
+      expect(onUpdated).toHaveBeenCalledWith({
+        ...KLANT,
+        status: 'Goedgekeurd',
+        prijsgroepId: 'pg-2',
+      })
+    );
+    expect(logActiviteitMock).toHaveBeenCalledWith('klant_prijsgroep_gewijzigd', {
+      id: 'staff-1',
+      email: 'paul@glassartanddesign.com',
+      naam: 'paul@glassartanddesign.com',
+    });
+  });
+
+  it('does not show the prijsgroep Opslaan button while still Beoordelen', () => {
+    renderModal({ ...KLANT, status: 'Beoordelen' });
+    expect(screen.queryByTestId('klant-modal-prijsgroep-opslaan')).not.toBeInTheDocument();
+  });
+
+  it('keeps the other fields read-only until Bewerken is clicked', () => {
+    renderModal(KLANT);
+    expect(screen.queryByTestId('klant-modal-companyName')).not.toBeInTheDocument();
+    expect(screen.getByTestId('klant-modal')).toHaveTextContent('Testbedrijf BV');
+    fireEvent.click(screen.getByTestId('klant-modal-bewerken'));
+    expect(screen.getByTestId('klant-modal-companyName')).toHaveValue('Testbedrijf BV');
+  });
+
+  it('saves all edited fields via Opslaan and exits edit mode', async () => {
+    updateDocMock.mockResolvedValue(undefined);
+    const { onUpdated } = renderModal(KLANT);
+    fireEvent.click(screen.getByTestId('klant-modal-bewerken'));
+    fireEvent.change(screen.getByTestId('klant-modal-contactPerson'), { target: { value: 'Piet Pietersen' } });
+    fireEvent.click(screen.getByTestId('klant-modal-velden-opslaan'));
+
+    await waitFor(() =>
+      expect(updateDocMock).toHaveBeenCalledWith(
+        { collectionName: 'klanten', id: 'uid-1' },
+        {
+          companyName: 'Testbedrijf BV',
+          kvk: '12345678',
+          contactPerson: 'Piet Pietersen',
+          contactPreference: 'email',
+          email: 'jan@example.com',
+          phone: '0612345678',
+          address: 'Teststraat 1',
+          postcode: '1234 AB',
+          city: 'Teststad',
+        }
+      )
+    );
+    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, contactPerson: 'Piet Pietersen' }));
+    expect(logActiviteitMock).toHaveBeenCalledWith('klant_gewijzigd', {
+      id: 'staff-1',
+      email: 'paul@glassartanddesign.com',
+      naam: 'paul@glassartanddesign.com',
+    });
+    expect(screen.queryByTestId('klant-modal-companyName')).not.toBeInTheDocument();
+  });
+
+  it('discards edits when Annuleren is clicked', () => {
+    renderModal(KLANT);
+    fireEvent.click(screen.getByTestId('klant-modal-bewerken'));
+    fireEvent.change(screen.getByTestId('klant-modal-contactPerson'), { target: { value: 'Gewijzigd' } });
+    fireEvent.click(screen.getByTestId('klant-modal-annuleren'));
+    expect(screen.queryByTestId('klant-modal-companyName')).not.toBeInTheDocument();
+    expect(screen.getByTestId('klant-modal')).toHaveTextContent('Jan Jansen');
+    expect(updateDocMock).not.toHaveBeenCalled();
+  });
+
   it('lists every prijsgroep as a dropdown option', () => {
     renderModal(KLANT);
     const options = screen.getByTestId('klant-modal-prijsgroep').querySelectorAll('option');
