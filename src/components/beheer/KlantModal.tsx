@@ -131,8 +131,7 @@ export function KlantModal({ klant, prijsgroepen, onClose, onUpdated }: KlantMod
       isOpen={klant !== null}
       onClose={onClose}
       closeLabel={t('modalClose')}
-      title={klant?.companyName}
-      subtitle={klant?.kvk ? `${t('klantenColKvk')}: ${klant.kvk}` : undefined}
+      title={t('klantenModalTitel')}
     >
       {klant && fields && (
         <div data-testid="klant-modal" className="flex flex-col gap-3 text-sm text-white/80">

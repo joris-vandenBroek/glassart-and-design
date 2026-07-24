@@ -168,8 +168,8 @@ export function BestellingModal({
       isOpen={bestelling !== null}
       onClose={onClose}
       closeLabel={t('modalClose')}
-      title={bestelling?.companyName}
-      subtitle={bestelling?.besteldatum}
+      title={t('bestellingenModalTitel')}
+      subtitle={bestelling ? `${bestelling.companyName} · ${bestelling.besteldatum}` : undefined}
     >
       {bestelling && (
         <div data-testid="bestelling-modal" className="flex flex-col gap-3 text-sm text-white/80">
