@@ -467,11 +467,11 @@ describe('ProductModal', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     fireEvent.click(screen.getByTestId('product-modal-confirm'));
-    expect(logActiviteitMock).toHaveBeenCalledWith('mandje_toegevoegd', {
-      id: 'uid-1',
-      email: 'klant@example.com',
-      naam: 'Testbedrijf BV',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'mandje_toegevoegd',
+      { id: 'uid-1', email: 'klant@example.com', naam: 'Testbedrijf BV' },
+      'Hotel paneel'
+    );
   });
 
   it('logs mandje_toegevoegd as Onbekend for an anonymous visitor', async () => {
@@ -481,11 +481,11 @@ describe('ProductModal', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     fireEvent.click(screen.getByTestId('product-modal-confirm'));
-    expect(logActiviteitMock).toHaveBeenCalledWith('mandje_toegevoegd', {
-      id: null,
-      email: 'Onbekend',
-      naam: 'Onbekend',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'mandje_toegevoegd',
+      { id: null, email: 'Onbekend', naam: 'Onbekend' },
+      'Hotel paneel'
+    );
   });
 
   it('does not offer an "eigen maat opgeven" option for a materiaal whose soort does not allow it', () => {
@@ -618,11 +618,11 @@ describe('ProductModal', () => {
       prijs: null,
       quantity: 1,
     });
-    expect(logActiviteitMock).toHaveBeenCalledWith('mandje_eigen_maat_toegevoegd', {
-      id: null,
-      email: 'Onbekend',
-      naam: 'Onbekend',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'mandje_eigen_maat_toegevoegd',
+      { id: null, email: 'Onbekend', naam: 'Onbekend' },
+      'Hotel paneel'
+    );
   });
 
   it('resets to a standard maat when switching to a materiaal whose soort does not allow eigen maat', () => {
