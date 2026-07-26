@@ -249,7 +249,8 @@ export function KunstenaarsSection({
     if (success) {
       void logActiviteit(
         modalState.mode === 'add' ? 'kunstenaar_toegevoegd' : 'kunstenaar_gewijzigd',
-        actorFromMedewerker(user)
+        actorFromMedewerker(user),
+        naam
       );
       closeModal();
     } else {
@@ -280,7 +281,7 @@ export function KunstenaarsSection({
       success = false;
     }
     if (success) {
-      void logActiviteit('kunstenaar_verwijderd', actorFromMedewerker(user));
+      void logActiviteit('kunstenaar_verwijderd', actorFromMedewerker(user), modalState.kunstenaar.naam);
       closeModal();
     } else {
       setActionError(t('kunstenaarsActionError'));
