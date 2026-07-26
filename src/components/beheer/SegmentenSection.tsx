@@ -62,7 +62,8 @@ export function SegmentenSection({ segmenten, loadError, onAdd, onUpdate, onRemo
     if (success) {
       void logActiviteit(
         modalState.mode === 'add' ? 'segment_toegevoegd' : 'segment_gewijzigd',
-        actorFromMedewerker(user)
+        actorFromMedewerker(user),
+        omschrijving
       );
       closeModal();
     } else {
@@ -74,7 +75,7 @@ export function SegmentenSection({ segmenten, loadError, onAdd, onUpdate, onRemo
     if (modalState?.mode !== 'edit') return;
     const success = await onRemove(modalState.segment.id);
     if (success) {
-      void logActiviteit('segment_verwijderd', actorFromMedewerker(user));
+      void logActiviteit('segment_verwijderd', actorFromMedewerker(user), modalState.segment.omschrijving);
       closeModal();
     } else {
       setActionError(t('segmentenActionError'));
