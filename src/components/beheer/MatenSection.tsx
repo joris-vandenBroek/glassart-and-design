@@ -64,7 +64,8 @@ export function MatenSection({ maten, kunstwerken, loadError, onAdd, onUpdate, o
     if (success) {
       void logActiviteit(
         modalState.mode === 'add' ? 'maat_toegevoegd' : 'maat_gewijzigd',
-        actorFromMedewerker(user)
+        actorFromMedewerker(user),
+        `${breedte}×${hoogte} cm`
       );
       closeModal();
     } else {
@@ -81,7 +82,11 @@ export function MatenSection({ maten, kunstwerken, loadError, onAdd, onUpdate, o
     }
     const success = await onRemove(modalState.maat.id);
     if (success) {
-      void logActiviteit('maat_verwijderd', actorFromMedewerker(user));
+      void logActiviteit(
+        'maat_verwijderd',
+        actorFromMedewerker(user),
+        `${modalState.maat.breedte}×${modalState.maat.hoogte} cm`
+      );
       closeModal();
     } else {
       setActionError(t('matenActionError'));
