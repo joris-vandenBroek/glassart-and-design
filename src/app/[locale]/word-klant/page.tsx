@@ -1,6 +1,8 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { GlassPanel } from '@/components/GlassPanel';
 import { RegistrationForm } from '@/components/RegistrationForm';
+import { pageAvailability } from '@/config/pageAvailability';
+import { UnderConstruction } from '@/components/UnderConstruction';
 
 export default async function WordKlantPage({
   params,
@@ -9,6 +11,11 @@ export default async function WordKlantPage({
 }) {
   const { locale } = params;
   setRequestLocale(locale);
+
+  if (!pageAvailability.wordKlant) {
+    return <UnderConstruction />;
+  }
+
   const t = await getTranslations('registrationPage');
 
   return (
