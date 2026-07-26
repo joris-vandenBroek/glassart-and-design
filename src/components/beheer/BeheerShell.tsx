@@ -12,6 +12,7 @@ import { MateriaalsoortenSection } from './MateriaalsoortenSection';
 import { MaterialenSection } from './MaterialenSection';
 import { MatenSection } from './MatenSection';
 import { SegmentenSection } from './SegmentenSection';
+import { StijlenSection } from './StijlenSection';
 import { KunstwerkenSection } from './KunstwerkenSection';
 import { PrijsgroepenSection } from './PrijsgroepenSection';
 import { KunstenaarsSection } from './KunstenaarsSection';
@@ -19,7 +20,7 @@ import { DrukkersSection } from './DrukkersSection';
 import { ActiviteitSection, type Activiteit } from './ActiviteitSection';
 import { GlassartDesignSection } from './GlassartDesignSection';
 import { InstellingenSection } from './InstellingenSection';
-import type { Materiaalsoort, Materiaal, Maat, Segment, Kunstwerk, Prijsgroep, Drukker } from './materiaalTypes';
+import type { Materiaalsoort, Materiaal, Maat, Segment, Stijl, Kunstwerk, Prijsgroep, Drukker } from './materiaalTypes';
 import type { Kunstenaar, KunstenaarUpdate } from './kunstenaarTypes';
 import type { Bedrijfsgegevens } from './bedrijfsgegevensTypes';
 import type { Bestelinstellingen } from './bestelinstellingenTypes';
@@ -226,6 +227,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   });
   const maten = useFirestoreCollection<Maat>('maten', { seed: MATEN_SEED });
   const segmenten = useFirestoreCollection<Segment>('segmenten', { seed: SEGMENTEN_SEED });
+  const stijlen = useFirestoreCollection<Stijl>('stijlen');
 
   const kunstwerkenReady = segmenten.items !== null && materialen.items !== null && maten.items !== null;
   const kunstwerkenSeed = kunstwerkenReady
@@ -285,6 +287,11 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   const materialenCount = (materialen.items ?? []).length;
   const matenCount = (maten.items ?? []).length;
   const segmentenCount = (segmenten.items ?? []).length;
+  const stijlenCount = (stijlen.items ?? []).length;
+  // Onderwerpen is wired into BeheerNav's props/union ahead of its own beheer CRUD
+  // section (added in a later step) so that shared union type only needs to change once;
+  // its real count will replace this placeholder once the Onderwerpen collection is read here.
+  const onderwerpenCount = 0;
   const kunstwerkenCount = (kunstwerken.items ?? []).length;
   const prijsgroepenCount = (prijsgroepen.items ?? []).length;
   const kunstenaarsCount = (kunstenaars.items ?? []).length;
@@ -310,6 +317,8 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
           materialenCount={materialenCount}
           matenCount={matenCount}
           segmentenCount={segmentenCount}
+          stijlenCount={stijlenCount}
+          onderwerpenCount={onderwerpenCount}
           kunstwerkenCount={kunstwerkenCount}
           kunstenaarsCount={kunstenaarsCount}
           prijsgroepenCount={prijsgroepenCount}
@@ -380,6 +389,14 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             onAdd={segmenten.add}
             onUpdate={segmenten.update}
             onRemove={segmenten.remove}
+          />
+        ) : activeSection === 'stijlen' ? (
+          <StijlenSection
+            stijlen={stijlen.items}
+            loadError={stijlen.error === 'load' ? t('stijlenLoadError') : null}
+            onAdd={stijlen.add}
+            onUpdate={stijlen.update}
+            onRemove={stijlen.remove}
           />
         ) : activeSection === 'kunstwerken' ? (
           <KunstwerkenSection
