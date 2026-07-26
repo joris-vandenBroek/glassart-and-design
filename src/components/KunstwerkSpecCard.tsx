@@ -7,8 +7,7 @@ interface KunstwerkSpecCardProps {
   titel: string;
   artiest?: string;
   collectieLabels: string[];
-  materiaalLabels: string[];
-  maatLabels: string[];
+  materiaalLabel: string;
 }
 
 export function KunstwerkSpecCard({
@@ -17,8 +16,7 @@ export function KunstwerkSpecCard({
   titel,
   artiest,
   collectieLabels,
-  materiaalLabels,
-  maatLabels,
+  materiaalLabel,
 }: KunstwerkSpecCardProps) {
   const t = useTranslations('kunstwerkSpecCard');
 
@@ -47,16 +45,10 @@ export function KunstwerkSpecCard({
               <dd>{collectieLabels.join(', ')}</dd>
             </div>
           )}
-          {materiaalLabels.length > 0 && (
+          {materiaalLabel && (
             <div data-testid="kunstwerk-spec-card-materiaal" className="flex items-baseline justify-between gap-2">
               <dt className="font-semibold">{t('materiaal')}</dt>
-              <dd>{materiaalLabels.join(' | ')}</dd>
-            </div>
-          )}
-          {maatLabels.length > 0 && (
-            <div data-testid="kunstwerk-spec-card-formaten" className="flex items-baseline justify-between gap-2">
-              <dt className="font-semibold">{t('formaten')}</dt>
-              <dd>{maatLabels.join(' | ')}</dd>
+              <dd>{materiaalLabel}</dd>
             </div>
           )}
         </dl>

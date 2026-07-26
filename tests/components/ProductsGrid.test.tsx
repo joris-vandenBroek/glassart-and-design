@@ -99,6 +99,7 @@ const MATERIALEN = [
   { id: 'mat-1', data: { materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Veiligheidsglas' } },
 ];
 const MATEN = [{ id: 'maat-1', data: { breedte: 40, hoogte: 60 } }];
+const MATERIAALSOORTEN = [{ id: 'soort-1', data: { omschrijving: 'Veiligheidsglas' } }];
 
 function mockCollections() {
   const data: Record<string, Array<{ id: string; data: Record<string, unknown> }>> = {
@@ -106,6 +107,7 @@ function mockCollections() {
     kunstwerken: KUNSTWERKEN,
     materialen: MATERIALEN,
     maten: MATEN,
+    materiaalsoorten: MATERIAALSOORTEN,
   };
   getDocsMock.mockImplementation((collectionRef: { name: string }) =>
     Promise.resolve(makeSnapshot(data[collectionRef.name] ?? []))
@@ -232,5 +234,11 @@ describe('ProductsGrid', () => {
     fireEvent.click(cards[0]);
     expect(screen.getByTestId('product-modal')).toBeInTheDocument();
     expect(logActiviteitMock).not.toHaveBeenCalled();
+  });
+
+  it('shows the resolved materiaal label on each kunstwerk card', async () => {
+    renderProductsGrid();
+    const cards = await screen.findAllByTestId('product-card');
+    expect(cards[0]).toHaveTextContent('4mm Veiligheidsglas');
   });
 });

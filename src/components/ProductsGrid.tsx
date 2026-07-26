@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useFirestoreCollection } from '@/lib/useFirestoreCollection';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
+import { resolveKunstwerkMateriaalLabel } from '@/lib/kunstwerkMateriaal';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
 import { WatermarkedImage } from './WatermarkedImage';
-import { ProductModal, materiaalLabel, maatLabel } from './ProductModal';
+import { ProductModal } from './ProductModal';
 import { KunstwerkSpecCard } from './KunstwerkSpecCard';
 import type { Segment, Kunstwerk, Materiaal, Maat, Materiaalsoort } from './beheer/materiaalTypes';
 
@@ -35,10 +36,6 @@ export function ProductsGrid() {
     activeFilter === ALL_FILTER
       ? allKunstwerken
       : allKunstwerken.filter((kunstwerk) => kunstwerk.segmentIds.includes(activeFilter));
-
-  const materiaalsoortNaamById = new Map(
-    (materiaalsoorten.items ?? []).map((soort) => [soort.id, soort.omschrijving])
-  );
 
   function filterButtonClass(isActive: boolean) {
     return isActive
@@ -86,10 +83,6 @@ export function ProductsGrid() {
       >
         {visibleKunstwerken.map((kunstwerk) => {
           const omschrijving = resolveKunstwerkOmschrijving(kunstwerk, locale);
-          const beschikbareMaterialen = (materialen.items ?? []).filter((materiaal) =>
-            kunstwerk.materiaalIds.includes(materiaal.id)
-          );
-          const beschikbareMaten = (maten.items ?? []).filter((maat) => kunstwerk.maatIds.includes(maat.id));
           const collectieLabels = kunstwerk.segmentIds.map(
             (segmentId) => segmenten.items?.find((segment) => segment.id === segmentId)?.omschrijving ?? segmentId
           );
@@ -123,10 +116,7 @@ export function ProductsGrid() {
                 titel={omschrijving}
                 artiest={kunstwerk.artiest}
                 collectieLabels={collectieLabels}
-                materiaalLabels={beschikbareMaterialen.map((materiaal) =>
-                  materiaalLabel(materiaal, materiaalsoortNaamById.get(materiaal.materiaalsoortId) ?? materiaal.materiaalsoortId)
-                )}
-                maatLabels={beschikbareMaten.map(maatLabel)}
+                materiaalLabel={resolveKunstwerkMateriaalLabel(kunstwerk, materialen.items ?? [], materiaalsoorten.items ?? [])}
               />
             </div>
           );

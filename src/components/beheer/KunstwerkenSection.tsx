@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
 import { KunstwerkSpecCard } from '@/components/KunstwerkSpecCard';
+import { resolveKunstwerkMateriaalLabel } from '@/lib/kunstwerkMateriaal';
 import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
@@ -553,12 +554,7 @@ export function KunstwerkenSection({
                 titel={omschrijvingNl}
                 artiest={artiest}
                 collectieLabels={segmentIds.map((segmentId) => segmentNaamById.get(segmentId) ?? segmentId)}
-                materiaalLabels={(materialen ?? [])
-                  .filter((materiaal) => materiaalIds.includes(materiaal.id))
-                  .map(materiaalLabel)}
-                maatLabels={(maten ?? [])
-                  .filter((maat) => maatIds.includes(maat.id))
-                  .map((maat) => `${maat.breedte}×${maat.hoogte} cm`)}
+                materiaalLabel={resolveKunstwerkMateriaalLabel({ materiaalIds }, materialen ?? [], materiaalsoorten ?? [])}
               />
             </div>
           </div>
