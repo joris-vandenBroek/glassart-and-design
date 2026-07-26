@@ -246,7 +246,7 @@ export function KlantModal({ klant, prijsgroepen, onClose, onUpdated }: KlantMod
 
           <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
             <span className="text-xs uppercase tracking-wide text-white/60">{t('klantenLabelAfleveradres')}</span>
-            {!isEditing && fields.deliveryAddress === '' && fields.deliveryPostcode === '' && fields.deliveryCity === '' ? (
+            {!isEditing && fields.deliveryAddress === '' ? (
               <p data-testid="klant-modal-afleveradres-leeg" className="text-white/50">
                 {t('klantenLabelGebruiktStandaardadres')}
               </p>
@@ -279,7 +279,7 @@ export function KlantModal({ klant, prijsgroepen, onClose, onUpdated }: KlantMod
 
           <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
             <span className="text-xs uppercase tracking-wide text-white/60">{t('klantenLabelFactuuradres')}</span>
-            {!isEditing && fields.invoiceAddress === '' && fields.invoicePostcode === '' && fields.invoiceCity === '' ? (
+            {!isEditing && fields.invoiceAddress === '' ? (
               <p data-testid="klant-modal-factuuradres-leeg" className="text-white/50">
                 {t('klantenLabelGebruiktStandaardadres')}
               </p>
