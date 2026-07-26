@@ -14,6 +14,14 @@ vi.mock('@/lib/useKunstwerkFotoUpload', () => ({
   useKunstwerkFotoUpload: () => ({ uploading: mockUploading, error: mockUploadError, upload: uploadMock }),
 }));
 
+const detectFormaatFromFileMock = vi.fn();
+const detectFormaatFromImageUrlMock = vi.fn();
+
+vi.mock('@/lib/detectKunstwerkFormaat', () => ({
+  detectFormaatFromFile: (...args: unknown[]) => detectFormaatFromFileMock(...args),
+  detectFormaatFromImageUrl: (...args: unknown[]) => detectFormaatFromImageUrlMock(...args),
+}));
+
 const logActiviteitMock = vi.fn();
 
 vi.mock('@/lib/useAdminAuth', () => ({
@@ -39,6 +47,7 @@ const MATERIALEN: Materiaal[] = [
 const MATEN: Maat[] = [
   { id: 'maat-1', breedte: 40, hoogte: 60 },
   { id: 'maat-2', breedte: 60, hoogte: 90 },
+  { id: 'maat-3', breedte: 50, hoogte: 50 },
 ];
 const KUNSTENAARS: Kunstenaar[] = [
   {
@@ -60,6 +69,7 @@ const KUNSTWERKEN: Kunstwerk[] = [
     foto: 'https://storage.example.com/kw-1.jpg',
     naam: 'Hotel paneel 1',
     kunstenaarId: null,
+    formaat: 'staand',
     segmentIds: ['seg-1'],
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
@@ -99,6 +109,10 @@ beforeEach(() => {
   mockUploading = false;
   mockUploadError = null;
   logActiviteitMock.mockReset();
+  detectFormaatFromFileMock.mockReset();
+  detectFormaatFromFileMock.mockResolvedValue(null);
+  detectFormaatFromImageUrlMock.mockReset();
+  detectFormaatFromImageUrlMock.mockResolvedValue(null);
 });
 
 describe('KunstwerkenSection', () => {
@@ -137,6 +151,9 @@ describe('KunstwerkenSection', () => {
     fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Test' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-mat-1-maat-1'), { target: { value: '99' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Test' } });
+    expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled(); // formaat still missing
+
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     expect(screen.getByTestId('kunstwerk-modal-opslaan')).not.toBeDisabled();
   });
 
@@ -181,6 +198,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'ka-1' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-mat-1-maat-1'), { target: { value: '99' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Nieuw kunstwerk' } });
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
 
     await waitFor(() =>
@@ -188,6 +206,7 @@ describe('KunstwerkenSection', () => {
         foto: 'https://storage.example.com/nieuw.jpg',
         naam: 'Vibrant Spirit',
         kunstenaarId: 'ka-1',
+        formaat: 'staand',
         segmentIds: ['seg-1'],
         materiaalIds: ['mat-1'],
         maatIds: ['maat-1'],
@@ -209,6 +228,7 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-prijs-mat-1-maat-1')).toHaveValue(150);
     expect(screen.getByTestId('kunstwerk-modal-naam')).toHaveValue('Hotel paneel 1');
     expect(screen.getByTestId('kunstwerk-modal-omschrijving-nl')).toHaveValue('Hotel paneel 1');
+    expect(screen.getByTestId('kunstwerk-modal-formaat-staand')).toBeChecked();
 
     fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-mat-1-maat-1'), { target: { value: '175' } });
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
@@ -218,6 +238,7 @@ describe('KunstwerkenSection', () => {
         foto: 'https://storage.example.com/kw-1.jpg',
         naam: 'Hotel paneel 1',
         kunstenaarId: null,
+        formaat: 'staand',
         segmentIds: ['seg-1'],
         materiaalIds: ['mat-1'],
         maatIds: ['maat-1'],
@@ -270,6 +291,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Nieuw kunstwerk' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-mat-1-maat-1'), { target: { value: '99' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Nieuw kunstwerk' } });
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
 
     await waitFor(() =>
@@ -324,6 +346,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Nieuw kunstwerk' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-mat-1-maat-1'), { target: { value: '99' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Nieuw kunstwerk' } });
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
 
     await screen.findByTestId('kunstwerk-modal-error');
@@ -355,5 +378,78 @@ describe('KunstwerkenSection', () => {
   it('does not show the backfill button when every kunstwerk already has a naam', () => {
     renderSection();
     expect(screen.queryByTestId('kunstwerken-backfill-namen')).not.toBeInTheDocument();
+  });
+
+  it('shows a hint that a formaat must be chosen, and hides it once one is picked', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    expect(screen.getByTestId('kunstwerk-modal-formaat-hint')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-vierkant'));
+    expect(screen.queryByTestId('kunstwerk-modal-formaat-hint')).not.toBeInTheDocument();
+  });
+
+  it('deselects and disables incompatible maten when the formaat is changed, in both directions', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).not.toBeDisabled();
+
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-vierkant'));
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).not.toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).toBeDisabled();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).not.toBeDisabled();
+
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-3'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).not.toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).toBeDisabled();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).not.toBeDisabled();
+  });
+
+  it('pre-selects the detected formaat when a new photo is uploaded, overridable by the admin', async () => {
+    uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
+    detectFormaatFromFileMock.mockResolvedValue('liggend');
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    const file = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
+
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-formaat-liggend')).toBeChecked());
+    expect(detectFormaatFromFileMock).toHaveBeenCalledWith(file);
+
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
+    expect(screen.getByTestId('kunstwerk-modal-formaat-staand')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-formaat-liggend')).not.toBeChecked();
+  });
+
+  it('leaves formaat unselected when detection fails on a new photo', async () => {
+    uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
+    detectFormaatFromFileMock.mockResolvedValue(null);
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    const file = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
+
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
+    expect(screen.getByTestId('kunstwerk-modal-formaat-vierkant')).not.toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-formaat-liggend')).not.toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-formaat-staand')).not.toBeChecked();
+  });
+
+  it('detects formaat from the existing photo when opening a kunstwerk that has none set yet', async () => {
+    detectFormaatFromImageUrlMock.mockResolvedValue('vierkant');
+    const zonderFormaat: Kunstwerk = { ...KUNSTWERKEN[0], id: 'kw-3', formaat: undefined };
+    renderSection({ kunstwerken: [...KUNSTWERKEN, zonderFormaat] });
+
+    fireEvent.click(screen.getByTestId('data-table-row-kw-3'));
+
+    expect(detectFormaatFromImageUrlMock).toHaveBeenCalledWith(zonderFormaat.foto);
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-formaat-vierkant')).toBeChecked());
+  });
+
+  it('does not call the detector when opening a kunstwerk that already has a formaat', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+    expect(detectFormaatFromImageUrlMock).not.toHaveBeenCalled();
   });
 });
