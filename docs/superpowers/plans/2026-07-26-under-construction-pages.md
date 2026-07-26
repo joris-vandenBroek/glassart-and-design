@@ -30,6 +30,18 @@
     db: {},
   }));
   ```
+- `getTranslations` from `next-intl/server` requires the `react-server` module resolution condition (`node_modules/next-intl/package.json` → `exports['./server']`), which Vitest's default (client) environment does not set — without a mock, it resolves to the client-stub build and throws `getTranslations is not supported in Client Components`. Every test that renders `UnderConstruction` (directly, or indirectly by rendering a gated page whose guard returns it) must mock the module to read from the imported locale messages:
+  ```ts
+  vi.mock('next-intl/server', () => ({
+    getTranslations: async (namespace: string) => {
+      const namespaceMessages = (messages as unknown as Record<string, Record<string, string>>)[
+        namespace
+      ];
+      return (key: string) => namespaceMessages[key];
+    },
+  }));
+  ```
+  Additionally, `UnderConstruction` and every gated `page.tsx` are async server components — `@testing-library/react`'s `render()` cannot accept a Promise as a child, so tests must await the component call directly before rendering its resolved element tree: `const ui = await UnderConstruction(); render(<NextIntlClientProvider ...>{ui}</NextIntlClientProvider>);` (same pattern for page components, e.g. `await CollectiesPage({ params: { locale: 'nl' } })`). See `tests/components/UnderConstruction.test.tsx` for the reference implementation of both workarounds.
 - Follow existing code conventions: Dutch UI copy/JSON keys where the rest of the site uses Dutch, English component/file names, 2-space indented JSON, Tailwind utility classes (no new CSS files).
 - Run `npx vitest run <file>` after every test-writing step from the project root (`C:\Temp\Glassart and design`).
 
@@ -228,13 +240,19 @@ vi.mock('@/i18n/navigation', () => ({
   ),
 }));
 
+vi.mock('next-intl/server', () => ({
+  getTranslations: async (namespace: string) => {
+    const namespaceMessages = (messages as unknown as Record<string, Record<string, string>>)[
+      namespace
+    ];
+    return (key: string) => namespaceMessages[key];
+  },
+}));
+
 describe('UnderConstruction', () => {
   it('shows the under-construction message and a link back home', async () => {
-    render(
-      <NextIntlClientProvider locale="nl" messages={messages}>
-        <UnderConstruction />
-      </NextIntlClientProvider>
-    );
+    const ui = await UnderConstruction();
+    render(<NextIntlClientProvider locale="nl" messages={messages}>{ui}</NextIntlClientProvider>);
 
     expect(await screen.findByTestId('under-construction')).toBeInTheDocument();
     expect(screen.getByText('We zijn met iets moois bezig')).toBeInTheDocument();
@@ -347,13 +365,19 @@ vi.mock('@/lib/firebase', () => ({
   db: {},
 }));
 
+vi.mock('next-intl/server', () => ({
+  getTranslations: async (namespace: string) => {
+    const namespaceMessages = (messages as unknown as Record<string, Record<string, string>>)[
+      namespace
+    ];
+    return (key: string) => namespaceMessages[key];
+  },
+}));
+
 describe('CollectiesPage', () => {
   it('shows the under-construction page while pageAvailability.collecties is false', async () => {
-    render(
-      <NextIntlClientProvider locale="nl" messages={messages}>
-        <CollectiesPage params={{ locale: 'nl' }} />
-      </NextIntlClientProvider>
-    );
+    const ui = await CollectiesPage({ params: { locale: 'nl' } });
+    render(<NextIntlClientProvider locale="nl" messages={messages}>{ui}</NextIntlClientProvider>);
 
     expect(await screen.findByTestId('under-construction')).toBeInTheDocument();
     expect(screen.queryByText('Ontdek onze kunstwerken op glas, gerangschikt per toepassing.')).not.toBeInTheDocument();
@@ -442,13 +466,19 @@ vi.mock('@/lib/firebase', () => ({
   db: {},
 }));
 
+vi.mock('next-intl/server', () => ({
+  getTranslations: async (namespace: string) => {
+    const namespaceMessages = (messages as unknown as Record<string, Record<string, string>>)[
+      namespace
+    ];
+    return (key: string) => namespaceMessages[key];
+  },
+}));
+
 describe('WordKlantPage', () => {
   it('shows the under-construction page while pageAvailability.wordKlant is false', async () => {
-    render(
-      <NextIntlClientProvider locale="nl" messages={messages}>
-        <WordKlantPage params={{ locale: 'nl' }} />
-      </NextIntlClientProvider>
-    );
+    const ui = await WordKlantPage({ params: { locale: 'nl' } });
+    render(<NextIntlClientProvider locale="nl" messages={messages}>{ui}</NextIntlClientProvider>);
 
     expect(await screen.findByTestId('under-construction')).toBeInTheDocument();
   });
@@ -535,13 +565,19 @@ vi.mock('@/lib/firebase', () => ({
   db: {},
 }));
 
+vi.mock('next-intl/server', () => ({
+  getTranslations: async (namespace: string) => {
+    const namespaceMessages = (messages as unknown as Record<string, Record<string, string>>)[
+      namespace
+    ];
+    return (key: string) => namespaceMessages[key];
+  },
+}));
+
 describe('InloggenPage', () => {
   it('shows the under-construction page while pageAvailability.inloggen is false', async () => {
-    render(
-      <NextIntlClientProvider locale="nl" messages={messages}>
-        <InloggenPage params={{ locale: 'nl' }} />
-      </NextIntlClientProvider>
-    );
+    const ui = await InloggenPage({ params: { locale: 'nl' } });
+    render(<NextIntlClientProvider locale="nl" messages={messages}>{ui}</NextIntlClientProvider>);
 
     expect(await screen.findByTestId('under-construction')).toBeInTheDocument();
   });
@@ -628,13 +664,19 @@ vi.mock('@/lib/firebase', () => ({
   db: {},
 }));
 
+vi.mock('next-intl/server', () => ({
+  getTranslations: async (namespace: string) => {
+    const namespaceMessages = (messages as unknown as Record<string, Record<string, string>>)[
+      namespace
+    ];
+    return (key: string) => namespaceMessages[key];
+  },
+}));
+
 describe('BeheerPage', () => {
   it('shows the under-construction page while pageAvailability.beheer is false', async () => {
-    render(
-      <NextIntlClientProvider locale="nl" messages={messages}>
-        <BeheerPage params={{ locale: 'nl' }} />
-      </NextIntlClientProvider>
-    );
+    const ui = await BeheerPage({ params: { locale: 'nl' } });
+    render(<NextIntlClientProvider locale="nl" messages={messages}>{ui}</NextIntlClientProvider>);
 
     expect(await screen.findByTestId('under-construction')).toBeInTheDocument();
   });
@@ -727,13 +769,19 @@ vi.mock('@/lib/firebase', () => ({
   db: {},
 }));
 
+vi.mock('next-intl/server', () => ({
+  getTranslations: async (namespace: string) => {
+    const namespaceMessages = (messages as unknown as Record<string, Record<string, string>>)[
+      namespace
+    ];
+    return (key: string) => namespaceMessages[key];
+  },
+}));
+
 describe('AccountPage', () => {
   it('shows the under-construction page while pageAvailability.account is false', async () => {
-    render(
-      <NextIntlClientProvider locale="nl" messages={messages}>
-        <AccountPage params={{ locale: 'nl' }} />
-      </NextIntlClientProvider>
-    );
+    const ui = await AccountPage({ params: { locale: 'nl' } });
+    render(<NextIntlClientProvider locale="nl" messages={messages}>{ui}</NextIntlClientProvider>);
 
     expect(await screen.findByTestId('under-construction')).toBeInTheDocument();
   });
@@ -820,13 +868,19 @@ vi.mock('@/lib/firebase', () => ({
   db: {},
 }));
 
+vi.mock('next-intl/server', () => ({
+  getTranslations: async (namespace: string) => {
+    const namespaceMessages = (messages as unknown as Record<string, Record<string, string>>)[
+      namespace
+    ];
+    return (key: string) => namespaceMessages[key];
+  },
+}));
+
 describe('ContactPage', () => {
   it('shows the under-construction page while pageAvailability.contact is false', async () => {
-    render(
-      <NextIntlClientProvider locale="nl" messages={messages}>
-        <ContactPage params={{ locale: 'nl' }} />
-      </NextIntlClientProvider>
-    );
+    const ui = await ContactPage({ params: { locale: 'nl' } });
+    render(<NextIntlClientProvider locale="nl" messages={messages}>{ui}</NextIntlClientProvider>);
 
     expect(await screen.findByTestId('under-construction')).toBeInTheDocument();
   });
