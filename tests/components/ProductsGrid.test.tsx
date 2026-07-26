@@ -62,6 +62,8 @@ const KUNSTWERKEN = [
       formaat: 'staand',
       prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 150 }],
       kunstenaarId: 'ka-1',
+      stijlIds: ['stijl-abstract'],
+      onderwerpIds: ['onderwerp-bloemen'],
       omschrijvingNl: 'Hotel paneel',
       omschrijvingFr: '',
       omschrijvingDe: '',
@@ -77,6 +79,8 @@ const KUNSTWERKEN = [
       maatIds: ['maat-1'],
       formaat: 'liggend',
       prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 200 }],
+      stijlIds: ['stijl-minimalistisch'],
+      onderwerpIds: ['onderwerp-dieren'],
       omschrijvingNl: 'Wellness paneel',
       omschrijvingFr: '',
       omschrijvingDe: '',
@@ -92,6 +96,8 @@ const KUNSTWERKEN = [
       maatIds: ['maat-1'],
       formaat: 'vierkant',
       prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 175 }],
+      stijlIds: ['stijl-abstract', 'stijl-minimalistisch'],
+      onderwerpIds: [],
       omschrijvingNl: 'Kunstwerk in beide segmenten',
       omschrijvingFr: '',
       omschrijvingDe: '',
@@ -119,6 +125,14 @@ const KUNSTENAARS = [
     },
   },
 ];
+const STIJLEN = [
+  { id: 'stijl-abstract', data: { omschrijving: 'Abstract' } },
+  { id: 'stijl-minimalistisch', data: { omschrijving: 'Minimalistisch' } },
+];
+const ONDERWERPEN = [
+  { id: 'onderwerp-bloemen', data: { omschrijving: 'Bloemen' } },
+  { id: 'onderwerp-dieren', data: { omschrijving: 'Dieren' } },
+];
 
 function mockCollections() {
   const data: Record<string, Array<{ id: string; data: Record<string, unknown> }>> = {
@@ -127,6 +141,8 @@ function mockCollections() {
     materialen: MATERIALEN,
     maten: MATEN,
     kunstenaars: KUNSTENAARS,
+    stijlen: STIJLEN,
+    onderwerpen: ONDERWERPEN,
   };
   getDocsMock.mockImplementation((collectionRef: { name: string }) =>
     Promise.resolve(makeSnapshot(data[collectionRef.name] ?? []))
@@ -295,5 +311,19 @@ describe('ProductsGrid', () => {
 
     fireEvent.click(screen.getByTestId('facet-formaat-option-vierkant'));
     expect(screen.getAllByTestId('product-card')).toHaveLength(2); // seg-wellness alone: kw-2 and kw-3
+  });
+
+  it('filters by stijl (OR within the facet) combined with segment via AND', async () => {
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+
+    expect(screen.getByTestId('facet-stijl-option-stijl-abstract')).toHaveTextContent('2'); // kw-1, kw-3
+    expect(screen.getByTestId('facet-stijl-option-stijl-minimalistisch')).toHaveTextContent('2'); // kw-2, kw-3
+
+    fireEvent.click(screen.getByTestId('facet-stijl-option-stijl-abstract'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(2); // kw-1, kw-3
+
+    fireEvent.click(screen.getByTestId('facet-stijl-option-stijl-minimalistisch'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(3); // OR: any of the 2 stijlen matches all 3
   });
 });

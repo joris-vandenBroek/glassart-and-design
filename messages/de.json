@@ -39,7 +39,8 @@
     "formaatFacetTitle": "Format",
     "formaatStaand": "Hochformat",
     "formaatLiggend": "Querformat",
-    "formaatVierkant": "Quadratisch"
+    "formaatVierkant": "Quadratisch",
+    "stijlFacetTitle": "Stil"
   },
   "kunstwerkSpecCard": {
     "collectie": "Kollektion",
