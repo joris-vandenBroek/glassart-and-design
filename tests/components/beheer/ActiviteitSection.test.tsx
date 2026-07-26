@@ -89,4 +89,30 @@ describe('ActiviteitSection', () => {
     ]);
     expect(screen.getByTestId('data-table-row-log-3')).toHaveTextContent('beheer_bezocht');
   });
+
+  it('shows the translated label for bestelinstellingen_gewijzigd', () => {
+    renderSection([
+      {
+        id: 'log-5',
+        type: 'bestelinstellingen_gewijzigd',
+        actorEmail: 'paul@glassartanddesign.com',
+        actorNaam: 'paul@glassartanddesign.com',
+        timestamp: new Date('2026-07-26T11:00:00'),
+      },
+    ]);
+    expect(screen.getByTestId('data-table-row-log-5')).toHaveTextContent('Bestelinstellingen gewijzigd');
+  });
+
+  it('shows the translated label for klant_minimale_afname_gewijzigd', () => {
+    renderSection([
+      {
+        id: 'log-6',
+        type: 'klant_minimale_afname_gewijzigd',
+        actorEmail: 'paul@glassartanddesign.com',
+        actorNaam: 'paul@glassartanddesign.com',
+        timestamp: new Date('2026-07-26T12:00:00'),
+      },
+    ]);
+    expect(screen.getByTestId('data-table-row-log-6')).toHaveTextContent('Minimale afname gewijzigd voor klant');
+  });
 });

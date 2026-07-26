@@ -19,6 +19,7 @@ export interface Klant {
   city: string;
   status: 'Beoordelen' | 'Goedgekeurd' | 'Afgewezen';
   prijsgroepId: string | null;
+  minimaleAfname?: number | null;
 }
 
 interface KlantenSectionProps {

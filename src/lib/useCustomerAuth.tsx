@@ -17,6 +17,7 @@ interface CustomerUser {
   email: string | null;
   companyName: string | null;
   contactPerson: string | null;
+  minimaleAfname: number | null;
 }
 
 interface CustomerAuthValue {
@@ -43,13 +44,19 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
       }
       const klantDoc = await getDoc(doc(db, 'klanten', firebaseUser.uid));
       const klantData = klantDoc.exists()
-        ? (klantDoc.data() as { status?: string; companyName?: string; contactPerson?: string })
+        ? (klantDoc.data() as {
+            status?: string;
+            companyName?: string;
+            contactPerson?: string;
+            minimaleAfname?: number | null;
+          })
         : null;
       setUser({
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         companyName: klantData?.companyName ?? null,
         contactPerson: klantData?.contactPerson ?? null,
+        minimaleAfname: klantData?.minimaleAfname ?? null,
       });
       setIsCustomer(klantData?.status === 'Goedgekeurd');
       setIsHydrated(true);
