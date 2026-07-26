@@ -2,6 +2,8 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { GlassPanel } from '@/components/GlassPanel';
 import { ContactInfo } from '@/components/ContactInfo';
 import { ContactForm } from '@/components/ContactForm';
+import { pageAvailability } from '@/config/pageAvailability';
+import { UnderConstruction } from '@/components/UnderConstruction';
 
 export default async function ContactPage({
   params,
@@ -10,6 +12,11 @@ export default async function ContactPage({
 }) {
   const { locale } = params;
   setRequestLocale(locale);
+
+  if (!pageAvailability.contact) {
+    return <UnderConstruction />;
+  }
+
   const t = await getTranslations('contactPage');
 
   return (
