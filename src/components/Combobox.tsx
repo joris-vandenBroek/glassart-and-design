@@ -20,7 +20,7 @@ interface ComboboxProps {
 export function Combobox({ options, value, onChange, placeholder, noResultsLabel, clearLabel, testId }: ComboboxProps) {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  const blurTimeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const blurTimeoutRef = useRef<number | null>(null);
 
   const selectedLabel = options.find((option) => option.value === value)?.label ?? '';
 
