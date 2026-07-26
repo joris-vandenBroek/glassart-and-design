@@ -97,7 +97,7 @@ export function CartPanel() {
       );
       clear();
       setOrderPlaced(true);
-      void logActiviteit('bestelling_geplaatst', actorFromCustomer(user));
+      void logActiviteit('bestelling_geplaatst', actorFromCustomer(user), bestelnr);
       if (user.email) {
         void sendConfirmationEmail(user.email);
       }
