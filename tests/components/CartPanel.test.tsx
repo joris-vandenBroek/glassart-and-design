@@ -479,11 +479,11 @@ describe('CartPanel', () => {
     fireEvent.click(screen.getByTestId('cart-place-order'));
 
     await screen.findByTestId('cart-order-confirmation');
-    expect(logActiviteitMock).toHaveBeenCalledWith('bestelling_geplaatst', {
-      id: 'uid-1',
-      email: 'klant@example.com',
-      naam: 'Testbedrijf BV',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'bestelling_geplaatst',
+      { id: 'uid-1', email: 'klant@example.com', naam: 'Testbedrijf BV' },
+      'GD-00001'
+    );
   });
 
   it('does not log bestelling_geplaatst when the Firestore write fails', async () => {

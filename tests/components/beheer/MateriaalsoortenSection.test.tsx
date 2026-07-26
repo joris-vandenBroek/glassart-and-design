@@ -152,11 +152,11 @@ describe('MateriaalsoortenSection', () => {
     fireEvent.change(screen.getByTestId('materiaalsoort-modal-omschrijving'), { target: { value: 'Acryl' } });
     fireEvent.click(screen.getByTestId('materiaalsoort-modal-opslaan'));
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('materiaalsoort_toegevoegd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'materiaalsoort_toegevoegd',
+        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+        'Acryl'
+      )
     );
   });
 
@@ -166,11 +166,11 @@ describe('MateriaalsoortenSection', () => {
     fireEvent.change(screen.getByTestId('materiaalsoort-modal-omschrijving'), { target: { value: 'Dibond 3mm' } });
     fireEvent.click(screen.getByTestId('materiaalsoort-modal-opslaan'));
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('materiaalsoort_gewijzigd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'materiaalsoort_gewijzigd',
+        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+        'Dibond 3mm'
+      )
     );
   });
 
@@ -179,11 +179,11 @@ describe('MateriaalsoortenSection', () => {
     fireEvent.click(screen.getByTestId('data-table-row-soort-2'));
     fireEvent.click(screen.getByTestId('materiaalsoort-modal-verwijderen'));
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('materiaalsoort_verwijderd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'materiaalsoort_verwijderd',
+        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+        'Dibond'
+      )
     );
   });
 

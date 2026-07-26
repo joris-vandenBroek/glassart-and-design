@@ -57,7 +57,11 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
     if (!state) return;
     const success = state.mode === 'add' ? await onAdd(fields) : await onUpdate(state.drukker.id, fields);
     if (success) {
-      void logActiviteit(state.mode === 'add' ? 'drukker_toegevoegd' : 'drukker_gewijzigd', actorFromMedewerker(user));
+      void logActiviteit(
+        state.mode === 'add' ? 'drukker_toegevoegd' : 'drukker_gewijzigd',
+        actorFromMedewerker(user),
+        fields.naam
+      );
       onClose();
     } else {
       setActionError(t('drukkersActionError'));
@@ -72,7 +76,7 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
     }
     const success = await onRemove(state.drukker.id);
     if (success) {
-      void logActiviteit('drukker_verwijderd', actorFromMedewerker(user));
+      void logActiviteit('drukker_verwijderd', actorFromMedewerker(user), state.drukker.naam);
       onClose();
     } else {
       setActionError(t('drukkersActionError'));

@@ -303,11 +303,11 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
 
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('kunstwerk_toegevoegd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'kunstwerk_toegevoegd',
+        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+        'Nieuw kunstwerk'
+      )
     );
   });
 
@@ -318,11 +318,11 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
 
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('kunstwerk_gewijzigd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'kunstwerk_gewijzigd',
+        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+        'Hotel paneel 1'
+      )
     );
   });
 
@@ -332,11 +332,11 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('kunstwerk-modal-verwijderen'));
 
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('kunstwerk_verwijderd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'kunstwerk_verwijderd',
+        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+        'Hotel paneel 1'
+      )
     );
   });
 
@@ -435,6 +435,13 @@ describe('KunstwerkenSection', () => {
       expect(onUpdate).toHaveBeenCalledWith(
         'kw-2',
         expect.objectContaining({ naam: 'Restaurant paneel 3' })
+      )
+    );
+    await waitFor(() =>
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'kunstwerk_gewijzigd',
+        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+        'Restaurant paneel 3'
       )
     );
   });

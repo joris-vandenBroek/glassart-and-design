@@ -73,7 +73,8 @@ export function PrijsgroepenSection({
     if (success) {
       void logActiviteit(
         modalState.mode === 'add' ? 'prijsgroep_toegevoegd' : 'prijsgroep_gewijzigd',
-        actorFromMedewerker(user)
+        actorFromMedewerker(user),
+        naam
       );
       closeModal();
     } else {
@@ -90,7 +91,7 @@ export function PrijsgroepenSection({
     }
     const success = await onRemove(modalState.prijsgroep.id);
     if (success) {
-      void logActiviteit('prijsgroep_verwijderd', actorFromMedewerker(user));
+      void logActiviteit('prijsgroep_verwijderd', actorFromMedewerker(user), modalState.prijsgroep.naam);
       closeModal();
     } else {
       setActionError(t('prijsgroepenActionError'));

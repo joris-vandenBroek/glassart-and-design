@@ -210,7 +210,7 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, k
         prijs: null,
         quantity: quantityNum,
       });
-      void logActiviteit('mandje_eigen_maat_toegevoegd', actorFromCustomer(user));
+      void logActiviteit('mandje_eigen_maat_toegevoegd', actorFromCustomer(user), kunstwerk.naam);
     } else {
       const gekozenMaat = beschikbareMaten.find((maat) => maat.id === maatId);
       if (!gekozenMaat || !prijsRegel) {
@@ -227,7 +227,7 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, k
         prijs: prijsRegel.prijs,
         quantity: quantityNum,
       });
-      void logActiviteit('mandje_toegevoegd', actorFromCustomer(user));
+      void logActiviteit('mandje_toegevoegd', actorFromCustomer(user), kunstwerk.naam);
     }
     setIsConfirmed(true);
     closeTimeoutRef.current = setTimeout(() => {

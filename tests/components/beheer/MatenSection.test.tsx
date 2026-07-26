@@ -163,25 +163,25 @@ describe('MatenSection', () => {
     fireEvent.change(screen.getByTestId('maat-modal-hoogte'), { target: { value: '70' } });
     fireEvent.click(screen.getByTestId('maat-modal-opslaan'));
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('maat_toegevoegd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'maat_toegevoegd',
+        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+        '50×70 cm'
+      )
     );
   });
 
   it('logs maat_gewijzigd when editing', async () => {
     renderSection();
     fireEvent.click(screen.getByTestId('data-table-row-maat-2'));
-    fireEvent.change(screen.getByTestId('maat-modal-breedte'), { target: { value: '65' } });
+    fireEvent.change(screen.getByTestId('maat-modal-hoogte'), { target: { value: '100' } });
     fireEvent.click(screen.getByTestId('maat-modal-opslaan'));
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('maat_gewijzigd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'maat_gewijzigd',
+        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+        '60×100 cm'
+      )
     );
   });
 
@@ -190,11 +190,11 @@ describe('MatenSection', () => {
     fireEvent.click(screen.getByTestId('data-table-row-maat-2'));
     fireEvent.click(screen.getByTestId('maat-modal-verwijderen'));
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('maat_verwijderd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'maat_verwijderd',
+        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+        '60×90 cm'
+      )
     );
   });
 

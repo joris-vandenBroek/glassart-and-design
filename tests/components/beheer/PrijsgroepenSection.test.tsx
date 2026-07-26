@@ -75,11 +75,11 @@ describe('PrijsgroepenSection', () => {
     fireEvent.click(screen.getByTestId('prijsgroep-modal-opslaan'));
     await waitFor(() => expect(onAdd).toHaveBeenCalledWith({ naam: 'VIP', kortingspercentage: 25 }));
     await waitFor(() => expect(screen.queryByTestId('prijsgroep-modal')).not.toBeInTheDocument());
-    expect(logActiviteitMock).toHaveBeenCalledWith('prijsgroep_toegevoegd', {
-      id: 'staff-1',
-      email: 'paul@glassartanddesign.com',
-      naam: 'paul@glassartanddesign.com',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'prijsgroep_toegevoegd',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'VIP'
+    );
   });
 
   it('disables Opslaan until naam is filled in', () => {
@@ -100,11 +100,11 @@ describe('PrijsgroepenSection', () => {
     await waitFor(() =>
       expect(onUpdate).toHaveBeenCalledWith('pg-2', { naam: 'Wholesale', kortingspercentage: 20 })
     );
-    expect(logActiviteitMock).toHaveBeenCalledWith('prijsgroep_gewijzigd', {
-      id: 'staff-1',
-      email: 'paul@glassartanddesign.com',
-      naam: 'paul@glassartanddesign.com',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'prijsgroep_gewijzigd',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'Wholesale'
+    );
   });
 
   it('deletes a prijsgroep and logs prijsgroep_verwijderd', async () => {
@@ -112,11 +112,11 @@ describe('PrijsgroepenSection', () => {
     fireEvent.click(screen.getByTestId('data-table-row-pg-1'));
     fireEvent.click(screen.getByTestId('prijsgroep-modal-verwijderen'));
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith('pg-1'));
-    expect(logActiviteitMock).toHaveBeenCalledWith('prijsgroep_verwijderd', {
-      id: 'staff-1',
-      email: 'paul@glassartanddesign.com',
-      naam: 'paul@glassartanddesign.com',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'prijsgroep_verwijderd',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'Standaard'
+    );
   });
 
   it('shows an action error and does not log when adding fails', async () => {

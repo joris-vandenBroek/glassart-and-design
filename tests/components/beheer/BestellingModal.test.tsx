@@ -60,6 +60,7 @@ const BESTELLING: Bestelling = {
   id: 'header-1',
   klantId: 'uid-1',
   companyName: 'Testbedrijf BV',
+  bestelnr: 'GD-00101',
   besteldatum: '1-7-2026',
   status: 'Te beoordelen',
   lineCount: 2,
@@ -167,11 +168,11 @@ describe('BestellingModal', () => {
     renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-goedkeuren'));
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('bestelling_goedgekeurd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'bestelling_goedgekeurd',
+        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+        'GD-00101'
+      )
     );
   });
 
@@ -180,11 +181,11 @@ describe('BestellingModal', () => {
     renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen'));
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('bestelling_afgewezen', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'bestelling_afgewezen',
+        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+        'GD-00101'
+      )
     );
   });
 
@@ -201,6 +202,7 @@ const BESTELLING_MET_EIGEN_MAAT: Bestelling = {
   id: 'header-2',
   klantId: 'uid-2',
   companyName: 'Ander Bedrijf',
+  bestelnr: 'GD-00102',
   besteldatum: '3-7-2026',
   status: 'Te beoordelen',
   lineCount: 1,
@@ -235,11 +237,11 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
       )
     );
     await waitFor(() => expect(onLinePrijsVastgesteld).toHaveBeenCalledWith('header-2', 'line-3', 275));
-    expect(logActiviteitMock).toHaveBeenCalledWith('bestelling_prijs_vastgesteld', {
-      id: 'staff-1',
-      email: 'paul@glassartanddesign.com',
-      naam: 'paul@glassartanddesign.com',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'bestelling_prijs_vastgesteld',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'GD-00102'
+    );
   });
 
   it('keeps the "Prijs vaststellen" button disabled until a positive number is entered', () => {
@@ -264,6 +266,7 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
       id: 'header-3',
       klantId: 'uid-3',
       companyName: 'Weer Een Bedrijf',
+      bestelnr: 'GD-00103',
       besteldatum: '5-7-2026',
       status: 'Te beoordelen',
       lineCount: 2,
@@ -351,11 +354,11 @@ describe('BestellingModal — regel bewerken', () => {
         maatId: 'maat-1',
       })
     );
-    expect(logActiviteitMock).toHaveBeenCalledWith('bestelling_regel_gewijzigd', {
-      id: 'staff-1',
-      email: 'paul@glassartanddesign.com',
-      naam: 'paul@glassartanddesign.com',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'bestelling_regel_gewijzigd',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'GD-00101'
+    );
     expect(screen.queryByTestId('bestelling-modal-regel-materiaal-line-1')).not.toBeInTheDocument();
   });
 

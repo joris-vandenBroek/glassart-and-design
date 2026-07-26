@@ -80,7 +80,7 @@ export function BestellingModal({
     if (!bestelling) return;
     try {
       await updateDoc(doc(db, 'bestelheaders', bestelling.id), { status: 'Te versturen naar drukker' });
-      void logActiviteit('bestelling_goedgekeurd', actorFromMedewerker(user));
+      void logActiviteit('bestelling_goedgekeurd', actorFromMedewerker(user), bestelling.bestelnr);
       onUpdated({ ...bestelling, status: 'Te versturen naar drukker' });
     } catch {
       setError(t('bestellingenActionError'));
@@ -91,7 +91,7 @@ export function BestellingModal({
     if (!bestelling) return;
     try {
       await updateDoc(doc(db, 'bestelheaders', bestelling.id), { status: 'Afgewezen' });
-      void logActiviteit('bestelling_afgewezen', actorFromMedewerker(user));
+      void logActiviteit('bestelling_afgewezen', actorFromMedewerker(user), bestelling.bestelnr);
       onUpdated({ ...bestelling, status: 'Afgewezen' });
     } catch {
       setError(t('bestellingenActionError'));
@@ -104,7 +104,7 @@ export function BestellingModal({
     if (!prijs || prijs <= 0) return;
     try {
       await updateDoc(doc(db, 'bestelheaders', bestelling.id, 'bestellines', line.id), { prijs });
-      void logActiviteit('bestelling_prijs_vastgesteld', actorFromMedewerker(user));
+      void logActiviteit('bestelling_prijs_vastgesteld', actorFromMedewerker(user), bestelling.bestelnr);
       onLinePrijsVastgesteld(bestelling.id, line.id, prijs);
     } catch {
       setError(t('bestellingenActionError'));
@@ -156,7 +156,7 @@ export function BestellingModal({
 
     try {
       await updateDoc(doc(db, 'bestelheaders', bestelling.id, 'bestellines', line.id), payload);
-      void logActiviteit('bestelling_regel_gewijzigd', actorFromMedewerker(user));
+      void logActiviteit('bestelling_regel_gewijzigd', actorFromMedewerker(user), bestelling.bestelnr);
       onLineUpdated(bestelling.id, line.id, updates);
       cancelEditRegel();
     } catch {

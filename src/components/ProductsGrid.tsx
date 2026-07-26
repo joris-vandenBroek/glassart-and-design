@@ -58,7 +58,7 @@ export function ProductsGrid() {
   function handleSelect(kunstwerk: Kunstwerk) {
     setSelectedKunstwerk(kunstwerk);
     if (user) {
-      void logActiviteit('kunstwerk_bekeken', actorFromCustomer(user));
+      void logActiviteit('kunstwerk_bekeken', actorFromCustomer(user), kunstwerk.naam);
     }
   }
 

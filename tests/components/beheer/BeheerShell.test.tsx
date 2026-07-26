@@ -286,6 +286,7 @@ describe('BeheerShell', () => {
             type: 'kunstwerk_bekeken',
             actorEmail: 'klant@example.com',
             actorNaam: 'Testbedrijf BV',
+            omschrijving: 'Hotel paneel',
             timestamp: { toDate: () => new Date('2026-07-22T10:00:00') },
           },
         },
@@ -296,6 +297,7 @@ describe('BeheerShell', () => {
     fireEvent.click(screen.getByTestId('beheer-nav-activiteit'));
     expect(await screen.findByTestId('activiteit-section')).toBeInTheDocument();
     expect(screen.getByTestId('data-table-row-log-1')).toHaveTextContent('Kunstwerk bekeken');
+    expect(screen.getByTestId('data-table-row-log-1')).toHaveTextContent('Hotel paneel');
   });
 
   it('shows the prijsgroepen count and switches to the Prijsgroepen section', async () => {
