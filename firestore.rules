@@ -8,9 +8,8 @@ service cloud.firestore {
     }
     function magKunstenaarBestellen(kunstenaarId, klantUid) {
       let ka = get(/databases/$(database)/documents/kunstenaars/$(kunstenaarId)).data;
-      return (ka.verkooprecht == 'open' && ka.exclusiefVoorKlantId == null) ||
-        ka.exclusiefVoorKlantId == klantUid ||
-        ka.klantId == klantUid;
+      return ka.klantId == klantUid ||
+        (ka.verkooprecht == 'open' && (ka.exclusiefVoorKlantId == null || ka.exclusiefVoorKlantId == klantUid));
     }
     match /medewerkers/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
