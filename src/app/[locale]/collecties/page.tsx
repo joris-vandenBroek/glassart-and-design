@@ -2,6 +2,8 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { GlassPanel } from '@/components/GlassPanel';
 import { ProductsGrid } from '@/components/ProductsGrid';
 import { BecomeClientCta } from '@/components/BecomeClientCta';
+import { pageAvailability } from '@/config/pageAvailability';
+import { UnderConstruction } from '@/components/UnderConstruction';
 
 export default async function CollectiesPage({
   params,
@@ -10,6 +12,11 @@ export default async function CollectiesPage({
 }) {
   const { locale } = params;
   setRequestLocale(locale);
+
+  if (!pageAvailability.collecties) {
+    return <UnderConstruction />;
+  }
+
   const t = await getTranslations('collectionsPage');
 
   return (
