@@ -24,6 +24,12 @@ function formatAfleveradres(klant: Klant): string {
   return `${adres}, ${postcode} ${plaats}`;
 }
 
+function formaatSuffix(kunstwerk: Kunstwerk | undefined): string {
+  if (kunstwerk?.formaat === 'liggend') return ' (Liggend)';
+  if (kunstwerk?.formaat === 'staand') return ' (Staand)';
+  return '';
+}
+
 function formatRegel(
   line: BestellingLine,
   kunstwerken: Kunstwerk[],
@@ -41,9 +47,9 @@ function formatRegel(
     ? `${materiaal.materiaaldikte}mm ${materiaalsoort?.omschrijving ?? materiaal.materiaalsoortId} — ${materiaal.omschrijving}`
     : 'Onbekend materiaal';
   const maatOmschrijving = maat
-    ? `${maat.breedte}×${maat.hoogte} cm`
+    ? `${maat.breedte}×${maat.hoogte} cm${formaatSuffix(kunstwerk)}`
     : line.breedte != null && line.hoogte != null
-      ? `${line.breedte}×${line.hoogte} cm`
+      ? `${line.breedte}×${line.hoogte} cm${formaatSuffix(kunstwerk)}`
       : 'Onbekende maat';
 
   return `${naam} — ${materiaalOmschrijving}, maat ${maatOmschrijving}, aantal ${line.quantity}`;
