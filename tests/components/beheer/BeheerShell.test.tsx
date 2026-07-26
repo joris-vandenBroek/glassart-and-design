@@ -79,6 +79,7 @@ const DEFAULT_COLLECTIONS: Record<string, Array<{ id: string; data: Record<strin
   maten: [{ id: 'maat-1', data: { breedte: 40, hoogte: 60 } }],
   segmenten: [{ id: 'seg-1', data: { omschrijving: 'Hotel' } }],
   prijsgroepen: [],
+  drukkers: [],
   kunstwerken: [
     {
       id: 'kw-1',

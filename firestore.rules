@@ -29,6 +29,10 @@ service cloud.firestore {
       allow read: if true;
       allow write: if request.auth != null && exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid));
     }
+    match /drukkers/{id} {
+      allow read: if request.auth != null && exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid));
+      allow write: if request.auth != null && exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid));
+    }
     match /instellingen/{id} {
       allow read: if true;
       allow write: if request.auth != null && exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid));
@@ -51,6 +55,7 @@ service cloud.firestore {
            'word_klant_bezocht','word_klant_aanvraag','klant_goedgekeurd','klant_afgewezen',
            'klant_gewijzigd','klant_prijsgroep_gewijzigd',
            'bestelling_goedgekeurd','bestelling_afgewezen','bestelling_regel_gewijzigd',
+           'drukker_toegevoegd','drukker_gewijzigd','drukker_verwijderd',
            'materiaalsoort_toegevoegd','materiaalsoort_gewijzigd','materiaalsoort_verwijderd',
            'materiaal_toegevoegd','materiaal_gewijzigd','materiaal_verwijderd',
            'maat_toegevoegd','maat_gewijzigd','maat_verwijderd',
