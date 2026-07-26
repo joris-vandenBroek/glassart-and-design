@@ -1,4 +1,3 @@
-import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
@@ -18,17 +17,6 @@ vi.mock('@/lib/firebase', () => ({
   db: {},
 }));
 
-// Mock UnderConstruction as a testable sync component. This mock is technically necessary
-// because UnderConstruction is an async server component, and jsdom/vitest environments
-// cannot render async RSCs directly (they return Promise objects that React rejects).
-// The mock preserves test integrity by:
-// 1. Using the real pageAvailability config (not mocked)
-// 2. Testing real CollectiesPage logic
-// 3. Verifying the guard clause works without being blocked by async component limitations
-vi.mock('@/components/UnderConstruction', () => ({
-  UnderConstruction: () => <div data-testid="under-construction">Under Construction</div>,
-}));
-
 vi.mock('next-intl/server', () => ({
   getTranslations: async (namespace: string) => {
     const namespaceMessages = (messages as unknown as Record<string, Record<string, string>>)[
@@ -41,7 +29,10 @@ vi.mock('next-intl/server', () => ({
 
 describe('CollectiesPage', () => {
   it('shows the under-construction page while pageAvailability.collecties is false', async () => {
-    const ui = await CollectiesPage({ params: { locale: 'nl' } });
+    const page = (await CollectiesPage({ params: { locale: 'nl' } })) as any;
+    // The guard returns an unresolved `<UnderConstruction />` element — it's itself an
+    // async server component, so it must be awaited a second time before render().
+    const ui = await page.type(page.props);
     render(<NextIntlClientProvider locale="nl" messages={messages}>{ui}</NextIntlClientProvider>);
 
     expect(await screen.findByTestId('under-construction')).toBeInTheDocument();
