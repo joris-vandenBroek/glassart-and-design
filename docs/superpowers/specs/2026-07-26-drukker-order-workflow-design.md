@@ -199,15 +199,36 @@ bestaande CRUD/status-events:
 Elk nieuw type krijgt een entry in `firestore.rules`' `type in [...]`-lijst, in
 `TYPE_LABEL_KEYS` (`ActiviteitSection.tsx`), en een vertaalsleutel in `messages/nl.json`.
 
-## Sectie G: E-mail-relay endpoint
+## Sectie G: E-mail-relay endpoint (hergebruikt, niet gedupliceerd)
 
-Nieuw bestand `mail-server/send-drukker-order.php`, vrijwel identiek aan
-`mail-server/send-order-confirmation.php`: zelfde shared-secret-check
-(`hash_equals`), zelfde PHPMailer-opzet inclusief `$mail->CharSet =
-PHPMailer::CHARSET_UTF8;` (zie [[feedback_phpmailer_utf8_charset]]), plain text
-(`isHTML(false)`). Enige verschil: de aanroep vanuit de frontend is **awaited** in
-plaats van fire-and-forget, en een falen resulteert in een zichtbare foutmelding in de
-dialoog in plaats van te worden genegeerd.
+`mail-server/send-order-confirmation.php` is or al generiek: het endpoint neemt
+`{ secret, to, subject, body }` aan en bevat niets order-specifieks, en de frontend
+leest de URL nu al uit een generiek genoemde env var
+(`NEXT_PUBLIC_MAIL_ENDPOINT_URL`). In plaats van een tweede, bijna-identiek PHP-bestand
+te maken:
+
+- Het bestand wordt **hernoemd** naar `mail-server/send-mail.php` (pure rename, geen
+  logica-wijziging — zelfde shared-secret-check, zelfde PHPMailer-opzet inclusief
+  `$mail->CharSet = PHPMailer::CHARSET_UTF8;`, zie
+  [[feedback_phpmailer_utf8_charset]], plain text `isHTML(false)`).
+- `CartPanel.tsx`'s bestaande order-bevestigingsmail-aanroep blijft ongewijzigd in code
+  (leest nog steeds `NEXT_PUBLIC_MAIL_ENDPOINT_URL`), maar die env var (GitHub repo
+  variable) wijst na de rename naar de nieuwe bestandsnaam.
+- `VersturenNaarDrukkerDialog.tsx` gebruikt exact dezelfde env vars
+  (`NEXT_PUBLIC_MAIL_ENDPOINT_URL` + `NEXT_PUBLIC_MAIL_SECRET`) — geen nieuwe
+  configuratie nodig.
+- Enige gedrags-verschil tussen de twee aanroepen zit puur aan de frontend-kant: de
+  order-bevestiging blijft fire-and-forget, de drukker-mail wordt **awaited** met een
+  zichtbare foutmelding bij falen (zie Sectie C) — het PHP-endpoint zelf maakt geen
+  onderscheid tussen de twee aanroepers.
+
+**Handmatige deploy-stap** (buiten deze codebase): op mijn.host moet het live bestand
+`mail-server/send-order-confirmation.php` hernoemd/vervangen worden door
+`send-mail.php`, en de GitHub repo variable `NEXT_PUBLIC_MAIL_ENDPOINT_URL`
+bijgewerkt — zelfde soort handmatige stap als eerdere mijn.host-wijzigingen. Tot die
+stap is uitgevoerd blijft de live order-bevestigingsmail werken op de oude URL; de
+rename moet in dezelfde deploy landen als deze feature om geen downtime te
+veroorzaken.
 
 ## Foutafhandeling
 
