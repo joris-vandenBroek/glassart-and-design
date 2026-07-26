@@ -8,6 +8,7 @@ import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
 import { useOverlayDismiss } from '@/lib/useOverlayDismiss';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
 import { formatCurrency } from '@/lib/formatCurrency';
+import { findVeiligheidsglasMateriaalId } from '@/lib/kunstwerkMateriaal';
 import { WatermarkedImage } from './WatermarkedImage';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from './beheer/materiaalTypes';
 
@@ -58,13 +59,18 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
     if (!kunstwerk) {
       return;
     }
-    setMateriaalId(kunstwerk.materiaalIds[0] ?? '');
+    const veiligheidsglasId = findVeiligheidsglasMateriaalId(materialen ?? [], materiaalsoorten ?? []);
+    const defaultMateriaalId =
+      veiligheidsglasId && kunstwerk.materiaalIds.includes(veiligheidsglasId)
+        ? veiligheidsglasId
+        : kunstwerk.materiaalIds[0] ?? '';
+    setMateriaalId(defaultMateriaalId);
     setMaatId(kunstwerk.maatIds[0] ?? '');
     setCustomBreedte('');
     setCustomHoogte('');
     setQuantity(1);
     setIsConfirmed(false);
-  }, [kunstwerk]);
+  }, [kunstwerk, materialen, materiaalsoorten]);
 
   // Ensure a pending "close after confirm" timer never fires for a stale
   // kunstwerk: clear it whenever `kunstwerk` changes, and on unmount.
