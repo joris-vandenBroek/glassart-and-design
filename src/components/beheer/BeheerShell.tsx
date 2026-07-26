@@ -62,6 +62,12 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
               address: data.address,
               postcode: data.postcode,
               city: data.city,
+              deliveryAddress: data.deliveryAddress ?? '',
+              deliveryPostcode: data.deliveryPostcode ?? '',
+              deliveryCity: data.deliveryCity ?? '',
+              invoiceAddress: data.invoiceAddress ?? '',
+              invoicePostcode: data.invoicePostcode ?? '',
+              invoiceCity: data.invoiceCity ?? '',
               status: data.status,
               prijsgroepId: data.prijsgroepId,
             } as Klant;

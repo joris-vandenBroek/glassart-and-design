@@ -57,6 +57,12 @@ const KLANT_DATA = {
   address: 'Teststraat 1',
   postcode: '1234 AB',
   city: 'Teststad',
+  deliveryAddress: '',
+  deliveryPostcode: '',
+  deliveryCity: '',
+  invoiceAddress: '',
+  invoicePostcode: '',
+  invoiceCity: '',
   status: 'Beoordelen',
   prijsgroepId: null,
 };
