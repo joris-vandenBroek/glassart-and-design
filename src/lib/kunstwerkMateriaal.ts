@@ -25,6 +25,10 @@ export function resolveKunstwerkMateriaalLabel(
   materialen: Materiaal[],
   materiaalsoorten: Materiaalsoort[]
 ): string {
+  if (kunstwerk.materiaalIds.length === 0) {
+    return MATERIAALLOOS_LABEL;
+  }
+
   const veiligheidsglasId = findVeiligheidsglasMateriaalId(materialen, materiaalsoorten);
   if (veiligheidsglasId && kunstwerk.materiaalIds.includes(veiligheidsglasId)) {
     return `${VEILIGHEIDSGLAS_DIKTE}mm ${VEILIGHEIDSGLAS_SOORT_NAAM}`;

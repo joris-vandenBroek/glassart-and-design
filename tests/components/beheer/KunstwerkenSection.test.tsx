@@ -354,6 +354,28 @@ describe('KunstwerkenSection', () => {
     expect(screen.queryByTestId('kunstwerken-backfill-materialen-maten')).not.toBeInTheDocument();
   });
 
+  it('never targets a materiaalloos kunstwerk with the "Materialen/maten aanvullen" backfill', async () => {
+    const materiaalloos: Kunstwerk = {
+      ...KUNSTWERKEN[0],
+      id: 'kw-akoestisch',
+      materiaalIds: [],
+      maatIds: [],
+      prijzen: [],
+      prijsPerM2: 120,
+    };
+    const onUpdate = vi.fn().mockResolvedValue(true);
+    // kw-1 (normal, incomplete) + kw-akoestisch (materiaalloos) in the list.
+    renderSection({ kunstwerken: [KUNSTWERKEN[0], materiaalloos], onUpdate });
+
+    const button = screen.getByTestId('kunstwerken-backfill-materialen-maten');
+    // Only kw-1 should be counted, never the materiaalloos kunstwerk.
+    expect(button).toHaveTextContent('1');
+    fireEvent.click(button);
+
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledWith('kw-1', expect.anything()));
+    expect(onUpdate).not.toHaveBeenCalledWith('kw-akoestisch', expect.anything());
+  });
+
   it('shows a backfill button for kunstwerken without a naam and fills naam from the NL description on click', async () => {
     const zonderNaam: Kunstwerk = {
       ...KUNSTWERKEN[0],

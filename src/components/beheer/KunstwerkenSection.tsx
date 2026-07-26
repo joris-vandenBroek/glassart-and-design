@@ -272,8 +272,9 @@ export function KunstwerkenSection({
   const alleMaatIds = (maten ?? []).map((maat) => maat.id);
   const kunstwerkenZonderAlleMaterialenMaten = kunstwerken.filter(
     (kunstwerk) =>
-      alleMateriaalIds.some((id) => !kunstwerk.materiaalIds.includes(id)) ||
-      alleMaatIds.some((id) => !kunstwerk.maatIds.includes(id))
+      kunstwerk.materiaalIds.length > 0 &&
+      (alleMateriaalIds.some((id) => !kunstwerk.materiaalIds.includes(id)) ||
+        alleMaatIds.some((id) => !kunstwerk.maatIds.includes(id)))
   );
 
   async function handleBackfillMaterialenMaten() {

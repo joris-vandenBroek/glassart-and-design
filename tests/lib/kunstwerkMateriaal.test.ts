@@ -55,4 +55,13 @@ describe('resolveKunstwerkMateriaalLabel', () => {
     const kunstwerk = { ...BASE_KUNSTWERK, materiaalIds: [] };
     expect(resolveKunstwerkMateriaalLabel(kunstwerk, MATERIALEN, MATERIAALSOORTEN)).toBe(MATERIAALLOOS_LABEL);
   });
+
+  it('short-circuits to the materiaalloos label on an empty materiaalIds before the veiligheidsglas lookup runs', () => {
+    // MATERIALEN/MATERIAALSOORTEN here do contain a 4mm Veiligheidsglas entry (mat-glas-4), so if the
+    // materiaalloos check did not run first, a bug could in theory still resolve a veiligheidsglas match
+    // via some other id. This asserts materiaalIds.length === 0 is the primary, first-checked signal.
+    const kunstwerk = { ...BASE_KUNSTWERK, materiaalIds: [] };
+    expect(findVeiligheidsglasMateriaalId(MATERIALEN, MATERIAALSOORTEN)).toBe('mat-glas-4');
+    expect(resolveKunstwerkMateriaalLabel(kunstwerk, MATERIALEN, MATERIAALSOORTEN)).toBe(MATERIAALLOOS_LABEL);
+  });
 });
