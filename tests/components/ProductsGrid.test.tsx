@@ -59,6 +59,7 @@ const KUNSTWERKEN = [
       segmentIds: ['seg-hotel'],
       materiaalIds: ['mat-1'],
       maatIds: ['maat-1'],
+      formaat: 'staand',
       prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 150 }],
       kunstenaarId: 'ka-1',
       omschrijvingNl: 'Hotel paneel',
@@ -74,6 +75,7 @@ const KUNSTWERKEN = [
       segmentIds: ['seg-wellness'],
       materiaalIds: ['mat-1'],
       maatIds: ['maat-1'],
+      formaat: 'liggend',
       prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 200 }],
       omschrijvingNl: 'Wellness paneel',
       omschrijvingFr: '',
@@ -88,6 +90,7 @@ const KUNSTWERKEN = [
       segmentIds: ['seg-hotel', 'seg-wellness'],
       materiaalIds: ['mat-1'],
       maatIds: ['maat-1'],
+      formaat: 'vierkant',
       prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 175 }],
       omschrijvingNl: 'Kunstwerk in beide segmenten',
       omschrijvingFr: '',
@@ -274,5 +277,23 @@ describe('ProductsGrid', () => {
     expect(screen.getByTestId('kunstenaar-banner')).toHaveTextContent('Sabrina Glasser');
     expect(screen.getByTestId('kunstenaar-banner')).toHaveTextContent('Werkt met gesmolten glas.');
     expect(screen.getAllByTestId('product-card')).toHaveLength(1);
+  });
+
+  it('filters by formaat, combines with segment via AND, and shows counts per formaat option', async () => {
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+
+    expect(screen.getByTestId('facet-formaat-option-staand')).toHaveTextContent('1');
+    expect(screen.getByTestId('facet-formaat-option-liggend')).toHaveTextContent('1');
+    expect(screen.getByTestId('facet-formaat-option-vierkant')).toHaveTextContent('1');
+
+    fireEvent.click(screen.getByTestId('facet-formaat-option-vierkant'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(1); // only kw-3
+
+    fireEvent.click(screen.getByTestId('filter-seg-wellness'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(1); // kw-3 is in both seg-wellness and vierkant
+
+    fireEvent.click(screen.getByTestId('facet-formaat-option-vierkant'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(2); // seg-wellness alone: kw-2 and kw-3
   });
 });

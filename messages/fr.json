@@ -35,7 +35,11 @@
     "kunstenaarFilterNoResults": "Aucun artiste trouvé",
     "breadcrumbHome": "Accueil",
     "collectieFacetTitle": "Collection",
-    "kunstenaarFacetTitle": "Artiste"
+    "kunstenaarFacetTitle": "Artiste",
+    "formaatFacetTitle": "Format",
+    "formaatStaand": "Portrait",
+    "formaatLiggend": "Paysage",
+    "formaatVierkant": "Carré"
   },
   "kunstwerkSpecCard": {
     "collectie": "Collection",

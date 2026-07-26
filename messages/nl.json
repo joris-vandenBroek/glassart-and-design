@@ -35,7 +35,11 @@
     "kunstenaarFilterNoResults": "Geen kunstenaars gevonden",
     "breadcrumbHome": "Home",
     "collectieFacetTitle": "Collectie",
-    "kunstenaarFacetTitle": "Kunstenaar"
+    "kunstenaarFacetTitle": "Kunstenaar",
+    "formaatFacetTitle": "Formaat",
+    "formaatStaand": "Staand",
+    "formaatLiggend": "Liggend",
+    "formaatVierkant": "Vierkant"
   },
   "kunstwerkSpecCard": {
     "collectie": "Collectie",

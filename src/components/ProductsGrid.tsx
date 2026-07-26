@@ -13,7 +13,7 @@ import { Combobox } from './Combobox';
 import { Breadcrumb } from './Breadcrumb';
 import { FilterSection } from './FilterSection';
 import { resolveKunstenaarOmschrijving } from '@/lib/resolveKunstenaarOmschrijving';
-import type { Segment, Kunstwerk, Materiaal, Maat, Materiaalsoort } from './beheer/materiaalTypes';
+import type { Segment, Kunstwerk, Materiaal, Maat, Materiaalsoort, KunstwerkFormaat } from './beheer/materiaalTypes';
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
 
 const ALL_FILTER = 'all';
@@ -23,6 +23,7 @@ export function ProductsGrid() {
   const tCollections = useTranslations('collectionsPage');
   const [activeFilter, setActiveFilter] = useState(ALL_FILTER);
   const [kunstenaarFilter, setKunstenaarFilter] = useState<string | null>(null);
+  const [formaatFilters, setFormaatFilters] = useState<Set<KunstwerkFormaat>>(new Set());
   const [selectedKunstwerk, setSelectedKunstwerk] = useState<Kunstwerk | null>(null);
   const { user } = useCustomerAuth();
 
@@ -42,8 +43,10 @@ export function ProductsGrid() {
     activeFilter === ALL_FILTER
       ? allKunstwerken
       : allKunstwerken.filter((kunstwerk) => kunstwerk.segmentIds.includes(activeFilter));
+  const byFormaat =
+    formaatFilters.size === 0 ? bySegment : bySegment.filter((kunstwerk) => kunstwerk.formaat != null && formaatFilters.has(kunstwerk.formaat));
   const visibleKunstwerken =
-    kunstenaarFilter === null ? bySegment : bySegment.filter((kunstwerk) => kunstwerk.kunstenaarId === kunstenaarFilter);
+    kunstenaarFilter === null ? byFormaat : byFormaat.filter((kunstwerk) => kunstwerk.kunstenaarId === kunstenaarFilter);
   const geselecteerdeKunstenaar = kunstenaarFilter
     ? (kunstenaars.items ?? []).find((kunstenaar) => kunstenaar.id === kunstenaarFilter) ?? null
     : null;
@@ -65,6 +68,25 @@ export function ProductsGrid() {
       void logActiviteit('kunstwerk_bekeken', actorFromCustomer(user));
     }
   }
+
+  function toggleFormaat(formaat: KunstwerkFormaat) {
+    setFormaatFilters((current) => {
+      const next = new Set(current);
+      if (next.has(formaat)) {
+        next.delete(formaat);
+      } else {
+        next.add(formaat);
+      }
+      return next;
+    });
+  }
+
+  const FORMAAT_OPTIES: KunstwerkFormaat[] = ['staand', 'liggend', 'vierkant'];
+  const formaatLabels: Record<KunstwerkFormaat, string> = {
+    staand: tCollections('formaatStaand'),
+    liggend: tCollections('formaatLiggend'),
+    vierkant: tCollections('formaatVierkant'),
+  };
 
   const geselecteerdSegment =
     activeFilter === ALL_FILTER ? null : (segmenten.items ?? []).find((segment) => segment.id === activeFilter) ?? null;
@@ -120,6 +142,29 @@ export function ProductsGrid() {
               clearLabel={tCollections('kunstenaarFilterClear')}
               testId="kunstenaar-filter"
             />
+          </FilterSection>
+
+          <FilterSection title={tCollections('formaatFacetTitle')} testId="formaat">
+            {FORMAAT_OPTIES.map((formaat) => {
+              const isChecked = formaatFilters.has(formaat);
+              const count = bySegment.filter((kunstwerk) => kunstwerk.formaat === formaat).length;
+              return (
+                <label
+                  key={formaat}
+                  data-testid={`facet-formaat-option-${formaat}`}
+                  className="flex cursor-pointer items-center gap-2 text-xs text-white/70"
+                >
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => toggleFormaat(formaat)}
+                    className="h-3.5 w-3.5 accent-gold"
+                  />
+                  <span className={isChecked ? 'text-white' : ''}>{formaatLabels[formaat]}</span>
+                  <span className="ml-auto text-[11px] text-white/40">{count}</span>
+                </label>
+              );
+            })}
           </FilterSection>
         </aside>
 
