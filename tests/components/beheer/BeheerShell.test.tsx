@@ -306,6 +306,19 @@ describe('BeheerShell', () => {
     expect(screen.getByTestId('data-table-row-pg-1')).toHaveTextContent('Standaard');
   });
 
+  it('shows the drukkers count and switches to the Drukkers section', async () => {
+    mockCollections({
+      drukkers: [
+        { id: 'drukker-1', data: { naam: 'Drukkerij Janssen', adres: 'Perslaan 1', postcode: '1000 AA', plaats: 'Utrecht', email: 'info@janssen.nl', prijsafspraken: '' } },
+      ],
+    });
+    renderShell();
+    await waitFor(() => expect(screen.getByTestId('beheer-nav-drukkers')).toHaveTextContent('1'));
+    screen.getByTestId('beheer-nav-drukkers').click();
+    expect(await screen.findByTestId('drukkers-section')).toBeInTheDocument();
+    expect(screen.getByTestId('data-table-row-drukker-1')).toHaveTextContent('Drukkerij Janssen');
+  });
+
   it('shows the Glassart & Design section with the loaded bedrijfsgegevens when the nav item is clicked', async () => {
     mockCollections();
     renderShell();

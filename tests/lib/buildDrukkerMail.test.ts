@@ -152,4 +152,44 @@ describe('buildDrukkerMail', () => {
     });
     expect(mail.subject).toContain('Nieuwe order(s) voor de drukker');
   });
+
+  it('falls back to the bestelling companyName and "Onbekend afleveradres" when the klant is not found', () => {
+    const mail = buildDrukkerMail({
+      bestellingen: [bestelling({ klantId: 'uid-missing', companyName: 'Verdwenen BV' })],
+      klanten: [],
+      kunstwerken: KUNSTWERKEN,
+      materialen: MATERIALEN,
+      maten: MATEN,
+      materiaalsoorten: MATERIAALSOORTEN,
+    });
+    expect(mail.body).toContain('== Verdwenen BV ==');
+    expect(mail.body).toContain('Afleveradres: Onbekend afleveradres');
+  });
+
+  it('falls back to "Onbekend materiaal", "Onbekend kunstwerk" and "Onbekende maat" for unmatched reference ids', () => {
+    const mail = buildDrukkerMail({
+      bestellingen: [
+        bestelling({
+          lines: [
+            {
+              id: 'line-unknown',
+              kunstwerkId: 'kw-missing',
+              maatId: 'maat-missing',
+              materiaalId: 'mat-missing',
+              prijs: 100,
+              quantity: 1,
+            },
+          ],
+        }),
+      ],
+      klanten: [klant()],
+      kunstwerken: KUNSTWERKEN,
+      materialen: MATERIALEN,
+      maten: MATEN,
+      materiaalsoorten: MATERIAALSOORTEN,
+    });
+    expect(mail.body).toContain('Onbekend kunstwerk');
+    expect(mail.body).toContain('Onbekend materiaal');
+    expect(mail.body).toContain('Onbekende maat');
+  });
 });
