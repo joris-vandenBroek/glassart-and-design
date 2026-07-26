@@ -29,7 +29,10 @@
   "collectionsPage": {
     "title": "Kollektionen",
     "intro": "Entdecken Sie unsere Kunstwerke auf Glas, gegliedert nach Einsatzbereich.",
-    "filterAll": "Alle"
+    "filterAll": "Alle",
+    "kunstenaarFilterPlaceholder": "Nach Künstler suchen…",
+    "kunstenaarFilterClear": "Alle Künstler",
+    "kunstenaarFilterNoResults": "Keine Künstler gefunden"
   },
   "kunstwerkSpecCard": {
     "collectie": "Kollektion",

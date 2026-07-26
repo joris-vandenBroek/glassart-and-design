@@ -29,7 +29,10 @@
   "collectionsPage": {
     "title": "Collections",
     "intro": "Discover our artwork on glass, organized by application.",
-    "filterAll": "All"
+    "filterAll": "All",
+    "kunstenaarFilterPlaceholder": "Search by artist…",
+    "kunstenaarFilterClear": "All artists",
+    "kunstenaarFilterNoResults": "No artists found"
   },
   "kunstwerkSpecCard": {
     "collectie": "Collection",

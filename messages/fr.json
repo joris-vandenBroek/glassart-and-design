@@ -29,7 +29,10 @@
   "collectionsPage": {
     "title": "Collections",
     "intro": "Découvrez nos œuvres sur verre, classées par application.",
-    "filterAll": "Tous"
+    "filterAll": "Tous",
+    "kunstenaarFilterPlaceholder": "Rechercher par artiste…",
+    "kunstenaarFilterClear": "Tous les artistes",
+    "kunstenaarFilterNoResults": "Aucun artiste trouvé"
   },
   "kunstwerkSpecCard": {
     "collectie": "Collection",

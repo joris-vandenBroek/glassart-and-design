@@ -29,7 +29,10 @@
   "collectionsPage": {
     "title": "Collecties",
     "intro": "Ontdek onze kunstwerken op glas, gerangschikt per toepassing.",
-    "filterAll": "Alle"
+    "filterAll": "Alle",
+    "kunstenaarFilterPlaceholder": "Zoek op kunstenaar…",
+    "kunstenaarFilterClear": "Alle kunstenaars",
+    "kunstenaarFilterNoResults": "Geen kunstenaars gevonden"
   },
   "kunstwerkSpecCard": {
     "collectie": "Collectie",
