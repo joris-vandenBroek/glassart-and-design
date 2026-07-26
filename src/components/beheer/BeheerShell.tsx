@@ -161,6 +161,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
               type: data.type as ActiviteitType,
               actorEmail: data.actorEmail,
               actorNaam: data.actorNaam,
+              omschrijving: data.omschrijving,
               timestamp: data.timestamp?.toDate() ?? null,
             } as Activiteit;
           })

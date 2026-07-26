@@ -42,6 +42,28 @@ describe('ActiviteitSection', () => {
     expect(screen.getByTestId('data-table-row-log-2')).toHaveTextContent('Onbekend');
   });
 
+  it('shows the omschrijving when present, and no stray "undefined" text when absent', () => {
+    renderSection([
+      {
+        id: 'log-9',
+        type: 'materiaalsoort_verwijderd',
+        actorEmail: 'paul@glassartanddesign.com',
+        actorNaam: 'paul@glassartanddesign.com',
+        timestamp: new Date('2026-07-26T13:00:00'),
+        omschrijving: 'Helder glas',
+      },
+      {
+        id: 'log-10',
+        type: 'account_bezocht',
+        actorEmail: 'klant@example.com',
+        actorNaam: 'Testbedrijf BV',
+        timestamp: new Date('2026-07-26T13:05:00'),
+      },
+    ]);
+    expect(screen.getByTestId('data-table-row-log-9')).toHaveTextContent('Helder glas');
+    expect(screen.getByTestId('data-table-row-log-10')).not.toHaveTextContent('undefined');
+  });
+
   it('shows the translated label for bedrijfsgegevens_gewijzigd', () => {
     renderSection([
       {
