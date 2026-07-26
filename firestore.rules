@@ -29,6 +29,10 @@ service cloud.firestore {
       allow read: if true;
       allow write: if request.auth != null && exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid));
     }
+    match /kunstenaars/{id} {
+      allow read: if true;
+      allow write: if request.auth != null && exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid));
+    }
     match /instellingen/{id} {
       allow read: if true;
       allow write: if request.auth != null && exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid));
@@ -57,7 +61,8 @@ service cloud.firestore {
            'segment_toegevoegd','segment_gewijzigd','segment_verwijderd',
            'kunstwerk_toegevoegd','kunstwerk_gewijzigd','kunstwerk_verwijderd',
            'prijsgroep_toegevoegd','prijsgroep_gewijzigd','prijsgroep_verwijderd',
-           'bedrijfsgegevens_gewijzigd','mandje_eigen_maat_toegevoegd','bestelling_prijs_vastgesteld']
+           'bedrijfsgegevens_gewijzigd','mandje_eigen_maat_toegevoegd','bestelling_prijs_vastgesteld',
+           'kunstenaar_toegevoegd','kunstenaar_gewijzigd','kunstenaar_verwijderd','klant_exclusiviteit_gewijzigd']
         && request.resource.data.keys().hasOnly(['type','actorId','actorEmail','actorNaam','timestamp'])
         && request.resource.data.actorEmail is string
         && request.resource.data.actorNaam is string;
