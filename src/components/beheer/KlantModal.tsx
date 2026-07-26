@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { doc, updateDoc } from 'firebase/firestore';
+import { deleteField, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Modal } from '@/components/Modal';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import type { Klant } from './KlantenSection';
 import type { Prijsgroep } from './materiaalTypes';
-import type { Kunstenaar } from './kunstenaarTypes';
+import type { Kunstenaar, KunstenaarUpdate } from './kunstenaarTypes';
 
 const STATUS_BADGE_CLASS: Record<Klant['status'], string> = {
   Beoordelen: 'bg-amber-400/10 text-amber-300',
@@ -49,7 +49,7 @@ interface KlantModalProps {
   kunstenaars: Kunstenaar[] | null;
   onClose: () => void;
   onUpdated: (klant: Klant) => void;
-  onKunstenaarUpdated: (id: string, data: Partial<Omit<Kunstenaar, 'id'>>) => Promise<boolean>;
+  onKunstenaarUpdated: (id: string, data: KunstenaarUpdate) => Promise<boolean>;
 }
 
 export function KlantModal({
@@ -137,11 +137,15 @@ export function KlantModal({
       await updateDoc(doc(db, 'klanten', klant.id), { exclusieveKunstenaarIds });
       const added = exclusieveKunstenaarIds.filter((id) => !klant.exclusieveKunstenaarIds.includes(id));
       const removed = klant.exclusieveKunstenaarIds.filter((id) => !exclusieveKunstenaarIds.includes(id));
+      // `prijsafspraken: deleteField()` is verplicht bij élke update van een
+      // kunstenaars-document; zonder die strip weigert firestore.rules deze write op
+      // documenten die het legacy-veld nog bevatten — en dan zou de zojuist opgeslagen
+      // exclusieveKunstenaarIds van de klant uit de pas lopen met de back-pointer.
       for (const id of added) {
-        await onKunstenaarUpdated(id, { exclusiefVoorKlantId: klant.id });
+        await onKunstenaarUpdated(id, { exclusiefVoorKlantId: klant.id, prijsafspraken: deleteField() });
       }
       for (const id of removed) {
-        await onKunstenaarUpdated(id, { exclusiefVoorKlantId: null });
+        await onKunstenaarUpdated(id, { exclusiefVoorKlantId: null, prijsafspraken: deleteField() });
       }
       void logActiviteit('klant_exclusiviteit_gewijzigd', actorFromMedewerker(user));
       onUpdated({ ...klant, exclusieveKunstenaarIds });

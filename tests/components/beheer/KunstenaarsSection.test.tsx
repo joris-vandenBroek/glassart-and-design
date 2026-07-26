@@ -23,12 +23,19 @@ vi.mock('@/lib/firebase', () => ({
   db: {},
 }));
 
+// Every `doc(collectionRef)` call mints a NEW id, so a test can prove the add path
+// reuses one generated reference across retries instead of creating duplicates.
+let autoIdCounter = 0;
+
 vi.mock('firebase/firestore', () => ({
   // `doc(db, collection, id)` returns a stable stub; `doc(collectionRef)` (the
-  // client-side id generation used when adding) returns a fixed new id.
+  // client-side id generation used when adding) mints a fresh id per call.
   doc: vi.fn((first: unknown, collectionName?: string, id?: string) =>
     collectionName === undefined
-      ? { collectionName: (first as { collectionName: string }).collectionName, id: 'nieuwe-ka-id' }
+      ? {
+          collectionName: (first as { collectionName: string }).collectionName,
+          id: `nieuwe-ka-id-${++autoIdCounter}`,
+        }
       : { collectionName, id }
   ),
   collection: vi.fn((_db: unknown, collectionName: string) => ({ collectionName })),
@@ -107,6 +114,7 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Kunstenaar
 }
 
 beforeEach(() => {
+  autoIdCounter = 0;
   uploadMock.mockReset();
   mockUploading = false;
   mockUploadError = null;
@@ -164,7 +172,7 @@ describe('KunstenaarsSection', () => {
     // Public document: no prijsafspraken, it is not publicly readable.
     await waitFor(() =>
       expect(setDocMock).toHaveBeenCalledWith(
-        { collectionName: 'kunstenaars', id: 'nieuwe-ka-id' },
+        { collectionName: 'kunstenaars', id: 'nieuwe-ka-id-1' },
         {
           foto: 'https://storage.example.com/nieuw.jpg',
           naam: 'Nieuwe Kunstenaar',
@@ -180,7 +188,7 @@ describe('KunstenaarsSection', () => {
     );
     // Companion document in the medewerker-only collection.
     expect(setDocMock).toHaveBeenCalledWith(
-      { collectionName: 'kunstenaarAfspraken', id: 'nieuwe-ka-id' },
+      { collectionName: 'kunstenaarAfspraken', id: 'nieuwe-ka-id-1' },
       { prijsafspraken: '30% commissie' }
     );
     expect(onRefetch).toHaveBeenCalled();
@@ -311,11 +319,103 @@ describe('KunstenaarsSection', () => {
     const onUpdate = vi.fn().mockResolvedValue(false);
     renderSection({ onUpdate });
     fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+    await waitFor(() => expect(screen.getByTestId('kunstenaar-modal-opslaan')).not.toBeDisabled());
     fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
     expect(await screen.findByTestId('kunstenaar-modal-error')).toHaveTextContent(
       'Er is iets misgegaan. Probeer het opnieuw.'
     );
     expect(logActiviteitMock).not.toHaveBeenCalled();
+  });
+
+  it('disables Opslaan until the prijsafspraken fetch has settled', async () => {
+    let resolveFetch: (snap: { data: () => unknown }) => void = () => {};
+    getDocMock.mockReturnValue(
+      new Promise<{ data: () => unknown }>((resolve) => {
+        resolveFetch = resolve;
+      })
+    );
+    renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+
+    // naam/omschrijving are prefilled synchronously, so without the loading guard
+    // Opslaan would already be clickable here and would save an empty afspraak.
+    expect(screen.getByTestId('kunstenaar-modal-opslaan')).toBeDisabled();
+    resolveFetch({ data: () => ({ prijsafspraken: '20% commissie' }) });
+    await waitFor(() => expect(screen.getByTestId('kunstenaar-modal-opslaan')).not.toBeDisabled());
+    expect(screen.getByTestId('kunstenaar-modal-prijsafspraken')).toHaveValue('20% commissie');
+  });
+
+  it('does not let a slow fetch for one kunstenaar overwrite the form of another', async () => {
+    let resolveEerste: (snap: { data: () => unknown }) => void = () => {};
+    getDocMock.mockImplementationOnce(
+      () =>
+        new Promise<{ data: () => unknown }>((resolve) => {
+          resolveEerste = resolve;
+        })
+    );
+    getDocMock.mockResolvedValue({ data: () => ({ prijsafspraken: 'afspraken van ka-2' }) });
+    renderSection({
+      kunstenaars: [KUNSTENAARS[0], { ...KUNSTENAARS[0], id: 'ka-2', naam: 'Bram Steen' }],
+    });
+
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+    fireEvent.click(screen.getByTestId('modal-close'));
+    fireEvent.click(screen.getByTestId('data-table-row-ka-2'));
+    await waitFor(() =>
+      expect(screen.getByTestId('kunstenaar-modal-prijsafspraken')).toHaveValue('afspraken van ka-2')
+    );
+
+    // The stale fetch for ka-1 resolves last and must be ignored.
+    resolveEerste({ data: () => ({ prijsafspraken: 'afspraken van ka-1' }) });
+    await waitFor(() => expect(screen.getByTestId('kunstenaar-modal-naam')).toHaveValue('Bram Steen'));
+    expect(screen.getByTestId('kunstenaar-modal-prijsafspraken')).toHaveValue('afspraken van ka-2');
+  });
+
+  it('blocks saving and shows an error when the prijsafspraken fetch fails', async () => {
+    getDocMock.mockRejectedValue(new Error('offline'));
+    const { onUpdate } = renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+
+    expect(await screen.findByTestId('kunstenaar-modal-error')).toHaveTextContent(
+      'De prijsafspraken konden niet geladen worden.'
+    );
+    // Saving stays blocked: falling back to '' would wipe a good companion document.
+    expect(screen.getByTestId('kunstenaar-modal-opslaan')).toBeDisabled();
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it('reuses the same generated id when a failed add is retried, instead of duplicating', async () => {
+    // First attempt: the public write succeeds but the companion write fails.
+    setDocMock.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('offline'));
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstenaars-add'));
+    fireEvent.change(screen.getByTestId('kunstenaar-modal-naam'), { target: { value: 'Nieuw' } });
+    fireEvent.change(screen.getByTestId('kunstenaar-modal-omschrijving-nl'), { target: { value: 'Glas.' } });
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
+    await screen.findByTestId('kunstenaar-modal-error');
+
+    // Retry from the still-open modal.
+    setDocMock.mockResolvedValue(undefined);
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
+    await waitFor(() => expect(screen.queryByTestId('kunstenaar-modal')).not.toBeInTheDocument());
+
+    const publiekeIds = setDocMock.mock.calls
+      .filter((call) => (call[0] as { collectionName: string }).collectionName === 'kunstenaars')
+      .map((call) => (call[0] as { id: string }).id);
+    expect(publiekeIds).toEqual(['nieuwe-ka-id-1', 'nieuwe-ka-id-1']);
+  });
+
+  it('still saves successfully when only the refetch afterwards fails', async () => {
+    const onRefetch = vi.fn().mockResolvedValue(false);
+    renderSection({ onRefetch });
+    fireEvent.click(screen.getByTestId('kunstenaars-add'));
+    fireEvent.change(screen.getByTestId('kunstenaar-modal-naam'), { target: { value: 'Nieuw' } });
+    fireEvent.change(screen.getByTestId('kunstenaar-modal-omschrijving-nl'), { target: { value: 'Glas.' } });
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
+
+    // Both writes are durable, so a read-side failure must not present the save as failed.
+    await waitFor(() => expect(screen.queryByTestId('kunstenaar-modal')).not.toBeInTheDocument());
+    expect(logActiviteitMock).toHaveBeenCalledWith('kunstenaar_toegevoegd', expect.anything());
   });
 
   it('blocks deleting a kunstenaar that is still linked to a kunstwerk', async () => {

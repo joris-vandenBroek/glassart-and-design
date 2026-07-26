@@ -440,6 +440,7 @@
     "kunstwerkenVerwijderen": "Verwijderen",
     "kunstenaarsLoadError": "Kon de kunstenaars niet laden. Probeer de pagina te verversen.",
     "kunstenaarsActionError": "Er is iets misgegaan. Probeer het opnieuw.",
+    "kunstenaarsAfsprakenLoadError": "De prijsafspraken konden niet geladen worden. Sluit dit venster en probeer het opnieuw.",
     "kunstenaarsEmpty": "Geen kunstenaars gevonden.",
     "kunstenaarsColNaam": "Naam",
     "kunstenaarsColVerkooprecht": "Verkooprecht",

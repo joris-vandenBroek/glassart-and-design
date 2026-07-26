@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { KlantModal } from './KlantModal';
 import type { Prijsgroep } from './materiaalTypes';
-import type { Kunstenaar } from './kunstenaarTypes';
+import type { Kunstenaar, KunstenaarUpdate } from './kunstenaarTypes';
 
 export interface Klant {
   id: string;
@@ -29,7 +29,7 @@ interface KlantenSectionProps {
   kunstenaars: Kunstenaar[] | null;
   loadError: string | null;
   onKlantUpdated: (klant: Klant) => void;
-  onKunstenaarUpdated: (id: string, data: Partial<Omit<Kunstenaar, 'id'>>) => Promise<boolean>;
+  onKunstenaarUpdated: (id: string, data: KunstenaarUpdate) => Promise<boolean>;
 }
 
 export function KlantenSection({
