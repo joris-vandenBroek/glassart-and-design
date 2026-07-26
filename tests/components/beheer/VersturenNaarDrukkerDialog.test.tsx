@@ -182,4 +182,87 @@ describe('VersturenNaarDrukkerDialog', () => {
       'De e-mail is verzonden, maar het bijwerken van de bestellingen is mislukt. Verstuur niet opnieuw — controleer de statussen handmatig.'
     );
   });
+
+  it('saves the zending archive record before updating the bestelling statuses', async () => {
+    fetchMock.mockResolvedValue({ ok: true });
+    const callOrder: string[] = [];
+    addDocMock.mockImplementation(async () => {
+      callOrder.push('addDoc');
+    });
+    updateDocMock.mockImplementation(async () => {
+      callOrder.push('updateDoc');
+    });
+    renderDialog();
+    fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
+
+    await waitFor(() => expect(updateDocMock).toHaveBeenCalled());
+    expect(callOrder).toEqual(['addDoc', 'updateDoc']);
+  });
+
+  it('archives the zending even when the subsequent status update fails', async () => {
+    fetchMock.mockResolvedValue({ ok: true });
+    addDocMock.mockResolvedValue(undefined);
+    updateDocMock.mockRejectedValue(new Error('offline'));
+    renderDialog();
+    fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
+
+    await screen.findByTestId('drukker-versturen-error');
+    expect(addDocMock).toHaveBeenCalled();
+  });
+
+  it('disables Versturen once a mail has been sent, even if the dialog stays open, preventing a duplicate send', async () => {
+    fetchMock.mockResolvedValue({ ok: true });
+    updateDocMock.mockResolvedValue(undefined);
+    addDocMock.mockResolvedValue(undefined);
+    renderDialog();
+    const versturenButton = screen.getByTestId('drukker-versturen-versturen');
+    fireEvent.click(versturenButton);
+
+    await waitFor(() => expect(updateDocMock).toHaveBeenCalled());
+    await waitFor(() => expect(versturenButton).toBeDisabled());
+
+    fireEvent.click(versturenButton);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables Versturen as soon as the mail POST succeeds, before the Firestore writes settle', async () => {
+    fetchMock.mockResolvedValue({ ok: true });
+    let resolveAddDoc: () => void = () => {};
+    addDocMock.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveAddDoc = resolve;
+        })
+    );
+    renderDialog();
+    fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
+
+    await waitFor(() => expect(screen.getByTestId('drukker-versturen-versturen')).toBeDisabled());
+    resolveAddDoc();
+  });
+
+  it('disables Versturen and shows a message when a selected bestelling has no matching klant', () => {
+    renderDialog({ klanten: [] });
+    expect(screen.getByTestId('drukker-versturen-versturen')).toBeDisabled();
+    expect(screen.getByTestId('drukker-versturen-klant-ontbreekt')).toHaveTextContent(
+      'Klantgegevens ontbreken voor 1 bestelling(en) — kan niet verstuurd worden.'
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('does not disable Versturen or show the klant-ontbreken message when all klanten are present', () => {
+    renderDialog();
+    expect(screen.queryByTestId('drukker-versturen-klant-ontbreekt')).not.toBeInTheDocument();
+    expect(screen.getByTestId('drukker-versturen-versturen')).not.toBeDisabled();
+  });
+
+  it('cannot be dismissed via Annuleren while a send is in flight', async () => {
+    fetchMock.mockImplementation(() => new Promise(() => {}));
+    const { onClose } = renderDialog();
+    fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
+
+    await waitFor(() => expect(screen.getByTestId('drukker-versturen-annuleren')).toBeDisabled());
+    fireEvent.click(screen.getByTestId('drukker-versturen-annuleren'));
+    expect(onClose).not.toHaveBeenCalled();
+  });
 });
