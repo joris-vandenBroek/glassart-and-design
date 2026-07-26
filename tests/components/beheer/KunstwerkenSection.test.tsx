@@ -132,6 +132,15 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('data-table-row-kw-1')).toHaveTextContent('Hotel paneel 1');
   });
 
+  it('pre-checks every materiaal and maat checkbox when opening "Kunstwerk toevoegen"', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    expect(screen.getByTestId('kunstwerk-modal-materiaal-mat-1')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-materiaal-mat-2')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-2')).toBeChecked();
+  });
+
   it('keeps Opslaan disabled until a photo is uploaded, then enables once all required fields are filled', async () => {
     uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
     renderSection();
@@ -144,8 +153,8 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled();
 
     fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-1'));
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
     expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled(); // naam, prijs and omschrijving still missing
 
     fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Test' } });
@@ -172,16 +181,15 @@ describe('KunstwerkenSection', () => {
   it('rebuilds the price grid when the materiaal/maat selection changes', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('kunstwerken-add'));
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-1'));
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-1'));
     expect(screen.getByTestId('kunstwerk-modal-prijs-mat-1-maat-1')).toBeInTheDocument();
+    expect(screen.getByTestId('kunstwerk-modal-prijs-mat-2-maat-1')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
-    expect(screen.getByTestId('kunstwerk-modal-prijs-mat-2-maat-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('kunstwerk-modal-prijs-mat-2-maat-1')).not.toBeInTheDocument();
+    expect(screen.getByTestId('kunstwerk-modal-prijs-mat-1-maat-1')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-1'));
     expect(screen.queryByTestId('kunstwerk-modal-prijs-mat-1-maat-1')).not.toBeInTheDocument();
-    expect(screen.getByTestId('kunstwerk-modal-prijs-mat-2-maat-1')).toBeInTheDocument();
   });
 
   it('adds a new kunstwerk with the uploaded photo, selections, prices and NL description', async () => {
@@ -192,8 +200,8 @@ describe('KunstwerkenSection', () => {
     fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-1'));
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
     fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Vibrant Spirit' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'ka-1' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-mat-1-maat-1'), { target: { value: '99' } });
@@ -286,8 +294,8 @@ describe('KunstwerkenSection', () => {
     fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-1'));
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
     fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Nieuw kunstwerk' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-mat-1-maat-1'), { target: { value: '99' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Nieuw kunstwerk' } });
@@ -341,8 +349,8 @@ describe('KunstwerkenSection', () => {
     fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-1'));
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
     fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Nieuw kunstwerk' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-mat-1-maat-1'), { target: { value: '99' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Nieuw kunstwerk' } });
@@ -351,6 +359,62 @@ describe('KunstwerkenSection', () => {
 
     await screen.findByTestId('kunstwerk-modal-error');
     expect(logActiviteitMock).not.toHaveBeenCalled();
+  });
+
+  it('shows a "Materialen/maten aanvullen" button when a kunstwerk is missing some materialen or maten, and fills them in on click', async () => {
+    const onUpdate = vi.fn().mockResolvedValue(true);
+    renderSection({ onUpdate }); // kw-1 only has mat-1/maat-1 out of 2 materialen/3 maten
+
+    const button = screen.getByTestId('kunstwerken-backfill-materialen-maten');
+    expect(button).toHaveTextContent('1');
+    fireEvent.click(button);
+
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith(
+        'kw-1',
+        expect.objectContaining({ materiaalIds: ['mat-1', 'mat-2'], maatIds: ['maat-1', 'maat-2', 'maat-3'] })
+      )
+    );
+  });
+
+  it('does not show the "Materialen/maten aanvullen" button when every kunstwerk already has everything checked', () => {
+    const volledig: Kunstwerk = {
+      ...KUNSTWERKEN[0],
+      materiaalIds: ['mat-1', 'mat-2'],
+      maatIds: ['maat-1', 'maat-2', 'maat-3'],
+      prijzen: [
+        { materiaalId: 'mat-1', maatId: 'maat-1', prijs: 150 },
+        { materiaalId: 'mat-1', maatId: 'maat-2', prijs: 175 },
+        { materiaalId: 'mat-1', maatId: 'maat-3', prijs: 140 },
+        { materiaalId: 'mat-2', maatId: 'maat-1', prijs: 160 },
+        { materiaalId: 'mat-2', maatId: 'maat-2', prijs: 185 },
+        { materiaalId: 'mat-2', maatId: 'maat-3', prijs: 150 },
+      ],
+    };
+    renderSection({ kunstwerken: [volledig] });
+    expect(screen.queryByTestId('kunstwerken-backfill-materialen-maten')).not.toBeInTheDocument();
+  });
+
+  it('never targets a materiaalloos kunstwerk with the "Materialen/maten aanvullen" backfill', async () => {
+    const materiaalloos: Kunstwerk = {
+      ...KUNSTWERKEN[0],
+      id: 'kw-akoestisch',
+      materiaalIds: [],
+      maatIds: [],
+      prijzen: [],
+      prijsPerM2: 120,
+    };
+    const onUpdate = vi.fn().mockResolvedValue(true);
+    // kw-1 (normal, incomplete) + kw-akoestisch (materiaalloos) in the list.
+    renderSection({ kunstwerken: [KUNSTWERKEN[0], materiaalloos], onUpdate });
+
+    const button = screen.getByTestId('kunstwerken-backfill-materialen-maten');
+    // Only kw-1 should be counted, never the materiaalloos kunstwerk.
+    expect(button).toHaveTextContent('1');
+    fireEvent.click(button);
+
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledWith('kw-1', expect.anything()));
+    expect(onUpdate).not.toHaveBeenCalledWith('kw-akoestisch', expect.anything());
   });
 
   it('shows a backfill button for kunstwerken without a naam and fills naam from the NL description on click', async () => {
@@ -378,6 +442,57 @@ describe('KunstwerkenSection', () => {
   it('does not show the backfill button when every kunstwerk already has a naam', () => {
     renderSection();
     expect(screen.queryByTestId('kunstwerken-backfill-namen')).not.toBeInTheDocument();
+  });
+
+  it('keeps the materialen/maten panel collapsed by default and expands it when clicked', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    const toggle = screen.getByTestId('kunstwerk-modal-materialen-maten-toggle');
+    expect(toggle.closest('details')).not.toHaveAttribute('open');
+    fireEvent.click(toggle);
+    expect(toggle.closest('details')).toHaveAttribute('open');
+  });
+
+  it('shows a "Prijs per m²" field instead of the price matrix once every materiaal is unchecked, and saves it', async () => {
+    uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
+    const { onAdd } = renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materialen-maten-toggle'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
+    expect(screen.queryByTestId('kunstwerk-modal-prijzen')).not.toBeInTheDocument();
+    expect(screen.getByTestId('kunstwerk-modal-prijs-per-m2')).toBeInTheDocument();
+
+    const file = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-vierkant'));
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Akoestisch paneel' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Verbetert de akoestiek.' } });
+    expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled();
+
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-per-m2'), { target: { value: '180' } });
+    expect(screen.getByTestId('kunstwerk-modal-opslaan')).not.toBeDisabled();
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
+
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith({
+        foto: 'https://storage.example.com/nieuw.jpg',
+        naam: 'Akoestisch paneel',
+        kunstenaarId: null,
+        formaat: 'vierkant',
+        segmentIds: ['seg-1'],
+        materiaalIds: [],
+        maatIds: [],
+        prijzen: [],
+        prijsPerM2: 180,
+        omschrijvingNl: 'Verbetert de akoestiek.',
+        omschrijvingFr: '',
+        omschrijvingDe: '',
+        omschrijvingEn: '',
+      })
+    );
   });
 
   it('shows a hint that a formaat must be chosen, and hides it once one is picked', () => {

@@ -4,7 +4,6 @@ export const MATERIAALSOORTEN_SEED: Omit<Materiaalsoort, 'id'>[] = [
   { omschrijving: 'Veiligheidsglas', staatEigenMaatToe: true, levertijdMaandenEigenMaat: 3 },
   { omschrijving: 'Dibond', staatEigenMaatToe: true, maxBreedte: 200, maxHoogte: 300 },
   { omschrijving: 'Acryl', staatEigenMaatToe: true, maxBreedte: 200, maxHoogte: 300 },
-  { omschrijving: 'Akoestische stof' },
 ];
 
 const MATERIAAL_SEED_BY_SOORT: Record<string, { materiaaldikte: number; omschrijving: string }[]> = {
@@ -18,9 +17,6 @@ const MATERIAAL_SEED_BY_SOORT: Record<string, { materiaaldikte: number; omschrij
     { materiaaldikte: 3, omschrijving: 'Licht en helder met een luxe glanzende look.' },
     { materiaaldikte: 5, omschrijving: 'Extra diepte en stevigheid voor een indrukwekkend effect.' },
     { materiaaldikte: 10, omschrijving: 'Maximale diepwerking voor exclusieve presentatie.' },
-  ],
-  'Akoestische stof': [
-    { materiaaldikte: 0, omschrijving: 'Verbetert de akoestiek en geeft een warme, moderne uitstraling.' },
   ],
 };
 
