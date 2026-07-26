@@ -123,7 +123,7 @@ describe('BestellingModal', () => {
     expect(line2.querySelector('img')).not.toBeInTheDocument();
   });
 
-  it('approves the bestelling and calls onUpdated with status Goedgekeurd', async () => {
+  it('approves the bestelling and calls onUpdated with status Te versturen naar drukker', async () => {
     updateDocMock.mockResolvedValue(undefined);
     const { onUpdated } = renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-goedkeuren'));
@@ -131,10 +131,12 @@ describe('BestellingModal', () => {
     await waitFor(() =>
       expect(updateDocMock).toHaveBeenCalledWith(
         { collectionName: 'bestelheaders', id: 'header-1' },
-        { status: 'Goedgekeurd' }
+        { status: 'Te versturen naar drukker' }
       )
     );
-    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...BESTELLING, status: 'Goedgekeurd' }));
+    await waitFor(() =>
+      expect(onUpdated).toHaveBeenCalledWith({ ...BESTELLING, status: 'Te versturen naar drukker' })
+    );
   });
 
   it('rejects the bestelling and calls onUpdated with status Afgewezen', async () => {

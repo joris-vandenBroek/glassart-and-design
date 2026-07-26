@@ -66,7 +66,7 @@ const BESTELLINGEN: Bestelling[] = [
     klantId: 'uid-2',
     companyName: 'Ander Bedrijf',
     besteldatum: '2-7-2026',
-    status: 'Goedgekeurd',
+    status: 'Verstuurd naar drukker',
     lineCount: 1,
     totalQuantity: 1,
     lines: [{ id: 'line-2', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
@@ -112,17 +112,21 @@ describe('BestellingenSection', () => {
     expect(screen.queryByTestId('bestellingen-section')).not.toBeInTheDocument();
   });
 
-  it('shows only the "Te beoordelen" bestelling by default (status filter defaults to Te beoordelen)', () => {
+  it('shows all bestellingen by default (status filter defaults to "alle bestellingen")', () => {
     renderSection();
-    expect(screen.getByTestId('data-table-row-header-1')).toBeInTheDocument();
-    expect(screen.queryByTestId('data-table-row-header-2')).not.toBeInTheDocument();
-  });
-
-  it('shows all bestellingen after clicking the "alle bestellingen" quick filter link', () => {
-    renderSection();
-    fireEvent.click(screen.getByTestId('data-table-quick-all'));
     expect(screen.getByTestId('data-table-row-header-1')).toBeInTheDocument();
     expect(screen.getByTestId('data-table-row-header-2')).toBeInTheDocument();
+  });
+
+  it('shows only the "Te versturen naar drukker" bestelling after clicking that quick filter link', () => {
+    const bestellingen = [
+      { ...BESTELLINGEN[0], status: 'Te versturen naar drukker' as const },
+      BESTELLINGEN[1],
+    ];
+    renderSection({ bestellingen });
+    fireEvent.click(screen.getByTestId('data-table-quick-active'));
+    expect(screen.getByTestId('data-table-row-header-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('data-table-row-header-2')).not.toBeInTheDocument();
   });
 
   it("opens the BestellingModal with the clicked bestelling's resolved kunstwerk data when a row is clicked", () => {
@@ -139,7 +143,7 @@ describe('BestellingenSection', () => {
     fireEvent.click(screen.getByTestId('bestelling-modal-goedkeuren'));
 
     await waitFor(() =>
-      expect(onBestellingUpdated).toHaveBeenCalledWith({ ...BESTELLINGEN[0], status: 'Goedgekeurd' })
+      expect(onBestellingUpdated).toHaveBeenCalledWith({ ...BESTELLINGEN[0], status: 'Te versturen naar drukker' })
     );
     await waitFor(() => expect(screen.queryByTestId('bestelling-modal')).not.toBeInTheDocument());
   });

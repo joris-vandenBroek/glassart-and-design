@@ -22,7 +22,7 @@ export interface Bestelling {
   klantId: string;
   companyName: string;
   besteldatum: string;
-  status: 'Te beoordelen' | 'Goedgekeurd' | 'Afgewezen';
+  status: 'Te beoordelen' | 'Te versturen naar drukker' | 'Verstuurd naar drukker' | 'Afgewezen';
   lineCount: number;
   totalQuantity: number;
   lines: BestellingLine[];
@@ -104,9 +104,10 @@ export function BestellingenSection({
         onRowClick={setSelectedBestelling}
         quickFilter={{
           key: 'status',
-          activeValue: 'Te beoordelen',
-          activeLabel: t('bestellingenQuickTeBeoordelen'),
+          activeValue: 'Te versturen naar drukker',
+          activeLabel: t('bestellingenQuickTeVersturenNaarDrukker'),
           allLabel: t('bestellingenQuickAlle'),
+          defaultActive: false,
         }}
         emptyLabel={t('bestellingenEmpty')}
         searchPlaceholder={t('dataTableSearchPlaceholder')}
