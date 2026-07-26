@@ -1,6 +1,8 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { GlassPanel } from '@/components/GlassPanel';
 import { CustomerLoginForm } from '@/components/CustomerLoginForm';
+import { pageAvailability } from '@/config/pageAvailability';
+import { UnderConstruction } from '@/components/UnderConstruction';
 
 export default async function InloggenPage({
   params,
@@ -9,6 +11,11 @@ export default async function InloggenPage({
 }) {
   const { locale } = params;
   setRequestLocale(locale);
+
+  if (!pageAvailability.inloggen) {
+    return <UnderConstruction />;
+  }
+
   const t = await getTranslations('loginPage');
 
   return (
