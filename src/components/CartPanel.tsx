@@ -27,9 +27,13 @@ export function CartPanel() {
   const { items, isHydrated, totalQuantity, totalPrice, unpricedLineCount, removeItem, clear } = useCart();
   const { user, isCustomer } = useCustomerAuth();
   // Het mandje leeft in localStorage en kan dagen oud zijn; de verkooprechten worden
-  // daarom vlak vóór het plaatsen opnieuw uit de actuele collecties gelezen.
-  const kunstwerken = useFirestoreCollection<Kunstwerk>('kunstwerken');
-  const kunstenaars = useFirestoreCollection<Kunstenaar>('kunstenaars');
+  // daarom vlak vóór het plaatsen opnieuw uit de actuele collecties gelezen. Alleen voor
+  // goedgekeurde klanten: dit paneel hangt in de navigatie van élke pagina, en niemand
+  // anders kan een bestelling plaatsen. `skip` haalt de collecties alsnog op zodra de
+  // klantstatus binnen is.
+  const kunstwerken = useFirestoreCollection<Kunstwerk>('kunstwerken', { skip: !isCustomer });
+  const kunstenaars = useFirestoreCollection<Kunstenaar>('kunstenaars', { skip: !isCustomer });
+  const bestelControleGereed = kunstwerken.items !== null && kunstenaars.items !== null;
   const panelRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -52,6 +56,12 @@ export function CartPanel() {
     }
     setPlaceOrderError(null);
     setEmailError(false);
+    // Een mislukte lees is een technisch probleem, geen uitspraak over dit artikel — anders
+    // krijgt de klant "niet meer beschikbaar" te zien voor iets wat gewoon bestelbaar is.
+    if (kunstwerken.error === 'load' || kunstenaars.error === 'load') {
+      setPlaceOrderError(t('placeOrderError'));
+      return;
+    }
     // Vóór de header, niet erna: `bestelheaders/{id}` mag niet verwijderd worden, dus een
     // regel die door de Firestore-regels geweigerd wordt zou een half geschreven bestelling
     // achterlaten die niemand nog kan opruimen.
@@ -240,7 +250,7 @@ export function CartPanel() {
                     <button
                       type="button"
                       data-testid="cart-place-order"
-                      disabled={items.length === 0}
+                      disabled={items.length === 0 || !bestelControleGereed}
                       onClick={handlePlaceOrder}
                       className="btn-gold w-full rounded-sm px-3 py-2.5 text-center text-xs font-head tracking-wide disabled:opacity-40"
                     >

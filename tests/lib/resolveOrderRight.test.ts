@@ -24,6 +24,37 @@ describe('resolveOrderRight', () => {
     expect(resolveOrderRight(null, [], 'uid-1')).toEqual({ canOrder: true, blockedReason: null });
   });
 
+  it('treats a kunstwerk document without a kunstenaarId field at all as having no kunstenaar', () => {
+    // Documenten van vóór deze feature hebben het veld niet; useFirestoreCollection spreidt de
+    // ruwe documentdata, dus dat leest als `undefined` in plaats van `null`. firestore.rules
+    // doet hetzelfde via `!('kunstenaarId' in kw) || kw.kunstenaarId == null`.
+    expect(resolveOrderRight(undefined as unknown as null, [kunstenaar()], 'uid-1')).toEqual({
+      canOrder: true,
+      blockedReason: null,
+    });
+    expect(resolveOrderRight(undefined as unknown as null, null, 'uid-1')).toEqual({
+      canOrder: true,
+      blockedReason: null,
+    });
+  });
+
+  it('still fails closed for an empty-string kunstenaarId', () => {
+    expect(resolveOrderRight('', [kunstenaar()], 'uid-1')).toEqual({
+      canOrder: false,
+      blockedReason: 'unavailable',
+    });
+  });
+
+  it('fails closed for a kunstenaar with an unexpected verkooprecht value', () => {
+    expect(
+      resolveOrderRight(
+        'ka-1',
+        [kunstenaar({ verkooprecht: 'iets-nieuws' as Kunstenaar['verkooprecht'] })],
+        'uid-1'
+      )
+    ).toEqual({ canOrder: false, blockedReason: 'artistOnly' });
+  });
+
   it('fails closed while the kunstenaars collection has not loaded yet', () => {
     expect(resolveOrderRight('ka-1', null, 'uid-1')).toEqual({
       canOrder: false,

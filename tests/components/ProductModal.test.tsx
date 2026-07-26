@@ -191,6 +191,14 @@ describe('ProductModal', () => {
     expect(screen.queryByTestId('product-modal-order-blocked')).not.toBeInTheDocument();
   });
 
+  it('keeps a legacy kunstwerk document without a kunstenaarId field orderable', () => {
+    // Zoals useFirestoreCollection het uit Firestore leest: het veld ontbreekt gewoon.
+    const { kunstenaarId: _weg, ...legacyKunstwerk } = KUNSTWERK;
+    renderModal(() => {}, legacyKunstwerk as Kunstwerk);
+    expect(screen.queryByTestId('product-modal-order-blocked')).not.toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-confirm')).not.toBeDisabled();
+  });
+
   it('fails closed while the kunstenaars collection has not loaded yet', () => {
     renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-open' }, null);
     expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();

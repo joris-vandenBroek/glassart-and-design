@@ -21,13 +21,19 @@ export function resolveOrderRight(
   kunstenaars: Kunstenaar[] | null,
   userUid: string | undefined
 ): OrderRight {
-  const dataReady = kunstenaarId === null || kunstenaars !== null;
+  // Bewust losse `== null`: kunstwerk-documenten van vóór deze feature hebben helemaal geen
+  // `kunstenaarId`-veld, en useFirestoreCollection spreidt de ruwe documentdata, dus die lezen
+  // als `undefined`. firestore.rules doet exact hetzelfde met
+  // `!('kunstenaarId' in kw) || kw.kunstenaarId == null`. Een lege string blijft wél dichtklappen.
+  const dataReady = kunstenaarId == null || kunstenaars !== null;
   const kunstenaar =
     kunstenaarId && kunstenaars ? kunstenaars.find((item) => item.id === kunstenaarId) ?? null : null;
-  const missing = kunstenaarId !== null && kunstenaars !== null && kunstenaar === null;
+  const missing = kunstenaarId != null && kunstenaars !== null && kunstenaar === null;
   const isOwnArtwork = kunstenaar?.klantId != null && kunstenaar.klantId === userUid;
   const isExclusiveToOther = kunstenaar?.exclusiefVoorKlantId != null && kunstenaar.exclusiefVoorKlantId !== userUid;
-  const isArtistOnlyForOthers = kunstenaar?.verkooprecht === 'alleen-kunstenaar' && !isOwnArtwork;
+  // Spiegelt `ka.verkooprecht == 'open'` uit de regels: alles wat niet expliciet 'open' is,
+  // valt dicht — ook een ontbrekende of onbekende waarde.
+  const isArtistOnlyForOthers = kunstenaar?.verkooprecht !== 'open' && !isOwnArtwork;
   const canOrder =
     dataReady && !missing && (!kunstenaar || isOwnArtwork || (!isExclusiveToOther && !isArtistOnlyForOthers));
   const blockedReason: OrderBlockedReason = canOrder

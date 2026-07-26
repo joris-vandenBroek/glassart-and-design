@@ -258,8 +258,10 @@ describe('CartPanel', () => {
     renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
+    // De knop komt pas vrij als kunstwerken én kunstenaars geladen zijn, dus dit
+    // synchroniseert op de laadstatus in plaats van op toevallige timing.
     await waitFor(() => expect(screen.getByTestId('cart-place-order')).not.toBeDisabled());
-    await waitFor(() => expect(getDocsMock).toHaveBeenCalled());
+    expect(getDocsMock).toHaveBeenCalled();
     fireEvent.click(screen.getByTestId('cart-place-order'));
 
     expect(await screen.findByTestId('cart-place-order-error')).toHaveTextContent(
@@ -281,10 +283,52 @@ describe('CartPanel', () => {
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     await waitFor(() => expect(screen.getByTestId('cart-place-order')).not.toBeDisabled());
+    expect(getDocsMock).toHaveBeenCalled();
     fireEvent.click(screen.getByTestId('cart-place-order'));
 
     expect(await screen.findByTestId('cart-order-confirmation')).toBeInTheDocument();
     expect(addDocMock).toHaveBeenNthCalledWith(1, { path: ['bestelheaders'] }, expect.anything());
+  });
+
+  it('does not read the kunstwerken/kunstenaars collections for a visitor who is not a customer', async () => {
+    signedOut();
+    renderCartPanel();
+    fireEvent.click(screen.getByTestId('seed-cart'));
+    fireEvent.click(screen.getByTestId('cart-icon'));
+    await waitFor(() => expect(screen.getByTestId('cart-login-to-order')).toBeInTheDocument());
+    expect(getDocsMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps the place-order button disabled until the pre-check collections have loaded', async () => {
+    let resolveKunstwerken: (snapshot: ReturnType<typeof makeSnapshot>) => void = () => {};
+    getDocsMock.mockImplementation((ref: { path: string[] }) => {
+      if (ref.path[0] === 'kunstwerken') {
+        return new Promise((resolve) => {
+          resolveKunstwerken = resolve;
+        });
+      }
+      return Promise.resolve(makeSnapshot(collections[ref.path[0]] ?? []));
+    });
+    renderCartPanel();
+    fireEvent.click(screen.getByTestId('seed-cart'));
+    fireEvent.click(screen.getByTestId('cart-icon'));
+    await waitFor(() => expect(screen.getByTestId('cart-place-order')).toBeInTheDocument());
+    // Zonder deze poort zou een snelle klik hier "niet meer beschikbaar" opleveren voor
+    // artikelen die gewoon in orde zijn.
+    expect(screen.getByTestId('cart-place-order')).toBeDisabled();
+
+    resolveKunstwerken(makeSnapshot(collections.kunstwerken));
+    await waitFor(() => expect(screen.getByTestId('cart-place-order')).not.toBeDisabled());
+  });
+
+  it('keeps the place-order button disabled when loading the pre-check collections fails', async () => {
+    getDocsMock.mockRejectedValue(new Error('offline'));
+    renderCartPanel();
+    fireEvent.click(screen.getByTestId('seed-cart'));
+    fireEvent.click(screen.getByTestId('cart-icon'));
+    await waitFor(() => expect(getDocsMock).toHaveBeenCalled());
+    expect(screen.getByTestId('cart-place-order')).toBeDisabled();
+    expect(screen.queryByTestId('cart-place-order-error')).not.toBeInTheDocument();
   });
 
   it('sends a confirmation email via fetch when the order succeeds and mail env vars are set', async () => {
