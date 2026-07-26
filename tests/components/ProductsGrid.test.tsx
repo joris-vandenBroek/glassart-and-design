@@ -252,6 +252,20 @@ describe('ProductsGrid', () => {
     expect(logActiviteitMock).not.toHaveBeenCalled();
   });
 
+  it('shows a breadcrumb that ends on "Collecties" when no segment is selected, and on the segment name once one is', async () => {
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+    expect(screen.getByTestId('breadcrumb-item-0')).toHaveTextContent('Home');
+    expect(screen.getByTestId('breadcrumb-item-1')).toHaveTextContent('Collecties');
+    expect(screen.getByTestId('breadcrumb-item-1')).toHaveAttribute('aria-current', 'page');
+
+    fireEvent.click(screen.getByTestId('filter-seg-hotel'));
+    expect(screen.getByTestId('breadcrumb-item-1')).toHaveTextContent('Collecties');
+    expect(screen.getByTestId('breadcrumb-item-1')).not.toHaveAttribute('aria-current');
+    expect(screen.getByTestId('breadcrumb-item-2')).toHaveTextContent('Hotel');
+    expect(screen.getByTestId('breadcrumb-item-2')).toHaveAttribute('aria-current', 'page');
+  });
+
   it('filters by kunstenaar and shows the artist info banner with their description', async () => {
     renderProductsGrid();
     await screen.findAllByTestId('product-card');

@@ -32,7 +32,10 @@
     "filterAll": "Alle",
     "kunstenaarFilterPlaceholder": "Zoek op kunstenaar…",
     "kunstenaarFilterClear": "Alle kunstenaars",
-    "kunstenaarFilterNoResults": "Geen kunstenaars gevonden"
+    "kunstenaarFilterNoResults": "Geen kunstenaars gevonden",
+    "breadcrumbHome": "Home",
+    "collectieFacetTitle": "Collectie",
+    "kunstenaarFacetTitle": "Kunstenaar"
   },
   "kunstwerkSpecCard": {
     "collectie": "Collectie",
