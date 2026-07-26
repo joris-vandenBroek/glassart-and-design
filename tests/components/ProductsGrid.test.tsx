@@ -54,8 +54,10 @@ const SEGMENTEN = [
 const KUNSTWERKEN = [
   {
     id: 'kw-1',
+    naam: 'Kunstwerk 1',
     data: {
       foto: 'https://example.com/kw-1.jpg',
+      naam: 'Kunstwerk 1',
       segmentIds: ['seg-hotel'],
       materiaalIds: ['mat-1'],
       maatIds: ['maat-1'],
@@ -69,8 +71,10 @@ const KUNSTWERKEN = [
   },
   {
     id: 'kw-2',
+    naam: 'Kunstwerk 2',
     data: {
       foto: 'https://example.com/kw-2.jpg',
+      naam: 'Kunstwerk 2',
       segmentIds: ['seg-wellness'],
       materiaalIds: ['mat-1'],
       maatIds: ['maat-1'],
@@ -83,8 +87,10 @@ const KUNSTWERKEN = [
   },
   {
     id: 'kw-3',
+    naam: 'Kunstwerk 3',
     data: {
       foto: 'https://example.com/kw-3.jpg',
+      naam: 'Kunstwerk 3',
       segmentIds: ['seg-hotel', 'seg-wellness'],
       materiaalIds: ['mat-1'],
       maatIds: ['maat-1'],
@@ -236,11 +242,11 @@ describe('ProductsGrid', () => {
     await waitFor(() => expect(getDocMock).toHaveBeenCalled());
     fireEvent.click(cards[0]);
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('kunstwerk_bekeken', {
-        id: 'uid-1',
-        email: 'klant@example.com',
-        naam: 'Testbedrijf BV',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'kunstwerk_bekeken',
+        { id: 'uid-1', email: 'klant@example.com', naam: 'Testbedrijf BV' },
+        KUNSTWERKEN[0].naam
+      )
     );
   });
 
