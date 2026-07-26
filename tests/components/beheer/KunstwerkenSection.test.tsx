@@ -380,4 +380,13 @@ describe('KunstwerkenSection', () => {
     renderSection();
     expect(screen.queryByTestId('kunstwerken-backfill-namen')).not.toBeInTheDocument();
   });
+
+  it('keeps the materialen/maten panel collapsed by default and expands it when clicked', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    const toggle = screen.getByTestId('kunstwerk-modal-materialen-maten-toggle');
+    expect(toggle.closest('details')).not.toHaveAttribute('open');
+    fireEvent.click(toggle);
+    expect(toggle.closest('details')).toHaveAttribute('open');
+  });
 });

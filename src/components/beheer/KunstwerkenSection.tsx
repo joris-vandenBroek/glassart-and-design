@@ -422,37 +422,45 @@ export function KunstwerkenSection({
             ))}
           </fieldset>
 
-          <fieldset className="flex flex-col gap-1">
-            <legend className="text-xs uppercase tracking-wide text-white/60">
-              {t('kunstwerkenLabelMaterialen')}
-            </legend>
-            {(materialen ?? []).map((materiaal) => (
-              <label key={materiaal.id} className="flex items-center gap-2 text-sm text-white/80">
-                <input
-                  type="checkbox"
-                  checked={materiaalIds.includes(materiaal.id)}
-                  onChange={() => setMateriaalIds((current) => toggle(current, materiaal.id))}
-                  data-testid={`kunstwerk-modal-materiaal-${materiaal.id}`}
-                />
-                {materiaalLabel(materiaal)}
-              </label>
-            ))}
-          </fieldset>
+          <details className="flex flex-col gap-3 rounded-sm border border-white/10 px-3 py-2">
+            <summary
+              data-testid="kunstwerk-modal-materialen-maten-toggle"
+              className="cursor-pointer text-xs uppercase tracking-wide text-white/60"
+            >
+              {t('kunstwerkenLabelMaterialenMaten')}
+            </summary>
+            <fieldset className="flex flex-col gap-1">
+              <legend className="text-xs uppercase tracking-wide text-white/60">
+                {t('kunstwerkenLabelMaterialen')}
+              </legend>
+              {(materialen ?? []).map((materiaal) => (
+                <label key={materiaal.id} className="flex items-center gap-2 text-sm text-white/80">
+                  <input
+                    type="checkbox"
+                    checked={materiaalIds.includes(materiaal.id)}
+                    onChange={() => setMateriaalIds((current) => toggle(current, materiaal.id))}
+                    data-testid={`kunstwerk-modal-materiaal-${materiaal.id}`}
+                  />
+                  {materiaalLabel(materiaal)}
+                </label>
+              ))}
+            </fieldset>
 
-          <fieldset className="flex flex-col gap-1">
-            <legend className="text-xs uppercase tracking-wide text-white/60">{t('kunstwerkenLabelMaten')}</legend>
-            {(maten ?? []).map((maat) => (
-              <label key={maat.id} className="flex items-center gap-2 text-sm text-white/80">
-                <input
-                  type="checkbox"
-                  checked={maatIds.includes(maat.id)}
-                  onChange={() => setMaatIds((current) => toggle(current, maat.id))}
-                  data-testid={`kunstwerk-modal-maat-${maat.id}`}
-                />
-                {`${maat.breedte}×${maat.hoogte} cm`}
-              </label>
-            ))}
-          </fieldset>
+            <fieldset className="flex flex-col gap-1">
+              <legend className="text-xs uppercase tracking-wide text-white/60">{t('kunstwerkenLabelMaten')}</legend>
+              {(maten ?? []).map((maat) => (
+                <label key={maat.id} className="flex items-center gap-2 text-sm text-white/80">
+                  <input
+                    type="checkbox"
+                    checked={maatIds.includes(maat.id)}
+                    onChange={() => setMaatIds((current) => toggle(current, maat.id))}
+                    data-testid={`kunstwerk-modal-maat-${maat.id}`}
+                  />
+                  {`${maat.breedte}×${maat.hoogte} cm`}
+                </label>
+              ))}
+            </fieldset>
+          </details>
 
           {materiaalIds.length > 0 && maatIds.length > 0 && (
             <div className="flex flex-col gap-1">
