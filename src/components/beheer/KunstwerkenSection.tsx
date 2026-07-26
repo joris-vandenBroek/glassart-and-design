@@ -183,7 +183,13 @@ export function KunstwerkenSection({
     setFormaatState(bestaandFormaat);
     if (!bestaandFormaat && kunstwerk.foto) {
       detectFormaatFromImageUrl(kunstwerk.foto).then((gedetecteerd) => {
-        if (gedetecteerd && formaatSessionRef.current === session) {
+        if (!gedetecteerd || formaatSessionRef.current !== session) return;
+        const conflicteertMetOpgeslagenMaten = kunstwerk.maatIds.some((id) => {
+          const maat = (maten ?? []).find((m) => m.id === id);
+          if (!maat) return false;
+          return gedetecteerd === 'vierkant' ? !isVierkanteMaat(maat) : isVierkanteMaat(maat);
+        });
+        if (!conflicteertMetOpgeslagenMaten) {
           setFormaat(gedetecteerd);
         }
       });

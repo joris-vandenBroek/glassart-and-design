@@ -11,7 +11,6 @@ export function detectFormaatFromImageUrl(url: string): Promise<KunstwerkFormaat
     const img = new Image();
     img.onload = () => resolve(detectFormaatFromDimensions(img.naturalWidth, img.naturalHeight));
     img.onerror = () => resolve(null);
-    img.crossOrigin = 'anonymous';
     img.src = url;
   });
 }

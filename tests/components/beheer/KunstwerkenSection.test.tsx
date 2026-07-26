@@ -437,14 +437,33 @@ describe('KunstwerkenSection', () => {
   });
 
   it('detects formaat from the existing photo when opening a kunstwerk that has none set yet', async () => {
-    detectFormaatFromImageUrlMock.mockResolvedValue('vierkant');
+    detectFormaatFromImageUrlMock.mockResolvedValue('staand');
     const zonderFormaat: Kunstwerk = { ...KUNSTWERKEN[0], id: 'kw-3', formaat: undefined };
     renderSection({ kunstwerken: [...KUNSTWERKEN, zonderFormaat] });
 
     fireEvent.click(screen.getByTestId('data-table-row-kw-3'));
 
     expect(detectFormaatFromImageUrlMock).toHaveBeenCalledWith(zonderFormaat.foto);
-    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-formaat-vierkant')).toBeChecked());
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-formaat-staand')).toBeChecked());
+  });
+
+  it('does not preselect a detected formaat when it would conflict with already-saved maten', async () => {
+    detectFormaatFromImageUrlMock.mockResolvedValue('vierkant');
+    const gemengdeMaten: Kunstwerk = {
+      ...KUNSTWERKEN[0],
+      id: 'kw-mixed',
+      formaat: undefined,
+      maatIds: ['maat-1', 'maat-3'],
+    };
+    renderSection({ kunstwerken: [...KUNSTWERKEN, gemengdeMaten] });
+
+    fireEvent.click(screen.getByTestId('data-table-row-kw-mixed'));
+    await waitFor(() => expect(detectFormaatFromImageUrlMock).toHaveBeenCalledWith(gemengdeMaten.foto));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(screen.getByTestId('kunstwerk-modal-formaat-vierkant')).not.toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).toBeChecked();
   });
 
   it('does not call the detector when opening a kunstwerk that already has a formaat', () => {
