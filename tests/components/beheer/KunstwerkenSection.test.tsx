@@ -452,4 +452,26 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
     expect(detectFormaatFromImageUrlMock).not.toHaveBeenCalled();
   });
+
+  it('ignores a stale detection result once the admin has moved on to a different kunstwerk', async () => {
+    const resolvers: Array<(value: 'vierkant' | 'liggend' | 'staand' | null) => void> = [];
+    detectFormaatFromImageUrlMock.mockImplementation(
+      () => new Promise((resolve) => { resolvers.push(resolve); })
+    );
+    const kwA: Kunstwerk = { ...KUNSTWERKEN[0], id: 'kw-a', formaat: undefined, foto: 'https://storage.example.com/kw-a.jpg' };
+    const kwB: Kunstwerk = { ...KUNSTWERKEN[0], id: 'kw-b', formaat: undefined, foto: 'https://storage.example.com/kw-b.jpg' };
+    renderSection({ kunstwerken: [kwA, kwB] });
+
+    fireEvent.click(screen.getByTestId('data-table-row-kw-a'));
+    fireEvent.click(screen.getByTestId('data-table-row-kw-b'));
+
+    expect(resolvers).toHaveLength(2);
+    resolvers[0]('vierkant');
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-naam')).toBeInTheDocument());
+
+    expect(screen.getByTestId('kunstwerk-modal-formaat-vierkant')).not.toBeChecked();
+
+    resolvers[1]('staand');
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-formaat-staand')).toBeChecked());
+  });
 });

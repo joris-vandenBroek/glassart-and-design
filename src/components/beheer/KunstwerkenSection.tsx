@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
@@ -84,6 +84,7 @@ export function KunstwerkenSection({
   const [actionError, setActionError] = useState<string | null>(null);
   const [isDraggingFoto, setIsDraggingFoto] = useState(false);
   const [backfillBezig, setBackfillBezig] = useState(false);
+  const formaatSessionRef = useRef(0);
 
   const segmentNaamById = useMemo(() => {
     const map = new Map<string, string>();
@@ -154,11 +155,14 @@ export function KunstwerkenSection({
   }
 
   function openAdd() {
+    formaatSessionRef.current += 1;
     resetForm();
     setModalState({ mode: 'add' });
   }
 
   function openEdit(kunstwerk: Kunstwerk) {
+    formaatSessionRef.current += 1;
+    const session = formaatSessionRef.current;
     setFoto(kunstwerk.foto);
     setNaam(kunstwerk.naam ?? '');
     setKunstenaarId(kunstwerk.kunstenaarId ?? '');
@@ -179,7 +183,7 @@ export function KunstwerkenSection({
     setFormaatState(bestaandFormaat);
     if (!bestaandFormaat && kunstwerk.foto) {
       detectFormaatFromImageUrl(kunstwerk.foto).then((gedetecteerd) => {
-        if (gedetecteerd) {
+        if (gedetecteerd && formaatSessionRef.current === session) {
           setFormaat(gedetecteerd);
         }
       });
@@ -188,15 +192,17 @@ export function KunstwerkenSection({
   }
 
   function closeModal() {
+    formaatSessionRef.current += 1;
     setModalState(null);
   }
 
   async function handleFotoFile(file: File) {
+    const session = formaatSessionRef.current;
     const url = await upload(file);
     if (url) {
       setFoto(url);
       const gedetecteerd = await detectFormaatFromFile(file);
-      if (gedetecteerd) {
+      if (gedetecteerd && formaatSessionRef.current === session) {
         setFormaat(gedetecteerd);
       }
     }
