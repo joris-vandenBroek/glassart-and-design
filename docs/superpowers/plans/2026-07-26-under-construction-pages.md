@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Show a branded "Under Construction" page on `/collecties`, `/word-klant`, `/inloggen`, `/beheer` and `/account` (all four locales) while keeping their existing implementations completely intact underneath, so any of them can be switched back on later with a one-line config change plus a rebuild.
+**Goal:** Show a branded "Under Construction" page on `/collecties`, `/word-klant`, `/inloggen`, `/beheer`, `/account` and `/contact` (all four locales) while keeping their existing implementations completely intact underneath, so any of them can be switched back on later with a one-line config change plus a rebuild. Only Home stays live.
 
 **Architecture:** A single config object (`src/config/pageAvailability.ts`) holds one boolean per gated route. Each route's existing `page.tsx` gets one added guard clause — `if (!pageAvailability.x) return <UnderConstruction />;` — placed right after `setRequestLocale(locale)` and before its existing render logic, which is left untouched. `UnderConstruction` is a new shared server component styled like the rest of the site (ink/charcoal background, gold accents, `GlassPanel`), pulling its copy from a new `underConstruction` translations namespace added to all four `messages/*.json` files.
 
@@ -11,8 +11,8 @@
 ## Global Constraints
 
 - The site is a static export (`next.config.mjs` → `output: 'export'`). `pageAvailability` values are read at build time only — there is no runtime/env-var toggle, and none should be added. Flipping a page back on always means: change the boolean, rebuild, redeploy.
-- Do not modify the existing render logic, styling, or tests of the five gated pages (`collecties`, `word-klant`, `inloggen`, `beheer`, `account`). Only add the guard clause and its import.
-- Do not modify `src/components/NavBar.tsx`, `src/app/[locale]/layout.tsx`, `src/app/[locale]/page.tsx` (home), or `src/app/[locale]/contact/page.tsx`. Nav links stay visible and clickable; Home and Contact stay live.
+- Do not modify the existing render logic, styling, or tests of the six gated pages (`collecties`, `word-klant`, `inloggen`, `beheer`, `account`, `contact`). Only add the guard clause and its import.
+- Do not modify `src/components/NavBar.tsx`, `src/app/[locale]/layout.tsx`, or `src/app/[locale]/page.tsx` (home). Nav links stay visible and clickable; Home stays live and is the only page not gated.
 - Every test file that renders a component using the `Link` component from `@/i18n/navigation` must mock that module the same way the existing test suite does:
   ```ts
   vi.mock('@/i18n/navigation', () => ({
@@ -42,7 +42,7 @@
 - Test: `tests/config/pageAvailability.test.ts`
 
 **Interfaces:**
-- Produces: `pageAvailability: { collecties: boolean; wordKlant: boolean; inloggen: boolean; beheer: boolean; account: boolean }`, named export from `@/config/pageAvailability`. Tasks 3–7 import and read one boolean each from this object.
+- Produces: `pageAvailability: { collecties: boolean; wordKlant: boolean; inloggen: boolean; beheer: boolean; account: boolean; contact: boolean }`, named export from `@/config/pageAvailability`. Tasks 3–8 import and read one boolean each from this object.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -60,6 +60,7 @@ describe('pageAvailability', () => {
       inloggen: false,
       beheer: false,
       account: false,
+      contact: false,
     });
   });
 });
@@ -84,6 +85,7 @@ export const pageAvailability = {
   inloggen: false,
   beheer: false,
   account: false,
+  contact: false,
 };
 ```
 
@@ -110,7 +112,7 @@ git commit -m "feat: voeg centrale pageAvailability-config toe"
 
 **Interfaces:**
 - Consumes: `GlassPanel` from `@/components/GlassPanel` (existing, no changes); `Link` from `@/i18n/navigation` (existing); `getTranslations` from `next-intl/server`; `underConstruction` translation namespace (`eyebrow`, `heading`, `text`, `backHome`) added in this task.
-- Produces: `UnderConstruction`, an async server component with no props, named export `UnderConstruction` from `@/components/UnderConstruction`, rendering a root element with `data-testid="under-construction"`. Tasks 3–7 render `<UnderConstruction />` in place of their normal page content.
+- Produces: `UnderConstruction`, an async server component with no props, named export `UnderConstruction` from `@/components/UnderConstruction`, rendering a root element with `data-testid="under-construction"`. Tasks 3–8 render `<UnderConstruction />` in place of their normal page content.
 
 - [ ] **Step 1: Add the `underConstruction` translations to all four locale files**
 
@@ -785,7 +787,101 @@ git commit -m "feat: toon Under Construction op /account"
 
 ---
 
-### Task 8: Full verification
+### Task 8: Gate `/contact`
+
+**Files:**
+- Modify: `src/app/[locale]/contact/page.tsx`
+- Test: `tests/app/contact-page.test.tsx`
+
+**Interfaces:**
+- Consumes: `pageAvailability` from Task 1, `UnderConstruction` from Task 2.
+
+- [ ] **Step 1: Write the failing test**
+
+Create `tests/app/contact-page.test.tsx`:
+
+```tsx
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
+import ContactPage from '@/app/[locale]/contact/page';
+import messages from '../../messages/nl.json';
+
+vi.mock('@/i18n/navigation', () => ({
+  Link: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
+}));
+
+vi.mock('@/lib/firebase', () => ({
+  auth: {},
+  db: {},
+}));
+
+describe('ContactPage', () => {
+  it('shows the under-construction page while pageAvailability.contact is false', async () => {
+    render(
+      <NextIntlClientProvider locale="nl" messages={messages}>
+        <ContactPage params={{ locale: 'nl' }} />
+      </NextIntlClientProvider>
+    );
+
+    expect(await screen.findByTestId('under-construction')).toBeInTheDocument();
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npx vitest run tests/app/contact-page.test.tsx`
+Expected: FAIL — `under-construction` test id not found.
+
+- [ ] **Step 3: Add the guard clause**
+
+In `src/app/[locale]/contact/page.tsx`:
+
+```ts
+import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { GlassPanel } from '@/components/GlassPanel';
+import { ContactInfo } from '@/components/ContactInfo';
+import { ContactForm } from '@/components/ContactForm';
+import { pageAvailability } from '@/config/pageAvailability';
+import { UnderConstruction } from '@/components/UnderConstruction';
+
+export default async function ContactPage({
+  params,
+}: {
+  params: { locale: string };
+}) {
+  const { locale } = params;
+  setRequestLocale(locale);
+
+  if (!pageAvailability.contact) {
+    return <UnderConstruction />;
+  }
+
+  const t = await getTranslations('contactPage');
+```
+
+The rest of the file stays exactly as it is.
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `npx vitest run tests/app/contact-page.test.tsx`
+Expected: PASS (1 test)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/app/\[locale\]/contact/page.tsx tests/app/contact-page.test.tsx
+git commit -m "feat: toon Under Construction op /contact"
+```
+
+---
+
+### Task 9: Full verification
 
 **Files:** none (verification only)
 
@@ -794,12 +890,12 @@ git commit -m "feat: toon Under Construction op /account"
 - [ ] **Step 1: Run the full test suite**
 
 Run: `npx vitest run`
-Expected: all test files pass, including the 7 new ones from Tasks 1–7 and every pre-existing test (nothing else should have changed behavior).
+Expected: all test files pass, including the 9 new ones from Tasks 1–8 and every pre-existing test (nothing else should have changed behavior).
 
 - [ ] **Step 2: Run a production build to confirm the static export still succeeds**
 
 Run: `npm run build`
-Expected: build completes successfully and emits the `out/` directory, including `out/nl/collecties/index.html`, `out/nl/word-klant/index.html`, `out/nl/inloggen/index.html`, `out/nl/beheer/index.html` and `out/nl/account/index.html` (plus `en`/`de`/`fr` equivalents where applicable) — each should now contain the Under Construction markup instead of the original page content.
+Expected: build completes successfully and emits the `out/` directory, including `out/nl/collecties/index.html`, `out/nl/word-klant/index.html`, `out/nl/inloggen/index.html`, `out/nl/beheer/index.html`, `out/nl/account/index.html` and `out/nl/contact/index.html` (plus `en`/`de`/`fr` equivalents where applicable) — each should now contain the Under Construction markup instead of the original page content.
 
 - [ ] **Step 3: Spot-check one generated file**
 

@@ -2,8 +2,8 @@
 
 ## Doel
 
-De site live brengen met alleen de homepage (en Contact) actief. Collecties,
-Word klant, Inloggen, Beheer en Account tonen een Under Construction-pagina,
+De site live brengen met alleen de homepage actief. Collecties, Word klant,
+Inloggen, Beheer, Account en Contact tonen een Under Construction-pagina,
 zonder de bestaande implementatie van die pagina's weg te gooien. Later kan
 elke pagina apart weer live gezet worden.
 
@@ -21,6 +21,7 @@ export const pageAvailability = {
   inloggen: false,
   beheer: false,
   account: false,
+  contact: false,
 };
 ```
 
@@ -31,7 +32,7 @@ nodig of gewenst).
 
 ### Guard-clause per pagina
 
-In elke van de vijf `page.tsx`-bestanden komt, na `setRequestLocale(locale)`
+In elke van de zes `page.tsx`-bestanden komt, na `setRequestLocale(locale)`
 en vóór de rest van de bestaande render-logica, één guard:
 
 ```ts
@@ -50,15 +51,16 @@ Betrokken bestanden:
 - `src/app/[locale]/inloggen/page.tsx` → `pageAvailability.inloggen`
 - `src/app/[locale]/beheer/page.tsx` → `pageAvailability.beheer`
 - `src/app/[locale]/account/page.tsx` → `pageAvailability.account`
+- `src/app/[locale]/contact/page.tsx` → `pageAvailability.contact`
 
-Home (`src/app/[locale]/page.tsx`) en Contact
-(`src/app/[locale]/contact/page.tsx`) blijven ongewijzigd en live.
+Home (`src/app/[locale]/page.tsx`) blijft ongewijzigd en live — dat is de
+enige pagina die nog echt actief is.
 
 ### NavBar
 
 `src/components/NavBar.tsx` blijft ongewijzigd: de links naar Collecties,
-Word klant, Inloggen en Beheer blijven zichtbaar en klikbaar. Een klik komt
-gewoon op de Under Construction-pagina van die route uit.
+Contact, Word klant, Inloggen en Beheer blijven zichtbaar en klikbaar. Een
+klik komt gewoon op de Under Construction-pagina van die route uit.
 
 ### UnderConstruction-component
 
@@ -88,21 +90,22 @@ naar het patroon van bestaande namespaces zoals `collectionsPage`.
 - `tests/components/UnderConstruction.test.tsx`: rendert het component met
   de nl-messages, controleert dat kop, subtekst en de terug-naar-home-link
   aanwezig zijn.
-- Voor elk van de vijf gated pagina's een test
+- Voor elk van de zes gated pagina's een test
   (`tests/app/<route>-page.test.tsx`, naar het patroon van het bestaande
   `tests/app/locale-page.test.tsx`) die rendert met de huidige (`false`)
   waarde uit `pageAvailability` en controleert dat
   `data-testid="under-construction"` aanwezig is — dus dat de guard
   daadwerkelijk werkt en de oorspronkelijke pagina-content niet rendert.
   Pagina's die Firestore-afhankelijke componenten importeren (bv. Collecties
-  → `ProductsGrid`) krijgen dezelfde `vi.mock('@/lib/firebase', ...)`-opzet
-  als `locale-page.test.tsx`, zodat de test niet op een echte Firebase-call
-  wacht — al zou dat door de vroege return sowieso niet moeten gebeuren.
+  → `ProductsGrid`, Contact → `ContactInfo`) krijgen dezelfde
+  `vi.mock('@/lib/firebase', ...)`-opzet als `locale-page.test.tsx`, zodat de
+  test niet op een echte Firebase-call wacht — al zou dat door de vroege
+  return sowieso niet moeten gebeuren.
 
 ## Buiten scope
 
-- Geen wijziging aan bestaande pagina-logica, styling of tests van de vijf
+- Geen wijziging aan bestaande pagina-logica, styling of tests van de zes
   gated pagina's zelf.
 - Geen runtime env-var toggle: de vlaggen zijn build-time constants, passend
   bij de bestaande static-export deploy-flow.
-- Geen wijziging aan Home, Contact of NavBar.
+- Geen wijziging aan Home of NavBar.
