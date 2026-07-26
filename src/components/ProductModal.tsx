@@ -8,7 +8,7 @@ import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
 import { useOverlayDismiss } from '@/lib/useOverlayDismiss';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
 import { formatCurrency } from '@/lib/formatCurrency';
-import { findVeiligheidsglasMateriaalId } from '@/lib/kunstwerkMateriaal';
+import { findVeiligheidsglasMateriaalId, MATERIAALLOOS_LABEL } from '@/lib/kunstwerkMateriaal';
 import { WatermarkedImage } from './WatermarkedImage';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from './beheer/materiaalTypes';
 
@@ -109,6 +109,7 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
     (soort) => soort.id === geselecteerdMateriaal?.materiaalsoortId
   );
   const isCustomSize = maatId === CUSTOM_MAAT_VALUE;
+  const isMateriaalloos = kunstwerk.materiaalIds.length === 0;
   const prijsRegel = !isCustomSize
     ? kunstwerk.prijzen.find((regel) => regel.materiaalId === materiaalId && regel.maatId === maatId)
     : undefined;
@@ -120,8 +121,16 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
     customBreedte !== '' && customHoogte !== '' && customBreedteNum > 0 && customHoogteNum > 0;
   const customSizeExceedsMax = customSizeFilledIn && !withinMax(customBreedteNum, customHoogteNum, geselecteerdSoort);
   const customSizeValid = customSizeFilledIn && !customSizeExceedsMax;
+  const materiaalloosPrijs =
+    isMateriaalloos && customSizeValid && kunstwerk.prijsPerM2
+      ? Math.round((customBreedteNum / 100) * (customHoogteNum / 100) * kunstwerk.prijsPerM2 * 100) / 100
+      : null;
 
-  const canConfirm = isCustomSize ? customSizeValid : Boolean(prijsRegel);
+  const canConfirm = isMateriaalloos
+    ? customSizeValid && Boolean(kunstwerk.prijsPerM2) && (kunstwerk.prijsPerM2 ?? 0) > 0
+    : isCustomSize
+      ? customSizeValid
+      : Boolean(prijsRegel);
 
   function handleMateriaalChange(nextMateriaalId: string) {
     setMateriaalId(nextMateriaalId);
@@ -134,6 +143,28 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
 
   function handleConfirm() {
     if (isConfirmed || !canConfirm || !kunstwerk) {
+      return;
+    }
+    if (isMateriaalloos) {
+      addItem({
+        kunstwerkId: kunstwerk.id,
+        foto: kunstwerk.foto,
+        omschrijving,
+        materiaalId: '',
+        materiaalLabel: MATERIAALLOOS_LABEL,
+        maatId: '',
+        maatLabel: `${customBreedteNum}×${customHoogteNum} cm${t('customSizeSuffix')}`,
+        breedte: customBreedteNum,
+        hoogte: customHoogteNum,
+        prijs: materiaalloosPrijs,
+        quantity,
+      });
+      void logActiviteit('mandje_toegevoegd', actorFromCustomer(user));
+      setIsConfirmed(true);
+      closeTimeoutRef.current = setTimeout(() => {
+        closeTimeoutRef.current = null;
+        onClose();
+      }, CONFIRM_FEEDBACK_MS);
       return;
     }
     const gekozenMateriaal = beschikbareMaterialen.find((materiaal) => materiaal.id === materiaalId);
@@ -209,48 +240,52 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
           <p data-testid="product-modal-omschrijving" className="text-sm leading-relaxed text-white/80">
             {omschrijving}
           </p>
-          <label className="flex flex-col gap-1 text-[0.65rem] uppercase tracking-wide text-white/60">
-            {t('material')}
-            <select
-              data-testid="product-modal-materiaal"
-              value={materiaalId}
-              onChange={(event) => handleMateriaalChange(event.target.value)}
-              className="rounded-sm bg-black/40 px-2 py-1.5 text-sm text-white"
-            >
-              {beschikbareMaterialen.map((materiaal) => (
-                <option key={materiaal.id} value={materiaal.id}>
-                  {resolvedMateriaalLabel(materiaal)}
-                </option>
-              ))}
-            </select>
-            {geselecteerdMateriaal && (
-              <span
-                data-testid="product-modal-materiaal-omschrijving"
-                className="pt-1 text-[0.7rem] normal-case tracking-normal text-white/50"
+          {!isMateriaalloos && (
+            <label className="flex flex-col gap-1 text-[0.65rem] uppercase tracking-wide text-white/60">
+              {t('material')}
+              <select
+                data-testid="product-modal-materiaal"
+                value={materiaalId}
+                onChange={(event) => handleMateriaalChange(event.target.value)}
+                className="rounded-sm bg-black/40 px-2 py-1.5 text-sm text-white"
               >
-                {geselecteerdMateriaal.omschrijving}
-              </span>
-            )}
-          </label>
-          <label className="flex flex-col gap-1 text-[0.65rem] uppercase tracking-wide text-white/60">
-            {t('size')}
-            <select
-              data-testid="product-modal-maat"
-              value={maatId}
-              onChange={(event) => setMaatId(event.target.value)}
-              className="rounded-sm bg-black/40 px-2 py-1.5 text-sm text-white"
-            >
-              {beschikbareMaten.map((maat) => (
-                <option key={maat.id} value={maat.id}>
-                  {maatLabel(maat)}
-                </option>
-              ))}
-              {geselecteerdSoort?.staatEigenMaatToe && (
-                <option value={CUSTOM_MAAT_VALUE}>{t('customSizeOption')}</option>
+                {beschikbareMaterialen.map((materiaal) => (
+                  <option key={materiaal.id} value={materiaal.id}>
+                    {resolvedMateriaalLabel(materiaal)}
+                  </option>
+                ))}
+              </select>
+              {geselecteerdMateriaal && (
+                <span
+                  data-testid="product-modal-materiaal-omschrijving"
+                  className="pt-1 text-[0.7rem] normal-case tracking-normal text-white/50"
+                >
+                  {geselecteerdMateriaal.omschrijving}
+                </span>
               )}
-            </select>
-          </label>
-          {isCustomSize && (
+            </label>
+          )}
+          {!isMateriaalloos && (
+            <label className="flex flex-col gap-1 text-[0.65rem] uppercase tracking-wide text-white/60">
+              {t('size')}
+              <select
+                data-testid="product-modal-maat"
+                value={maatId}
+                onChange={(event) => setMaatId(event.target.value)}
+                className="rounded-sm bg-black/40 px-2 py-1.5 text-sm text-white"
+              >
+                {beschikbareMaten.map((maat) => (
+                  <option key={maat.id} value={maat.id}>
+                    {maatLabel(maat)}
+                  </option>
+                ))}
+                {geselecteerdSoort?.staatEigenMaatToe && (
+                  <option value={CUSTOM_MAAT_VALUE}>{t('customSizeOption')}</option>
+                )}
+              </select>
+            </label>
+          )}
+          {(isCustomSize || isMateriaalloos) && (
             <div className="flex flex-col gap-2">
               <div className="flex gap-2">
                 <label className="flex flex-1 flex-col gap-1 text-[0.65rem] uppercase tracking-wide text-white/60">
@@ -289,7 +324,13 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
               )}
             </div>
           )}
-          {isCustomSize ? (
+          {isMateriaalloos ? (
+            materiaalloosPrijs !== null && (
+              <p data-testid="product-modal-prijs" className="text-sm text-white/80">
+                {formatCurrency(materiaalloosPrijs)}
+              </p>
+            )
+          ) : isCustomSize ? (
             <p data-testid="product-modal-prijs" className="text-sm text-white/80">
               {t('priceOnRequest')}
             </p>

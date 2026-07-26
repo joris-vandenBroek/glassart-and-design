@@ -66,6 +66,21 @@ const MATERIAALSOORTEN: Materiaalsoort[] = [
   { id: 'soort-1', omschrijving: 'Veiligheidsglas' },
   { id: 'soort-2', omschrijving: 'Acryl' },
 ];
+const MATERIAALLOOS_KUNSTWERK: Kunstwerk = {
+  id: 'kw-akoestisch',
+  foto: 'https://example.com/akoestisch.jpg',
+  naam: 'Akoestisch paneel',
+  artiest: '',
+  segmentIds: [],
+  materiaalIds: [],
+  maatIds: [],
+  prijzen: [],
+  prijsPerM2: 180,
+  omschrijvingNl: 'Verbetert de akoestiek en geeft een warme, moderne uitstraling.',
+  omschrijvingFr: '',
+  omschrijvingDe: '',
+  omschrijvingEn: '',
+};
 
 function renderModal(onClose: () => void = () => {}, kunstwerk: Kunstwerk | null = KUNSTWERK) {
   return render(
@@ -544,5 +559,71 @@ describe('ProductModal', () => {
     fireEvent.change(screen.getByTestId('product-modal-materiaal'), { target: { value: 'mat-2' } });
     expect(screen.queryByTestId('product-modal-maat-custom-breedte')).not.toBeInTheDocument();
     expect(screen.getByTestId('product-modal-maat')).toHaveValue('maat-1');
+  });
+
+  it('hides the materiaal and maat selects for a materiaalloos kunstwerk, showing free-size inputs directly', () => {
+    renderModal(() => {}, MATERIAALLOOS_KUNSTWERK);
+    expect(screen.queryByTestId('product-modal-materiaal')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('product-modal-maat')).not.toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-maat-custom-breedte')).toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-maat-custom-hoogte')).toBeInTheDocument();
+  });
+
+  it('computes and shows a live price for a materiaalloos kunstwerk based on the entered size and prijsPerM2', () => {
+    renderModal(() => {}, MATERIAALLOOS_KUNSTWERK);
+    expect(screen.queryByTestId('product-modal-prijs')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('product-modal-maat-custom-breedte'), { target: { value: '100' } });
+    fireEvent.change(screen.getByTestId('product-modal-maat-custom-hoogte'), { target: { value: '200' } });
+    expect(screen.getByTestId('product-modal-prijs')).toHaveTextContent('€ 360,00');
+  });
+
+  it('adds a materiaalloos item to the cart with the computed price and no material/maat, logging mandje_toegevoegd', async () => {
+    vi.useRealTimers();
+    function Probe() {
+      const { items } = useCart();
+      return <div data-testid="probe">{JSON.stringify(items)}</div>;
+    }
+    render(
+      <NextIntlClientProvider locale="nl" messages={messages}>
+        <CustomerAuthProvider>
+          <CartProvider>
+            <ProductModal
+              kunstwerk={MATERIAALLOOS_KUNSTWERK}
+              materialen={MATERIALEN}
+              maten={MATEN}
+              materiaalsoorten={MATERIAALSOORTEN}
+              onClose={() => {}}
+            />
+            <Probe />
+          </CartProvider>
+        </CustomerAuthProvider>
+      </NextIntlClientProvider>
+    );
+    expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
+    fireEvent.change(screen.getByTestId('product-modal-maat-custom-breedte'), { target: { value: '100' } });
+    fireEvent.change(screen.getByTestId('product-modal-maat-custom-hoogte'), { target: { value: '200' } });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    fireEvent.click(screen.getByTestId('product-modal-confirm'));
+
+    const items = JSON.parse(screen.getByTestId('probe').textContent ?? '[]');
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      kunstwerkId: 'kw-akoestisch',
+      materiaalId: '',
+      materiaalLabel: 'Akoestische stof',
+      maatId: '',
+      breedte: 100,
+      hoogte: 200,
+      maatLabel: '100×200 cm (eigen maat)',
+      prijs: 360,
+      quantity: 1,
+    });
+    expect(logActiviteitMock).toHaveBeenCalledWith('mandje_toegevoegd', {
+      id: null,
+      email: 'Onbekend',
+      naam: 'Onbekend',
+    });
   });
 });
