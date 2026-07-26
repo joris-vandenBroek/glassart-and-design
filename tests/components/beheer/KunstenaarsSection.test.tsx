@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { KunstenaarsSection } from '@/components/beheer/KunstenaarsSection';
 import type { Kunstenaar } from '@/components/beheer/kunstenaarTypes';
 import type { Klant } from '@/components/beheer/KlantenSection';
+import type { Kunstwerk } from '@/components/beheer/materiaalTypes';
 import messages from '../../../messages/nl.json';
 
 const uploadMock = vi.fn();
@@ -71,6 +72,7 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Kunstenaar
       <KunstenaarsSection
         kunstenaars={KUNSTENAARS}
         klanten={KLANTEN}
+        kunstwerken={[]}
         loadError={null}
         onAdd={onAdd}
         onUpdate={onUpdate}
@@ -198,5 +200,17 @@ describe('KunstenaarsSection', () => {
       'Er is iets misgegaan. Probeer het opnieuw.'
     );
     expect(logActiviteitMock).not.toHaveBeenCalled();
+  });
+
+  it('blocks deleting a kunstenaar that is still linked to a kunstwerk', async () => {
+    const { onRemove } = renderSection({
+      kunstwerken: [{ id: 'kw-1', kunstenaarId: 'ka-1' } as never],
+    });
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-verwijderen'));
+    expect(await screen.findByTestId('kunstenaar-modal-error')).toHaveTextContent(
+      'Deze kunstenaar is nog aan een kunstwerk gekoppeld en kan niet verwijderd worden.'
+    );
+    expect(onRemove).not.toHaveBeenCalled();
   });
 });

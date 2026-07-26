@@ -10,6 +10,7 @@ import { WatermarkedImage } from './WatermarkedImage';
 import { ProductModal, materiaalLabel, maatLabel } from './ProductModal';
 import { KunstwerkSpecCard } from './KunstwerkSpecCard';
 import type { Segment, Kunstwerk, Materiaal, Maat, Materiaalsoort } from './beheer/materiaalTypes';
+import type { Kunstenaar } from './beheer/kunstenaarTypes';
 
 const ALL_FILTER = 'all';
 
@@ -25,6 +26,7 @@ export function ProductsGrid() {
   const materialen = useFirestoreCollection<Materiaal>('materialen');
   const maten = useFirestoreCollection<Maat>('maten');
   const materiaalsoorten = useFirestoreCollection<Materiaalsoort>('materiaalsoorten');
+  const kunstenaars = useFirestoreCollection<Kunstenaar>('kunstenaars');
 
   if (segmenten.items === null || kunstwerken.items === null) {
     return null;
@@ -39,6 +41,7 @@ export function ProductsGrid() {
   const materiaalsoortNaamById = new Map(
     (materiaalsoorten.items ?? []).map((soort) => [soort.id, soort.omschrijving])
   );
+  const kunstenaarNaamById = new Map((kunstenaars.items ?? []).map((kunstenaar) => [kunstenaar.id, kunstenaar.naam]));
 
   function filterButtonClass(isActive: boolean) {
     return isActive
@@ -121,7 +124,7 @@ export function ProductsGrid() {
                 }
                 code={kunstwerk.naam}
                 titel={omschrijving}
-                artiest={kunstwerk.artiest}
+                artiest={kunstwerk.kunstenaarId ? kunstenaarNaamById.get(kunstwerk.kunstenaarId) ?? '' : ''}
                 collectieLabels={collectieLabels}
                 materiaalLabels={beschikbareMaterialen.map((materiaal) =>
                   materiaalLabel(materiaal, materiaalsoortNaamById.get(materiaal.materiaalsoortId) ?? materiaal.materiaalsoortId)

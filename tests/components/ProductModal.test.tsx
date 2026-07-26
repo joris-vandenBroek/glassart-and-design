@@ -39,7 +39,7 @@ const KUNSTWERK: Kunstwerk = {
   id: 'kw-1',
   foto: 'https://example.com/kw-1.jpg',
   naam: 'Hotel paneel',
-  artiest: '',
+  kunstenaarId: null,
   segmentIds: ['seg-1'],
   materiaalIds: ['mat-1', 'mat-2'],
   maatIds: ['maat-1', 'maat-2'],

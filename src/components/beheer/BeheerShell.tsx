@@ -337,6 +337,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             materialen={materialen.items}
             materiaalsoorten={materiaalsoorten.items}
             maten={maten.items}
+            kunstenaars={kunstenaars.items}
             loadError={kunstwerken.error === 'load' ? t('kunstwerkenLoadError') : null}
             onAdd={kunstwerken.add}
             onUpdate={kunstwerken.update}
@@ -346,6 +347,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
           <KunstenaarsSection
             kunstenaars={kunstenaars.items}
             klanten={klanten}
+            kunstwerken={kunstwerken.items}
             loadError={kunstenaars.error === 'load' ? t('kunstenaarsLoadError') : null}
             onAdd={kunstenaars.add}
             onUpdate={kunstenaars.update}

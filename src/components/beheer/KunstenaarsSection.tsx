@@ -10,10 +10,12 @@ import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import type { Kunstenaar } from './kunstenaarTypes';
 import type { Klant } from './KlantenSection';
+import type { Kunstwerk } from './materiaalTypes';
 
 interface KunstenaarsSectionProps {
   kunstenaars: Kunstenaar[] | null;
   klanten: Klant[] | null;
+  kunstwerken: Kunstwerk[] | null;
   loadError: string | null;
   onAdd: (data: Omit<Kunstenaar, 'id'>) => Promise<boolean>;
   onUpdate: (id: string, data: Omit<Kunstenaar, 'id'>) => Promise<boolean>;
@@ -38,6 +40,7 @@ const LEGE_FORM = {
 export function KunstenaarsSection({
   kunstenaars,
   klanten,
+  kunstwerken,
   loadError,
   onAdd,
   onUpdate,
@@ -184,6 +187,11 @@ export function KunstenaarsSection({
 
   async function handleRemove() {
     if (modalState?.mode !== 'edit') return;
+    const inUse = (kunstwerken ?? []).some((kunstwerk) => kunstwerk.kunstenaarId === modalState.kunstenaar.id);
+    if (inUse) {
+      setActionError(t('kunstenaarsVerwijderBlocked'));
+      return;
+    }
     const success = await onRemove(modalState.kunstenaar.id);
     if (success) {
       void logActiviteit('kunstenaar_verwijderd', actorFromMedewerker(user));
