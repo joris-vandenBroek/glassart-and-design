@@ -25,12 +25,17 @@ export type KunstwerkFormaat = 'vierkant' | 'liggend' | 'staand';
 
 export interface Kunstwerk {
   // ...bestaande velden...
-  formaat: KunstwerkFormaat | null;
+  formaat?: KunstwerkFormaat | null;
 }
 ```
 
-`null` bestaat uitsluitend om bestaande Firestore-documenten (aangemaakt vóór deze feature) zonder
-crash te kunnen inlezen — zie Sectie D voor de verplichting bij opslaan. `Maat` blijft ongewijzigd:
+Optioneel (`?`), zelfde patroon als `Materiaalsoort.staatEigenMaatToe?: boolean` verderop in
+hetzelfde bestand: bestaande Firestore-documenten en test-fixtures die het veld niet kennen blijven
+geldig (`undefined`, gelijk behandeld aan `null` — "nog geen keuze gemaakt"). De "verplicht bij
+opslaan"-regel uit Sectie C is een UI/formulier-validatie (Opslaan-knop uitgeschakeld), geen
+TypeScript-verplichting — dat voorkomt dat elke bestaande `Kunstwerk`-literal in de tests (11+
+bestanden) aangepast moet worden voor een veld dat voor die tests niet relevant is. `Maat` blijft
+ongewijzigd:
 geen nieuw veld. Of een `Maat` "vierkant" is, wordt overal afgeleid met een kleine helper:
 
 ```ts
@@ -62,12 +67,20 @@ export function detectFormaatFromImageUrl(url: string): Promise<KunstwerkFormaat
     img.src = url;
   });
 }
+
+export function detectFormaatFromFile(file: File): Promise<KunstwerkFormaat | null> {
+  const objectUrl = URL.createObjectURL(file);
+  return detectFormaatFromImageUrl(objectUrl).finally(() => URL.revokeObjectURL(objectUrl));
+}
 ```
 
-`detectFormaatFromImageUrl` wordt in `KunstwerkenSection.tsx` op twee momenten aangeroepen:
+`detectFormaatFromFile` kapselt het aanmaken/opruimen van de object-URL in dezelfde module in —
+`KunstwerkenSection.tsx` roept nooit zelf `URL.createObjectURL` aan, en kan bij het testen dus als
+geheel gemockt worden zonder dat jsdom's (onvolledige) `URL.createObjectURL`-ondersteuning een rol
+speelt. Beide functies worden in `KunstwerkenSection.tsx` op twee momenten aangeroepen:
 
-1. **Nieuwe foto gekozen** (in de bestaande `handleFotoFile`, na het zetten van de preview): roep aan
-   met een `URL.createObjectURL(file)`, en zet bij een niet-`null` resultaat `formaat` in de
+1. **Nieuwe foto gekozen** (in de bestaande `handleFotoFile`, na het zetten van de preview): roep
+   `detectFormaatFromFile(file)` aan, en zet bij een niet-`null` resultaat `formaat` in de
    formulier-state naar de gedetecteerde waarde (overschrijft een eventueel eerder gekozen formaat —
    een nieuwe foto is een nieuwe voorselectie).
 2. **Bewerkformulier geopend voor een bestaand kunstwerk waarvan `formaat === null`** (in een `useEffect`
