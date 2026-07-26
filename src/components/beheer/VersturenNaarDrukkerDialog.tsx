@@ -123,7 +123,11 @@ export function VersturenNaarDrukkerDialog({
           updateDoc(doc(db, 'bestelheaders', bestelling.id), { status: 'Verstuurd naar drukker' })
         )
       );
-      void logActiviteit('bestelling_verstuurd_naar_drukker', actorFromMedewerker(user));
+      void logActiviteit(
+        'bestelling_verstuurd_naar_drukker',
+        actorFromMedewerker(user),
+        bestellingen.map((b) => b.bestelnr).join(', ')
+      );
       onVerstuurd(bestellingen.map((b) => ({ ...b, status: 'Verstuurd naar drukker' as const })));
       onClose();
     } catch {
