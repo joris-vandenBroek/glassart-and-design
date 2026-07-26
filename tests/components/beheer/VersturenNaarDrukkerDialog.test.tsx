@@ -73,6 +73,7 @@ const BESTELLING: Bestelling = {
   id: 'header-1',
   klantId: 'uid-1',
   companyName: 'Testbedrijf BV',
+  bestelnr: 'GD-00201',
   besteldatum: '1-7-2026',
   status: 'Te versturen naar drukker',
   lineCount: 1,

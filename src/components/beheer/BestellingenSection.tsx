@@ -23,6 +23,7 @@ export interface Bestelling {
   id: string;
   klantId: string;
   companyName: string;
+  bestelnr: string;
   besteldatum: string;
   status: 'Te beoordelen' | 'Te versturen naar drukker' | 'Verstuurd naar drukker' | 'Afgewezen';
   lineCount: number;
