@@ -389,4 +389,44 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(toggle);
     expect(toggle.closest('details')).toHaveAttribute('open');
   });
+
+  it('shows a "Prijs per m²" field instead of the price matrix once every materiaal is unchecked, and saves it', async () => {
+    uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
+    const { onAdd } = renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materialen-maten-toggle'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
+    expect(screen.queryByTestId('kunstwerk-modal-prijzen')).not.toBeInTheDocument();
+    expect(screen.getByTestId('kunstwerk-modal-prijs-per-m2')).toBeInTheDocument();
+
+    const file = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Akoestisch paneel' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Verbetert de akoestiek.' } });
+    expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled();
+
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-per-m2'), { target: { value: '180' } });
+    expect(screen.getByTestId('kunstwerk-modal-opslaan')).not.toBeDisabled();
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
+
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith({
+        foto: 'https://storage.example.com/nieuw.jpg',
+        naam: 'Akoestisch paneel',
+        artiest: '',
+        segmentIds: ['seg-1'],
+        materiaalIds: [],
+        maatIds: [],
+        prijzen: [],
+        prijsPerM2: 180,
+        omschrijvingNl: 'Verbetert de akoestiek.',
+        omschrijvingFr: '',
+        omschrijvingDe: '',
+        omschrijvingEn: '',
+      })
+    );
+  });
 });

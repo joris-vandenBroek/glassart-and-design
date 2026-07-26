@@ -9,7 +9,7 @@ import { resolveKunstwerkMateriaalLabel } from '@/lib/kunstwerkMateriaal';
 import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
-import type { Kunstwerk, Segment, Materiaal, Materiaalsoort, Maat, PrijsRegel } from './materiaalTypes';
+import type { Kunstwerk, Segment, Materiaal, Materiaalsoort, Maat } from './materiaalTypes';
 
 interface KunstwerkenSectionProps {
   kunstwerken: Kunstwerk[] | null;
@@ -43,6 +43,7 @@ const LEGE_FORM = {
   materiaalIds: [] as string[],
   maatIds: [] as string[],
   prijzen: {} as PrijzenState,
+  prijsPerM2: '',
   omschrijvingNl: '',
   omschrijvingFr: '',
   omschrijvingDe: '',
@@ -71,6 +72,7 @@ export function KunstwerkenSection({
   const [materiaalIds, setMateriaalIds] = useState<string[]>(LEGE_FORM.materiaalIds);
   const [maatIds, setMaatIds] = useState<string[]>(LEGE_FORM.maatIds);
   const [prijzen, setPrijzen] = useState<PrijzenState>(LEGE_FORM.prijzen);
+  const [prijsPerM2, setPrijsPerM2] = useState(LEGE_FORM.prijsPerM2);
   const [omschrijvingNl, setOmschrijvingNl] = useState(LEGE_FORM.omschrijvingNl);
   const [omschrijvingFr, setOmschrijvingFr] = useState(LEGE_FORM.omschrijvingFr);
   const [omschrijvingDe, setOmschrijvingDe] = useState(LEGE_FORM.omschrijvingDe);
@@ -121,6 +123,7 @@ export function KunstwerkenSection({
     setMateriaalIds((materialen ?? []).map((materiaal) => materiaal.id));
     setMaatIds((maten ?? []).map((maat) => maat.id));
     setPrijzen(LEGE_FORM.prijzen);
+    setPrijsPerM2(LEGE_FORM.prijsPerM2);
     setOmschrijvingNl(LEGE_FORM.omschrijvingNl);
     setOmschrijvingFr(LEGE_FORM.omschrijvingFr);
     setOmschrijvingDe(LEGE_FORM.omschrijvingDe);
@@ -145,6 +148,7 @@ export function KunstwerkenSection({
       prijzenMap[prijsKey(regel.materiaalId, regel.maatId)] = String(regel.prijs);
     });
     setPrijzen(prijzenMap);
+    setPrijsPerM2(kunstwerk.prijsPerM2 != null ? String(kunstwerk.prijsPerM2) : '');
     setOmschrijvingNl(kunstwerk.omschrijvingNl);
     setOmschrijvingFr(kunstwerk.omschrijvingFr);
     setOmschrijvingDe(kunstwerk.omschrijvingDe);
@@ -188,6 +192,7 @@ export function KunstwerkenSection({
     await handleFotoFile(file);
   }
 
+  const isMateriaalloos = materiaalIds.length === 0;
   const prijsCombinaties = materiaalIds.flatMap((materiaalId) =>
     maatIds.map((maatId) => ({ materiaalId, maatId }))
   );
@@ -199,31 +204,33 @@ export function KunstwerkenSection({
     uploading ||
     !naam ||
     segmentIds.length === 0 ||
-    materiaalIds.length === 0 ||
-    maatIds.length === 0 ||
-    !allePrijzenIngevuld ||
+    (isMateriaalloos
+      ? !prijsPerM2 || Number(prijsPerM2) <= 0
+      : maatIds.length === 0 || !allePrijzenIngevuld) ||
     !omschrijvingNl;
 
   async function handleSave() {
     if (!modalState) return;
-    const prijzenArray: PrijsRegel[] = prijsCombinaties.map(({ materiaalId, maatId }) => ({
-      materiaalId,
-      maatId,
-      prijs: Number(prijzen[prijsKey(materiaalId, maatId)]),
-    }));
-    const data = {
+    const basisData = {
       foto,
       naam,
       artiest,
       segmentIds,
       materiaalIds,
-      maatIds,
-      prijzen: prijzenArray,
+      maatIds: isMateriaalloos ? [] : maatIds,
+      prijzen: isMateriaalloos
+        ? []
+        : prijsCombinaties.map(({ materiaalId, maatId }) => ({
+            materiaalId,
+            maatId,
+            prijs: Number(prijzen[prijsKey(materiaalId, maatId)]),
+          })),
       omschrijvingNl,
       omschrijvingFr,
       omschrijvingDe,
       omschrijvingEn,
     };
+    const data = isMateriaalloos ? { ...basisData, prijsPerM2: Number(prijsPerM2) } : basisData;
     const success = modalState.mode === 'add' ? await onAdd(data) : await onUpdate(modalState.kunstwerk.id, data);
     if (success) {
       void logActiviteit(
@@ -512,6 +519,22 @@ export function KunstwerkenSection({
                 </tbody>
               </table>
             </div>
+          )}
+
+          {isMateriaalloos && (
+            <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+              {t('kunstwerkenLabelPrijsPerM2')}
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-white/50">€</span>
+                <input
+                  type="number"
+                  value={prijsPerM2}
+                  onChange={(event) => setPrijsPerM2(event.target.value)}
+                  data-testid="kunstwerk-modal-prijs-per-m2"
+                  className="w-24 rounded-sm bg-black/40 px-2 py-1 text-sm text-white"
+                />
+              </div>
+            </label>
           )}
 
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">

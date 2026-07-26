@@ -40,6 +40,7 @@ export interface Kunstwerk {
   materiaalIds: string[];
   maatIds: string[];
   prijzen: PrijsRegel[];
+  prijsPerM2?: number;
   omschrijvingNl: string;
   omschrijvingFr: string;
   omschrijvingDe: string;
