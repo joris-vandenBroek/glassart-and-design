@@ -39,7 +39,11 @@ export type ActiviteitType =
   | 'kunstenaar_toegevoegd'
   | 'kunstenaar_gewijzigd'
   | 'kunstenaar_verwijderd'
-  | 'klant_exclusiviteit_gewijzigd';
+  | 'klant_exclusiviteit_gewijzigd'
+  | 'drukker_toegevoegd'
+  | 'drukker_gewijzigd'
+  | 'drukker_verwijderd'
+  | 'bestelling_verstuurd_naar_drukker';
 
 export interface ActiviteitActor {
   id: string | null;

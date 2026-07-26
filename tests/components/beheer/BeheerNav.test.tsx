@@ -20,6 +20,7 @@ function renderNav(
     kunstwerkenCount: 36,
     kunstenaarsCount: 8,
     prijsgroepenCount: 9,
+    drukkersCount: 7,
     activiteitCount: 12,
   };
   const counts = { ...defaultCounts, ...overrideCounts };
@@ -38,6 +39,7 @@ function renderNav(
         kunstwerkenCount={counts.kunstwerkenCount}
         kunstenaarsCount={counts.kunstenaarsCount}
         prijsgroepenCount={counts.prijsgroepenCount}
+        drukkersCount={counts.drukkersCount}
         activiteitCount={counts.activiteitCount}
       />
     </NextIntlClientProvider>
@@ -63,6 +65,8 @@ describe('BeheerNav', () => {
     expect(screen.getByTestId('beheer-nav-kunstenaars')).toHaveTextContent('8');
     expect(screen.getByTestId('beheer-nav-prijsgroepen')).toHaveTextContent('Prijsgroepen');
     expect(screen.getByTestId('beheer-nav-prijsgroepen')).toHaveTextContent('9');
+    expect(screen.getByTestId('beheer-nav-drukkers')).toHaveTextContent('Drukkers');
+    expect(screen.getByTestId('beheer-nav-drukkers')).toHaveTextContent('7');
     expect(screen.getByTestId('beheer-nav-activiteit')).toHaveTextContent('Activiteitenlog');
     expect(screen.getByTestId('beheer-nav-activiteit')).toHaveTextContent('12');
     expect(screen.getByTestId('beheer-nav-glassartDesign')).toHaveTextContent('Glassart and Design');

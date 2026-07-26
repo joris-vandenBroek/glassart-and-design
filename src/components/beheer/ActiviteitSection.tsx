@@ -65,6 +65,10 @@ const TYPE_LABEL_KEYS: Record<ActiviteitType, string> = {
   kunstenaar_gewijzigd: 'activiteitTypeKunstenaarGewijzigd',
   kunstenaar_verwijderd: 'activiteitTypeKunstenaarVerwijderd',
   klant_exclusiviteit_gewijzigd: 'activiteitTypeKlantExclusiviteitGewijzigd',
+  drukker_toegevoegd: 'activiteitTypeDrukkerToegevoegd',
+  drukker_gewijzigd: 'activiteitTypeDrukkerGewijzigd',
+  drukker_verwijderd: 'activiteitTypeDrukkerVerwijderd',
+  bestelling_verstuurd_naar_drukker: 'activiteitTypeBestellingVerstuurdNaarDrukker',
 };
 
 export function ActiviteitSection({ activiteiten, loadError }: ActiviteitSectionProps) {

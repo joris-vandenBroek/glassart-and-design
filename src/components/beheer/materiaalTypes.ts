@@ -51,3 +51,13 @@ export interface Prijsgroep {
   naam: string;
   kortingspercentage: number;
 }
+
+export interface Drukker {
+  id: string;
+  naam: string;
+  adres: string;
+  postcode: string;
+  plaats: string;
+  email: string;
+  prijsafspraken: string;
+}

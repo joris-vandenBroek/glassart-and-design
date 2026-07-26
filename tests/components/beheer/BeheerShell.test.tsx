@@ -59,6 +59,12 @@ const KLANT_DATA = {
   address: 'Teststraat 1',
   postcode: '1234 AB',
   city: 'Teststad',
+  deliveryAddress: '',
+  deliveryPostcode: '',
+  deliveryCity: '',
+  invoiceAddress: '',
+  invoicePostcode: '',
+  invoiceCity: '',
   status: 'Beoordelen',
   prijsgroepId: null,
 };
@@ -75,6 +81,7 @@ const DEFAULT_COLLECTIONS: Record<string, Array<{ id: string; data: Record<strin
   maten: [{ id: 'maat-1', data: { breedte: 40, hoogte: 60 } }],
   segmenten: [{ id: 'seg-1', data: { omschrijving: 'Hotel' } }],
   prijsgroepen: [],
+  drukkers: [],
   kunstwerken: [
     {
       id: 'kw-1',
@@ -430,6 +437,19 @@ describe('BeheerShell', () => {
         )
       ).toHaveLength(0);
     });
+  });
+
+  it('shows the drukkers count and switches to the Drukkers section', async () => {
+    mockCollections({
+      drukkers: [
+        { id: 'drukker-1', data: { naam: 'Drukkerij Janssen', adres: 'Perslaan 1', postcode: '1000 AA', plaats: 'Utrecht', email: 'info@janssen.nl', prijsafspraken: '' } },
+      ],
+    });
+    renderShell();
+    await waitFor(() => expect(screen.getByTestId('beheer-nav-drukkers')).toHaveTextContent('1'));
+    screen.getByTestId('beheer-nav-drukkers').click();
+    expect(await screen.findByTestId('drukkers-section')).toBeInTheDocument();
+    expect(screen.getByTestId('data-table-row-drukker-1')).toHaveTextContent('Drukkerij Janssen');
   });
 
   it('shows the Glassart & Design section with the loaded bedrijfsgegevens when the nav item is clicked', async () => {

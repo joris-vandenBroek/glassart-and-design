@@ -42,6 +42,12 @@ const KLANT: Klant = {
   address: 'Teststraat 1',
   postcode: '1234 AB',
   city: 'Teststad',
+  deliveryAddress: '',
+  deliveryPostcode: '',
+  deliveryCity: '',
+  invoiceAddress: '',
+  invoicePostcode: '',
+  invoiceCity: '',
   status: 'Beoordelen',
   prijsgroepId: null,
   exclusieveKunstenaarIds: [],
@@ -194,6 +200,12 @@ describe('KlantModal', () => {
           address: 'Teststraat 1',
           postcode: '1234 AB',
           city: 'Teststad',
+          deliveryAddress: '',
+          deliveryPostcode: '',
+          deliveryCity: '',
+          invoiceAddress: '',
+          invoicePostcode: '',
+          invoiceCity: '',
         }
       )
     );
@@ -204,6 +216,56 @@ describe('KlantModal', () => {
       naam: 'paul@glassartanddesign.com',
     });
     expect(screen.queryByTestId('klant-modal-companyName')).not.toBeInTheDocument();
+  });
+
+  it('shows "Gebruikt standaardadres" for afleveradres and factuuradres when both are empty', () => {
+    renderModal(KLANT);
+    expect(screen.getByTestId('klant-modal-afleveradres-leeg')).toHaveTextContent('Gebruikt standaardadres');
+    expect(screen.getByTestId('klant-modal-factuuradres-leeg')).toHaveTextContent('Gebruikt standaardadres');
+  });
+
+  it('shows the afleveradres fields read-only when set, instead of the "gebruikt standaardadres" label', () => {
+    renderModal({ ...KLANT, deliveryAddress: 'Havenweg 5', deliveryPostcode: '5678 CD', deliveryCity: 'Havenstad' });
+    expect(screen.queryByTestId('klant-modal-afleveradres-leeg')).not.toBeInTheDocument();
+    expect(screen.getByTestId('klant-modal')).toHaveTextContent('Havenweg 5');
+    expect(screen.getByTestId('klant-modal')).toHaveTextContent('Havenstad');
+  });
+
+  it('edits and saves the afleveradres and factuuradres fields via Opslaan', async () => {
+    updateDocMock.mockResolvedValue(undefined);
+    const { onUpdated } = renderModal(KLANT);
+    fireEvent.click(screen.getByTestId('klant-modal-bewerken'));
+    fireEvent.change(screen.getByTestId('klant-modal-deliveryAddress'), { target: { value: 'Havenweg 5' } });
+    fireEvent.change(screen.getByTestId('klant-modal-deliveryPostcode'), { target: { value: '5678 CD' } });
+    fireEvent.change(screen.getByTestId('klant-modal-deliveryCity'), { target: { value: 'Havenstad' } });
+    fireEvent.change(screen.getByTestId('klant-modal-invoiceAddress'), { target: { value: 'Factuurlaan 9' } });
+    fireEvent.change(screen.getByTestId('klant-modal-invoicePostcode'), { target: { value: '9999 ZZ' } });
+    fireEvent.change(screen.getByTestId('klant-modal-invoiceCity'), { target: { value: 'Factuurstad' } });
+    fireEvent.click(screen.getByTestId('klant-modal-velden-opslaan'));
+
+    await waitFor(() =>
+      expect(updateDocMock).toHaveBeenCalledWith(
+        { collectionName: 'klanten', id: 'uid-1' },
+        {
+          companyName: 'Testbedrijf BV',
+          kvk: '12345678',
+          contactPerson: 'Jan Jansen',
+          contactPreference: 'email',
+          email: 'jan@example.com',
+          phone: '0612345678',
+          address: 'Teststraat 1',
+          postcode: '1234 AB',
+          city: 'Teststad',
+          deliveryAddress: 'Havenweg 5',
+          deliveryPostcode: '5678 CD',
+          deliveryCity: 'Havenstad',
+          invoiceAddress: 'Factuurlaan 9',
+          invoicePostcode: '9999 ZZ',
+          invoiceCity: 'Factuurstad',
+        }
+      )
+    );
+    expect(onUpdated).toHaveBeenCalled();
   });
 
   it('discards edits when Annuleren is clicked', () => {

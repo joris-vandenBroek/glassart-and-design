@@ -15,9 +15,10 @@ import { SegmentenSection } from './SegmentenSection';
 import { KunstwerkenSection } from './KunstwerkenSection';
 import { PrijsgroepenSection } from './PrijsgroepenSection';
 import { KunstenaarsSection } from './KunstenaarsSection';
+import { DrukkersSection } from './DrukkersSection';
 import { ActiviteitSection, type Activiteit } from './ActiviteitSection';
 import { GlassartDesignSection } from './GlassartDesignSection';
-import type { Materiaalsoort, Materiaal, Maat, Segment, Kunstwerk, Prijsgroep } from './materiaalTypes';
+import type { Materiaalsoort, Materiaal, Maat, Segment, Kunstwerk, Prijsgroep, Drukker } from './materiaalTypes';
 import type { Kunstenaar, KunstenaarUpdate } from './kunstenaarTypes';
 import type { Bedrijfsgegevens } from './bedrijfsgegevensTypes';
 import type { ActiviteitType } from '@/lib/logActiviteit';
@@ -64,6 +65,12 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
               address: data.address,
               postcode: data.postcode,
               city: data.city,
+              deliveryAddress: data.deliveryAddress ?? '',
+              deliveryPostcode: data.deliveryPostcode ?? '',
+              deliveryCity: data.deliveryCity ?? '',
+              invoiceAddress: data.invoiceAddress ?? '',
+              invoicePostcode: data.invoicePostcode ?? '',
+              invoiceCity: data.invoiceCity ?? '',
               status: data.status,
               prijsgroepId: data.prijsgroepId,
               exclusieveKunstenaarIds: data.exclusieveKunstenaarIds ?? [],
@@ -260,6 +267,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
     }
     return kunstenaars.update(id, { ...data, prijsafspraken: deleteField() } as KunstenaarUpdate);
   }
+  const drukkers = useFirestoreCollection<Drukker>('drukkers');
   const bedrijfsgegevens = useFirestoreDocument<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens', {
     seed: BEDRIJFSGEGEVENS_SEED,
   });
@@ -273,6 +281,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   const kunstwerkenCount = (kunstwerken.items ?? []).length;
   const prijsgroepenCount = (prijsgroepen.items ?? []).length;
   const kunstenaarsCount = (kunstenaars.items ?? []).length;
+  const drukkersCount = (drukkers.items ?? []).length;
   const activiteitCount = (activiteiten ?? []).length;
 
   return (
@@ -297,6 +306,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
           kunstwerkenCount={kunstwerkenCount}
           kunstenaarsCount={kunstenaarsCount}
           prijsgroepenCount={prijsgroepenCount}
+          drukkersCount={drukkersCount}
           activiteitCount={activiteitCount}
         />
       </GlassPanel>
@@ -317,6 +327,8 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             materialen={materialen.items}
             maten={maten.items}
             materiaalsoorten={materiaalsoorten.items}
+            klanten={klanten}
+            drukkers={drukkers.items}
             loadError={bestellingenLoadError}
             onBestellingUpdated={handleBestellingUpdated}
             onLinePrijsVastgesteld={handleLinePrijsVastgesteld}
@@ -393,6 +405,14 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             onAdd={prijsgroepen.add}
             onUpdate={prijsgroepen.update}
             onRemove={prijsgroepen.remove}
+          />
+        ) : activeSection === 'drukkers' ? (
+          <DrukkersSection
+            drukkers={drukkers.items}
+            loadError={drukkers.error === 'load' ? t('drukkersLoadError') : null}
+            onAdd={drukkers.add}
+            onUpdate={drukkers.update}
+            onRemove={drukkers.remove}
           />
         ) : activeSection === 'glassartDesign' ? (
           <GlassartDesignSection

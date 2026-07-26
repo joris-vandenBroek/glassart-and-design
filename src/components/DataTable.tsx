@@ -17,12 +17,20 @@ export interface StatusQuickFilter<T> {
   defaultActive?: boolean;
 }
 
+export interface RowSelection<T> {
+  selectedIds: Set<string>;
+  onToggle: (id: string) => void;
+  onToggleAll: (ids: string[]) => void;
+  isSelectable: (row: T) => boolean;
+}
+
 interface DataTableProps<T> {
   columns: Column<T>[];
   rows: T[];
   getRowId: (row: T) => string;
   onRowClick: (row: T) => void;
   quickFilter?: StatusQuickFilter<T>;
+  selection?: RowSelection<T>;
   emptyLabel: string;
   searchPlaceholder: string;
 }
@@ -35,6 +43,7 @@ export function DataTable<T extends object>({
   getRowId,
   onRowClick,
   quickFilter,
+  selection,
   emptyLabel,
   searchPlaceholder,
 }: DataTableProps<T>) {
@@ -68,6 +77,14 @@ export function DataTable<T extends object>({
     });
     return sortDirection === 'asc' ? sorted : sorted.reverse();
   }, [filteredRows, sortKey, sortDirection]);
+
+  const selectableVisibleIds = useMemo(() => {
+    if (!selection) return [];
+    return sortedRows.filter((row) => selection.isSelectable(row)).map((row) => getRowId(row));
+  }, [sortedRows, selection, getRowId]);
+
+  const allVisibleSelected =
+    selectableVisibleIds.length > 0 && selectableVisibleIds.every((id) => selection?.selectedIds.has(id));
 
   function handleHeaderClick(column: Column<T>) {
     if (column.sortable === false) {
@@ -130,6 +147,17 @@ export function DataTable<T extends object>({
         <table className="w-full text-left text-sm text-white/80">
           <thead>
             <tr className="border-b border-white/10 text-xs uppercase tracking-wide text-white/60">
+              {selection && (
+                <th className="w-8 px-3 py-2">
+                  <input
+                    type="checkbox"
+                    data-testid="data-table-select-all"
+                    checked={allVisibleSelected}
+                    onChange={() => selection.onToggleAll(selectableVisibleIds)}
+                    className="h-3.5 w-3.5"
+                  />
+                </th>
+              )}
               {columns.map((column) => (
                 <th key={column.key} className="px-3 py-2">
                   <button
@@ -153,6 +181,19 @@ export function DataTable<T extends object>({
                 onClick={() => onRowClick(row)}
                 className="cursor-pointer border-b border-white/5 hover:bg-white/5"
               >
+                {selection && (
+                  <td className="px-3 py-2" onClick={(event) => event.stopPropagation()}>
+                    {selection.isSelectable(row) && (
+                      <input
+                        type="checkbox"
+                        data-testid={`data-table-row-select-${getRowId(row)}`}
+                        checked={selection.selectedIds.has(getRowId(row))}
+                        onChange={() => selection.onToggle(getRowId(row))}
+                        className="h-3.5 w-3.5"
+                      />
+                    )}
+                  </td>
+                )}
                 {columns.map((column) => (
                   <td key={column.key} className="px-3 py-2">
                     {column.render ? column.render(row) : String(row[column.key] ?? '')}

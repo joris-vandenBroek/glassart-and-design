@@ -18,6 +18,12 @@ export interface Klant {
   address: string;
   postcode: string;
   city: string;
+  deliveryAddress: string;
+  deliveryPostcode: string;
+  deliveryCity: string;
+  invoiceAddress: string;
+  invoicePostcode: string;
+  invoiceCity: string;
   status: 'Beoordelen' | 'Goedgekeurd' | 'Afgewezen';
   prijsgroepId: string | null;
   exclusieveKunstenaarIds: string[];

@@ -13,7 +13,8 @@ import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from './materiaalType
 
 const STATUS_BADGE_CLASS: Record<Bestelling['status'], string> = {
   'Te beoordelen': 'bg-amber-400/10 text-amber-300',
-  Goedgekeurd: 'bg-green-500/10 text-green-400',
+  'Te versturen naar drukker': 'bg-sky-400/10 text-sky-300',
+  'Verstuurd naar drukker': 'bg-green-500/10 text-green-400',
   Afgewezen: 'bg-red-400/10 text-red-400',
 };
 
@@ -78,9 +79,9 @@ export function BestellingModal({
   async function handleGoedkeuren() {
     if (!bestelling) return;
     try {
-      await updateDoc(doc(db, 'bestelheaders', bestelling.id), { status: 'Goedgekeurd' });
+      await updateDoc(doc(db, 'bestelheaders', bestelling.id), { status: 'Te versturen naar drukker' });
       void logActiviteit('bestelling_goedgekeurd', actorFromMedewerker(user));
-      onUpdated({ ...bestelling, status: 'Goedgekeurd' });
+      onUpdated({ ...bestelling, status: 'Te versturen naar drukker' });
     } catch {
       setError(t('bestellingenActionError'));
     }
