@@ -1,6 +1,8 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { GlassPanel } from '@/components/GlassPanel';
 import { AdminDashboard } from '@/components/beheer/AdminDashboard';
+import { pageAvailability } from '@/config/pageAvailability';
+import { UnderConstruction } from '@/components/UnderConstruction';
 
 export function generateStaticParams() {
   return [{ locale: 'nl' }];
@@ -15,6 +17,11 @@ export default async function BeheerPage({
 }) {
   const { locale } = params;
   setRequestLocale(locale);
+
+  if (!pageAvailability.beheer) {
+    return <UnderConstruction />;
+  }
+
   const t = await getTranslations('beheer');
 
   return (
