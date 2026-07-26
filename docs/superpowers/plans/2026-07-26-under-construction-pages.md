@@ -30,7 +30,7 @@
     db: {},
   }));
   ```
-- `getTranslations` from `next-intl/server` requires the `react-server` module resolution condition (`node_modules/next-intl/package.json` → `exports['./server']`), which Vitest's default (client) environment does not set — without a mock, it resolves to the client-stub build and throws `getTranslations is not supported in Client Components`. Every test that renders `UnderConstruction` (directly, or indirectly by rendering a gated page whose guard returns it) must mock the module to read from the imported locale messages:
+- `getTranslations` from `next-intl/server` requires the `react-server` module resolution condition (`node_modules/next-intl/package.json` → `exports['./server']`), which Vitest's default (client) environment does not set — without a mock, it resolves to the client-stub build and throws `getTranslations is not supported in Client Components`. Every test that renders `UnderConstruction` (directly, or indirectly by rendering a gated page whose guard returns it) must mock the module to read from the imported locale messages. Gated `page.tsx` files also call `setRequestLocale(locale)` unconditionally (before the guard), also from `next-intl/server` — since the whole module is mocked, that export must exist too, as a no-op:
   ```ts
   vi.mock('next-intl/server', () => ({
     getTranslations: async (namespace: string) => {
@@ -39,9 +39,19 @@
       ];
       return (key: string) => namespaceMessages[key];
     },
+    setRequestLocale: () => {},
   }));
   ```
-  Additionally, `UnderConstruction` and every gated `page.tsx` are async server components — `@testing-library/react`'s `render()` cannot accept a Promise as a child, so tests must await the component call directly before rendering its resolved element tree: `const ui = await UnderConstruction(); render(<NextIntlClientProvider ...>{ui}</NextIntlClientProvider>);` (same pattern for page components, e.g. `await CollectiesPage({ params: { locale: 'nl' } })`). See `tests/components/UnderConstruction.test.tsx` for the reference implementation of both workarounds.
+  Additionally, `UnderConstruction` and every gated `page.tsx` are async server components — `@testing-library/react`'s `render()` cannot accept a Promise as a child, so a test that renders `UnderConstruction` directly must await the component call before rendering its resolved element tree (`const ui = await UnderConstruction();`). A gated **page** test needs one more level: `await CollectiesPage(...)` only resolves the page's own promise — the guard's returned `<UnderConstruction />` element is still an unresolved reference to a second async component, and handing it to `render()` as-is throws the same "Promise as child" error (verified empirically — do not mock `UnderConstruction` away to sidestep this, that turns the test into a check that the page returns *some* component named `UnderConstruction`, not that it actually renders the real one). Resolve that second level manually before rendering:
+  ```ts
+  const page = (await CollectiesPage({ params: { locale: 'nl' } })) as any;
+  // `page` is the unresolved `<UnderConstruction />` element the guard returned.
+  // UnderConstruction is itself an async server component, so it must be awaited
+  // a second time — render() cannot accept a Promise as a child either way.
+  const ui = await page.type(page.props);
+  render(<NextIntlClientProvider locale="nl" messages={messages}>{ui}</NextIntlClientProvider>);
+  ```
+  See `tests/components/UnderConstruction.test.tsx` for the single-await reference and the corrected `tests/app/collecties-page.test.tsx` for the double-await reference.
 - Follow existing code conventions: Dutch UI copy/JSON keys where the rest of the site uses Dutch, English component/file names, 2-space indented JSON, Tailwind utility classes (no new CSS files).
 - Run `npx vitest run <file>` after every test-writing step from the project root (`C:\Temp\Glassart and design`).
 
@@ -372,11 +382,13 @@ vi.mock('next-intl/server', () => ({
     ];
     return (key: string) => namespaceMessages[key];
   },
+  setRequestLocale: () => {},
 }));
 
 describe('CollectiesPage', () => {
   it('shows the under-construction page while pageAvailability.collecties is false', async () => {
-    const ui = await CollectiesPage({ params: { locale: 'nl' } });
+    const page = (await CollectiesPage({ params: { locale: 'nl' } })) as any;
+    const ui = await page.type(page.props);
     render(<NextIntlClientProvider locale="nl" messages={messages}>{ui}</NextIntlClientProvider>);
 
     expect(await screen.findByTestId('under-construction')).toBeInTheDocument();
@@ -473,11 +485,13 @@ vi.mock('next-intl/server', () => ({
     ];
     return (key: string) => namespaceMessages[key];
   },
+  setRequestLocale: () => {},
 }));
 
 describe('WordKlantPage', () => {
   it('shows the under-construction page while pageAvailability.wordKlant is false', async () => {
-    const ui = await WordKlantPage({ params: { locale: 'nl' } });
+    const page = (await WordKlantPage({ params: { locale: 'nl' } })) as any;
+    const ui = await page.type(page.props);
     render(<NextIntlClientProvider locale="nl" messages={messages}>{ui}</NextIntlClientProvider>);
 
     expect(await screen.findByTestId('under-construction')).toBeInTheDocument();
@@ -572,11 +586,13 @@ vi.mock('next-intl/server', () => ({
     ];
     return (key: string) => namespaceMessages[key];
   },
+  setRequestLocale: () => {},
 }));
 
 describe('InloggenPage', () => {
   it('shows the under-construction page while pageAvailability.inloggen is false', async () => {
-    const ui = await InloggenPage({ params: { locale: 'nl' } });
+    const page = (await InloggenPage({ params: { locale: 'nl' } })) as any;
+    const ui = await page.type(page.props);
     render(<NextIntlClientProvider locale="nl" messages={messages}>{ui}</NextIntlClientProvider>);
 
     expect(await screen.findByTestId('under-construction')).toBeInTheDocument();
@@ -671,11 +687,13 @@ vi.mock('next-intl/server', () => ({
     ];
     return (key: string) => namespaceMessages[key];
   },
+  setRequestLocale: () => {},
 }));
 
 describe('BeheerPage', () => {
   it('shows the under-construction page while pageAvailability.beheer is false', async () => {
-    const ui = await BeheerPage({ params: { locale: 'nl' } });
+    const page = (await BeheerPage({ params: { locale: 'nl' } })) as any;
+    const ui = await page.type(page.props);
     render(<NextIntlClientProvider locale="nl" messages={messages}>{ui}</NextIntlClientProvider>);
 
     expect(await screen.findByTestId('under-construction')).toBeInTheDocument();
@@ -776,11 +794,13 @@ vi.mock('next-intl/server', () => ({
     ];
     return (key: string) => namespaceMessages[key];
   },
+  setRequestLocale: () => {},
 }));
 
 describe('AccountPage', () => {
   it('shows the under-construction page while pageAvailability.account is false', async () => {
-    const ui = await AccountPage({ params: { locale: 'nl' } });
+    const page = (await AccountPage({ params: { locale: 'nl' } })) as any;
+    const ui = await page.type(page.props);
     render(<NextIntlClientProvider locale="nl" messages={messages}>{ui}</NextIntlClientProvider>);
 
     expect(await screen.findByTestId('under-construction')).toBeInTheDocument();
@@ -875,11 +895,13 @@ vi.mock('next-intl/server', () => ({
     ];
     return (key: string) => namespaceMessages[key];
   },
+  setRequestLocale: () => {},
 }));
 
 describe('ContactPage', () => {
   it('shows the under-construction page while pageAvailability.contact is false', async () => {
-    const ui = await ContactPage({ params: { locale: 'nl' } });
+    const page = (await ContactPage({ params: { locale: 'nl' } })) as any;
+    const ui = await page.type(page.props);
     render(<NextIntlClientProvider locale="nl" messages={messages}>{ui}</NextIntlClientProvider>);
 
     expect(await screen.findByTestId('under-construction')).toBeInTheDocument();
