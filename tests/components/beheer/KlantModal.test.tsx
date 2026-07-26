@@ -160,11 +160,11 @@ describe('KlantModal', () => {
         prijsgroepId: 'pg-2',
       })
     );
-    expect(logActiviteitMock).toHaveBeenCalledWith('klant_prijsgroep_gewijzigd', {
-      id: 'staff-1',
-      email: 'paul@glassartanddesign.com',
-      naam: 'paul@glassartanddesign.com',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'klant_prijsgroep_gewijzigd',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'Testbedrijf BV'
+    );
   });
 
   it('does not show the prijsgroep Opslaan button while still Beoordelen', () => {
@@ -195,11 +195,11 @@ describe('KlantModal', () => {
     await waitFor(() =>
       expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), { minimaleAfname: 6 })
     );
-    expect(logActiviteitMock).toHaveBeenCalledWith('klant_minimale_afname_gewijzigd', {
-      id: 'staff-1',
-      email: 'paul@glassartanddesign.com',
-      naam: 'paul@glassartanddesign.com',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'klant_minimale_afname_gewijzigd',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'Testbedrijf BV'
+    );
     expect(onUpdated).toHaveBeenCalledWith(expect.objectContaining({ minimaleAfname: 6 }));
   });
 
@@ -261,11 +261,11 @@ describe('KlantModal', () => {
       )
     );
     await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, contactPerson: 'Piet Pietersen' }));
-    expect(logActiviteitMock).toHaveBeenCalledWith('klant_gewijzigd', {
-      id: 'staff-1',
-      email: 'paul@glassartanddesign.com',
-      naam: 'paul@glassartanddesign.com',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'klant_gewijzigd',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'Testbedrijf BV'
+    );
     expect(screen.queryByTestId('klant-modal-companyName')).not.toBeInTheDocument();
   });
 
@@ -383,11 +383,11 @@ describe('KlantModal', () => {
     fireEvent.change(screen.getByTestId('klant-modal-prijsgroep'), { target: { value: 'pg-2' } });
     fireEvent.click(screen.getByTestId('klant-modal-goedkeuren'));
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('klant_goedgekeurd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'klant_goedgekeurd',
+        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+        'Testbedrijf BV'
+      )
     );
   });
 
@@ -396,11 +396,11 @@ describe('KlantModal', () => {
     renderModal(KLANT);
     fireEvent.click(screen.getByTestId('klant-modal-afwijzen'));
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('klant_afgewezen', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'klant_afgewezen',
+        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+        'Testbedrijf BV'
+      )
     );
   });
 
@@ -421,11 +421,11 @@ describe('KlantModal', () => {
     // BeheerShell.updateKunstenaarVeilig, which backs this prop.
     await waitFor(() => expect(onKunstenaarUpdated).toHaveBeenCalledWith('ka-1', { exclusiefVoorKlantId: 'uid-1' }));
     expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, exclusieveKunstenaarIds: ['ka-1'] });
-    expect(logActiviteitMock).toHaveBeenCalledWith('klant_exclusiviteit_gewijzigd', {
-      id: 'staff-1',
-      email: 'paul@glassartanddesign.com',
-      naam: 'paul@glassartanddesign.com',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'klant_exclusiviteit_gewijzigd',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'Testbedrijf BV'
+    );
   });
 
   it('blocks checking a kunstenaar that another klant already holds exclusively', () => {
