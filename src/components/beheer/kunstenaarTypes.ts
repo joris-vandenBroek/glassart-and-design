@@ -6,7 +6,8 @@ export interface Kunstenaar {
   omschrijvingFr: string;
   omschrijvingDe: string;
   omschrijvingEn: string;
-  prijsafspraken: string;
+  // Let op: `prijsafspraken` staat bewust NIET in dit publiek leesbare document,
+  // maar in de medewerker-only collectie `kunstenaarAfspraken/{id}` (zelfde doc-id).
   verkooprecht: 'open' | 'alleen-kunstenaar';
   klantId: string | null;
   exclusiefVoorKlantId: string | null;

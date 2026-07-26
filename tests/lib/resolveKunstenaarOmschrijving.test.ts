@@ -10,7 +10,6 @@ const BASE_KUNSTENAAR: Kunstenaar = {
   omschrijvingFr: 'Texte français',
   omschrijvingDe: 'Deutscher Text',
   omschrijvingEn: 'English text',
-  prijsafspraken: '',
   verkooprecht: 'open',
   klantId: null,
   exclusiefVoorKlantId: null,

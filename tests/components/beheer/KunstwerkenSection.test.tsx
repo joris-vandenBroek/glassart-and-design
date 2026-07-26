@@ -49,7 +49,6 @@ const KUNSTENAARS: Kunstenaar[] = [
     omschrijvingFr: '',
     omschrijvingDe: '',
     omschrijvingEn: '',
-    prijsafspraken: '',
     verkooprecht: 'open',
     klantId: null,
     exclusiefVoorKlantId: null,

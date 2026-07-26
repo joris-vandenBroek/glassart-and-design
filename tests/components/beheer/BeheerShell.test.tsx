@@ -21,6 +21,7 @@ vi.mock('firebase/firestore', () => ({
   addDoc: (...args: unknown[]) => addDocMock(...args),
   updateDoc: vi.fn(),
   deleteDoc: vi.fn(),
+  deleteField: vi.fn(() => ({ __sentinel: 'deleteField' })),
   getDoc: (...args: unknown[]) => getDocMock(...args),
   setDoc: (...args: unknown[]) => setDocMock(...args),
   query: vi.fn((collectionRef) => collectionRef),
@@ -303,7 +304,7 @@ describe('BeheerShell', () => {
   it('shows the count and switches to the Kunstenaars section', async () => {
     mockCollections({
       kunstenaars: [
-        { id: 'ka-1', data: { naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', prijsafspraken: '', verkooprecht: 'open', klantId: null, exclusiefVoorKlantId: null } },
+        { id: 'ka-1', data: { naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', verkooprecht: 'open', klantId: null, exclusiefVoorKlantId: null } },
       ],
     });
     renderShell();

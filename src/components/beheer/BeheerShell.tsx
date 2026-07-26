@@ -352,9 +352,9 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             klanten={klanten}
             kunstwerken={kunstwerken.items}
             loadError={kunstenaars.error === 'load' ? t('kunstenaarsLoadError') : null}
-            onAdd={kunstenaars.add}
             onUpdate={kunstenaars.update}
             onRemove={kunstenaars.remove}
+            onRefetch={kunstenaars.refetch}
           />
         ) : activeSection === 'prijsgroepen' ? (
           <PrijsgroepenSection

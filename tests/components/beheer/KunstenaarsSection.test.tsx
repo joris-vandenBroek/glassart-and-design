@@ -15,6 +15,29 @@ vi.mock('@/lib/useKunstwerkFotoUpload', () => ({
   useKunstwerkFotoUpload: () => ({ uploading: mockUploading, error: mockUploadError, upload: uploadMock }),
 }));
 
+const getDocMock = vi.fn();
+const setDocMock = vi.fn();
+const deleteDocMock = vi.fn();
+
+vi.mock('@/lib/firebase', () => ({
+  db: {},
+}));
+
+vi.mock('firebase/firestore', () => ({
+  // `doc(db, collection, id)` returns a stable stub; `doc(collectionRef)` (the
+  // client-side id generation used when adding) returns a fixed new id.
+  doc: vi.fn((first: unknown, collectionName?: string, id?: string) =>
+    collectionName === undefined
+      ? { collectionName: (first as { collectionName: string }).collectionName, id: 'nieuwe-ka-id' }
+      : { collectionName, id }
+  ),
+  collection: vi.fn((_db: unknown, collectionName: string) => ({ collectionName })),
+  deleteField: vi.fn(() => ({ __sentinel: 'deleteField' })),
+  getDoc: (...args: unknown[]) => getDocMock(...args),
+  setDoc: (...args: unknown[]) => setDocMock(...args),
+  deleteDoc: (...args: unknown[]) => deleteDocMock(...args),
+}));
+
 const logActiviteitMock = vi.fn();
 
 vi.mock('@/lib/useAdminAuth', () => ({
@@ -56,7 +79,6 @@ const KUNSTENAARS: Kunstenaar[] = [
     omschrijvingFr: '',
     omschrijvingDe: '',
     omschrijvingEn: '',
-    prijsafspraken: '20% commissie',
     verkooprecht: 'open',
     klantId: null,
     exclusiefVoorKlantId: null,
@@ -64,9 +86,9 @@ const KUNSTENAARS: Kunstenaar[] = [
 ];
 
 function renderSection(overrides: Partial<React.ComponentProps<typeof KunstenaarsSection>> = {}) {
-  const onAdd = overrides.onAdd ?? vi.fn().mockResolvedValue(true);
   const onUpdate = overrides.onUpdate ?? vi.fn().mockResolvedValue(true);
   const onRemove = overrides.onRemove ?? vi.fn().mockResolvedValue(true);
+  const onRefetch = overrides.onRefetch ?? vi.fn().mockResolvedValue(true);
   render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <KunstenaarsSection
@@ -74,14 +96,14 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Kunstenaar
         klanten={KLANTEN}
         kunstwerken={[]}
         loadError={null}
-        onAdd={onAdd}
         onUpdate={onUpdate}
         onRemove={onRemove}
+        onRefetch={onRefetch}
         {...overrides}
       />
     </NextIntlClientProvider>
   );
-  return { onAdd, onUpdate, onRemove };
+  return { onUpdate, onRemove, onRefetch };
 }
 
 beforeEach(() => {
@@ -89,6 +111,12 @@ beforeEach(() => {
   mockUploading = false;
   mockUploadError = null;
   logActiviteitMock.mockReset();
+  getDocMock.mockReset();
+  getDocMock.mockResolvedValue({ data: () => undefined });
+  setDocMock.mockReset();
+  setDocMock.mockResolvedValue(undefined);
+  deleteDocMock.mockReset();
+  deleteDocMock.mockResolvedValue(undefined);
 });
 
 describe('KunstenaarsSection', () => {
@@ -120,32 +148,42 @@ describe('KunstenaarsSection', () => {
 
   it('adds a new kunstenaar with an uploaded photo, verkooprecht and gekoppelde klant', async () => {
     uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
-    const { onAdd } = renderSection();
+    const { onRefetch } = renderSection();
     fireEvent.click(screen.getByTestId('kunstenaars-add'));
     const file = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
     fireEvent.change(screen.getByTestId('kunstenaar-modal-foto-input'), { target: { files: [file] } });
     await waitFor(() => expect(screen.getByTestId('kunstenaar-modal-foto-preview')).toBeInTheDocument());
     fireEvent.change(screen.getByTestId('kunstenaar-modal-naam'), { target: { value: 'Nieuwe Kunstenaar' } });
     fireEvent.change(screen.getByTestId('kunstenaar-modal-omschrijving-nl'), { target: { value: 'Werkt met glas.' } });
+    fireEvent.change(screen.getByTestId('kunstenaar-modal-prijsafspraken'), { target: { value: '30% commissie' } });
     fireEvent.change(screen.getByTestId('kunstenaar-modal-verkooprecht'), { target: { value: 'alleen-kunstenaar' } });
     fireEvent.focus(screen.getByTestId('kunstenaar-modal-klant'));
     fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-option-klant-1'));
     fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
 
+    // Public document: no prijsafspraken, it is not publicly readable.
     await waitFor(() =>
-      expect(onAdd).toHaveBeenCalledWith({
-        foto: 'https://storage.example.com/nieuw.jpg',
-        naam: 'Nieuwe Kunstenaar',
-        omschrijvingNl: 'Werkt met glas.',
-        omschrijvingFr: '',
-        omschrijvingDe: '',
-        omschrijvingEn: '',
-        prijsafspraken: '',
-        verkooprecht: 'alleen-kunstenaar',
-        klantId: 'klant-1',
-        exclusiefVoorKlantId: null,
-      })
+      expect(setDocMock).toHaveBeenCalledWith(
+        { collectionName: 'kunstenaars', id: 'nieuwe-ka-id' },
+        {
+          foto: 'https://storage.example.com/nieuw.jpg',
+          naam: 'Nieuwe Kunstenaar',
+          omschrijvingNl: 'Werkt met glas.',
+          omschrijvingFr: '',
+          omschrijvingDe: '',
+          omschrijvingEn: '',
+          verkooprecht: 'alleen-kunstenaar',
+          klantId: 'klant-1',
+          exclusiefVoorKlantId: null,
+        }
+      )
     );
+    // Companion document in the medewerker-only collection.
+    expect(setDocMock).toHaveBeenCalledWith(
+      { collectionName: 'kunstenaarAfspraken', id: 'nieuwe-ka-id' },
+      { prijsafspraken: '30% commissie' }
+    );
+    expect(onRefetch).toHaveBeenCalled();
     expect(logActiviteitMock).toHaveBeenCalledWith('kunstenaar_toegevoegd', {
       id: 'staff-1',
       email: 'paul@glassartanddesign.com',
@@ -153,13 +191,64 @@ describe('KunstenaarsSection', () => {
     });
   });
 
+  it('never writes prijsafspraken onto the publicly readable kunstenaars document', async () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstenaars-add'));
+    fireEvent.change(screen.getByTestId('kunstenaar-modal-naam'), { target: { value: 'X' } });
+    fireEvent.change(screen.getByTestId('kunstenaar-modal-omschrijving-nl'), { target: { value: 'Y' } });
+    fireEvent.change(screen.getByTestId('kunstenaar-modal-prijsafspraken'), { target: { value: 'geheim' } });
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
+
+    await waitFor(() => expect(setDocMock).toHaveBeenCalledTimes(2));
+    const publicWrite = setDocMock.mock.calls.find(
+      (call) => (call[0] as { collectionName: string }).collectionName === 'kunstenaars'
+    );
+    expect(publicWrite).toBeDefined();
+    expect(Object.keys(publicWrite![1] as Record<string, unknown>)).not.toContain('prijsafspraken');
+  });
+
+  it('pre-fills the prijsafspraken textarea from the kunstenaarAfspraken companion document', async () => {
+    getDocMock.mockResolvedValue({ data: () => ({ prijsafspraken: '20% commissie' }) });
+    renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('kunstenaar-modal-prijsafspraken')).toHaveValue('20% commissie')
+    );
+    expect(getDocMock).toHaveBeenCalledWith({ collectionName: 'kunstenaarAfspraken', id: 'ka-1' });
+  });
+
+  it('leaves the prijsafspraken textarea empty when there is no companion document yet', async () => {
+    getDocMock.mockResolvedValue({ data: () => undefined });
+    renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+
+    await waitFor(() => expect(getDocMock).toHaveBeenCalled());
+    expect(screen.getByTestId('kunstenaar-modal-prijsafspraken')).toHaveValue('');
+  });
+
+  it('falls back to a legacy prijsafspraken value still stored on the public document', async () => {
+    getDocMock.mockResolvedValue({ data: () => undefined });
+    renderSection({
+      kunstenaars: [{ ...KUNSTENAARS[0], prijsafspraken: 'legacy 15%' } as Kunstenaar],
+    });
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('kunstenaar-modal-prijsafspraken')).toHaveValue('legacy 15%')
+    );
+  });
+
   it('opens a row for editing pre-filled and updates it, preserving exclusiefVoorKlantId', async () => {
+    getDocMock.mockResolvedValue({ data: () => ({ prijsafspraken: '20% commissie' }) });
     const { onUpdate } = renderSection({
       kunstenaars: [{ ...KUNSTENAARS[0], exclusiefVoorKlantId: 'klant-1' }],
     });
     fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
     expect(screen.getByTestId('kunstenaar-modal-naam')).toHaveValue('Sabrina Glasser');
-    expect(screen.getByTestId('kunstenaar-modal-prijsafspraken')).toHaveValue('20% commissie');
+    await waitFor(() =>
+      expect(screen.getByTestId('kunstenaar-modal-prijsafspraken')).toHaveValue('20% commissie')
+    );
 
     fireEvent.change(screen.getByTestId('kunstenaar-modal-naam'), { target: { value: 'Sabrina G.' } });
     fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
@@ -172,11 +261,18 @@ describe('KunstenaarsSection', () => {
         omschrijvingFr: '',
         omschrijvingDe: '',
         omschrijvingEn: '',
-        prijsafspraken: '20% commissie',
         verkooprecht: 'open',
         klantId: null,
         exclusiefVoorKlantId: 'klant-1',
+        // Strips any legacy value left on the publicly readable document.
+        prijsafspraken: { __sentinel: 'deleteField' },
       })
+    );
+    await waitFor(() =>
+      expect(setDocMock).toHaveBeenCalledWith(
+        { collectionName: 'kunstenaarAfspraken', id: 'ka-1' },
+        { prijsafspraken: '20% commissie' }
+      )
     );
     expect(logActiviteitMock).toHaveBeenCalledWith('kunstenaar_gewijzigd', expect.anything());
   });
@@ -189,12 +285,32 @@ describe('KunstenaarsSection', () => {
     expect(logActiviteitMock).toHaveBeenCalledWith('kunstenaar_verwijderd', expect.anything());
   });
 
+  it('also deletes the kunstenaarAfspraken companion document when deleting a kunstenaar', async () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-verwijderen'));
+    await waitFor(() =>
+      expect(deleteDocMock).toHaveBeenCalledWith({ collectionName: 'kunstenaarAfspraken', id: 'ka-1' })
+    );
+  });
+
   it('shows an action error and does not log when adding fails', async () => {
-    const onAdd = vi.fn().mockResolvedValue(false);
-    renderSection({ onAdd });
+    setDocMock.mockRejectedValue(new Error('offline'));
+    renderSection();
     fireEvent.click(screen.getByTestId('kunstenaars-add'));
     fireEvent.change(screen.getByTestId('kunstenaar-modal-naam'), { target: { value: 'X' } });
     fireEvent.change(screen.getByTestId('kunstenaar-modal-omschrijving-nl'), { target: { value: 'Y' } });
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
+    expect(await screen.findByTestId('kunstenaar-modal-error')).toHaveTextContent(
+      'Er is iets misgegaan. Probeer het opnieuw.'
+    );
+    expect(logActiviteitMock).not.toHaveBeenCalled();
+  });
+
+  it('shows an action error and does not log when editing fails', async () => {
+    const onUpdate = vi.fn().mockResolvedValue(false);
+    renderSection({ onUpdate });
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
     fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
     expect(await screen.findByTestId('kunstenaar-modal-error')).toHaveTextContent(
       'Er is iets misgegaan. Probeer het opnieuw.'
@@ -212,5 +328,6 @@ describe('KunstenaarsSection', () => {
       'Deze kunstenaar is nog aan een kunstwerk gekoppeld en kan niet verwijderd worden.'
     );
     expect(onRemove).not.toHaveBeenCalled();
+    expect(deleteDocMock).not.toHaveBeenCalled();
   });
 });

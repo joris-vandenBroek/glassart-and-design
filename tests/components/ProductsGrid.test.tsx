@@ -110,7 +110,6 @@ const KUNSTENAARS = [
       omschrijvingFr: '',
       omschrijvingDe: '',
       omschrijvingEn: '',
-      prijsafspraken: '',
       verkooprecht: 'open',
       klantId: null,
       exclusiefVoorKlantId: null,

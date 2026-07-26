@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { collection, deleteDoc, deleteField, doc, getDoc, setDoc, type FieldValue } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
 import { Combobox } from '@/components/Combobox';
@@ -17,10 +19,23 @@ interface KunstenaarsSectionProps {
   klanten: Klant[] | null;
   kunstwerken: Kunstwerk[] | null;
   loadError: string | null;
-  onAdd: (data: Omit<Kunstenaar, 'id'>) => Promise<boolean>;
-  onUpdate: (id: string, data: Omit<Kunstenaar, 'id'>) => Promise<boolean>;
+  onUpdate: (id: string, data: KunstenaarUpdate) => Promise<boolean>;
   onRemove: (id: string) => Promise<boolean>;
+  onRefetch: () => Promise<boolean>;
 }
+
+// Interne prijsafspraken staan in een aparte, alleen voor medewerkers leesbare
+// collectie; het kunstenaars-document zelf is publiek leesbaar (Collecties-pagina).
+const AFSPRAKEN_COLLECTION = 'kunstenaarAfspraken';
+
+// Documenten die vóór deze splitsing zijn aangemaakt hebben `prijsafspraken` nog
+// in het publieke document staan. Elke update stript dat veld met deleteField():
+// zonder die strip zou het veld publiek leesbaar blijven én zou de firestore-regel
+// (`!('prijsafspraken' in request.resource.data)`) de update weigeren, omdat
+// request.resource.data bij een update het samengevoegde eindresultaat is.
+type KunstenaarUpdate = Omit<Kunstenaar, 'id'> & { prijsafspraken?: FieldValue };
+
+type LegacyKunstenaar = Kunstenaar & { prijsafspraken?: string };
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; kunstenaar: Kunstenaar } | null;
 type KunstenaarRow = Kunstenaar & { verkooprechtLabel: string; klantNaam: string };
@@ -42,9 +57,9 @@ export function KunstenaarsSection({
   klanten,
   kunstwerken,
   loadError,
-  onAdd,
   onUpdate,
   onRemove,
+  onRefetch,
 }: KunstenaarsSectionProps) {
   const t = useTranslations('beheer');
   const { uploading, error: fotoUploadError, upload } = useKunstwerkFotoUpload();
@@ -107,18 +122,30 @@ export function KunstenaarsSection({
     setModalState({ mode: 'add' });
   }
 
-  function openEdit(kunstenaar: Kunstenaar) {
+  async function openEdit(kunstenaar: Kunstenaar) {
     setFoto(kunstenaar.foto);
     setNaam(kunstenaar.naam);
     setOmschrijvingNl(kunstenaar.omschrijvingNl);
     setOmschrijvingFr(kunstenaar.omschrijvingFr);
     setOmschrijvingDe(kunstenaar.omschrijvingDe);
     setOmschrijvingEn(kunstenaar.omschrijvingEn);
-    setPrijsafspraken(kunstenaar.prijsafspraken);
+    setPrijsafspraken(LEGE_FORM.prijsafspraken);
     setVerkooprecht(kunstenaar.verkooprecht);
     setKlantId(kunstenaar.klantId);
     setActionError(null);
     setModalState({ mode: 'edit', kunstenaar });
+    // Val terug op het legacy-veld in het publieke document, anders zouden de
+    // afspraken van nog niet gemigreerde kunstenaars bij het eerste opslaan
+    // gewist worden.
+    const legacyPrijsafspraken = (kunstenaar as LegacyKunstenaar).prijsafspraken;
+    try {
+      const afsprakenSnap = await getDoc(doc(db, AFSPRAKEN_COLLECTION, kunstenaar.id));
+      setPrijsafspraken(
+        (afsprakenSnap.data()?.prijsafspraken as string | undefined) ?? legacyPrijsafspraken ?? ''
+      );
+    } catch {
+      setPrijsafspraken(legacyPrijsafspraken ?? '');
+    }
   }
 
   function closeModal() {
@@ -167,13 +194,28 @@ export function KunstenaarsSection({
       omschrijvingFr,
       omschrijvingDe,
       omschrijvingEn,
-      prijsafspraken,
       verkooprecht,
       klantId,
       exclusiefVoorKlantId: modalState.mode === 'edit' ? modalState.kunstenaar.exclusiefVoorKlantId : null,
     };
-    const success =
-      modalState.mode === 'add' ? await onAdd(data) : await onUpdate(modalState.kunstenaar.id, data);
+    let success: boolean;
+    try {
+      if (modalState.mode === 'add') {
+        // De generieke add() geeft het nieuwe id niet terug, en dat id is nodig om
+        // het bijbehorende afsprakendocument te kunnen schrijven.
+        const nieuweRef = doc(collection(db, 'kunstenaars'));
+        await setDoc(nieuweRef, data);
+        await setDoc(doc(db, AFSPRAKEN_COLLECTION, nieuweRef.id), { prijsafspraken });
+        success = await onRefetch();
+      } else {
+        success = await onUpdate(modalState.kunstenaar.id, { ...data, prijsafspraken: deleteField() });
+        if (success) {
+          await setDoc(doc(db, AFSPRAKEN_COLLECTION, modalState.kunstenaar.id), { prijsafspraken });
+        }
+      }
+    } catch {
+      success = false;
+    }
     if (success) {
       void logActiviteit(
         modalState.mode === 'add' ? 'kunstenaar_toegevoegd' : 'kunstenaar_gewijzigd',
@@ -192,7 +234,15 @@ export function KunstenaarsSection({
       setActionError(t('kunstenaarsVerwijderBlocked'));
       return;
     }
-    const success = await onRemove(modalState.kunstenaar.id);
+    let success: boolean;
+    try {
+      success = await onRemove(modalState.kunstenaar.id);
+      if (success) {
+        await deleteDoc(doc(db, AFSPRAKEN_COLLECTION, modalState.kunstenaar.id));
+      }
+    } catch {
+      success = false;
+    }
     if (success) {
       void logActiviteit('kunstenaar_verwijderd', actorFromMedewerker(user));
       closeModal();
@@ -223,7 +273,7 @@ export function KunstenaarsSection({
         columns={columns}
         rows={rows}
         getRowId={(row) => row.id}
-        onRowClick={openEdit}
+        onRowClick={(row) => void openEdit(row)}
         emptyLabel={t('kunstenaarsEmpty')}
         searchPlaceholder={t('dataTableSearchPlaceholder')}
       />

@@ -39,9 +39,16 @@ service cloud.firestore {
       allow read: if true;
       allow write: if request.auth != null && exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid));
     }
+    // Publiek leesbaar: naam, foto en omschrijvingen worden op de Collecties-pagina
+    // getoond aan anonieme bezoekers. Interne prijsafspraken staan daarom NIET in dit
+    // document maar in /kunstenaarAfspraken/{id} (alleen medewerkers).
     match /kunstenaars/{id} {
       allow read: if true;
-      allow write: if request.auth != null && exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid));
+      allow write: if request.auth != null && exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid))
+        && !('prijsafspraken' in request.resource.data);
+    }
+    match /kunstenaarAfspraken/{id} {
+      allow read, write: if request.auth != null && exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid));
     }
     match /instellingen/{id} {
       allow read: if true;
