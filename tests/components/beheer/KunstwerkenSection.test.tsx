@@ -485,10 +485,10 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('data-table-row-kw-b'));
 
     expect(resolvers).toHaveLength(2);
-    resolvers[0]('vierkant');
+    resolvers[0]('liggend');
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-naam')).toBeInTheDocument());
 
-    expect(screen.getByTestId('kunstwerk-modal-formaat-vierkant')).not.toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-formaat-liggend')).not.toBeChecked();
 
     resolvers[1]('staand');
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-formaat-staand')).toBeChecked());
