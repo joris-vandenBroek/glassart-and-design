@@ -344,5 +344,20 @@ describe('KlantModal', () => {
     );
     expect(onUpdated).not.toHaveBeenCalled();
     expect(logActiviteitMock).not.toHaveBeenCalled();
+    // De back-pointer is wat de Firestore-regels en de winkel-UI lezen; mislukt die, dan
+    // mag het klantdocument geen exclusiviteit claimen die nergens gehandhaafd wordt.
+    expect(updateDocMock).not.toHaveBeenCalled();
+  });
+
+  it('writes the kunstenaar back-pointer before the klant document', async () => {
+    const onKunstenaarUpdated = vi.fn().mockResolvedValue(true);
+    renderModal(KLANT, PRIJSGROEPEN, KUNSTENAARS, onKunstenaarUpdated);
+    fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-1'));
+    fireEvent.click(screen.getByTestId('klant-modal-exclusiviteit-opslaan'));
+
+    await waitFor(() => expect(updateDocMock).toHaveBeenCalled());
+    expect(onKunstenaarUpdated.mock.invocationCallOrder[0]).toBeLessThan(
+      updateDocMock.mock.invocationCallOrder[0]
+    );
   });
 });

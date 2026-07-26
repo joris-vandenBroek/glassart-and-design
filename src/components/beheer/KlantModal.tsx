@@ -134,12 +134,13 @@ export function KlantModal({
   async function handleOpslaanExclusiviteit() {
     if (!klant) return;
     try {
-      await updateDoc(doc(db, 'klanten', klant.id), { exclusieveKunstenaarIds });
       const added = exclusieveKunstenaarIds.filter((id) => !klant.exclusieveKunstenaarIds.includes(id));
       const removed = klant.exclusieveKunstenaarIds.filter((id) => !exclusieveKunstenaarIds.includes(id));
-      // Faalt een back-pointer, dan is de zojuist opgeslagen exclusieveKunstenaarIds van de
-      // klant niet meer in lijn met de kunstenaars — stoppen en de fout tonen in plaats van
-      // stilzwijgend doorgaan en een geslaagde opslag melden.
+      // Eerst de back-pointers op de kunstenaars, dán pas het klantdocument. Alleen
+      // `Kunstenaar.exclusiefVoorKlantId` wordt door de Firestore-regels en de winkel-UI
+      // gelezen; `Klant.exclusieveKunstenaarIds` is puur administratief. Faalt een
+      // back-pointer halverwege, dan stoppen we met het klantdocument ONGEWIJZIGD in
+      // plaats van met een klant die een niet-gehandhaafde exclusiviteit claimt.
       for (const id of added) {
         if (!(await onKunstenaarUpdated(id, { exclusiefVoorKlantId: klant.id }))) {
           setError(t('klantenActionError'));
@@ -152,6 +153,7 @@ export function KlantModal({
           return;
         }
       }
+      await updateDoc(doc(db, 'klanten', klant.id), { exclusieveKunstenaarIds });
       void logActiviteit('klant_exclusiviteit_gewijzigd', actorFromMedewerker(user));
       onUpdated({ ...klant, exclusieveKunstenaarIds });
     } catch {
