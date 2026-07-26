@@ -26,6 +26,12 @@ interface EditableFields {
   address: string;
   postcode: string;
   city: string;
+  deliveryAddress: string;
+  deliveryPostcode: string;
+  deliveryCity: string;
+  invoiceAddress: string;
+  invoicePostcode: string;
+  invoiceCity: string;
 }
 
 function fieldsFromKlant(klant: Klant): EditableFields {
@@ -39,6 +45,12 @@ function fieldsFromKlant(klant: Klant): EditableFields {
     address: klant.address,
     postcode: klant.postcode,
     city: klant.city,
+    deliveryAddress: klant.deliveryAddress,
+    deliveryPostcode: klant.deliveryPostcode,
+    deliveryCity: klant.deliveryCity,
+    invoiceAddress: klant.invoiceAddress,
+    invoicePostcode: klant.invoicePostcode,
+    invoiceCity: klant.invoiceCity,
   };
 }
 
@@ -230,6 +242,72 @@ export function KlantModal({ klant, prijsgroepen, onClose, onUpdated }: KlantMod
               testId="klant-modal-city"
               onChange={(value) => setField('city', value)}
             />
+          </div>
+
+          <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
+            <span className="text-xs uppercase tracking-wide text-white/60">{t('klantenLabelAfleveradres')}</span>
+            {!isEditing && fields.deliveryAddress === '' && fields.deliveryPostcode === '' && fields.deliveryCity === '' ? (
+              <p data-testid="klant-modal-afleveradres-leeg" className="text-white/50">
+                {t('klantenLabelGebruiktStandaardadres')}
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Veld
+                  label={t('klantenLabelAdres')}
+                  value={fields.deliveryAddress}
+                  editing={isEditing}
+                  testId="klant-modal-deliveryAddress"
+                  onChange={(value) => setField('deliveryAddress', value)}
+                />
+                <Veld
+                  label={t('klantenLabelPostcode')}
+                  value={fields.deliveryPostcode}
+                  editing={isEditing}
+                  testId="klant-modal-deliveryPostcode"
+                  onChange={(value) => setField('deliveryPostcode', value)}
+                />
+                <Veld
+                  label={t('klantenLabelPlaats')}
+                  value={fields.deliveryCity}
+                  editing={isEditing}
+                  testId="klant-modal-deliveryCity"
+                  onChange={(value) => setField('deliveryCity', value)}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
+            <span className="text-xs uppercase tracking-wide text-white/60">{t('klantenLabelFactuuradres')}</span>
+            {!isEditing && fields.invoiceAddress === '' && fields.invoicePostcode === '' && fields.invoiceCity === '' ? (
+              <p data-testid="klant-modal-factuuradres-leeg" className="text-white/50">
+                {t('klantenLabelGebruiktStandaardadres')}
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Veld
+                  label={t('klantenLabelAdres')}
+                  value={fields.invoiceAddress}
+                  editing={isEditing}
+                  testId="klant-modal-invoiceAddress"
+                  onChange={(value) => setField('invoiceAddress', value)}
+                />
+                <Veld
+                  label={t('klantenLabelPostcode')}
+                  value={fields.invoicePostcode}
+                  editing={isEditing}
+                  testId="klant-modal-invoicePostcode"
+                  onChange={(value) => setField('invoicePostcode', value)}
+                />
+                <Veld
+                  label={t('klantenLabelPlaats')}
+                  value={fields.invoiceCity}
+                  editing={isEditing}
+                  testId="klant-modal-invoiceCity"
+                  onChange={(value) => setField('invoiceCity', value)}
+                />
+              </div>
+            )}
           </div>
 
           {isEditing && (
