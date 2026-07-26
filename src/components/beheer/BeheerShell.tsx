@@ -66,6 +66,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
               city: data.city,
               status: data.status,
               prijsgroepId: data.prijsgroepId,
+              exclusieveKunstenaarIds: data.exclusieveKunstenaarIds ?? [],
             } as Klant;
           })
         );
@@ -275,8 +276,10 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
           <KlantenSection
             klanten={klanten}
             prijsgroepen={prijsgroepen.items}
+            kunstenaars={kunstenaars.items}
             loadError={loadError}
             onKlantUpdated={handleKlantUpdated}
+            onKunstenaarUpdated={kunstenaars.update}
           />
         ) : activeSection === 'bestellingen' ? (
           <BestellingenSection

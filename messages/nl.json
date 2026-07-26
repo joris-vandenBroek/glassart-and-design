@@ -325,6 +325,8 @@
     "klantenLabelPostcode": "Postcode",
     "klantenLabelPlaats": "Plaats",
     "klantenLabelPrijsgroep": "Prijsgroep",
+    "klantenLabelExclusieveKunstenaars": "Exclusief recht op kunstenaars",
+    "klantenExclusiviteitBlocked": "Deze kunstenaar is al exclusief toegewezen aan een andere klant.",
     "klantenOpslaan": "Opslaan",
     "klantenModalTitel": "Klantgegevens",
     "klantenContactPreferenceEmail": "E-mail",

@@ -42,6 +42,7 @@ const KLANTEN: Klant[] = [
     city: 'Teststad',
     status: 'Beoordelen',
     prijsgroepId: null,
+    exclusieveKunstenaarIds: [],
   },
   {
     id: 'uid-2',
@@ -56,6 +57,7 @@ const KLANTEN: Klant[] = [
     city: 'Anderstad',
     status: 'Goedgekeurd',
     prijsgroepId: 'pg-1',
+    exclusieveKunstenaarIds: [],
   },
 ];
 
@@ -66,18 +68,21 @@ const PRIJSGROEPEN: Prijsgroep[] = [
 
 function renderSection(overrides: Partial<React.ComponentProps<typeof KlantenSection>> = {}) {
   const onKlantUpdated = vi.fn();
+  const onKunstenaarUpdated = vi.fn().mockResolvedValue(true);
   render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <KlantenSection
         klanten={KLANTEN}
         prijsgroepen={PRIJSGROEPEN}
+        kunstenaars={[]}
         loadError={null}
         onKlantUpdated={onKlantUpdated}
+        onKunstenaarUpdated={onKunstenaarUpdated}
         {...overrides}
       />
     </NextIntlClientProvider>
   );
-  return { onKlantUpdated };
+  return { onKlantUpdated, onKunstenaarUpdated };
 }
 
 beforeEach(() => {
