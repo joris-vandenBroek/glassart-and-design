@@ -2,18 +2,26 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { BestellingenSection, type Bestelling } from '@/components/beheer/BestellingenSection';
-import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from '@/components/beheer/materiaalTypes';
+import type { Kunstwerk, Materiaal, Maat, Materiaalsoort, Drukker } from '@/components/beheer/materiaalTypes';
+import type { Klant } from '@/components/beheer/KlantenSection';
 import messages from '../../../messages/nl.json';
 
 const updateDocMock = vi.fn();
+const addDocMock = vi.fn();
+const fetchMock = vi.fn();
+
+vi.stubGlobal('fetch', fetchMock);
 
 vi.mock('@/lib/firebase', () => ({
   db: {},
 }));
 
 vi.mock('firebase/firestore', () => ({
-  doc: vi.fn((_db, collectionName, id) => ({ collectionName, id })),
+  doc: vi.fn((_db, ...segments: string[]) => ({ collectionName: segments.slice(0, -1).join('/'), id: segments[segments.length - 1] })),
+  collection: vi.fn((_db, ...segments: string[]) => ({ name: segments.join('/') })),
   updateDoc: (...args: unknown[]) => updateDocMock(...args),
+  addDoc: (...args: unknown[]) => addDocMock(...args),
+  serverTimestamp: () => 'server-timestamp',
 }));
 
 vi.mock('@/lib/useAdminAuth', () => ({
@@ -49,6 +57,33 @@ const MATERIALEN: Materiaal[] = [
 ];
 const MATEN: Maat[] = [{ id: 'maat-1', breedte: 40, hoogte: 60 }];
 const MATERIAALSOORTEN: Materiaalsoort[] = [{ id: 'soort-1', omschrijving: 'Veiligheidsglas' }];
+
+const KLANTEN: Klant[] = [
+  {
+    id: 'uid-1',
+    companyName: 'Testbedrijf BV',
+    kvk: '12345678',
+    contactPerson: 'Jan Jansen',
+    email: 'jan@example.com',
+    phone: '0612345678',
+    contactPreference: 'email',
+    address: 'Teststraat 1',
+    postcode: '1234 AB',
+    city: 'Teststad',
+    deliveryAddress: '',
+    deliveryPostcode: '',
+    deliveryCity: '',
+    invoiceAddress: '',
+    invoicePostcode: '',
+    invoiceCity: '',
+    status: 'Goedgekeurd',
+    prijsgroepId: 'pg-1',
+  },
+];
+
+const DRUKKERS: Drukker[] = [
+  { id: 'drukker-1', naam: 'Drukkerij Janssen', adres: 'Perslaan 1', postcode: '1000 AA', plaats: 'Utrecht', email: 'info@janssen.nl', prijsafspraken: '' },
+];
 
 const BESTELLINGEN: Bestelling[] = [
   {
@@ -87,8 +122,8 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Bestelling
           materialen={MATERIALEN}
           maten={MATEN}
           materiaalsoorten={MATERIAALSOORTEN}
-          klanten={[]}
-          drukkers={[]}
+          klanten={KLANTEN}
+          drukkers={DRUKKERS}
           loadError={null}
           onBestellingUpdated={onBestellingUpdated}
           onLinePrijsVastgesteld={onLinePrijsVastgesteld}
@@ -108,6 +143,10 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Bestelling
 
 beforeEach(() => {
   updateDocMock.mockReset();
+  addDocMock.mockReset();
+  fetchMock.mockReset();
+  vi.stubEnv('NEXT_PUBLIC_MAIL_ENDPOINT_URL', 'https://example.com/mail.php');
+  vi.stubEnv('NEXT_PUBLIC_MAIL_SECRET', 'test-secret');
 });
 
 describe('BestellingenSection', () => {
@@ -215,6 +254,39 @@ describe('BestellingenSection', () => {
       fireEvent.click(screen.getByTestId('data-table-row-select-header-1'));
       expect(screen.getByTestId('bestellingen-selectie-balk')).toBeInTheDocument();
       rerender(bestellingen.map((b) => ({ ...b, status: 'Verstuurd naar drukker' as const })));
+      expect(screen.queryByTestId('bestellingen-selectie-balk')).not.toBeInTheDocument();
+    });
+
+    it('opens the VersturenNaarDrukkerDialog with only the selected bestellingen when the button is clicked', () => {
+      const bestellingen = [
+        { ...BESTELLINGEN[0], status: 'Te versturen naar drukker' as const },
+        { ...BESTELLINGEN[1], id: 'header-3', status: 'Te versturen naar drukker' as const },
+      ];
+      renderSection({ bestellingen });
+      fireEvent.click(screen.getByTestId('data-table-row-select-header-1'));
+      expect(screen.queryByTestId('drukker-versturen-drukker')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('bestellingen-versturen-naar-drukker'));
+
+      expect(screen.getByTestId('drukker-versturen-drukker')).toHaveValue('drukker-1');
+      expect(screen.getByTestId('drukker-versturen-preview')).toHaveTextContent('Testbedrijf BV');
+      expect(screen.getByTestId('drukker-versturen-preview')).not.toHaveTextContent('Ander Bedrijf');
+    });
+
+    it('reports each verstuurde bestelling, clears the selection, and closes the dialog on a successful send', async () => {
+      fetchMock.mockResolvedValue({ ok: true });
+      updateDocMock.mockResolvedValue(undefined);
+      addDocMock.mockResolvedValue(undefined);
+      const bestellingen = [{ ...BESTELLINGEN[0], status: 'Te versturen naar drukker' as const }];
+      const { onBestellingUpdated } = renderSection({ bestellingen });
+      fireEvent.click(screen.getByTestId('data-table-row-select-header-1'));
+      fireEvent.click(screen.getByTestId('bestellingen-versturen-naar-drukker'));
+
+      fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
+
+      await waitFor(() => expect(onBestellingUpdated).toHaveBeenCalled());
+      expect(onBestellingUpdated.mock.calls[0][0]).toEqual({ ...bestellingen[0], status: 'Verstuurd naar drukker' });
+      expect(screen.queryByTestId('drukker-versturen-drukker')).not.toBeInTheDocument();
       expect(screen.queryByTestId('bestellingen-selectie-balk')).not.toBeInTheDocument();
     });
   });

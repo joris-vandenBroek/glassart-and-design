@@ -38,7 +38,8 @@ export type ActiviteitType =
   | 'bestelling_regel_gewijzigd'
   | 'drukker_toegevoegd'
   | 'drukker_gewijzigd'
-  | 'drukker_verwijderd';
+  | 'drukker_verwijderd'
+  | 'bestelling_verstuurd_naar_drukker';
 
 export interface ActiviteitActor {
   id: string | null;

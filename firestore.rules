@@ -68,7 +68,8 @@ service cloud.firestore {
            'segment_toegevoegd','segment_gewijzigd','segment_verwijderd',
            'kunstwerk_toegevoegd','kunstwerk_gewijzigd','kunstwerk_verwijderd',
            'prijsgroep_toegevoegd','prijsgroep_gewijzigd','prijsgroep_verwijderd',
-           'bedrijfsgegevens_gewijzigd','mandje_eigen_maat_toegevoegd','bestelling_prijs_vastgesteld']
+           'bedrijfsgegevens_gewijzigd','mandje_eigen_maat_toegevoegd','bestelling_prijs_vastgesteld',
+           'bestelling_verstuurd_naar_drukker']
         && request.resource.data.keys().hasOnly(['type','actorId','actorEmail','actorNaam','timestamp'])
         && request.resource.data.actorEmail is string
         && request.resource.data.actorNaam is string;

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { BestellingModal } from './BestellingModal';
+import { VersturenNaarDrukkerDialog } from './VersturenNaarDrukkerDialog';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort, Drukker } from './materiaalTypes';
 import type { Klant } from './KlantenSection';
 
@@ -59,6 +60,7 @@ export function BestellingenSection({
   const t = useTranslations('beheer');
   const [selectedBestelling, setSelectedBestelling] = useState<Bestelling | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showVersturenDialog, setShowVersturenDialog] = useState(false);
 
   useEffect(() => {
     if (bestellingen === null) return;
@@ -150,6 +152,7 @@ export function BestellingenSection({
           </span>
           <button
             type="button"
+            onClick={() => setShowVersturenDialog(true)}
             data-testid="bestellingen-versturen-naar-drukker"
             className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
           >
@@ -191,6 +194,22 @@ export function BestellingenSection({
         }}
         onLinePrijsVastgesteld={handleLinePrijsVastgesteld}
         onLineUpdated={handleLineUpdated}
+      />
+      <VersturenNaarDrukkerDialog
+        isOpen={showVersturenDialog}
+        onClose={() => setShowVersturenDialog(false)}
+        bestellingen={bestellingen.filter((b) => selectedIds.has(b.id))}
+        klanten={klanten ?? []}
+        drukkers={drukkers ?? []}
+        kunstwerken={kunstwerken ?? []}
+        materialen={materialen ?? []}
+        maten={maten ?? []}
+        materiaalsoorten={materiaalsoorten ?? []}
+        onVerstuurd={(updated) => {
+          updated.forEach(onBestellingUpdated);
+          setSelectedIds(new Set());
+          setShowVersturenDialog(false);
+        }}
       />
     </div>
   );
