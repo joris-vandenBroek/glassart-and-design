@@ -9,7 +9,10 @@ import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
 import { WatermarkedImage } from './WatermarkedImage';
 import { ProductModal, materiaalLabel, maatLabel } from './ProductModal';
 import { KunstwerkSpecCard } from './KunstwerkSpecCard';
+import { Combobox } from './Combobox';
+import { resolveKunstenaarOmschrijving } from '@/lib/resolveKunstenaarOmschrijving';
 import type { Segment, Kunstwerk, Materiaal, Maat, Materiaalsoort } from './beheer/materiaalTypes';
+import type { Kunstenaar } from './beheer/kunstenaarTypes';
 
 const ALL_FILTER = 'all';
 
@@ -17,6 +20,7 @@ export function ProductsGrid() {
   const locale = useLocale();
   const tCollections = useTranslations('collectionsPage');
   const [activeFilter, setActiveFilter] = useState(ALL_FILTER);
+  const [kunstenaarFilter, setKunstenaarFilter] = useState<string | null>(null);
   const [selectedKunstwerk, setSelectedKunstwerk] = useState<Kunstwerk | null>(null);
   const { user } = useCustomerAuth();
 
@@ -25,20 +29,27 @@ export function ProductsGrid() {
   const materialen = useFirestoreCollection<Materiaal>('materialen');
   const maten = useFirestoreCollection<Maat>('maten');
   const materiaalsoorten = useFirestoreCollection<Materiaalsoort>('materiaalsoorten');
+  const kunstenaars = useFirestoreCollection<Kunstenaar>('kunstenaars');
 
   if (segmenten.items === null || kunstwerken.items === null) {
     return null;
   }
 
   const allKunstwerken = kunstwerken.items;
-  const visibleKunstwerken =
+  const bySegment =
     activeFilter === ALL_FILTER
       ? allKunstwerken
       : allKunstwerken.filter((kunstwerk) => kunstwerk.segmentIds.includes(activeFilter));
+  const visibleKunstwerken =
+    kunstenaarFilter === null ? bySegment : bySegment.filter((kunstwerk) => kunstwerk.kunstenaarId === kunstenaarFilter);
+  const geselecteerdeKunstenaar = kunstenaarFilter
+    ? (kunstenaars.items ?? []).find((kunstenaar) => kunstenaar.id === kunstenaarFilter) ?? null
+    : null;
 
   const materiaalsoortNaamById = new Map(
     (materiaalsoorten.items ?? []).map((soort) => [soort.id, soort.omschrijving])
   );
+  const kunstenaarNaamById = new Map((kunstenaars.items ?? []).map((kunstenaar) => [kunstenaar.id, kunstenaar.naam]));
 
   function filterButtonClass(isActive: boolean) {
     return isActive
@@ -79,6 +90,36 @@ export function ProductsGrid() {
           </button>
         ))}
       </div>
+
+      <div className="mx-auto mb-4 flex max-w-xs flex-col gap-2">
+        <Combobox
+          options={(kunstenaars.items ?? []).map((kunstenaar) => ({ value: kunstenaar.id, label: kunstenaar.naam }))}
+          value={kunstenaarFilter}
+          onChange={setKunstenaarFilter}
+          placeholder={tCollections('kunstenaarFilterPlaceholder')}
+          noResultsLabel={tCollections('kunstenaarFilterNoResults')}
+          clearLabel={tCollections('kunstenaarFilterClear')}
+          testId="kunstenaar-filter"
+        />
+      </div>
+      {geselecteerdeKunstenaar && (
+        <div
+          data-testid="kunstenaar-banner"
+          className="mx-auto mb-8 flex max-w-2xl items-center gap-4 rounded border border-white/10 p-4 text-left"
+        >
+          {geselecteerdeKunstenaar.foto && (
+            <img
+              src={geselecteerdeKunstenaar.foto}
+              alt={geselecteerdeKunstenaar.naam}
+              className="h-20 w-20 rounded-full object-cover"
+            />
+          )}
+          <div>
+            <p className="font-head text-sm font-semibold text-white">{geselecteerdeKunstenaar.naam}</p>
+            <p className="text-xs text-white/70">{resolveKunstenaarOmschrijving(geselecteerdeKunstenaar, locale)}</p>
+          </div>
+        </div>
+      )}
 
       <div
         data-testid="products-grid"
@@ -121,7 +162,7 @@ export function ProductsGrid() {
                 }
                 code={kunstwerk.naam}
                 titel={omschrijving}
-                artiest={kunstwerk.artiest}
+                artiest={kunstwerk.kunstenaarId ? kunstenaarNaamById.get(kunstwerk.kunstenaarId) ?? '' : ''}
                 collectieLabels={collectieLabels}
                 materiaalLabels={beschikbareMaterialen.map((materiaal) =>
                   materiaalLabel(materiaal, materiaalsoortNaamById.get(materiaal.materiaalsoortId) ?? materiaal.materiaalsoortId)
@@ -138,6 +179,7 @@ export function ProductsGrid() {
         materialen={materialen.items}
         maten={maten.items}
         materiaalsoorten={materiaalsoorten.items}
+        kunstenaars={kunstenaars.items}
         onClose={() => setSelectedKunstwerk(null)}
       />
     </>

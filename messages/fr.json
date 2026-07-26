@@ -29,7 +29,10 @@
   "collectionsPage": {
     "title": "Collections",
     "intro": "Découvrez nos œuvres sur verre, classées par application.",
-    "filterAll": "Tous"
+    "filterAll": "Tous",
+    "kunstenaarFilterPlaceholder": "Rechercher par artiste…",
+    "kunstenaarFilterClear": "Tous les artistes",
+    "kunstenaarFilterNoResults": "Aucun artiste trouvé"
   },
   "kunstwerkSpecCard": {
     "collectie": "Collection",
@@ -84,7 +87,11 @@
     "customSizeMaxError": "Cette taille est trop grande. Maximum {maxBreedte}×{maxHoogte} cm.",
     "customSizeLeadTime": "Attention : cette taille a un délai de livraison d'au moins {months, plural, one {# mois} other {# mois}}.",
     "priceOnRequest": "Prix sur demande",
-    "customSizeNote": "{count, plural, one {+ # article, prix à confirmer après devis} other {+ # articles, prix à confirmer après devis}}"
+    "customSizeNote": "{count, plural, one {+ # article, prix à confirmer après devis} other {+ # articles, prix à confirmer après devis}}",
+    "orderBlockedExclusive": "Cette œuvre est exclusivement réservée à un autre client.",
+    "orderBlockedArtistOnly": "Cette œuvre ne peut être commandée que par l'artiste lui-même.",
+    "orderBlockedUnavailable": "Cette œuvre ne peut pas être commandée pour le moment. Veuillez réessayer plus tard.",
+    "placeOrderBlockedItem": "Impossible de passer la commande : \"{omschrijving}\" n'est plus disponible pour vous. Retirez cet article de votre panier et réessayez."
   },
   "contactPage": {
     "title": "Contact",

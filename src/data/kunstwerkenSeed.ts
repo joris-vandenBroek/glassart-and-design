@@ -111,7 +111,7 @@ export function buildKunstwerkenSeed(
     return fotos.map((foto, index) => ({
       foto,
       naam: `${segment.omschrijving} paneel ${index + 1}`,
-      artiest: '',
+      kunstenaarId: null,
       segmentIds: [segment.id],
       materiaalIds,
       maatIds,

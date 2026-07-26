@@ -9,6 +9,7 @@ import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import type { Kunstwerk, Segment, Materiaal, Materiaalsoort, Maat, PrijsRegel } from './materiaalTypes';
+import type { Kunstenaar } from './kunstenaarTypes';
 
 interface KunstwerkenSectionProps {
   kunstwerken: Kunstwerk[] | null;
@@ -16,6 +17,7 @@ interface KunstwerkenSectionProps {
   materialen: Materiaal[] | null;
   materiaalsoorten: Materiaalsoort[] | null;
   maten: Maat[] | null;
+  kunstenaars: Kunstenaar[] | null;
   loadError: string | null;
   onAdd: (data: Omit<Kunstwerk, 'id'>) => Promise<boolean>;
   onUpdate: (id: string, data: Omit<Kunstwerk, 'id'>) => Promise<boolean>;
@@ -24,7 +26,7 @@ interface KunstwerkenSectionProps {
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; kunstwerk: Kunstwerk } | null;
 type PrijzenState = Record<string, string>;
-type KunstwerkRow = Kunstwerk & { segmentNamen: string };
+type KunstwerkRow = Kunstwerk & { segmentNamen: string; kunstenaarNaam: string };
 
 function prijsKey(materiaalId: string, maatId: string) {
   return `${materiaalId}:${maatId}`;
@@ -37,7 +39,7 @@ function toggle(list: string[], id: string): string[] {
 const LEGE_FORM = {
   foto: '',
   naam: '',
-  artiest: '',
+  kunstenaarId: '' as string,
   segmentIds: [] as string[],
   materiaalIds: [] as string[],
   maatIds: [] as string[],
@@ -54,6 +56,7 @@ export function KunstwerkenSection({
   materialen,
   materiaalsoorten,
   maten,
+  kunstenaars,
   loadError,
   onAdd,
   onUpdate,
@@ -65,7 +68,7 @@ export function KunstwerkenSection({
   const [modalState, setModalState] = useState<ModalState>(null);
   const [foto, setFoto] = useState(LEGE_FORM.foto);
   const [naam, setNaam] = useState(LEGE_FORM.naam);
-  const [artiest, setArtiest] = useState(LEGE_FORM.artiest);
+  const [kunstenaarId, setKunstenaarId] = useState(LEGE_FORM.kunstenaarId);
   const [segmentIds, setSegmentIds] = useState<string[]>(LEGE_FORM.segmentIds);
   const [materiaalIds, setMateriaalIds] = useState<string[]>(LEGE_FORM.materiaalIds);
   const [maatIds, setMaatIds] = useState<string[]>(LEGE_FORM.maatIds);
@@ -90,6 +93,12 @@ export function KunstwerkenSection({
     return map;
   }, [materiaalsoorten]);
 
+  const kunstenaarNaamById = useMemo(() => {
+    const map = new Map<string, string>();
+    (kunstenaars ?? []).forEach((kunstenaar) => map.set(kunstenaar.id, kunstenaar.naam));
+    return map;
+  }, [kunstenaars]);
+
   function materiaalLabel(materiaal: Materiaal): string {
     const soortNaam = materiaalsoortNaamById.get(materiaal.materiaalsoortId) ?? materiaal.materiaalsoortId;
     return `${materiaal.materiaaldikte}mm — ${soortNaam}`;
@@ -110,12 +119,13 @@ export function KunstwerkenSection({
   const rows: KunstwerkRow[] = kunstwerken.map((kunstwerk) => ({
     ...kunstwerk,
     segmentNamen: kunstwerk.segmentIds.map((id) => segmentNaamById.get(id) ?? id).join(', '),
+    kunstenaarNaam: kunstwerk.kunstenaarId ? kunstenaarNaamById.get(kunstwerk.kunstenaarId) ?? '' : '',
   }));
 
   function resetForm() {
     setFoto(LEGE_FORM.foto);
     setNaam(LEGE_FORM.naam);
-    setArtiest(LEGE_FORM.artiest);
+    setKunstenaarId(LEGE_FORM.kunstenaarId);
     setSegmentIds(LEGE_FORM.segmentIds);
     setMateriaalIds(LEGE_FORM.materiaalIds);
     setMaatIds(LEGE_FORM.maatIds);
@@ -135,7 +145,7 @@ export function KunstwerkenSection({
   function openEdit(kunstwerk: Kunstwerk) {
     setFoto(kunstwerk.foto);
     setNaam(kunstwerk.naam ?? '');
-    setArtiest(kunstwerk.artiest ?? '');
+    setKunstenaarId(kunstwerk.kunstenaarId ?? '');
     setSegmentIds(kunstwerk.segmentIds);
     setMateriaalIds(kunstwerk.materiaalIds);
     setMaatIds(kunstwerk.maatIds);
@@ -213,7 +223,7 @@ export function KunstwerkenSection({
     const data = {
       foto,
       naam,
-      artiest,
+      kunstenaarId: kunstenaarId || null,
       segmentIds,
       materiaalIds,
       maatIds,
@@ -268,7 +278,7 @@ export function KunstwerkenSection({
       render: (row) => <img src={row.foto} alt="" className="h-10 w-10 rounded object-cover" />,
     },
     { key: 'naam', label: t('kunstwerkenColNaam') },
-    { key: 'artiest', label: t('kunstwerkenColArtiest') },
+    { key: 'kunstenaarNaam', label: t('kunstwerkenColKunstenaar') },
     { key: 'segmentNamen', label: t('kunstwerkenColSegmenten') },
     { key: 'omschrijvingNl', label: t('kunstwerkenColOmschrijving') },
   ];
@@ -355,14 +365,20 @@ export function KunstwerkenSection({
             />
           </label>
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('kunstwerkenLabelArtiest')}
-            <input
-              type="text"
-              value={artiest}
-              onChange={(event) => setArtiest(event.target.value)}
-              data-testid="kunstwerk-modal-artiest"
+            {t('kunstwerkenLabelKunstenaar')}
+            <select
+              value={kunstenaarId}
+              onChange={(event) => setKunstenaarId(event.target.value)}
+              data-testid="kunstwerk-modal-kunstenaar"
               className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-            />
+            >
+              <option value="">{t('kunstwerkenKunstenaarGeen')}</option>
+              {(kunstenaars ?? []).map((kunstenaar) => (
+                <option key={kunstenaar.id} value={kunstenaar.id}>
+                  {kunstenaar.naam}
+                </option>
+              ))}
+            </select>
           </label>
           {foto && (
             <img
@@ -551,7 +567,7 @@ export function KunstwerkenSection({
                 }
                 code={naam}
                 titel={omschrijvingNl}
-                artiest={artiest}
+                artiest={kunstenaarNaamById.get(kunstenaarId) ?? ''}
                 collectieLabels={segmentIds.map((segmentId) => segmentNaamById.get(segmentId) ?? segmentId)}
                 materiaalLabels={(materialen ?? [])
                   .filter((materiaal) => materiaalIds.includes(materiaal.id))

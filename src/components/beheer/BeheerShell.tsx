@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
+import { collection, deleteField, doc, getDoc, getDocs, limit, orderBy, query, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { GlassPanel } from '@/components/GlassPanel';
 import { BeheerNav, type BeheerSection } from './BeheerNav';
@@ -14,9 +14,11 @@ import { MatenSection } from './MatenSection';
 import { SegmentenSection } from './SegmentenSection';
 import { KunstwerkenSection } from './KunstwerkenSection';
 import { PrijsgroepenSection } from './PrijsgroepenSection';
+import { KunstenaarsSection } from './KunstenaarsSection';
 import { ActiviteitSection, type Activiteit } from './ActiviteitSection';
 import { GlassartDesignSection } from './GlassartDesignSection';
 import type { Materiaalsoort, Materiaal, Maat, Segment, Kunstwerk, Prijsgroep } from './materiaalTypes';
+import type { Kunstenaar, KunstenaarUpdate } from './kunstenaarTypes';
 import type { Bedrijfsgegevens } from './bedrijfsgegevensTypes';
 import type { ActiviteitType } from '@/lib/logActiviteit';
 import { useFirestoreCollection } from '@/lib/useFirestoreCollection';
@@ -64,6 +66,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
               city: data.city,
               status: data.status,
               prijsgroepId: data.prijsgroepId,
+              exclusieveKunstenaarIds: data.exclusieveKunstenaarIds ?? [],
             } as Klant;
           })
         );
@@ -227,6 +230,36 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
     skip: !kunstwerkenReady,
   });
   const prijsgroepen = useFirestoreCollection<Prijsgroep>('prijsgroepen');
+  const kunstenaars = useFirestoreCollection<Kunstenaar>('kunstenaars');
+
+  /**
+   * Het ENIGE schrijfpad naar `kunstenaars/{id}`.
+   *
+   * Elke update moet het legacy `prijsafspraken`-veld strippen (zie KunstenaarUpdate),
+   * maar strippen zonder migreren zou de interne afspraken van een nog niet gemigreerde
+   * kunstenaar stilzwijgend wissen. Daarom staat "eerst migreren, dan strippen" hier op
+   * één plek in plaats van in elke aanroepende component: KunstenaarsSection (opslaan) en
+   * KlantModal (exclusiviteit) krijgen dit als gewone update-functie doorgegeven en hoeven
+   * van de splitsing niets te weten.
+   */
+  async function updateKunstenaarVeilig(
+    id: string,
+    data: Partial<Omit<Kunstenaar, 'id'>>
+  ): Promise<boolean> {
+    const kunstenaar = (kunstenaars.items ?? []).find((item) => item.id === id) as
+      | (Kunstenaar & { prijsafspraken?: string })
+      | undefined;
+    const legacyPrijsafspraken = kunstenaar?.prijsafspraken;
+    if (legacyPrijsafspraken) {
+      const afsprakenSnap = await getDoc(doc(db, 'kunstenaarAfspraken', id));
+      // Bestaat het afsprakendocument al, dan is dat de actuele waarde (of de zojuist
+      // opgeslagen invoer van de gebruiker) en mag de legacy-waarde die niet overschrijven.
+      if (!afsprakenSnap.exists()) {
+        await setDoc(doc(db, 'kunstenaarAfspraken', id), { prijsafspraken: legacyPrijsafspraken });
+      }
+    }
+    return kunstenaars.update(id, { ...data, prijsafspraken: deleteField() } as KunstenaarUpdate);
+  }
   const bedrijfsgegevens = useFirestoreDocument<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens', {
     seed: BEDRIJFSGEGEVENS_SEED,
   });
@@ -239,6 +272,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   const segmentenCount = (segmenten.items ?? []).length;
   const kunstwerkenCount = (kunstwerken.items ?? []).length;
   const prijsgroepenCount = (prijsgroepen.items ?? []).length;
+  const kunstenaarsCount = (kunstenaars.items ?? []).length;
   const activiteitCount = (activiteiten ?? []).length;
 
   return (
@@ -261,6 +295,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
           matenCount={matenCount}
           segmentenCount={segmentenCount}
           kunstwerkenCount={kunstwerkenCount}
+          kunstenaarsCount={kunstenaarsCount}
           prijsgroepenCount={prijsgroepenCount}
           activiteitCount={activiteitCount}
         />
@@ -270,8 +305,10 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
           <KlantenSection
             klanten={klanten}
             prijsgroepen={prijsgroepen.items}
+            kunstenaars={kunstenaars.items}
             loadError={loadError}
             onKlantUpdated={handleKlantUpdated}
+            onKunstenaarUpdated={updateKunstenaarVeilig}
           />
         ) : activeSection === 'bestellingen' ? (
           <BestellingenSection
@@ -332,10 +369,21 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             materialen={materialen.items}
             materiaalsoorten={materiaalsoorten.items}
             maten={maten.items}
+            kunstenaars={kunstenaars.items}
             loadError={kunstwerken.error === 'load' ? t('kunstwerkenLoadError') : null}
             onAdd={kunstwerken.add}
             onUpdate={kunstwerken.update}
             onRemove={kunstwerken.remove}
+          />
+        ) : activeSection === 'kunstenaars' ? (
+          <KunstenaarsSection
+            kunstenaars={kunstenaars.items}
+            klanten={klanten}
+            kunstwerken={kunstwerken.items}
+            loadError={kunstenaars.error === 'load' ? t('kunstenaarsLoadError') : null}
+            onUpdate={updateKunstenaarVeilig}
+            onRemove={kunstenaars.remove}
+            onRefetch={kunstenaars.refetch}
           />
         ) : activeSection === 'prijsgroepen' ? (
           <PrijsgroepenSection

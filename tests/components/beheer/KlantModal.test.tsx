@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { KlantModal } from '@/components/beheer/KlantModal';
 import type { Klant } from '@/components/beheer/KlantenSection';
 import type { Prijsgroep } from '@/components/beheer/materiaalTypes';
+import type { Kunstenaar } from '@/components/beheer/kunstenaarTypes';
 import messages from '../../../messages/nl.json';
 
 const updateDocMock = vi.fn();
@@ -43,6 +44,7 @@ const KLANT: Klant = {
   city: 'Teststad',
   status: 'Beoordelen',
   prijsgroepId: null,
+  exclusieveKunstenaarIds: [],
 };
 
 const PRIJSGROEPEN: Prijsgroep[] = [
@@ -50,15 +52,55 @@ const PRIJSGROEPEN: Prijsgroep[] = [
   { id: 'pg-2', naam: 'Premium', kortingspercentage: 10 },
 ];
 
-function renderModal(klant: Klant | null, prijsgroepen: Prijsgroep[] | null = PRIJSGROEPEN) {
+const KUNSTENAARS: Kunstenaar[] = [
+  {
+    id: 'ka-1',
+    naam: 'Sabrina Glasser',
+    foto: null,
+    omschrijvingNl: 'Werkt met glas.',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+    verkooprecht: 'open',
+    klantId: null,
+    exclusiefVoorKlantId: null,
+  },
+  {
+    id: 'ka-2',
+    naam: 'Bram Steen',
+    foto: null,
+    omschrijvingNl: 'Werkt met steen.',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+    verkooprecht: 'open',
+    klantId: null,
+    exclusiefVoorKlantId: 'uid-2',
+  },
+];
+
+function renderModal(
+  klant: Klant | null,
+  prijsgroepen: Prijsgroep[] | null = PRIJSGROEPEN,
+  kunstenaars: Kunstenaar[] | null = KUNSTENAARS,
+  onKunstenaarUpdatedOverride?: (id: string, data: Partial<Omit<Kunstenaar, 'id'>>) => Promise<boolean>
+) {
   const onClose = vi.fn();
   const onUpdated = vi.fn();
+  const onKunstenaarUpdated = onKunstenaarUpdatedOverride ?? vi.fn().mockResolvedValue(true);
   render(
     <NextIntlClientProvider locale="nl" messages={messages}>
-      <KlantModal klant={klant} prijsgroepen={prijsgroepen} onClose={onClose} onUpdated={onUpdated} />
+      <KlantModal
+        klant={klant}
+        prijsgroepen={prijsgroepen}
+        kunstenaars={kunstenaars}
+        onKunstenaarUpdated={onKunstenaarUpdated}
+        onClose={onClose}
+        onUpdated={onUpdated}
+      />
     </NextIntlClientProvider>
   );
-  return { onClose, onUpdated };
+  return { onClose, onUpdated, onKunstenaarUpdated };
 }
 
 beforeEach(() => {
@@ -255,5 +297,67 @@ describe('KlantModal', () => {
     fireEvent.click(screen.getByTestId('klant-modal-afwijzen'));
     await screen.findByTestId('klant-modal-error');
     expect(logActiviteitMock).not.toHaveBeenCalled();
+  });
+
+  it('toggles a kunstenaar checkbox on and saves exclusieveKunstenaarIds, updating the kunstenaar back-pointer', async () => {
+    const { onUpdated, onKunstenaarUpdated } = renderModal(KLANT);
+    fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-1'));
+    fireEvent.click(screen.getByTestId('klant-modal-exclusiviteit-opslaan'));
+    await waitFor(() => expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), { exclusieveKunstenaarIds: ['ka-1'] }));
+    // Plain payload: stripping/migrating prijsafspraken is the job of
+    // BeheerShell.updateKunstenaarVeilig, which backs this prop.
+    await waitFor(() => expect(onKunstenaarUpdated).toHaveBeenCalledWith('ka-1', { exclusiefVoorKlantId: 'uid-1' }));
+    expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, exclusieveKunstenaarIds: ['ka-1'] });
+    expect(logActiviteitMock).toHaveBeenCalledWith('klant_exclusiviteit_gewijzigd', {
+      id: 'staff-1',
+      email: 'paul@glassartanddesign.com',
+      naam: 'paul@glassartanddesign.com',
+    });
+  });
+
+  it('blocks checking a kunstenaar that another klant already holds exclusively', () => {
+    renderModal(KLANT);
+    fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-2'));
+    expect(screen.getByTestId('klant-modal-error')).toHaveTextContent(
+      'Deze kunstenaar is al exclusief toegewezen aan een andere klant.'
+    );
+    expect(screen.getByTestId('klant-modal-exclusief-ka-2')).not.toBeChecked();
+  });
+
+  it('allows unchecking a kunstenaar this klant already holds exclusively, clearing the back-pointer on save', async () => {
+    const { onKunstenaarUpdated } = renderModal({ ...KLANT, exclusieveKunstenaarIds: ['ka-2'] }, PRIJSGROEPEN, [
+      { ...KUNSTENAARS[1], exclusiefVoorKlantId: 'uid-1' },
+    ]);
+    fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-2'));
+    fireEvent.click(screen.getByTestId('klant-modal-exclusiviteit-opslaan'));
+    await waitFor(() => expect(onKunstenaarUpdated).toHaveBeenCalledWith('ka-2', { exclusiefVoorKlantId: null }));
+  });
+
+  it('shows an error and does not report success when a kunstenaar back-pointer write fails', async () => {
+    const onKunstenaarUpdated = vi.fn().mockResolvedValue(false);
+    const { onUpdated } = renderModal(KLANT, PRIJSGROEPEN, KUNSTENAARS, onKunstenaarUpdated);
+    fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-1'));
+    fireEvent.click(screen.getByTestId('klant-modal-exclusiviteit-opslaan'));
+
+    expect(await screen.findByTestId('klant-modal-error')).toHaveTextContent(
+      'Er is iets misgegaan. Probeer het opnieuw.'
+    );
+    expect(onUpdated).not.toHaveBeenCalled();
+    expect(logActiviteitMock).not.toHaveBeenCalled();
+    // De back-pointer is wat de Firestore-regels en de winkel-UI lezen; mislukt die, dan
+    // mag het klantdocument geen exclusiviteit claimen die nergens gehandhaafd wordt.
+    expect(updateDocMock).not.toHaveBeenCalled();
+  });
+
+  it('writes the kunstenaar back-pointer before the klant document', async () => {
+    const onKunstenaarUpdated = vi.fn().mockResolvedValue(true);
+    renderModal(KLANT, PRIJSGROEPEN, KUNSTENAARS, onKunstenaarUpdated);
+    fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-1'));
+    fireEvent.click(screen.getByTestId('klant-modal-exclusiviteit-opslaan'));
+
+    await waitFor(() => expect(updateDocMock).toHaveBeenCalled());
+    expect(onKunstenaarUpdated.mock.invocationCallOrder[0]).toBeLessThan(
+      updateDocMock.mock.invocationCallOrder[0]
+    );
   });
 });

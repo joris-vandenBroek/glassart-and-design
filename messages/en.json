@@ -29,7 +29,10 @@
   "collectionsPage": {
     "title": "Collections",
     "intro": "Discover our artwork on glass, organized by application.",
-    "filterAll": "All"
+    "filterAll": "All",
+    "kunstenaarFilterPlaceholder": "Search by artist…",
+    "kunstenaarFilterClear": "All artists",
+    "kunstenaarFilterNoResults": "No artists found"
   },
   "kunstwerkSpecCard": {
     "collectie": "Collection",
@@ -84,7 +87,11 @@
     "customSizeMaxError": "This size is too large. Maximum {maxBreedte}×{maxHoogte} cm.",
     "customSizeLeadTime": "Note: this size has a lead time of at least {months, plural, one {# month} other {# months}}.",
     "priceOnRequest": "Price on request",
-    "customSizeNote": "{count, plural, one {+ # item, price to follow after quote} other {+ # items, price to follow after quote}}"
+    "customSizeNote": "{count, plural, one {+ # item, price to follow after quote} other {+ # items, price to follow after quote}}",
+    "orderBlockedExclusive": "This artwork is exclusively reserved for another customer.",
+    "orderBlockedArtistOnly": "This artwork can only be ordered by the artist themselves.",
+    "orderBlockedUnavailable": "This artwork cannot be ordered right now. Please try again later.",
+    "placeOrderBlockedItem": "Can't place the order: \"{omschrijving}\" is no longer available to you. Remove this item from your cart and try again."
   },
   "contactPage": {
     "title": "Contact",

@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { KunstwerkenSection } from '@/components/beheer/KunstwerkenSection';
 import type { Kunstwerk, Segment, Materiaal, Maat } from '@/components/beheer/materiaalTypes';
+import type { Kunstenaar } from '@/components/beheer/kunstenaarTypes';
 import messages from '../../../messages/nl.json';
 
 const uploadMock = vi.fn();
@@ -39,12 +40,26 @@ const MATEN: Maat[] = [
   { id: 'maat-1', breedte: 40, hoogte: 60 },
   { id: 'maat-2', breedte: 60, hoogte: 90 },
 ];
+const KUNSTENAARS: Kunstenaar[] = [
+  {
+    id: 'ka-1',
+    naam: 'Sabrina Glasser',
+    foto: null,
+    omschrijvingNl: 'Werkt met glas.',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+    verkooprecht: 'open',
+    klantId: null,
+    exclusiefVoorKlantId: null,
+  },
+];
 const KUNSTWERKEN: Kunstwerk[] = [
   {
     id: 'kw-1',
     foto: 'https://storage.example.com/kw-1.jpg',
     naam: 'Hotel paneel 1',
-    artiest: '',
+    kunstenaarId: null,
     segmentIds: ['seg-1'],
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
@@ -67,6 +82,7 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Kunstwerke
         segmenten={SEGMENTEN}
         materialen={MATERIALEN}
         maten={MATEN}
+        kunstenaars={KUNSTENAARS}
         loadError={null}
         onAdd={onAdd}
         onUpdate={onUpdate}
@@ -162,7 +178,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-1'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-1'));
     fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Vibrant Spirit' } });
-    fireEvent.change(screen.getByTestId('kunstwerk-modal-artiest'), { target: { value: 'Sabrina' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'ka-1' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-mat-1-maat-1'), { target: { value: '99' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Nieuw kunstwerk' } });
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
@@ -171,7 +187,7 @@ describe('KunstwerkenSection', () => {
       expect(onAdd).toHaveBeenCalledWith({
         foto: 'https://storage.example.com/nieuw.jpg',
         naam: 'Vibrant Spirit',
-        artiest: 'Sabrina',
+        kunstenaarId: 'ka-1',
         segmentIds: ['seg-1'],
         materiaalIds: ['mat-1'],
         maatIds: ['maat-1'],
@@ -201,7 +217,7 @@ describe('KunstwerkenSection', () => {
       expect(onUpdate).toHaveBeenCalledWith('kw-1', {
         foto: 'https://storage.example.com/kw-1.jpg',
         naam: 'Hotel paneel 1',
-        artiest: '',
+        kunstenaarId: null,
         segmentIds: ['seg-1'],
         materiaalIds: ['mat-1'],
         maatIds: ['maat-1'],

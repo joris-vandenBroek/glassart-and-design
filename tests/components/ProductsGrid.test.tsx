@@ -60,6 +60,7 @@ const KUNSTWERKEN = [
       materiaalIds: ['mat-1'],
       maatIds: ['maat-1'],
       prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 150 }],
+      kunstenaarId: 'ka-1',
       omschrijvingNl: 'Hotel paneel',
       omschrijvingFr: '',
       omschrijvingDe: '',
@@ -99,6 +100,22 @@ const MATERIALEN = [
   { id: 'mat-1', data: { materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Veiligheidsglas' } },
 ];
 const MATEN = [{ id: 'maat-1', data: { breedte: 40, hoogte: 60 } }];
+const KUNSTENAARS = [
+  {
+    id: 'ka-1',
+    data: {
+      naam: 'Sabrina Glasser',
+      foto: null,
+      omschrijvingNl: 'Werkt met gesmolten glas.',
+      omschrijvingFr: '',
+      omschrijvingDe: '',
+      omschrijvingEn: '',
+      verkooprecht: 'open',
+      klantId: null,
+      exclusiefVoorKlantId: null,
+    },
+  },
+];
 
 function mockCollections() {
   const data: Record<string, Array<{ id: string; data: Record<string, unknown> }>> = {
@@ -106,6 +123,7 @@ function mockCollections() {
     kunstwerken: KUNSTWERKEN,
     materialen: MATERIALEN,
     maten: MATEN,
+    kunstenaars: KUNSTENAARS,
   };
   getDocsMock.mockImplementation((collectionRef: { name: string }) =>
     Promise.resolve(makeSnapshot(data[collectionRef.name] ?? []))
@@ -232,5 +250,15 @@ describe('ProductsGrid', () => {
     fireEvent.click(cards[0]);
     expect(screen.getByTestId('product-modal')).toBeInTheDocument();
     expect(logActiviteitMock).not.toHaveBeenCalled();
+  });
+
+  it('filters by kunstenaar and shows the artist info banner with their description', async () => {
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+    fireEvent.focus(screen.getByTestId('kunstenaar-filter'));
+    fireEvent.click(screen.getByTestId('kunstenaar-filter-option-ka-1'));
+    expect(screen.getByTestId('kunstenaar-banner')).toHaveTextContent('Sabrina Glasser');
+    expect(screen.getByTestId('kunstenaar-banner')).toHaveTextContent('Werkt met gesmolten glas.');
+    expect(screen.getAllByTestId('product-card')).toHaveLength(1);
   });
 });

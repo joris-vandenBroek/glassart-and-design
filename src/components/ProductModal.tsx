@@ -7,9 +7,11 @@ import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
 import { useOverlayDismiss } from '@/lib/useOverlayDismiss';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
+import { resolveOrderRight } from '@/lib/resolveOrderRight';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { WatermarkedImage } from './WatermarkedImage';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from './beheer/materiaalTypes';
+import type { Kunstenaar } from './beheer/kunstenaarTypes';
 
 const CONFIRM_FEEDBACK_MS = 600;
 const CUSTOM_MAAT_VALUE = '__eigen_maat__';
@@ -36,10 +38,11 @@ interface ProductModalProps {
   materialen: Materiaal[] | null;
   maten: Maat[] | null;
   materiaalsoorten: Materiaalsoort[] | null;
+  kunstenaars: Kunstenaar[] | null;
   onClose: () => void;
 }
 
-export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, onClose }: ProductModalProps) {
+export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, kunstenaars, onClose }: ProductModalProps) {
   const t = useTranslations('cart');
   const locale = useLocale();
   const [materiaalId, setMateriaalId] = useState('');
@@ -87,6 +90,10 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
   if (!kunstwerk) {
     return null;
   }
+
+  // Dezelfde helper als CartPanel gebruikt bij het plaatsen van de bestelling, zodat de
+  // UI-blokkade niet uit de pas kan lopen met de controle vlak vóór het wegschrijven.
+  const { canOrder, blockedReason } = resolveOrderRight(kunstwerk.kunstenaarId, kunstenaars, user?.uid);
 
   const beschikbareMaterialen = (materialen ?? []).filter((materiaal) =>
     kunstwerk.materiaalIds.includes(materiaal.id)
@@ -318,11 +325,20 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
               </button>
             </div>
           </div>
+          {blockedReason && (
+            <p data-testid="product-modal-order-blocked" className="text-xs text-amber-400">
+              {blockedReason === 'exclusive'
+                ? t('orderBlockedExclusive')
+                : blockedReason === 'artistOnly'
+                ? t('orderBlockedArtistOnly')
+                : t('orderBlockedUnavailable')}
+            </p>
+          )}
           <button
             type="button"
             data-testid="product-modal-confirm"
             onClick={handleConfirm}
-            disabled={isConfirmed || !canConfirm}
+            disabled={isConfirmed || !canConfirm || !canOrder}
             className={`rounded-sm px-4 py-2.5 text-xs tracking-[0.15em] transition disabled:opacity-40 ${
               isConfirmed ? 'cursor-default bg-green-500 text-white' : 'btn-gold'
             }`}

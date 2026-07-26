@@ -7,12 +7,16 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useCart } from '@/lib/useCart';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
+import { useFirestoreCollection } from '@/lib/useFirestoreCollection';
 import { generateBestelnr } from '@/lib/generateBestelnr';
 import { useOverlayDismiss } from '@/lib/useOverlayDismiss';
 import { formatCurrency } from '@/lib/formatCurrency';
+import { resolveOrderRight } from '@/lib/resolveOrderRight';
 import { WatermarkedImage } from './WatermarkedImage';
 import { Link } from '@/i18n/navigation';
 import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
+import type { Kunstwerk } from './beheer/materiaalTypes';
+import type { Kunstenaar } from './beheer/kunstenaarTypes';
 
 export function CartPanel() {
   const t = useTranslations('cart');
@@ -22,6 +26,14 @@ export function CartPanel() {
   const [emailError, setEmailError] = useState(false);
   const { items, isHydrated, totalQuantity, totalPrice, unpricedLineCount, removeItem, clear } = useCart();
   const { user, isCustomer } = useCustomerAuth();
+  // Het mandje leeft in localStorage en kan dagen oud zijn; de verkooprechten worden
+  // daarom vlak vóór het plaatsen opnieuw uit de actuele collecties gelezen. Alleen voor
+  // goedgekeurde klanten: dit paneel hangt in de navigatie van élke pagina, en niemand
+  // anders kan een bestelling plaatsen. `skip` haalt de collecties alsnog op zodra de
+  // klantstatus binnen is.
+  const kunstwerken = useFirestoreCollection<Kunstwerk>('kunstwerken', { skip: !isCustomer });
+  const kunstenaars = useFirestoreCollection<Kunstenaar>('kunstenaars', { skip: !isCustomer });
+  const bestelControleGereed = kunstwerken.items !== null && kunstenaars.items !== null;
   const panelRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -44,6 +56,24 @@ export function CartPanel() {
     }
     setPlaceOrderError(null);
     setEmailError(false);
+    // Een mislukte lees is een technisch probleem, geen uitspraak over dit artikel — anders
+    // krijgt de klant "niet meer beschikbaar" te zien voor iets wat gewoon bestelbaar is.
+    if (kunstwerken.error === 'load' || kunstenaars.error === 'load') {
+      setPlaceOrderError(t('placeOrderError'));
+      return;
+    }
+    // Vóór de header, niet erna: `bestelheaders/{id}` mag niet verwijderd worden, dus een
+    // regel die door de Firestore-regels geweigerd wordt zou een half geschreven bestelling
+    // achterlaten die niemand nog kan opruimen.
+    const blockedItem = items.find((item) => {
+      const kunstwerk = (kunstwerken.items ?? []).find((kw) => kw.id === item.kunstwerkId);
+      if (!kunstwerk) return true; // huidige staat niet te controleren — behandel als geblokkeerd
+      return !resolveOrderRight(kunstwerk.kunstenaarId, kunstenaars.items, user.uid).canOrder;
+    });
+    if (blockedItem) {
+      setPlaceOrderError(t('placeOrderBlockedItem', { omschrijving: blockedItem.omschrijving }));
+      return;
+    }
     try {
       const bestelnr = await generateBestelnr();
       const headerDoc = await addDoc(collection(db, 'bestelheaders'), {
@@ -220,7 +250,7 @@ export function CartPanel() {
                     <button
                       type="button"
                       data-testid="cart-place-order"
-                      disabled={items.length === 0}
+                      disabled={items.length === 0 || !bestelControleGereed}
                       onClick={handlePlaceOrder}
                       className="btn-gold w-full rounded-sm px-3 py-2.5 text-center text-xs font-head tracking-wide disabled:opacity-40"
                     >

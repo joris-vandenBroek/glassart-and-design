@@ -1,6 +1,16 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function magKunstwerkBestellen(kunstwerkId, klantUid) {
+      let kw = get(/databases/$(database)/documents/kunstwerken/$(kunstwerkId)).data;
+      return !('kunstenaarId' in kw) || kw.kunstenaarId == null ||
+        magKunstenaarBestellen(kw.kunstenaarId, klantUid);
+    }
+    function magKunstenaarBestellen(kunstenaarId, klantUid) {
+      let ka = get(/databases/$(database)/documents/kunstenaars/$(kunstenaarId)).data;
+      return ka.klantId == klantUid ||
+        (ka.verkooprecht == 'open' && (ka.exclusiefVoorKlantId == null || ka.exclusiefVoorKlantId == klantUid));
+    }
     match /medewerkers/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow write: if false;
@@ -28,6 +38,17 @@ service cloud.firestore {
     match /prijsgroepen/{id} {
       allow read: if true;
       allow write: if request.auth != null && exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid));
+    }
+    // Publiek leesbaar: naam, foto en omschrijvingen worden op de Collecties-pagina
+    // getoond aan anonieme bezoekers. Interne prijsafspraken staan daarom NIET in dit
+    // document maar in /kunstenaarAfspraken/{id} (alleen medewerkers).
+    match /kunstenaars/{id} {
+      allow read: if true;
+      allow write: if request.auth != null && exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid))
+        && !('prijsafspraken' in request.resource.data);
+    }
+    match /kunstenaarAfspraken/{id} {
+      allow read, write: if request.auth != null && exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid));
     }
     match /instellingen/{id} {
       allow read: if true;
@@ -57,7 +78,8 @@ service cloud.firestore {
            'segment_toegevoegd','segment_gewijzigd','segment_verwijderd',
            'kunstwerk_toegevoegd','kunstwerk_gewijzigd','kunstwerk_verwijderd',
            'prijsgroep_toegevoegd','prijsgroep_gewijzigd','prijsgroep_verwijderd',
-           'bedrijfsgegevens_gewijzigd','mandje_eigen_maat_toegevoegd','bestelling_prijs_vastgesteld']
+           'bedrijfsgegevens_gewijzigd','mandje_eigen_maat_toegevoegd','bestelling_prijs_vastgesteld',
+           'kunstenaar_toegevoegd','kunstenaar_gewijzigd','kunstenaar_verwijderd','klant_exclusiviteit_gewijzigd']
         && request.resource.data.keys().hasOnly(['type','actorId','actorEmail','actorNaam','timestamp'])
         && request.resource.data.actorEmail is string
         && request.resource.data.actorNaam is string;
@@ -82,7 +104,8 @@ service cloud.firestore {
           request.resource.data.maatId is string &&
           request.resource.data.materiaalId is string && request.resource.data.materiaalId.size() > 0 &&
           (request.resource.data.prijs == null || (request.resource.data.prijs is number && request.resource.data.prijs > 0)) &&
-          request.resource.data.quantity is int && request.resource.data.quantity > 0;
+          request.resource.data.quantity is int && request.resource.data.quantity > 0 &&
+          magKunstwerkBestellen(request.resource.data.kunstwerkId, request.auth.uid);
         allow read: if request.auth != null &&
           (request.auth.uid == get(/databases/$(database)/documents/bestelheaders/$(id)).data.klantId ||
            exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid)));

@@ -10,6 +10,7 @@ export type BeheerSection =
   | 'maten'
   | 'segmenten'
   | 'kunstwerken'
+  | 'kunstenaars'
   | 'prijsgroepen'
   | 'activiteit'
   | 'glassartDesign';
@@ -25,6 +26,7 @@ interface BeheerNavProps {
   matenCount: number;
   segmentenCount: number;
   kunstwerkenCount: number;
+  kunstenaarsCount: number;
   prijsgroepenCount: number;
   activiteitCount: number;
 }
@@ -37,6 +39,7 @@ const ACTIVE_ITEMS: { id: BeheerSection; labelKey: string }[] = [
   { id: 'maten', labelKey: 'navMaten' },
   { id: 'segmenten', labelKey: 'navSegmenten' },
   { id: 'kunstwerken', labelKey: 'navKunstwerken' },
+  { id: 'kunstenaars', labelKey: 'navKunstenaars' },
   { id: 'prijsgroepen', labelKey: 'navPrijsgroepen' },
   { id: 'activiteit', labelKey: 'navActiviteit' },
   { id: 'glassartDesign', labelKey: 'navGlassartDesign' },
@@ -55,6 +58,7 @@ export function BeheerNav({
   matenCount,
   segmentenCount,
   kunstwerkenCount,
+  kunstenaarsCount,
   prijsgroepenCount,
   activiteitCount,
 }: BeheerNavProps) {
@@ -67,6 +71,7 @@ export function BeheerNav({
     maten: matenCount,
     segmenten: segmentenCount,
     kunstwerken: kunstwerkenCount,
+    kunstenaars: kunstenaarsCount,
     prijsgroepen: prijsgroepenCount,
     activiteit: activiteitCount,
   };

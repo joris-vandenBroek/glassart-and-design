@@ -35,7 +35,11 @@ export type ActiviteitType =
   | 'bedrijfsgegevens_gewijzigd'
   | 'mandje_eigen_maat_toegevoegd'
   | 'bestelling_prijs_vastgesteld'
-  | 'bestelling_regel_gewijzigd';
+  | 'bestelling_regel_gewijzigd'
+  | 'kunstenaar_toegevoegd'
+  | 'kunstenaar_gewijzigd'
+  | 'kunstenaar_verwijderd'
+  | 'klant_exclusiviteit_gewijzigd';
 
 export interface ActiviteitActor {
   id: string | null;
