@@ -280,7 +280,8 @@ export function KunstwerkenSection({
     if (success) {
       void logActiviteit(
         modalState.mode === 'add' ? 'kunstwerk_toegevoegd' : 'kunstwerk_gewijzigd',
-        actorFromMedewerker(user)
+        actorFromMedewerker(user),
+        naam
       );
       closeModal();
     } else {
@@ -292,7 +293,7 @@ export function KunstwerkenSection({
     if (modalState?.mode !== 'edit') return;
     const success = await onRemove(modalState.kunstwerk.id);
     if (success) {
-      void logActiviteit('kunstwerk_verwijderd', actorFromMedewerker(user));
+      void logActiviteit('kunstwerk_verwijderd', actorFromMedewerker(user), modalState.kunstwerk.naam);
       closeModal();
     } else {
       setActionError(t('kunstwerkenActionError'));
@@ -305,9 +306,10 @@ export function KunstwerkenSection({
     setBackfillBezig(true);
     for (const kunstwerk of kunstwerkenZonderNaam) {
       const { id, ...data } = kunstwerk;
-      const success = await onUpdate(id, { ...data, naam: kunstwerk.omschrijvingNl || kunstwerk.id });
+      const nieuweNaam = kunstwerk.omschrijvingNl || kunstwerk.id;
+      const success = await onUpdate(id, { ...data, naam: nieuweNaam });
       if (success) {
-        void logActiviteit('kunstwerk_gewijzigd', actorFromMedewerker(user));
+        void logActiviteit('kunstwerk_gewijzigd', actorFromMedewerker(user), nieuweNaam);
       }
     }
     setBackfillBezig(false);
