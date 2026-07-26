@@ -44,6 +44,36 @@ const KUNSTWERKEN: Kunstwerk[] = [
     omschrijvingDe: '',
     omschrijvingEn: '',
   },
+  {
+    id: 'kw-2',
+    foto: '',
+    naam: 'Raampaneel',
+    kunstenaarId: null,
+    segmentIds: [],
+    materiaalIds: ['mat-1'],
+    maatIds: ['maat-1'],
+    prijzen: [],
+    omschrijvingNl: 'Raampaneel',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+    formaat: 'liggend',
+  },
+  {
+    id: 'kw-3',
+    foto: '',
+    naam: 'Deurpaneel',
+    kunstenaarId: null,
+    segmentIds: [],
+    materiaalIds: ['mat-1'],
+    maatIds: ['maat-1'],
+    prijzen: [],
+    omschrijvingNl: 'Deurpaneel',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+    formaat: 'staand',
+  },
 ];
 const MATERIALEN: Materiaal[] = [{ id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 6, omschrijving: 'Helder' }];
 const MATEN: Maat[] = [{ id: 'maat-1', breedte: 40, hoogte: 60 }];
@@ -152,6 +182,51 @@ describe('buildDrukkerMail', () => {
       materiaalsoorten: MATERIAALSOORTEN,
     });
     expect(mail.subject).toContain('Nieuwe order(s) voor de drukker');
+  });
+
+  it('appends " (Liggend)" to the maat when the kunstwerk formaat is liggend', () => {
+    const mail = buildDrukkerMail({
+      bestellingen: [
+        bestelling({
+          lines: [{ id: 'line-4', kunstwerkId: 'kw-2', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
+        }),
+      ],
+      klanten: [klant()],
+      kunstwerken: KUNSTWERKEN,
+      materialen: MATERIALEN,
+      maten: MATEN,
+      materiaalsoorten: MATERIAALSOORTEN,
+    });
+    expect(mail.body).toContain('maat 40×60 cm (Liggend), aantal 1');
+  });
+
+  it('appends " (Staand)" to the maat when the kunstwerk formaat is staand', () => {
+    const mail = buildDrukkerMail({
+      bestellingen: [
+        bestelling({
+          lines: [{ id: 'line-5', kunstwerkId: 'kw-3', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
+        }),
+      ],
+      klanten: [klant()],
+      kunstwerken: KUNSTWERKEN,
+      materialen: MATERIALEN,
+      maten: MATEN,
+      materiaalsoorten: MATERIAALSOORTEN,
+    });
+    expect(mail.body).toContain('maat 40×60 cm (Staand), aantal 1');
+  });
+
+  it('adds no suffix when the kunstwerk formaat is vierkant or not set', () => {
+    const mail = buildDrukkerMail({
+      bestellingen: [bestelling()],
+      klanten: [klant()],
+      kunstwerken: KUNSTWERKEN,
+      materialen: MATERIALEN,
+      maten: MATEN,
+      materiaalsoorten: MATERIAALSOORTEN,
+    });
+    expect(mail.body).toContain('maat 40×60 cm, aantal 2');
+    expect(mail.body).not.toContain('cm (');
   });
 
   it('falls back to the bestelling companyName and "Onbekend afleveradres" when the klant is not found', () => {
