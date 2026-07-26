@@ -52,6 +52,7 @@ interface KlantModalProps {
 export function KlantModal({ klant, prijsgroepen, onClose, onUpdated }: KlantModalProps) {
   const t = useTranslations('beheer');
   const [prijsgroepId, setPrijsgroepId] = useState('');
+  const [minimaleAfname, setMinimaleAfname] = useState('');
   const [fields, setFields] = useState<EditableFields | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +61,7 @@ export function KlantModal({ klant, prijsgroepen, onClose, onUpdated }: KlantMod
   useEffect(() => {
     if (klant) {
       setPrijsgroepId(klant.prijsgroepId ?? '');
+      setMinimaleAfname(klant.minimaleAfname != null ? String(klant.minimaleAfname) : '');
       setFields(fieldsFromKlant(klant));
       setIsEditing(false);
       setError(null);
@@ -99,6 +101,20 @@ export function KlantModal({ klant, prijsgroepen, onClose, onUpdated }: KlantMod
       await updateDoc(doc(db, 'klanten', klant.id), { prijsgroepId });
       void logActiviteit('klant_prijsgroep_gewijzigd', actorFromMedewerker(user));
       onUpdated({ ...klant, prijsgroepId });
+    } catch {
+      setError(t('klantenActionError'));
+    }
+  }
+
+  async function handleOpslaanMinimaleAfname() {
+    if (!klant) return;
+    const trimmed = minimaleAfname.trim();
+    const parsed = trimmed === '' ? null : Math.max(1, Math.round(Number(trimmed)) || 1);
+    try {
+      await updateDoc(doc(db, 'klanten', klant.id), { minimaleAfname: parsed });
+      void logActiviteit('klant_minimale_afname_gewijzigd', actorFromMedewerker(user));
+      onUpdated({ ...klant, minimaleAfname: parsed });
+      setMinimaleAfname(parsed != null ? String(parsed) : '');
     } catch {
       setError(t('klantenActionError'));
     }
@@ -283,6 +299,28 @@ export function KlantModal({ klant, prijsgroepen, onClose, onUpdated }: KlantMod
                 {t('klantenOpslaan')}
               </button>
             )}
+          </div>
+
+          <div className="flex items-end gap-2">
+            <label className="flex flex-1 flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+              {t('klantenLabelMinimaleAfname')}
+              <input
+                type="number"
+                min={1}
+                value={minimaleAfname}
+                onChange={(event) => setMinimaleAfname(event.target.value)}
+                data-testid="klant-modal-minimale-afname"
+                className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={handleOpslaanMinimaleAfname}
+              data-testid="klant-modal-minimale-afname-opslaan"
+              className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+            >
+              {t('klantenOpslaan')}
+            </button>
           </div>
 
           {error && (

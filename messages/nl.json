@@ -328,6 +328,7 @@
     "klantenLabelPostcode": "Postcode",
     "klantenLabelPlaats": "Plaats",
     "klantenLabelPrijsgroep": "Prijsgroep",
+    "klantenLabelMinimaleAfname": "Minimale afname (override)",
     "klantenOpslaan": "Opslaan",
     "klantenModalTitel": "Klantgegevens",
     "klantenContactPreferenceEmail": "E-mail",

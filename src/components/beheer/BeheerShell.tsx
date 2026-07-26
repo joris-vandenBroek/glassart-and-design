@@ -67,6 +67,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
               city: data.city,
               status: data.status,
               prijsgroepId: data.prijsgroepId,
+              minimaleAfname: data.minimaleAfname ?? null,
             } as Klant;
           })
         );
