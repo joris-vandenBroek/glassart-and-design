@@ -36,7 +36,7 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
   const [actionError, setActionError] = useState<string | null>(null);
   const [expandedZendingId, setExpandedZendingId] = useState<string | null>(null);
   const drukkerId = state?.mode === 'edit' ? state.drukker.id : null;
-  const { zendingen } = useDrukkerZendingen(drukkerId);
+  const { zendingen, error: zendingenError } = useDrukkerZendingen(drukkerId);
 
   useEffect(() => {
     if (state?.mode === 'edit') {
@@ -174,45 +174,51 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
           )}
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
-          <span className="text-xs uppercase tracking-wide text-white/60">{t('drukkersZendingenTitel')}</span>
-          {zendingen === null ? null : zendingen.length === 0 ? (
-            <p data-testid="drukker-modal-zendingen-leeg" className="text-white/50">
-              {t('drukkersZendingenLeeg')}
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {zendingen.map((zending) => (
-                <li key={zending.id} data-testid={`drukker-zending-${zending.id}`} className="rounded-sm bg-black/30 p-2 text-xs">
-                  <div className="flex items-center justify-between gap-2">
-                    <span>
-                      {zending.verzondenOp ? zending.verzondenOp.toLocaleString('nl-NL') : ''} —{' '}
-                      {t('drukkersZendingenSamenvatting', {
-                        klanten: zending.aantalKlanten,
-                        regels: zending.aantalRegels,
-                      })}
-                    </span>
-                    <button
-                      type="button"
-                      data-testid={`drukker-zending-bekijken-${zending.id}`}
-                      onClick={() =>
-                        setExpandedZendingId((current) => (current === zending.id ? null : zending.id))
-                      }
-                      className="shrink-0 text-white/50 underline underline-offset-2 hover:text-white"
-                    >
-                      {expandedZendingId === zending.id
-                        ? t('drukkersZendingenVerbergen')
-                        : t('drukkersZendingenBekijken')}
-                    </button>
-                  </div>
-                  {expandedZendingId === zending.id && (
-                    <pre className="mt-2 whitespace-pre-wrap text-white/70">{zending.body}</pre>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        {state?.mode === 'edit' && (
+          <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
+            <span className="text-xs uppercase tracking-wide text-white/60">{t('drukkersZendingenTitel')}</span>
+            {zendingenError ? (
+              <p data-testid="drukker-modal-zendingen-error" className="text-xs text-red-400">
+                {t('drukkersActionError')}
+              </p>
+            ) : zendingen === null ? null : zendingen.length === 0 ? (
+              <p data-testid="drukker-modal-zendingen-leeg" className="text-white/50">
+                {t('drukkersZendingenLeeg')}
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {zendingen.map((zending) => (
+                  <li key={zending.id} data-testid={`drukker-zending-${zending.id}`} className="rounded-sm bg-black/30 p-2 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span>
+                        {zending.verzondenOp ? zending.verzondenOp.toLocaleString('nl-NL') : ''} —{' '}
+                        {t('drukkersZendingenSamenvatting', {
+                          klanten: zending.aantalKlanten,
+                          regels: zending.aantalRegels,
+                        })}
+                      </span>
+                      <button
+                        type="button"
+                        data-testid={`drukker-zending-bekijken-${zending.id}`}
+                        onClick={() =>
+                          setExpandedZendingId((current) => (current === zending.id ? null : zending.id))
+                        }
+                        className="shrink-0 text-white/50 underline underline-offset-2 hover:text-white"
+                      >
+                        {expandedZendingId === zending.id
+                          ? t('drukkersZendingenVerbergen')
+                          : t('drukkersZendingenBekijken')}
+                      </button>
+                    </div>
+                    {expandedZendingId === zending.id && (
+                      <pre className="mt-2 whitespace-pre-wrap text-white/70">{zending.body}</pre>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
     </Modal>
   );
