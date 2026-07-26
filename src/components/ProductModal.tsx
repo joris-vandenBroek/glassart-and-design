@@ -8,8 +8,11 @@ import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
 import { useOverlayDismiss } from '@/lib/useOverlayDismiss';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
 import { formatCurrency } from '@/lib/formatCurrency';
+import { useFirestoreDocument } from '@/lib/useFirestoreDocument';
 import { WatermarkedImage } from './WatermarkedImage';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from './beheer/materiaalTypes';
+import type { Bestelinstellingen } from './beheer/bestelinstellingenTypes';
+import { BESTELINSTELLINGEN_SEED } from '@/data/bestelinstellingenSeed';
 
 const CONFIRM_FEEDBACK_MS = 600;
 const CUSTOM_MAAT_VALUE = '__eigen_maat__';
@@ -46,10 +49,16 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
   const [maatId, setMaatId] = useState('');
   const [customBreedte, setCustomBreedte] = useState('');
   const [customHoogte, setCustomHoogte] = useState('');
-  const [quantity, setQuantity] = useState(1);
+  const [quantityInput, setQuantityInput] = useState('1');
   const [isConfirmed, setIsConfirmed] = useState(false);
   const { addItem } = useCart();
   const { user } = useCustomerAuth();
+  const { data: bestelinstellingen } = useFirestoreDocument<Bestelinstellingen>(
+    'instellingen',
+    'bestelinstellingen',
+    { seed: BESTELINSTELLINGEN_SEED }
+  );
+  const effectiveMinimum = user?.minimaleAfname ?? bestelinstellingen?.minimaleAfname ?? 1;
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -62,8 +71,13 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
     setMaatId(kunstwerk.maatIds[0] ?? '');
     setCustomBreedte('');
     setCustomHoogte('');
-    setQuantity(1);
+    // Deliberately depends only on [kunstwerk]: useFirestoreDocument/useCustomerAuth
+    // resolve well before a customer opens the popup in practice, and re-running this
+    // reset whenever effectiveMinimum changes would also clobber materiaal/maat
+    // selections the customer already made.
+    setQuantityInput(String(effectiveMinimum));
     setIsConfirmed(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kunstwerk]);
 
   // Ensure a pending "close after confirm" timer never fires for a stale
@@ -115,7 +129,11 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
   const customSizeExceedsMax = customSizeFilledIn && !withinMax(customBreedteNum, customHoogteNum, geselecteerdSoort);
   const customSizeValid = customSizeFilledIn && !customSizeExceedsMax;
 
-  const canConfirm = isCustomSize ? customSizeValid : Boolean(prijsRegel);
+  const quantityNum = Number(quantityInput);
+  const quantityValid =
+    quantityInput.trim() !== '' && Number.isInteger(quantityNum) && quantityNum >= effectiveMinimum;
+
+  const canConfirm = (isCustomSize ? customSizeValid : Boolean(prijsRegel)) && quantityValid;
 
   function handleMateriaalChange(nextMateriaalId: string) {
     setMateriaalId(nextMateriaalId);
@@ -146,7 +164,7 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
         breedte: customBreedteNum,
         hoogte: customHoogteNum,
         prijs: null,
-        quantity,
+        quantity: quantityNum,
       });
       void logActiviteit('mandje_eigen_maat_toegevoegd', actorFromCustomer(user));
     } else {
@@ -163,7 +181,7 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
         maatId,
         maatLabel: maatLabel(gekozenMaat),
         prijs: prijsRegel.prijs,
-        quantity,
+        quantity: quantityNum,
       });
       void logActiviteit('mandje_toegevoegd', actorFromCustomer(user));
     }
@@ -294,29 +312,46 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
               </p>
             )
           )}
-          <div className="flex items-center justify-between gap-2 text-sm text-white/80">
-            <span className="text-[0.65rem] uppercase tracking-wide text-white/60">{t('quantity')}</span>
-            <div className="flex h-10 items-center overflow-hidden rounded-full border border-white/20">
-              <button
-                type="button"
-                data-testid="product-modal-quantity-minus"
-                onClick={() => setQuantity((current) => Math.max(1, current - 1))}
-                className="flex h-full w-9 items-center justify-center text-white/80 transition hover:bg-gold hover:text-ink"
-              >
-                −
-              </button>
-              <span data-testid="product-modal-quantity-value" className="w-9 text-center">
-                {quantity}
-              </span>
-              <button
-                type="button"
-                data-testid="product-modal-quantity-plus"
-                onClick={() => setQuantity((current) => current + 1)}
-                className="flex h-full w-9 items-center justify-center text-white/80 transition hover:bg-gold hover:text-ink"
-              >
-                +
-              </button>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between gap-2 text-sm text-white/80">
+              <span className="text-[0.65rem] uppercase tracking-wide text-white/60">{t('quantity')}</span>
+              <div className="flex h-10 items-center overflow-hidden rounded-full border border-white/20">
+                <button
+                  type="button"
+                  data-testid="product-modal-quantity-minus"
+                  onClick={() =>
+                    setQuantityInput((current) =>
+                      String(Math.max(effectiveMinimum, (Number(current) || effectiveMinimum) - 1))
+                    )
+                  }
+                  className="flex h-full w-9 items-center justify-center text-white/80 transition hover:bg-gold hover:text-ink"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  data-testid="product-modal-quantity-value"
+                  value={quantityInput}
+                  onChange={(event) => setQuantityInput(event.target.value)}
+                  className="h-full w-14 bg-transparent text-center text-sm text-white"
+                />
+                <button
+                  type="button"
+                  data-testid="product-modal-quantity-plus"
+                  onClick={() =>
+                    setQuantityInput((current) => String((Number(current) || effectiveMinimum) + 1))
+                  }
+                  className="flex h-full w-9 items-center justify-center text-white/80 transition hover:bg-gold hover:text-ink"
+                >
+                  +
+                </button>
+              </div>
             </div>
+            {!quantityValid && (
+              <p data-testid="product-modal-quantity-error" className="text-right text-xs text-red-400">
+                {t('minimumQuantityError', { minimum: effectiveMinimum })}
+              </p>
+            )}
           </div>
           <button
             type="button"

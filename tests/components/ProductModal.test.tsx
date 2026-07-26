@@ -23,6 +23,7 @@ vi.mock('firebase/auth', () => ({
 vi.mock('firebase/firestore', () => ({
   doc: vi.fn((_db, collection, id) => ({ collection, id })),
   getDoc: (...args: unknown[]) => getDocMock(...args),
+  setDoc: vi.fn(),
 }));
 
 vi.mock('@/lib/logActiviteit', () => ({
@@ -118,7 +119,7 @@ describe('ProductModal', () => {
     expect(screen.getByTestId('product-modal-materiaal')).toHaveValue('mat-1');
     expect(screen.getByTestId('product-modal-maat')).toHaveValue('maat-1');
     expect(screen.getByTestId('product-modal-prijs')).toHaveTextContent('€ 150,00');
-    expect(screen.getByTestId('product-modal-quantity-value')).toHaveTextContent('1');
+    expect(screen.getByTestId('product-modal-quantity-value')).toHaveValue(1);
   });
 
   it('updates the shown price when a different materiaal or maat is chosen', () => {
@@ -153,13 +154,13 @@ describe('ProductModal', () => {
     );
   });
 
-  it('increments and decrements quantity, never below 1', () => {
+  it('increments and decrements quantity, never below the effective minimum', () => {
     renderModal();
     fireEvent.click(screen.getByTestId('product-modal-quantity-minus'));
-    expect(screen.getByTestId('product-modal-quantity-value')).toHaveTextContent('1');
+    expect(screen.getByTestId('product-modal-quantity-value')).toHaveValue(1);
     fireEvent.click(screen.getByTestId('product-modal-quantity-plus'));
     fireEvent.click(screen.getByTestId('product-modal-quantity-plus'));
-    expect(screen.getByTestId('product-modal-quantity-value')).toHaveTextContent('3');
+    expect(screen.getByTestId('product-modal-quantity-value')).toHaveValue(3);
   });
 
   it('calls onClose when the backdrop is clicked', () => {
@@ -521,5 +522,129 @@ describe('ProductModal', () => {
     fireEvent.change(screen.getByTestId('product-modal-materiaal'), { target: { value: 'mat-2' } });
     expect(screen.queryByTestId('product-modal-maat-custom-breedte')).not.toBeInTheDocument();
     expect(screen.getByTestId('product-modal-maat')).toHaveValue('maat-1');
+  });
+
+  function mockDocsByCollection(byCollection: Record<string, { exists: boolean; data?: object }>) {
+    getDocMock.mockImplementation((ref: { collection: string; id: string }) => {
+      const entry = byCollection[ref.collection];
+      if (!entry) {
+        return Promise.resolve({ exists: () => false });
+      }
+      return Promise.resolve({ exists: () => entry.exists, data: () => entry.data });
+    });
+  }
+
+  async function flushMicrotasks() {
+    // The suite defaults to fake timers (see the top-level beforeEach) for the
+    // CONFIRM_FEEDBACK_MS close-timer tests. The tests below don't touch that
+    // timer, but they DO need this setTimeout(0) to actually fire so the
+    // pending getDoc() promise (useFirestoreDocument/useCustomerAuth) can
+    // resolve, so switch to real timers before flushing.
+    vi.useRealTimers();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+  }
+
+  function renderTree(kunstwerk: Kunstwerk | null) {
+    return (
+      <NextIntlClientProvider locale="nl" messages={messages}>
+        <CustomerAuthProvider>
+          <CartProvider>
+            <ProductModal
+              kunstwerk={kunstwerk}
+              materialen={MATERIALEN}
+              maten={MATEN}
+              materiaalsoorten={MATERIAALSOORTEN}
+              onClose={() => {}}
+            />
+          </CartProvider>
+        </CustomerAuthProvider>
+      </NextIntlClientProvider>
+    );
+  }
+
+  // These 3 tests mount with kunstwerk=null first and only rerender with the
+  // real kunstwerk after the Firestore data has resolved. This mirrors the
+  // real-app lifecycle described by the kunstwerk-reset effect's comment in
+  // ProductModal.tsx (the popup is closed, i.e. kunstwerk is null, while
+  // useFirestoreDocument/useCustomerAuth resolve; it only becomes non-null
+  // once the customer opens a product). Mounting directly with a non-null
+  // kunstwerk (like renderModal() does) would fire the reset effect before
+  // the async data arrives, which is not what these tests are checking.
+  it('prefills quantity with the global minimale afname when there is no logged-in klant', async () => {
+    mockDocsByCollection({ instellingen: { exists: true, data: { minimaleAfname: 5 } } });
+    const { rerender } = render(renderTree(null));
+    await flushMicrotasks();
+    rerender(renderTree(KUNSTWERK));
+    expect(screen.getByTestId('product-modal-quantity-value')).toHaveValue(5);
+  });
+
+  it('prefills quantity with the klant override when it differs from the global minimum', async () => {
+    mockDocsByCollection({
+      klanten: { exists: true, data: { status: 'Goedgekeurd', minimaleAfname: 8 } },
+      instellingen: { exists: true, data: { minimaleAfname: 3 } },
+    });
+    onAuthStateChangedMock.mockImplementation((_auth, callback) => {
+      callback({ uid: 'uid-1', email: 'klant@example.com' });
+      return () => {};
+    });
+    const { rerender } = render(renderTree(null));
+    await flushMicrotasks();
+    rerender(renderTree(KUNSTWERK));
+    expect(screen.getByTestId('product-modal-quantity-value')).toHaveValue(8);
+  });
+
+  it('falls back to the global minimum when the klant has no override', async () => {
+    mockDocsByCollection({
+      klanten: { exists: true, data: { status: 'Goedgekeurd', minimaleAfname: null } },
+      instellingen: { exists: true, data: { minimaleAfname: 4 } },
+    });
+    onAuthStateChangedMock.mockImplementation((_auth, callback) => {
+      callback({ uid: 'uid-1', email: 'klant@example.com' });
+      return () => {};
+    });
+    const { rerender } = render(renderTree(null));
+    await flushMicrotasks();
+    rerender(renderTree(KUNSTWERK));
+    expect(screen.getByTestId('product-modal-quantity-value')).toHaveValue(4);
+  });
+
+  it('shows an error and disables confirm when the typed quantity is below the minimum', async () => {
+    mockDocsByCollection({ instellingen: { exists: true, data: { minimaleAfname: 5 } } });
+    renderModal();
+    await flushMicrotasks();
+    fireEvent.change(screen.getByTestId('product-modal-quantity-value'), { target: { value: '2' } });
+    expect(screen.getByTestId('product-modal-quantity-error')).toHaveTextContent('Minimaal 5 stuks');
+    expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
+  });
+
+  it('re-enables confirm once the typed quantity meets the minimum', async () => {
+    mockDocsByCollection({ instellingen: { exists: true, data: { minimaleAfname: 5 } } });
+    renderModal();
+    await flushMicrotasks();
+    fireEvent.change(screen.getByTestId('product-modal-quantity-value'), { target: { value: '2' } });
+    fireEvent.change(screen.getByTestId('product-modal-quantity-value'), { target: { value: '5' } });
+    expect(screen.queryByTestId('product-modal-quantity-error')).not.toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-confirm')).not.toBeDisabled();
+  });
+
+  it('shows an error when the quantity field is cleared', async () => {
+    mockDocsByCollection({ instellingen: { exists: true, data: { minimaleAfname: 5 } } });
+    renderModal();
+    await flushMicrotasks();
+    fireEvent.change(screen.getByTestId('product-modal-quantity-value'), { target: { value: '' } });
+    expect(screen.getByTestId('product-modal-quantity-error')).toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
+  });
+
+  it('the minus button never goes below the effective minimum', async () => {
+    mockDocsByCollection({ instellingen: { exists: true, data: { minimaleAfname: 3 } } });
+    renderModal();
+    await flushMicrotasks();
+    fireEvent.click(screen.getByTestId('product-modal-quantity-minus'));
+    fireEvent.click(screen.getByTestId('product-modal-quantity-minus'));
+    fireEvent.click(screen.getByTestId('product-modal-quantity-minus'));
+    expect(screen.getByTestId('product-modal-quantity-value')).toHaveValue(3);
   });
 });

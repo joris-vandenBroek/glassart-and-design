@@ -84,7 +84,8 @@
     "customSizeMaxError": "Cette taille est trop grande. Maximum {maxBreedte}×{maxHoogte} cm.",
     "customSizeLeadTime": "Attention : cette taille a un délai de livraison d'au moins {months, plural, one {# mois} other {# mois}}.",
     "priceOnRequest": "Prix sur demande",
-    "customSizeNote": "{count, plural, one {+ # article, prix à confirmer après devis} other {+ # articles, prix à confirmer après devis}}"
+    "customSizeNote": "{count, plural, one {+ # article, prix à confirmer après devis} other {+ # articles, prix à confirmer après devis}}",
+    "minimumQuantityError": "Minimum {minimum} pièces"
   },
   "contactPage": {
     "title": "Contact",
