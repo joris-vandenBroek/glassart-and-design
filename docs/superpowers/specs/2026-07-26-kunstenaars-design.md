@@ -16,6 +16,7 @@ Nieuwe Firestore-collectie `kunstenaars`. Type in een nieuw bestand `src/compone
 interface Kunstenaar {
   id: string;
   naam: string;
+  foto: string | null;            // portretfoto, optioneel
   omschrijvingNl: string;
   omschrijvingFr: string;
   omschrijvingDe: string;
@@ -52,7 +53,8 @@ Een klant kan exclusief recht hebben op meerdere kunstenaars. Per kunstenaar gel
 
 ## Beheer UI
 
-- **Nieuwe sectie "Kunstenaars"** in de admin-navigatie (`BeheerNav.tsx` / `BeheerShell.tsx`), gebouwd als `PrijsgroepenSection.tsx` (lijst + modal, geen foto-upload nodig): velden `naam`, de 4 omschrijving-velden (zelfde meertalige textarea-UX als Kunstwerk), `prijsafspraken` (textarea), `verkooprecht` (select/toggle), en een doorzoekbare dropdown om optioneel een bestaand `Klant`-account te koppelen (zelfde combobox-component als op de Collecties-pagina, zie verderop).
+- **Nieuwe sectie "Kunstenaars"** in de admin-navigatie (`BeheerNav.tsx` / `BeheerShell.tsx`), gebouwd als `PrijsgroepenSection.tsx` qua lijst/modal-structuur, maar mét foto-upload (zie hieronder): velden `naam`, portretfoto, de 4 omschrijving-velden (zelfde meertalige textarea-UX als Kunstwerk), `prijsafspraken` (textarea), `verkooprecht` (select/toggle), en een doorzoekbare dropdown om optioneel een bestaand `Klant`-account te koppelen (zelfde combobox-component als op de Collecties-pagina, zie verderop).
+- **Portretfoto:** upload/drag-drop op dezelfde manier als bij Kunstwerk (`KunstwerkenSection.tsx`), met hergebruik van de bestaande `useKunstwerkFotoUpload`-hook (`src/lib/useKunstwerkFotoUpload.ts`) — deze is ondanks de naam al generiek (stuurt gewoon een `foto`-file naar het bestaande upload-endpoint), dus geen aanpassing nodig. Optioneel veld; een Kunstenaar zonder foto toont een placeholder/initialen, zoals gebruikelijk.
 - **Verwijder-guard:** een Kunstenaar die in gebruik is bij een Kunstwerk (`kunstenaarId` match) kan niet verwijderd worden — zelfde patroon als `PrijsgroepenSection.tsx:84-90`.
 - **`KunstwerkenSection.tsx`:** het vrije-tekst "artiest"-veld wordt een dropdown met bestaande Kunstenaars.
 - **`KlantModal.tsx`:** nieuwe multi-select (checkbox-lijst, zelfde UX als Kunstwerk's `segmentIds`/`materiaalIds`) voor "Exclusief recht op kunstenaars". Bij het aanvinken van een kunstenaar voor klant A: als een andere klant die kunstenaar al exclusief heeft, blokkeert de UI dit met een duidelijke foutmelding. Bij opslaan wordt zowel `Klant.exclusieveKunstenaarIds` als het bijbehorende `Kunstenaar.exclusiefVoorKlantId` in dezelfde actie bijgewerkt (denormalisatie, zie hieronder).
@@ -91,7 +93,7 @@ waarbij `kunstenaar` de `get()` is van `kunstenaars/{kunstwerk.kunstenaarId}`. D
 
 - Nieuwe doorzoekbare kunstenaar-dropdown (custom combobox-component — tekstinvoer + gefilterde lijst, sluit bij selectie/klik-buiten; er bestaat nog geen combobox in de codebase) naast de bestaande segment-filterknoppen in `ProductsGrid.tsx`.
 - Kunstenaar-filter en segment-filter zijn combineerbaar (AND).
-- Bij het selecteren van een kunstenaar verschijnt een infokaart/banner boven de grid met de omschrijving van die kunstenaar, locale-resolved via hetzelfde patroon als `resolveKunstwerkOmschrijving.ts`.
+- Bij het selecteren van een kunstenaar verschijnt een infokaart/banner boven de grid met de portretfoto (indien aanwezig) en de omschrijving van die kunstenaar, locale-resolved via hetzelfde patroon als `resolveKunstwerkOmschrijving.ts`.
 - Niet-bestelbare kunstwerken (zie hierboven) blijven zichtbaar in de gefilterde resultaten, met disabled bestel-state.
 - Kunstenaar-selectie wissen ("×" / "alle kunstenaars") toont weer de normale (evt. segment-gefilterde) view.
 
@@ -106,6 +108,5 @@ waarbij `kunstenaar` de `get()` is van `kunstenaars/{kunstwerk.kunstenaarId}`. D
 
 ## Scope-afbakening (niet in deze feature)
 
-- Geen foto/portret voor Kunstenaar (niet gevraagd).
 - Geen self-service registratie-flow voor kunstenaars om zelf een Kunstenaar-profiel aan te maken — koppeling Kunstenaar↔Klant gebeurt door de beheerder in de beheer-UI.
 - Geen wijziging aan hoe kunstwerken-prijzen werken; dit blijft ongemoeid.
