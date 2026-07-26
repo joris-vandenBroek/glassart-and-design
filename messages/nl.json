@@ -26,6 +26,12 @@
     "myOrders": "Mijn bestellingen",
     "myAccount": "Mijn account"
   },
+  "underConstruction": {
+    "eyebrow": "Binnenkort",
+    "heading": "We zijn met iets moois bezig",
+    "text": "Deze pagina is in ontwikkeling. Kom binnenkort terug om het resultaat te zien.",
+    "backHome": "Terug naar home"
+  },
   "collectionsPage": {
     "title": "Collecties",
     "intro": "Ontdek onze kunstwerken op glas, gerangschikt per toepassing.",

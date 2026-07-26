@@ -26,6 +26,12 @@
     "myOrders": "Mes commandes",
     "myAccount": "Mon compte"
   },
+  "underConstruction": {
+    "eyebrow": "Bientôt",
+    "heading": "Nous préparons quelque chose de beau",
+    "text": "Cette page est en construction. Revenez bientôt.",
+    "backHome": "Retour à l'accueil"
+  },
   "collectionsPage": {
     "title": "Collections",
     "intro": "Découvrez nos œuvres sur verre, classées par application.",

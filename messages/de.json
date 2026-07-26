@@ -26,6 +26,12 @@
     "myOrders": "Meine Bestellungen",
     "myAccount": "Mein Konto"
   },
+  "underConstruction": {
+    "eyebrow": "In Kürze",
+    "heading": "Wir arbeiten an etwas Schönem",
+    "text": "Diese Seite befindet sich im Aufbau. Schauen Sie bald wieder vorbei.",
+    "backHome": "Zurück zur Startseite"
+  },
   "collectionsPage": {
     "title": "Kollektionen",
     "intro": "Entdecken Sie unsere Kunstwerke auf Glas, gegliedert nach Einsatzbereich.",

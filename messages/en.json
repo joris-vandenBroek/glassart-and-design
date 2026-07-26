@@ -26,6 +26,12 @@
     "myOrders": "My orders",
     "myAccount": "My account"
   },
+  "underConstruction": {
+    "eyebrow": "Coming soon",
+    "heading": "We're working on something beautiful",
+    "text": "This page is under construction. Please check back soon.",
+    "backHome": "Back to home"
+  },
   "collectionsPage": {
     "title": "Collections",
     "intro": "Discover our artwork on glass, organized by application.",
