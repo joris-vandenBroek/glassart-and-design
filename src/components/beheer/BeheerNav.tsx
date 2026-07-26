@@ -12,7 +12,8 @@ export type BeheerSection =
   | 'kunstwerken'
   | 'prijsgroepen'
   | 'activiteit'
-  | 'glassartDesign';
+  | 'glassartDesign'
+  | 'instellingen';
 
 interface BeheerNavProps {
   activeSection: BeheerSection;
@@ -40,6 +41,7 @@ const ACTIVE_ITEMS: { id: BeheerSection; labelKey: string }[] = [
   { id: 'prijsgroepen', labelKey: 'navPrijsgroepen' },
   { id: 'activiteit', labelKey: 'navActiviteit' },
   { id: 'glassartDesign', labelKey: 'navGlassartDesign' },
+  { id: 'instellingen', labelKey: 'navInstellingen' },
 ];
 
 const DISABLED_ITEMS: { id: string; labelKey: string }[] = [];

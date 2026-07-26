@@ -16,14 +16,17 @@ import { KunstwerkenSection } from './KunstwerkenSection';
 import { PrijsgroepenSection } from './PrijsgroepenSection';
 import { ActiviteitSection, type Activiteit } from './ActiviteitSection';
 import { GlassartDesignSection } from './GlassartDesignSection';
+import { InstellingenSection } from './InstellingenSection';
 import type { Materiaalsoort, Materiaal, Maat, Segment, Kunstwerk, Prijsgroep } from './materiaalTypes';
 import type { Bedrijfsgegevens } from './bedrijfsgegevensTypes';
+import type { Bestelinstellingen } from './bestelinstellingenTypes';
 import type { ActiviteitType } from '@/lib/logActiviteit';
 import { useFirestoreCollection } from '@/lib/useFirestoreCollection';
 import { useFirestoreDocument } from '@/lib/useFirestoreDocument';
 import { MATERIAALSOORTEN_SEED, buildMaterialenSeed } from '@/data/materiaalsoortenSeed';
 import { SEGMENTEN_SEED, MATEN_SEED, buildKunstwerkenSeed } from '@/data/kunstwerkenSeed';
 import { BEDRIJFSGEGEVENS_SEED } from '@/data/bedrijfsgegevensSeed';
+import { BESTELINSTELLINGEN_SEED } from '@/data/bestelinstellingenSeed';
 
 interface BeheerShellProps {
   email: string;
@@ -230,6 +233,9 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   const bedrijfsgegevens = useFirestoreDocument<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens', {
     seed: BEDRIJFSGEGEVENS_SEED,
   });
+  const bestelinstellingen = useFirestoreDocument<Bestelinstellingen>('instellingen', 'bestelinstellingen', {
+    seed: BESTELINSTELLINGEN_SEED,
+  });
 
   const klantenCount = (klanten ?? []).filter((klant) => klant.status === 'Beoordelen').length;
   const bestellingenCount = (bestellingen ?? []).filter((b) => b.status === 'Te beoordelen').length;
@@ -351,6 +357,12 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             bedrijfsgegevens={bedrijfsgegevens.data}
             loadError={bedrijfsgegevens.error === 'load' ? t('glassartDesignLoadError') : null}
             onSave={bedrijfsgegevens.save}
+          />
+        ) : activeSection === 'instellingen' ? (
+          <InstellingenSection
+            bestelinstellingen={bestelinstellingen.data}
+            loadError={bestelinstellingen.error === 'load' ? t('instellingenLoadError') : null}
+            onSave={bestelinstellingen.save}
           />
         ) : (
           <ActiviteitSection activiteiten={activiteiten} loadError={activiteitenLoadError} />

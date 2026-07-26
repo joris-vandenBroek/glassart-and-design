@@ -44,7 +44,7 @@ function renderNav(
 }
 
 describe('BeheerNav', () => {
-  it('renders the 10 active items with their counters, and no disabled placeholder items', () => {
+  it('renders the 11 active items with their counters, and no disabled placeholder items', () => {
     renderNav();
     expect(screen.getByTestId('beheer-nav-klanten')).toHaveTextContent('Klanten');
     expect(screen.getByTestId('beheer-nav-klanten')).toHaveTextContent('3');
@@ -63,11 +63,19 @@ describe('BeheerNav', () => {
     expect(screen.getByTestId('beheer-nav-activiteit')).toHaveTextContent('12');
     expect(screen.getByTestId('beheer-nav-glassartDesign')).toHaveTextContent('Glassart and Design');
     expect(screen.getByTestId('beheer-nav-glassartDesign')).not.toBeDisabled();
+    expect(screen.getByTestId('beheer-nav-instellingen')).toHaveTextContent('Instellingen');
+    expect(screen.getByTestId('beheer-nav-instellingen')).not.toBeDisabled();
   });
 
   it('does not show a count badge on the Glassart & Design item', () => {
     renderNav();
     const item = screen.getByTestId('beheer-nav-glassartDesign');
+    expect(item.querySelectorAll('span')).toHaveLength(1);
+  });
+
+  it('does not show a count badge on the Instellingen item', () => {
+    renderNav();
+    const item = screen.getByTestId('beheer-nav-instellingen');
     expect(item.querySelectorAll('span')).toHaveLength(1);
   });
 
