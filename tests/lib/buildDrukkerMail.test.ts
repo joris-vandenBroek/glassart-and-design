@@ -172,6 +172,24 @@ describe('buildDrukkerMail', () => {
     expect(mail.body).toContain('maat 90×140 cm');
   });
 
+  it('appends the formaat suffix on a custom-size (breedte/hoogte) line too', () => {
+    const mail = buildDrukkerMail({
+      bestellingen: [
+        bestelling({
+          lines: [
+            { id: 'line-6', kunstwerkId: 'kw-2', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: 275, quantity: 1 },
+          ],
+        }),
+      ],
+      klanten: [klant()],
+      kunstwerken: KUNSTWERKEN,
+      materialen: MATERIALEN,
+      maten: MATEN,
+      materiaalsoorten: MATERIAALSOORTEN,
+    });
+    expect(mail.body).toContain('maat 90×140 cm (Liggend), aantal 1');
+  });
+
   it('sets a subject mentioning the drukker order', () => {
     const mail = buildDrukkerMail({
       bestellingen: [bestelling()],
