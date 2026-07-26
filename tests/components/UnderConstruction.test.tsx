@@ -38,6 +38,7 @@ describe('UnderConstruction', () => {
     render(<NextIntlClientProvider locale="nl" messages={messages}>{ui}</NextIntlClientProvider>);
 
     expect(await screen.findByTestId('under-construction')).toBeInTheDocument();
+    expect(screen.getByText('Binnenkort')).toBeInTheDocument();
     expect(screen.getByText('We zijn met iets moois bezig')).toBeInTheDocument();
     expect(
       screen.getByText('Deze pagina is in ontwikkeling. Kom binnenkort terug om het resultaat te zien.')
