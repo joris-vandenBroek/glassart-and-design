@@ -1,6 +1,8 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { GlassPanel } from '@/components/GlassPanel';
 import { AccountDashboard } from '@/components/account/AccountDashboard';
+import { pageAvailability } from '@/config/pageAvailability';
+import { UnderConstruction } from '@/components/UnderConstruction';
 
 export default async function AccountPage({
   params,
@@ -9,6 +11,11 @@ export default async function AccountPage({
 }) {
   const { locale } = params;
   setRequestLocale(locale);
+
+  if (!pageAvailability.account) {
+    return <UnderConstruction />;
+  }
+
   const t = await getTranslations('nav');
 
   return (
