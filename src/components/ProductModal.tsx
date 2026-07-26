@@ -12,7 +12,6 @@ import { useFirestoreDocument } from '@/lib/useFirestoreDocument';
 import { WatermarkedImage } from './WatermarkedImage';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from './beheer/materiaalTypes';
 import type { Bestelinstellingen } from './beheer/bestelinstellingenTypes';
-import { BESTELINSTELLINGEN_SEED } from '@/data/bestelinstellingenSeed';
 
 const CONFIRM_FEEDBACK_MS = 600;
 const CUSTOM_MAAT_VALUE = '__eigen_maat__';
@@ -55,8 +54,7 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
   const { user } = useCustomerAuth();
   const { data: bestelinstellingen } = useFirestoreDocument<Bestelinstellingen>(
     'instellingen',
-    'bestelinstellingen',
-    { seed: BESTELINSTELLINGEN_SEED }
+    'bestelinstellingen'
   );
   const effectiveMinimum = user?.minimaleAfname ?? bestelinstellingen?.minimaleAfname ?? 1;
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
