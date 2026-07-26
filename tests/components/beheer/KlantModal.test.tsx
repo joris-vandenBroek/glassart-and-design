@@ -172,6 +172,57 @@ describe('KlantModal', () => {
     expect(screen.queryByTestId('klant-modal-prijsgroep-opslaan')).not.toBeInTheDocument();
   });
 
+  it('pre-fills the minimale afname override input from klant.minimaleAfname', () => {
+    renderModal({ ...KLANT, minimaleAfname: 7 });
+    expect(screen.getByTestId('klant-modal-minimale-afname')).toHaveValue(7);
+  });
+
+  it('shows an empty minimale afname input when the klant has no override', () => {
+    renderModal({ ...KLANT, minimaleAfname: null });
+    expect(screen.getByTestId('klant-modal-minimale-afname')).toHaveValue(null);
+  });
+
+  it('shows the minimale afname override input even for a klant still "Beoordelen"', () => {
+    renderModal({ ...KLANT, status: 'Beoordelen' });
+    expect(screen.getByTestId('klant-modal-minimale-afname')).toBeInTheDocument();
+  });
+
+  it('saves the minimale afname override and logs klant_minimale_afname_gewijzigd', async () => {
+    updateDocMock.mockResolvedValue(undefined);
+    const { onUpdated } = renderModal({ ...KLANT, minimaleAfname: null });
+    fireEvent.change(screen.getByTestId('klant-modal-minimale-afname'), { target: { value: '6' } });
+    fireEvent.click(screen.getByTestId('klant-modal-minimale-afname-opslaan'));
+    await waitFor(() =>
+      expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), { minimaleAfname: 6 })
+    );
+    expect(logActiviteitMock).toHaveBeenCalledWith('klant_minimale_afname_gewijzigd', {
+      id: 'staff-1',
+      email: 'paul@glassartanddesign.com',
+      naam: 'paul@glassartanddesign.com',
+    });
+    expect(onUpdated).toHaveBeenCalledWith(expect.objectContaining({ minimaleAfname: 6 }));
+  });
+
+  it('clears the override to null when saving an empty value', async () => {
+    updateDocMock.mockResolvedValue(undefined);
+    renderModal({ ...KLANT, minimaleAfname: 6 });
+    fireEvent.change(screen.getByTestId('klant-modal-minimale-afname'), { target: { value: '' } });
+    fireEvent.click(screen.getByTestId('klant-modal-minimale-afname-opslaan'));
+    await waitFor(() =>
+      expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), { minimaleAfname: null })
+    );
+  });
+
+  it('clamps a saved override below 1 up to 1', async () => {
+    updateDocMock.mockResolvedValue(undefined);
+    renderModal({ ...KLANT, minimaleAfname: null });
+    fireEvent.change(screen.getByTestId('klant-modal-minimale-afname'), { target: { value: '0' } });
+    fireEvent.click(screen.getByTestId('klant-modal-minimale-afname-opslaan'));
+    await waitFor(() =>
+      expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), { minimaleAfname: 1 })
+    );
+  });
+
   it('keeps the other fields read-only until Bewerken is clicked', () => {
     renderModal(KLANT);
     expect(screen.queryByTestId('klant-modal-companyName')).not.toBeInTheDocument();

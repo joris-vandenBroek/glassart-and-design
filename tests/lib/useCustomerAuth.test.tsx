@@ -30,6 +30,7 @@ function TestConsumer() {
       <div data-testid="is-customer">{String(isCustomer)}</div>
       <div data-testid="company-name">{user?.companyName ?? 'none'}</div>
       <div data-testid="contact-person">{user?.contactPerson ?? 'none'}</div>
+      <div data-testid="minimale-afname">{user?.minimaleAfname ?? 'none'}</div>
     </div>
   );
 }
@@ -142,5 +143,32 @@ describe('useCustomerAuth', () => {
     await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('klant5@example.com'));
     expect(screen.getByTestId('company-name')).toHaveTextContent('none');
     expect(screen.getByTestId('contact-person')).toHaveTextContent('none');
+  });
+
+  it('exposes minimaleAfname from the klanten document', async () => {
+    getDocMock.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ status: 'Goedgekeurd', minimaleAfname: 5 }),
+    });
+    onAuthStateChangedMock.mockImplementation((_auth, callback) => {
+      callback({ uid: 'uid-6', email: 'klant6@example.com' });
+      return () => {};
+    });
+    renderProvider();
+    await waitFor(() => expect(screen.getByTestId('minimale-afname')).toHaveTextContent('5'));
+  });
+
+  it('exposes null minimaleAfname when the klanten document has no override', async () => {
+    getDocMock.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ status: 'Goedgekeurd' }),
+    });
+    onAuthStateChangedMock.mockImplementation((_auth, callback) => {
+      callback({ uid: 'uid-7', email: 'klant7@example.com' });
+      return () => {};
+    });
+    renderProvider();
+    await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('klant7@example.com'));
+    expect(screen.getByTestId('minimale-afname')).toHaveTextContent('none');
   });
 });

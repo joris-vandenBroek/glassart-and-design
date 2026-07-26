@@ -18,6 +18,7 @@ interface CustomerUser {
   companyName: string | null;
   contactPerson: string | null;
   exclusieveKunstenaarIds: string[];
+  minimaleAfname: number | null;
 }
 
 interface CustomerAuthValue {
@@ -49,6 +50,7 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
             companyName?: string;
             contactPerson?: string;
             exclusieveKunstenaarIds?: string[];
+            minimaleAfname?: number | null;
           })
         : null;
       setUser({
@@ -57,6 +59,7 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
         companyName: klantData?.companyName ?? null,
         contactPerson: klantData?.contactPerson ?? null,
         exclusieveKunstenaarIds: klantData?.exclusieveKunstenaarIds ?? [],
+        minimaleAfname: klantData?.minimaleAfname ?? null,
       });
       setIsCustomer(klantData?.status === 'Goedgekeurd');
       setIsHydrated(true);

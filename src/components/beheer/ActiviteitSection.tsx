@@ -69,6 +69,8 @@ const TYPE_LABEL_KEYS: Record<ActiviteitType, string> = {
   drukker_gewijzigd: 'activiteitTypeDrukkerGewijzigd',
   drukker_verwijderd: 'activiteitTypeDrukkerVerwijderd',
   bestelling_verstuurd_naar_drukker: 'activiteitTypeBestellingVerstuurdNaarDrukker',
+  bestelinstellingen_gewijzigd: 'activiteitTypeBestelinstellingenGewijzigd',
+  klant_minimale_afname_gewijzigd: 'activiteitTypeKlantMinimaleAfnameGewijzigd',
 };
 
 export function ActiviteitSection({ activiteiten, loadError }: ActiviteitSectionProps) {

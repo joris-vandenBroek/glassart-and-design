@@ -91,7 +91,8 @@
     "orderBlockedExclusive": "Dit kunstwerk is exclusief voorbehouden aan een andere klant.",
     "orderBlockedArtistOnly": "Dit kunstwerk kan alleen door de kunstenaar zelf besteld worden.",
     "orderBlockedUnavailable": "Dit kunstwerk kan op dit moment niet besteld worden. Probeer het later opnieuw.",
-    "placeOrderBlockedItem": "Kan de bestelling niet plaatsen: \"{omschrijving}\" is niet (meer) beschikbaar voor jou. Verwijder dit artikel uit je mandje en probeer opnieuw."
+    "placeOrderBlockedItem": "Kan de bestelling niet plaatsen: \"{omschrijving}\" is niet (meer) beschikbaar voor jou. Verwijder dit artikel uit je mandje en probeer opnieuw.",
+    "minimumQuantityError": "Minimaal {minimum} stuks"
   },
   "contactPage": {
     "title": "Contact",
@@ -318,7 +319,14 @@
     "activiteitTypeKunstenaarVerwijderd": "Kunstenaar verwijderd",
     "activiteitTypeKlantExclusiviteitGewijzigd": "Exclusiviteit gewijzigd voor klant",
     "activiteitTypeBestellingVerstuurdNaarDrukker": "Bestelling verstuurd naar drukker",
+    "activiteitTypeBestelinstellingenGewijzigd": "Bestelinstellingen gewijzigd",
+    "activiteitTypeKlantMinimaleAfnameGewijzigd": "Minimale afname gewijzigd voor klant",
     "navGlassartDesign": "Glassart and Design",
+    "navInstellingen": "Instellingen",
+    "instellingenLabelMinimaleAfname": "Minimale afname",
+    "instellingenOpslaan": "Opslaan",
+    "instellingenLoadError": "Kon de instellingen niet laden. Probeer de pagina te verversen.",
+    "instellingenActionError": "Er is iets misgegaan. Probeer het opnieuw.",
     "modalClose": "Sluiten",
     "bewerken": "Bewerken",
     "annuleren": "Annuleren",
@@ -342,6 +350,7 @@
     "klantenLabelPrijsgroep": "Prijsgroep",
     "klantenLabelExclusieveKunstenaars": "Exclusief recht op kunstenaars",
     "klantenExclusiviteitBlocked": "Deze kunstenaar is al exclusief toegewezen aan een andere klant.",
+    "klantenLabelMinimaleAfname": "Minimale afname (override)",
     "klantenOpslaan": "Opslaan",
     "klantenModalTitel": "Klantgegevens",
     "klantenContactPreferenceEmail": "E-mail",

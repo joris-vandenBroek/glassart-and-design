@@ -477,4 +477,11 @@ describe('BeheerShell', () => {
       )
     );
   });
+
+  it('shows the Instellingen section when selected', async () => {
+    mockCollections();
+    renderShell();
+    fireEvent.click(screen.getByTestId('beheer-nav-instellingen'));
+    expect(await screen.findByTestId('instellingen-section')).toBeInTheDocument();
+  });
 });

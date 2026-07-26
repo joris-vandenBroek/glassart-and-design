@@ -27,6 +27,7 @@ export interface Klant {
   status: 'Beoordelen' | 'Goedgekeurd' | 'Afgewezen';
   prijsgroepId: string | null;
   exclusieveKunstenaarIds: string[];
+  minimaleAfname?: number | null;
 }
 
 interface KlantenSectionProps {
