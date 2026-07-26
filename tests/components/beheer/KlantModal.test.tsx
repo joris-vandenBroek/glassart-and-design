@@ -17,7 +17,6 @@ vi.mock('@/lib/firebase', () => ({
 vi.mock('firebase/firestore', () => ({
   doc: vi.fn((_db, collectionName, id) => ({ collectionName, id })),
   updateDoc: (...args: unknown[]) => updateDocMock(...args),
-  deleteField: vi.fn(() => ({ __sentinel: 'deleteField' })),
 }));
 
 vi.mock('@/lib/useAdminAuth', () => ({
@@ -83,11 +82,12 @@ const KUNSTENAARS: Kunstenaar[] = [
 function renderModal(
   klant: Klant | null,
   prijsgroepen: Prijsgroep[] | null = PRIJSGROEPEN,
-  kunstenaars: Kunstenaar[] | null = KUNSTENAARS
+  kunstenaars: Kunstenaar[] | null = KUNSTENAARS,
+  onKunstenaarUpdatedOverride?: (id: string, data: Partial<Omit<Kunstenaar, 'id'>>) => Promise<boolean>
 ) {
   const onClose = vi.fn();
   const onUpdated = vi.fn();
-  const onKunstenaarUpdated = vi.fn().mockResolvedValue(true);
+  const onKunstenaarUpdated = onKunstenaarUpdatedOverride ?? vi.fn().mockResolvedValue(true);
   render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <KlantModal
@@ -304,15 +304,9 @@ describe('KlantModal', () => {
     fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-1'));
     fireEvent.click(screen.getByTestId('klant-modal-exclusiviteit-opslaan'));
     await waitFor(() => expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), { exclusieveKunstenaarIds: ['ka-1'] }));
-    // The deleteField() sentinel is mandatory on every kunstenaars write: legacy
-    // documents still carry prijsafspraken, and firestore.rules evaluates the MERGED
-    // post-write document, so without it this back-pointer write would be rejected.
-    await waitFor(() =>
-      expect(onKunstenaarUpdated).toHaveBeenCalledWith('ka-1', {
-        exclusiefVoorKlantId: 'uid-1',
-        prijsafspraken: { __sentinel: 'deleteField' },
-      })
-    );
+    // Plain payload: stripping/migrating prijsafspraken is the job of
+    // BeheerShell.updateKunstenaarVeilig, which backs this prop.
+    await waitFor(() => expect(onKunstenaarUpdated).toHaveBeenCalledWith('ka-1', { exclusiefVoorKlantId: 'uid-1' }));
     expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, exclusieveKunstenaarIds: ['ka-1'] });
     expect(logActiviteitMock).toHaveBeenCalledWith('klant_exclusiviteit_gewijzigd', {
       id: 'staff-1',
@@ -336,11 +330,19 @@ describe('KlantModal', () => {
     ]);
     fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-2'));
     fireEvent.click(screen.getByTestId('klant-modal-exclusiviteit-opslaan'));
-    await waitFor(() =>
-      expect(onKunstenaarUpdated).toHaveBeenCalledWith('ka-2', {
-        exclusiefVoorKlantId: null,
-        prijsafspraken: { __sentinel: 'deleteField' },
-      })
+    await waitFor(() => expect(onKunstenaarUpdated).toHaveBeenCalledWith('ka-2', { exclusiefVoorKlantId: null }));
+  });
+
+  it('shows an error and does not report success when a kunstenaar back-pointer write fails', async () => {
+    const onKunstenaarUpdated = vi.fn().mockResolvedValue(false);
+    const { onUpdated } = renderModal(KLANT, PRIJSGROEPEN, KUNSTENAARS, onKunstenaarUpdated);
+    fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-1'));
+    fireEvent.click(screen.getByTestId('klant-modal-exclusiviteit-opslaan'));
+
+    expect(await screen.findByTestId('klant-modal-error')).toHaveTextContent(
+      'Er is iets misgegaan. Probeer het opnieuw.'
     );
+    expect(onUpdated).not.toHaveBeenCalled();
+    expect(logActiviteitMock).not.toHaveBeenCalled();
   });
 });

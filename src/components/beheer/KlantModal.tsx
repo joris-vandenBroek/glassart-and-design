@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { deleteField, doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Modal } from '@/components/Modal';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import type { Klant } from './KlantenSection';
 import type { Prijsgroep } from './materiaalTypes';
-import type { Kunstenaar, KunstenaarUpdate } from './kunstenaarTypes';
+import type { Kunstenaar } from './kunstenaarTypes';
 
 const STATUS_BADGE_CLASS: Record<Klant['status'], string> = {
   Beoordelen: 'bg-amber-400/10 text-amber-300',
@@ -49,7 +49,7 @@ interface KlantModalProps {
   kunstenaars: Kunstenaar[] | null;
   onClose: () => void;
   onUpdated: (klant: Klant) => void;
-  onKunstenaarUpdated: (id: string, data: KunstenaarUpdate) => Promise<boolean>;
+  onKunstenaarUpdated: (id: string, data: Partial<Omit<Kunstenaar, 'id'>>) => Promise<boolean>;
 }
 
 export function KlantModal({
@@ -137,15 +137,20 @@ export function KlantModal({
       await updateDoc(doc(db, 'klanten', klant.id), { exclusieveKunstenaarIds });
       const added = exclusieveKunstenaarIds.filter((id) => !klant.exclusieveKunstenaarIds.includes(id));
       const removed = klant.exclusieveKunstenaarIds.filter((id) => !exclusieveKunstenaarIds.includes(id));
-      // `prijsafspraken: deleteField()` is verplicht bij élke update van een
-      // kunstenaars-document; zonder die strip weigert firestore.rules deze write op
-      // documenten die het legacy-veld nog bevatten — en dan zou de zojuist opgeslagen
-      // exclusieveKunstenaarIds van de klant uit de pas lopen met de back-pointer.
+      // Faalt een back-pointer, dan is de zojuist opgeslagen exclusieveKunstenaarIds van de
+      // klant niet meer in lijn met de kunstenaars — stoppen en de fout tonen in plaats van
+      // stilzwijgend doorgaan en een geslaagde opslag melden.
       for (const id of added) {
-        await onKunstenaarUpdated(id, { exclusiefVoorKlantId: klant.id, prijsafspraken: deleteField() });
+        if (!(await onKunstenaarUpdated(id, { exclusiefVoorKlantId: klant.id }))) {
+          setError(t('klantenActionError'));
+          return;
+        }
       }
       for (const id of removed) {
-        await onKunstenaarUpdated(id, { exclusiefVoorKlantId: null, prijsafspraken: deleteField() });
+        if (!(await onKunstenaarUpdated(id, { exclusiefVoorKlantId: null }))) {
+          setError(t('klantenActionError'));
+          return;
+        }
       }
       void logActiviteit('klant_exclusiviteit_gewijzigd', actorFromMedewerker(user));
       onUpdated({ ...klant, exclusieveKunstenaarIds });

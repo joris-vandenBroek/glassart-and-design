@@ -2,15 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import {
-  collection,
-  deleteDoc,
-  deleteField,
-  doc,
-  getDoc,
-  setDoc,
-  type DocumentReference,
-} from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, setDoc, type DocumentReference } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
@@ -18,7 +10,7 @@ import { Combobox } from '@/components/Combobox';
 import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
-import type { Kunstenaar, KunstenaarUpdate } from './kunstenaarTypes';
+import type { Kunstenaar } from './kunstenaarTypes';
 import type { Klant } from './KlantenSection';
 import type { Kunstwerk } from './materiaalTypes';
 
@@ -27,7 +19,7 @@ interface KunstenaarsSectionProps {
   klanten: Klant[] | null;
   kunstwerken: Kunstwerk[] | null;
   loadError: string | null;
-  onUpdate: (id: string, data: KunstenaarUpdate) => Promise<boolean>;
+  onUpdate: (id: string, data: Partial<Omit<Kunstenaar, 'id'>>) => Promise<boolean>;
   onRemove: (id: string) => Promise<boolean>;
   onRefetch: () => Promise<boolean>;
 }
@@ -244,10 +236,12 @@ export function KunstenaarsSection({
         await onRefetch();
         success = true;
       } else {
-        success = await onUpdate(modalState.kunstenaar.id, { ...data, prijsafspraken: deleteField() });
-        if (success) {
-          await setDoc(doc(db, AFSPRAKEN_COLLECTION, modalState.kunstenaar.id), { prijsafspraken });
-        }
+        // Eerst het afsprakendocument met de zojuist ingevoerde waarde, dán pas de update
+        // van het publieke document. onUpdate is de veilige wrapper uit BeheerShell, die
+        // een nog niet gemigreerde legacy-waarde migreert vóór hij hem stript; doordat het
+        // afsprakendocument hier al bestaat, slaat die migratie de verse invoer niet over.
+        await setDoc(doc(db, AFSPRAKEN_COLLECTION, modalState.kunstenaar.id), { prijsafspraken });
+        success = await onUpdate(modalState.kunstenaar.id, data);
       }
     } catch {
       success = false;

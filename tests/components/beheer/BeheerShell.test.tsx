@@ -8,6 +8,7 @@ const getDocsMock = vi.fn();
 const addDocMock = vi.fn();
 const getDocMock = vi.fn();
 const setDocMock = vi.fn();
+const updateDocMock = vi.fn();
 
 vi.mock('@/lib/firebase', () => ({
   db: {},
@@ -19,7 +20,7 @@ vi.mock('firebase/firestore', () => ({
   doc: vi.fn((_db, collectionName, id) => ({ collectionName, id })),
   getDocs: (...args: unknown[]) => getDocsMock(...args),
   addDoc: (...args: unknown[]) => addDocMock(...args),
-  updateDoc: vi.fn(),
+  updateDoc: (...args: unknown[]) => updateDocMock(...args),
   deleteDoc: vi.fn(),
   deleteField: vi.fn(() => ({ __sentinel: 'deleteField' })),
   getDoc: (...args: unknown[]) => getDocMock(...args),
@@ -129,6 +130,9 @@ beforeEach(() => {
   addDocMock.mockReset();
   getDocMock.mockReset();
   setDocMock.mockReset();
+  updateDocMock.mockReset();
+  updateDocMock.mockResolvedValue(undefined);
+  setDocMock.mockResolvedValue(undefined);
 });
 
 describe('BeheerShell', () => {
@@ -312,6 +316,120 @@ describe('BeheerShell', () => {
     screen.getByTestId('beheer-nav-kunstenaars').click();
     expect(await screen.findByTestId('kunstenaars-section')).toBeInTheDocument();
     expect(screen.getByTestId('data-table-row-ka-1')).toHaveTextContent('Sabrina Glasser');
+  });
+
+  // updateKunstenaarVeilig is the single write path to kunstenaars/{id}. Every update must
+  // strip the legacy prijsafspraken field (firestore.rules rejects the merged post-write
+  // document otherwise), but stripping without migrating first would silently destroy the
+  // internal commission notes of an artist that was never opened in the Kunstenaars section.
+  describe('updateKunstenaarVeilig (via the Klanten exclusiviteit flow)', () => {
+    const KUNSTENAAR_PUBLIEK = {
+      naam: 'Sabrina Glasser',
+      foto: null,
+      omschrijvingNl: 'Werkt met glas.',
+      omschrijvingFr: '',
+      omschrijvingDe: '',
+      omschrijvingEn: '',
+      verkooprecht: 'open',
+      klantId: null,
+      exclusiefVoorKlantId: null,
+    };
+
+    // Only the bedrijfsgegevens document exists; kunstenaarAfspraken/ka-1 does not.
+    function mockAfsprakenOntbreekt() {
+      getDocMock.mockImplementation((ref: { collectionName: string }) =>
+        Promise.resolve(
+          ref.collectionName === 'kunstenaarAfspraken'
+            ? { exists: () => false, data: () => undefined }
+            : { exists: () => true, data: () => BEDRIJFSGEGEVENS_FIXTURE }
+        )
+      );
+    }
+
+    async function toggleExclusiviteit() {
+      renderShell();
+      fireEvent.click(await screen.findByTestId('data-table-row-uid-1'));
+      fireEvent.click(await screen.findByTestId('klant-modal-exclusief-ka-1'));
+      fireEvent.click(screen.getByTestId('klant-modal-exclusiviteit-opslaan'));
+    }
+
+    function kunstenaarUpdateCall() {
+      return updateDocMock.mock.calls.find(
+        (call) => (call[0] as { collectionName: string }).collectionName === 'kunstenaars'
+      );
+    }
+
+    it('migrates a legacy prijsafspraken value into kunstenaarAfspraken before stripping it', async () => {
+      mockCollections({
+        klanten: [{ id: 'uid-1', data: KLANT_DATA }],
+        kunstenaars: [{ id: 'ka-1', data: { ...KUNSTENAAR_PUBLIEK, prijsafspraken: '20% commissie' } }],
+      });
+      mockAfsprakenOntbreekt();
+      await toggleExclusiviteit();
+
+      await waitFor(() =>
+        expect(setDocMock).toHaveBeenCalledWith(
+          { collectionName: 'kunstenaarAfspraken', id: 'ka-1' },
+          { prijsafspraken: '20% commissie' }
+        )
+      );
+      await waitFor(() => expect(kunstenaarUpdateCall()).toBeDefined());
+
+      // The migration must happen BEFORE the strip, otherwise the value is lost.
+      const migratie = setDocMock.mock.calls.findIndex(
+        (call) => (call[0] as { collectionName: string }).collectionName === 'kunstenaarAfspraken'
+      );
+      expect(setDocMock.mock.invocationCallOrder[migratie]).toBeLessThan(
+        updateDocMock.mock.invocationCallOrder[updateDocMock.mock.calls.indexOf(kunstenaarUpdateCall()!)]
+      );
+
+      expect(kunstenaarUpdateCall()![1]).toEqual({
+        exclusiefVoorKlantId: 'uid-1',
+        prijsafspraken: { __sentinel: 'deleteField' },
+      });
+    });
+
+    it('does not write an afspraken document when there is no legacy value to migrate', async () => {
+      mockCollections({
+        klanten: [{ id: 'uid-1', data: KLANT_DATA }],
+        kunstenaars: [{ id: 'ka-1', data: KUNSTENAAR_PUBLIEK }],
+      });
+      mockAfsprakenOntbreekt();
+      await toggleExclusiviteit();
+
+      await waitFor(() => expect(kunstenaarUpdateCall()).toBeDefined());
+      expect(kunstenaarUpdateCall()![1]).toEqual({
+        exclusiefVoorKlantId: 'uid-1',
+        prijsafspraken: { __sentinel: 'deleteField' },
+      });
+      expect(
+        setDocMock.mock.calls.filter(
+          (call) => (call[0] as { collectionName: string }).collectionName === 'kunstenaarAfspraken'
+        )
+      ).toHaveLength(0);
+    });
+
+    it('leaves an existing afspraken document untouched instead of overwriting it with the legacy value', async () => {
+      mockCollections({
+        klanten: [{ id: 'uid-1', data: KLANT_DATA }],
+        kunstenaars: [{ id: 'ka-1', data: { ...KUNSTENAAR_PUBLIEK, prijsafspraken: 'verouderd' } }],
+      });
+      getDocMock.mockImplementation((ref: { collectionName: string }) =>
+        Promise.resolve(
+          ref.collectionName === 'kunstenaarAfspraken'
+            ? { exists: () => true, data: () => ({ prijsafspraken: 'actueel' }) }
+            : { exists: () => true, data: () => BEDRIJFSGEGEVENS_FIXTURE }
+        )
+      );
+      await toggleExclusiviteit();
+
+      await waitFor(() => expect(kunstenaarUpdateCall()).toBeDefined());
+      expect(
+        setDocMock.mock.calls.filter(
+          (call) => (call[0] as { collectionName: string }).collectionName === 'kunstenaarAfspraken'
+        )
+      ).toHaveLength(0);
+    });
   });
 
   it('shows the Glassart & Design section with the loaded bedrijfsgegevens when the nav item is clicked', async () => {

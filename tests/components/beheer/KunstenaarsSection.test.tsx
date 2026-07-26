@@ -272,8 +272,6 @@ describe('KunstenaarsSection', () => {
         verkooprecht: 'open',
         klantId: null,
         exclusiefVoorKlantId: 'klant-1',
-        // Strips any legacy value left on the publicly readable document.
-        prijsafspraken: { __sentinel: 'deleteField' },
       })
     );
     await waitFor(() =>
