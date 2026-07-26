@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { KlantModal } from './KlantModal';
 import type { Prijsgroep } from './materiaalTypes';
+import type { Kunstenaar } from './kunstenaarTypes';
 
 export interface Klant {
   id: string;
@@ -17,18 +18,35 @@ export interface Klant {
   address: string;
   postcode: string;
   city: string;
+  deliveryAddress: string;
+  deliveryPostcode: string;
+  deliveryCity: string;
+  invoiceAddress: string;
+  invoicePostcode: string;
+  invoiceCity: string;
   status: 'Beoordelen' | 'Goedgekeurd' | 'Afgewezen';
   prijsgroepId: string | null;
+  exclusieveKunstenaarIds: string[];
+  minimaleAfname?: number | null;
 }
 
 interface KlantenSectionProps {
   klanten: Klant[] | null;
   prijsgroepen: Prijsgroep[] | null;
+  kunstenaars: Kunstenaar[] | null;
   loadError: string | null;
   onKlantUpdated: (klant: Klant) => void;
+  onKunstenaarUpdated: (id: string, data: Partial<Omit<Kunstenaar, 'id'>>) => Promise<boolean>;
 }
 
-export function KlantenSection({ klanten, prijsgroepen, loadError, onKlantUpdated }: KlantenSectionProps) {
+export function KlantenSection({
+  klanten,
+  prijsgroepen,
+  kunstenaars,
+  loadError,
+  onKlantUpdated,
+  onKunstenaarUpdated,
+}: KlantenSectionProps) {
   const t = useTranslations('beheer');
   const [selectedKlant, setSelectedKlant] = useState<Klant | null>(null);
 
@@ -73,6 +91,8 @@ export function KlantenSection({ klanten, prijsgroepen, loadError, onKlantUpdate
       <KlantModal
         klant={selectedKlant}
         prijsgroepen={prijsgroepen}
+        kunstenaars={kunstenaars}
+        onKunstenaarUpdated={onKunstenaarUpdated}
         onClose={() => setSelectedKlant(null)}
         onUpdated={(updated) => {
           onKlantUpdated(updated);

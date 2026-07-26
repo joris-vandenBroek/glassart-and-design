@@ -9,6 +9,7 @@ import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import type { Klant } from './KlantenSection';
 import type { Prijsgroep } from './materiaalTypes';
+import type { Kunstenaar } from './kunstenaarTypes';
 
 const STATUS_BADGE_CLASS: Record<Klant['status'], string> = {
   Beoordelen: 'bg-amber-400/10 text-amber-300',
@@ -26,6 +27,12 @@ interface EditableFields {
   address: string;
   postcode: string;
   city: string;
+  deliveryAddress: string;
+  deliveryPostcode: string;
+  deliveryCity: string;
+  invoiceAddress: string;
+  invoicePostcode: string;
+  invoiceCity: string;
 }
 
 function fieldsFromKlant(klant: Klant): EditableFields {
@@ -39,19 +46,36 @@ function fieldsFromKlant(klant: Klant): EditableFields {
     address: klant.address,
     postcode: klant.postcode,
     city: klant.city,
+    deliveryAddress: klant.deliveryAddress,
+    deliveryPostcode: klant.deliveryPostcode,
+    deliveryCity: klant.deliveryCity,
+    invoiceAddress: klant.invoiceAddress,
+    invoicePostcode: klant.invoicePostcode,
+    invoiceCity: klant.invoiceCity,
   };
 }
 
 interface KlantModalProps {
   klant: Klant | null;
   prijsgroepen: Prijsgroep[] | null;
+  kunstenaars: Kunstenaar[] | null;
   onClose: () => void;
   onUpdated: (klant: Klant) => void;
+  onKunstenaarUpdated: (id: string, data: Partial<Omit<Kunstenaar, 'id'>>) => Promise<boolean>;
 }
 
-export function KlantModal({ klant, prijsgroepen, onClose, onUpdated }: KlantModalProps) {
+export function KlantModal({
+  klant,
+  prijsgroepen,
+  kunstenaars,
+  onClose,
+  onUpdated,
+  onKunstenaarUpdated,
+}: KlantModalProps) {
   const t = useTranslations('beheer');
   const [prijsgroepId, setPrijsgroepId] = useState('');
+  const [exclusieveKunstenaarIds, setExclusieveKunstenaarIds] = useState<string[]>([]);
+  const [minimaleAfname, setMinimaleAfname] = useState('');
   const [fields, setFields] = useState<EditableFields | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +84,8 @@ export function KlantModal({ klant, prijsgroepen, onClose, onUpdated }: KlantMod
   useEffect(() => {
     if (klant) {
       setPrijsgroepId(klant.prijsgroepId ?? '');
+      setExclusieveKunstenaarIds(klant.exclusieveKunstenaarIds);
+      setMinimaleAfname(klant.minimaleAfname != null ? String(klant.minimaleAfname) : '');
       setFields(fieldsFromKlant(klant));
       setIsEditing(false);
       setError(null);
@@ -99,6 +125,65 @@ export function KlantModal({ klant, prijsgroepen, onClose, onUpdated }: KlantMod
       await updateDoc(doc(db, 'klanten', klant.id), { prijsgroepId });
       void logActiviteit('klant_prijsgroep_gewijzigd', actorFromMedewerker(user));
       onUpdated({ ...klant, prijsgroepId });
+    } catch {
+      setError(t('klantenActionError'));
+    }
+  }
+
+  function toggle(list: string[], id: string): string[] {
+    return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
+  }
+
+  function toggleExclusiviteit(kunstenaarId: string) {
+    const kunstenaar = (kunstenaars ?? []).find((item) => item.id === kunstenaarId);
+    const isChecked = exclusieveKunstenaarIds.includes(kunstenaarId);
+    if (!isChecked && kunstenaar?.exclusiefVoorKlantId && kunstenaar.exclusiefVoorKlantId !== klant?.id) {
+      setError(t('klantenExclusiviteitBlocked'));
+      return;
+    }
+    setError(null);
+    setExclusieveKunstenaarIds((current) => toggle(current, kunstenaarId));
+  }
+
+  async function handleOpslaanExclusiviteit() {
+    if (!klant) return;
+    try {
+      const added = exclusieveKunstenaarIds.filter((id) => !klant.exclusieveKunstenaarIds.includes(id));
+      const removed = klant.exclusieveKunstenaarIds.filter((id) => !exclusieveKunstenaarIds.includes(id));
+      // Eerst de back-pointers op de kunstenaars, dán pas het klantdocument. Alleen
+      // `Kunstenaar.exclusiefVoorKlantId` wordt door de Firestore-regels en de winkel-UI
+      // gelezen; `Klant.exclusieveKunstenaarIds` is puur administratief. Faalt een
+      // back-pointer halverwege, dan stoppen we met het klantdocument ONGEWIJZIGD in
+      // plaats van met een klant die een niet-gehandhaafde exclusiviteit claimt.
+      for (const id of added) {
+        if (!(await onKunstenaarUpdated(id, { exclusiefVoorKlantId: klant.id }))) {
+          setError(t('klantenActionError'));
+          return;
+        }
+      }
+      for (const id of removed) {
+        if (!(await onKunstenaarUpdated(id, { exclusiefVoorKlantId: null }))) {
+          setError(t('klantenActionError'));
+          return;
+        }
+      }
+      await updateDoc(doc(db, 'klanten', klant.id), { exclusieveKunstenaarIds });
+      void logActiviteit('klant_exclusiviteit_gewijzigd', actorFromMedewerker(user));
+      onUpdated({ ...klant, exclusieveKunstenaarIds });
+    } catch {
+      setError(t('klantenActionError'));
+    }
+  }
+
+  async function handleOpslaanMinimaleAfname() {
+    if (!klant) return;
+    const trimmed = minimaleAfname.trim();
+    const parsed = trimmed === '' ? null : Math.max(1, Math.round(Number(trimmed)) || 1);
+    try {
+      await updateDoc(doc(db, 'klanten', klant.id), { minimaleAfname: parsed });
+      void logActiviteit('klant_minimale_afname_gewijzigd', actorFromMedewerker(user));
+      onUpdated({ ...klant, minimaleAfname: parsed });
+      setMinimaleAfname(parsed != null ? String(parsed) : '');
     } catch {
       setError(t('klantenActionError'));
     }
@@ -232,6 +317,72 @@ export function KlantModal({ klant, prijsgroepen, onClose, onUpdated }: KlantMod
             />
           </div>
 
+          <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
+            <span className="text-xs uppercase tracking-wide text-white/60">{t('klantenLabelAfleveradres')}</span>
+            {!isEditing && fields.deliveryAddress === '' ? (
+              <p data-testid="klant-modal-afleveradres-leeg" className="text-white/50">
+                {t('klantenLabelGebruiktStandaardadres')}
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Veld
+                  label={t('klantenLabelAdres')}
+                  value={fields.deliveryAddress}
+                  editing={isEditing}
+                  testId="klant-modal-deliveryAddress"
+                  onChange={(value) => setField('deliveryAddress', value)}
+                />
+                <Veld
+                  label={t('klantenLabelPostcode')}
+                  value={fields.deliveryPostcode}
+                  editing={isEditing}
+                  testId="klant-modal-deliveryPostcode"
+                  onChange={(value) => setField('deliveryPostcode', value)}
+                />
+                <Veld
+                  label={t('klantenLabelPlaats')}
+                  value={fields.deliveryCity}
+                  editing={isEditing}
+                  testId="klant-modal-deliveryCity"
+                  onChange={(value) => setField('deliveryCity', value)}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
+            <span className="text-xs uppercase tracking-wide text-white/60">{t('klantenLabelFactuuradres')}</span>
+            {!isEditing && fields.invoiceAddress === '' ? (
+              <p data-testid="klant-modal-factuuradres-leeg" className="text-white/50">
+                {t('klantenLabelGebruiktStandaardadres')}
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Veld
+                  label={t('klantenLabelAdres')}
+                  value={fields.invoiceAddress}
+                  editing={isEditing}
+                  testId="klant-modal-invoiceAddress"
+                  onChange={(value) => setField('invoiceAddress', value)}
+                />
+                <Veld
+                  label={t('klantenLabelPostcode')}
+                  value={fields.invoicePostcode}
+                  editing={isEditing}
+                  testId="klant-modal-invoicePostcode"
+                  onChange={(value) => setField('invoicePostcode', value)}
+                />
+                <Veld
+                  label={t('klantenLabelPlaats')}
+                  value={fields.invoiceCity}
+                  editing={isEditing}
+                  testId="klant-modal-invoiceCity"
+                  onChange={(value) => setField('invoiceCity', value)}
+                />
+              </div>
+            )}
+          </div>
+
           {isEditing && (
             <div className="flex gap-2">
               <button
@@ -283,6 +434,53 @@ export function KlantModal({ klant, prijsgroepen, onClose, onUpdated }: KlantMod
                 {t('klantenOpslaan')}
               </button>
             )}
+          </div>
+
+          <fieldset className="flex flex-col gap-1">
+            <legend className="text-xs uppercase tracking-wide text-white/60">
+              {t('klantenLabelExclusieveKunstenaars')}
+            </legend>
+            {(kunstenaars ?? []).map((kunstenaar) => (
+              <label key={kunstenaar.id} className="flex items-center gap-2 text-sm text-white/80">
+                <input
+                  type="checkbox"
+                  checked={exclusieveKunstenaarIds.includes(kunstenaar.id)}
+                  onChange={() => toggleExclusiviteit(kunstenaar.id)}
+                  data-testid={`klant-modal-exclusief-${kunstenaar.id}`}
+                />
+                {kunstenaar.naam}
+              </label>
+            ))}
+          </fieldset>
+          <button
+            type="button"
+            onClick={handleOpslaanExclusiviteit}
+            data-testid="klant-modal-exclusiviteit-opslaan"
+            className="w-fit rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+          >
+            {t('klantenOpslaan')}
+          </button>
+
+          <div className="flex items-end gap-2">
+            <label className="flex flex-1 flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+              {t('klantenLabelMinimaleAfname')}
+              <input
+                type="number"
+                min={1}
+                value={minimaleAfname}
+                onChange={(event) => setMinimaleAfname(event.target.value)}
+                data-testid="klant-modal-minimale-afname"
+                className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={handleOpslaanMinimaleAfname}
+              data-testid="klant-modal-minimale-afname-opslaan"
+              className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+            >
+              {t('klantenOpslaan')}
+            </button>
           </div>
 
           {error && (

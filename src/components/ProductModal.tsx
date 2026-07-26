@@ -7,10 +7,14 @@ import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
 import { useOverlayDismiss } from '@/lib/useOverlayDismiss';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
+import { resolveOrderRight } from '@/lib/resolveOrderRight';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { findVeiligheidsglasMateriaalId, MATERIAALLOOS_LABEL } from '@/lib/kunstwerkMateriaal';
+import { useFirestoreDocument } from '@/lib/useFirestoreDocument';
 import { WatermarkedImage } from './WatermarkedImage';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from './beheer/materiaalTypes';
+import type { Kunstenaar } from './beheer/kunstenaarTypes';
+import type { Bestelinstellingen } from './beheer/bestelinstellingenTypes';
 
 const CONFIRM_FEEDBACK_MS = 600;
 const CUSTOM_MAAT_VALUE = '__eigen_maat__';
@@ -37,20 +41,26 @@ interface ProductModalProps {
   materialen: Materiaal[] | null;
   maten: Maat[] | null;
   materiaalsoorten: Materiaalsoort[] | null;
+  kunstenaars: Kunstenaar[] | null;
   onClose: () => void;
 }
 
-export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, onClose }: ProductModalProps) {
+export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, kunstenaars, onClose }: ProductModalProps) {
   const t = useTranslations('cart');
   const locale = useLocale();
   const [materiaalId, setMateriaalId] = useState('');
   const [maatId, setMaatId] = useState('');
   const [customBreedte, setCustomBreedte] = useState('');
   const [customHoogte, setCustomHoogte] = useState('');
-  const [quantity, setQuantity] = useState(1);
+  const [quantityInput, setQuantityInput] = useState('1');
   const [isConfirmed, setIsConfirmed] = useState(false);
   const { addItem } = useCart();
   const { user } = useCustomerAuth();
+  const { data: bestelinstellingen } = useFirestoreDocument<Bestelinstellingen>(
+    'instellingen',
+    'bestelinstellingen'
+  );
+  const effectiveMinimum = user?.minimaleAfname ?? bestelinstellingen?.minimaleAfname ?? 1;
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -68,8 +78,14 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
     setMaatId(kunstwerk.maatIds[0] ?? '');
     setCustomBreedte('');
     setCustomHoogte('');
-    setQuantity(1);
+    // Deliberately excludes effectiveMinimum (derived from useFirestoreDocument/
+    // useCustomerAuth): those resolve well before a customer opens the popup in
+    // practice, and re-running this reset whenever effectiveMinimum changes would
+    // also clobber materiaal/maat selections the customer already made. materialen/
+    // materiaalsoorten ARE included since the default-materiaal lookup above reads them.
+    setQuantityInput(String(effectiveMinimum));
     setIsConfirmed(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kunstwerk, materialen, materiaalsoorten]);
 
   // Ensure a pending "close after confirm" timer never fires for a stale
@@ -93,6 +109,10 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
   if (!kunstwerk) {
     return null;
   }
+
+  // Dezelfde helper als CartPanel gebruikt bij het plaatsen van de bestelling, zodat de
+  // UI-blokkade niet uit de pas kan lopen met de controle vlak vóór het wegschrijven.
+  const { canOrder, blockedReason } = resolveOrderRight(kunstwerk.kunstenaarId, kunstenaars, user?.uid);
 
   const beschikbareMaterialen = (materialen ?? []).filter((materiaal) =>
     kunstwerk.materiaalIds.includes(materiaal.id)
@@ -126,11 +146,16 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
       ? Math.round((customBreedteNum / 100) * (customHoogteNum / 100) * kunstwerk.prijsPerM2 * 100) / 100
       : null;
 
-  const canConfirm = isMateriaalloos
-    ? customSizeValid && Boolean(kunstwerk.prijsPerM2) && (kunstwerk.prijsPerM2 ?? 0) > 0
-    : isCustomSize
-      ? customSizeValid
-      : Boolean(prijsRegel);
+  const quantityNum = Number(quantityInput);
+  const quantityValid =
+    quantityInput.trim() !== '' && Number.isInteger(quantityNum) && quantityNum >= effectiveMinimum;
+
+  const canConfirm =
+    (isMateriaalloos
+      ? customSizeValid && Boolean(kunstwerk.prijsPerM2) && (kunstwerk.prijsPerM2 ?? 0) > 0
+      : isCustomSize
+        ? customSizeValid
+        : Boolean(prijsRegel)) && quantityValid;
 
   function handleMateriaalChange(nextMateriaalId: string) {
     setMateriaalId(nextMateriaalId);
@@ -157,7 +182,7 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
         breedte: customBreedteNum,
         hoogte: customHoogteNum,
         prijs: materiaalloosPrijs,
-        quantity,
+        quantity: quantityNum,
       });
       void logActiviteit('mandje_toegevoegd', actorFromCustomer(user));
       setIsConfirmed(true);
@@ -183,7 +208,7 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
         breedte: customBreedteNum,
         hoogte: customHoogteNum,
         prijs: null,
-        quantity,
+        quantity: quantityNum,
       });
       void logActiviteit('mandje_eigen_maat_toegevoegd', actorFromCustomer(user));
     } else {
@@ -200,7 +225,7 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
         maatId,
         maatLabel: maatLabel(gekozenMaat),
         prijs: prijsRegel.prijs,
-        quantity,
+        quantity: quantityNum,
       });
       void logActiviteit('mandje_toegevoegd', actorFromCustomer(user));
     }
@@ -341,35 +366,61 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
               </p>
             )
           )}
-          <div className="flex items-center justify-between gap-2 text-sm text-white/80">
-            <span className="text-[0.65rem] uppercase tracking-wide text-white/60">{t('quantity')}</span>
-            <div className="flex h-10 items-center overflow-hidden rounded-full border border-white/20">
-              <button
-                type="button"
-                data-testid="product-modal-quantity-minus"
-                onClick={() => setQuantity((current) => Math.max(1, current - 1))}
-                className="flex h-full w-9 items-center justify-center text-white/80 transition hover:bg-gold hover:text-ink"
-              >
-                −
-              </button>
-              <span data-testid="product-modal-quantity-value" className="w-9 text-center">
-                {quantity}
-              </span>
-              <button
-                type="button"
-                data-testid="product-modal-quantity-plus"
-                onClick={() => setQuantity((current) => current + 1)}
-                className="flex h-full w-9 items-center justify-center text-white/80 transition hover:bg-gold hover:text-ink"
-              >
-                +
-              </button>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between gap-2 text-sm text-white/80">
+              <span className="text-[0.65rem] uppercase tracking-wide text-white/60">{t('quantity')}</span>
+              <div className="flex h-10 items-center overflow-hidden rounded-full border border-white/20">
+                <button
+                  type="button"
+                  data-testid="product-modal-quantity-minus"
+                  onClick={() =>
+                    setQuantityInput((current) =>
+                      String(Math.max(effectiveMinimum, (Number(current) || effectiveMinimum) - 1))
+                    )
+                  }
+                  className="flex h-full w-9 items-center justify-center text-white/80 transition hover:bg-gold hover:text-ink"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  data-testid="product-modal-quantity-value"
+                  value={quantityInput}
+                  onChange={(event) => setQuantityInput(event.target.value)}
+                  className="h-full w-14 bg-transparent text-center text-sm text-white"
+                />
+                <button
+                  type="button"
+                  data-testid="product-modal-quantity-plus"
+                  onClick={() =>
+                    setQuantityInput((current) => String((Number(current) || effectiveMinimum) + 1))
+                  }
+                  className="flex h-full w-9 items-center justify-center text-white/80 transition hover:bg-gold hover:text-ink"
+                >
+                  +
+                </button>
+              </div>
             </div>
+            {!quantityValid && (
+              <p data-testid="product-modal-quantity-error" className="text-right text-xs text-red-400">
+                {t('minimumQuantityError', { minimum: effectiveMinimum })}
+              </p>
+            )}
           </div>
+          {blockedReason && (
+            <p data-testid="product-modal-order-blocked" className="text-xs text-amber-400">
+              {blockedReason === 'exclusive'
+                ? t('orderBlockedExclusive')
+                : blockedReason === 'artistOnly'
+                ? t('orderBlockedArtistOnly')
+                : t('orderBlockedUnavailable')}
+            </p>
+          )}
           <button
             type="button"
             data-testid="product-modal-confirm"
             onClick={handleConfirm}
-            disabled={isConfirmed || !canConfirm}
+            disabled={isConfirmed || !canConfirm || !canOrder}
             className={`rounded-sm px-4 py-2.5 text-xs tracking-[0.15em] transition disabled:opacity-40 ${
               isConfirmed ? 'cursor-default bg-green-500 text-white' : 'btn-gold'
             }`}

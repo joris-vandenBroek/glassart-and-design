@@ -5,6 +5,7 @@ import { ProductModal } from '@/components/ProductModal';
 import { CartProvider, useCart } from '@/lib/useCart';
 import { CustomerAuthProvider } from '@/lib/useCustomerAuth';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from '@/components/beheer/materiaalTypes';
+import type { Kunstenaar } from '@/components/beheer/kunstenaarTypes';
 import messages from '../../messages/nl.json';
 
 const onAuthStateChangedMock = vi.fn();
@@ -23,6 +24,7 @@ vi.mock('firebase/auth', () => ({
 vi.mock('firebase/firestore', () => ({
   doc: vi.fn((_db, collection, id) => ({ collection, id })),
   getDoc: (...args: unknown[]) => getDocMock(...args),
+  setDoc: vi.fn(),
 }));
 
 vi.mock('@/lib/logActiviteit', () => ({
@@ -39,7 +41,7 @@ const KUNSTWERK: Kunstwerk = {
   id: 'kw-1',
   foto: 'https://example.com/kw-1.jpg',
   naam: 'Hotel paneel',
-  artiest: '',
+  kunstenaarId: null,
   segmentIds: ['seg-1'],
   materiaalIds: ['mat-1', 'mat-2'],
   maatIds: ['maat-1', 'maat-2'],
@@ -70,7 +72,7 @@ const MATERIAALLOOS_KUNSTWERK: Kunstwerk = {
   id: 'kw-akoestisch',
   foto: 'https://example.com/akoestisch.jpg',
   naam: 'Akoestisch paneel',
-  artiest: '',
+  kunstenaarId: null,
   segmentIds: [],
   materiaalIds: [],
   maatIds: [],
@@ -81,8 +83,62 @@ const MATERIAALLOOS_KUNSTWERK: Kunstwerk = {
   omschrijvingDe: '',
   omschrijvingEn: '',
 };
+const KUNSTENAARS: Kunstenaar[] = [
+  {
+    id: 'ka-open',
+    naam: 'Open Artiest',
+    foto: null,
+    omschrijvingNl: '',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+    verkooprecht: 'open',
+    klantId: null,
+    exclusiefVoorKlantId: null,
+  },
+  {
+    id: 'ka-exclusief',
+    naam: 'Exclusieve Artiest',
+    foto: null,
+    omschrijvingNl: '',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+    verkooprecht: 'open',
+    klantId: null,
+    exclusiefVoorKlantId: 'ander-klant-uid',
+  },
+  {
+    id: 'ka-alleen-zelf',
+    naam: 'Solo Artiest',
+    foto: null,
+    omschrijvingNl: '',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+    verkooprecht: 'alleen-kunstenaar',
+    klantId: null,
+    exclusiefVoorKlantId: null,
+  },
+  {
+    id: 'ka-eigen',
+    naam: 'Eigen Artiest',
+    foto: null,
+    omschrijvingNl: '',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+    verkooprecht: 'alleen-kunstenaar',
+    klantId: 'kunstenaar-uid',
+    exclusiefVoorKlantId: 'ander-klant-uid',
+  },
+];
 
-function renderModal(onClose: () => void = () => {}, kunstwerk: Kunstwerk | null = KUNSTWERK) {
+function renderModal(
+  onClose: () => void = () => {},
+  kunstwerk: Kunstwerk | null = KUNSTWERK,
+  kunstenaars: Kunstenaar[] | null = KUNSTENAARS
+) {
   return render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <CustomerAuthProvider>
@@ -92,6 +148,7 @@ function renderModal(onClose: () => void = () => {}, kunstwerk: Kunstwerk | null
             materialen={MATERIALEN}
             maten={MATEN}
             materiaalsoorten={MATERIAALSOORTEN}
+            kunstenaars={kunstenaars}
             onClose={onClose}
           />
         </CartProvider>
@@ -127,13 +184,78 @@ describe('ProductModal', () => {
     expect(screen.queryByTestId('product-modal')).not.toBeInTheDocument();
   });
 
+  it('disables the confirm button and explains why for a kunstwerk exclusive to another klant', () => {
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-exclusief' });
+    expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
+    expect(screen.getByTestId('product-modal-order-blocked')).toHaveTextContent(
+      'Dit kunstwerk is exclusief voorbehouden aan een andere klant.'
+    );
+  });
+
+  it('disables the confirm button and explains why for a kunstwerk that only the artist may order', () => {
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-alleen-zelf' });
+    expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
+    expect(screen.getByTestId('product-modal-order-blocked')).toHaveTextContent(
+      'Dit kunstwerk kan alleen door de kunstenaar zelf besteld worden.'
+    );
+  });
+
+  it('does not block ordering for a kunstwerk with no kunstenaar or an open one', () => {
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: null });
+    expect(screen.queryByTestId('product-modal-order-blocked')).not.toBeInTheDocument();
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-open' });
+    expect(screen.queryByTestId('product-modal-order-blocked')).not.toBeInTheDocument();
+  });
+
+  it('keeps a legacy kunstwerk document without a kunstenaarId field orderable', () => {
+    // Zoals useFirestoreCollection het uit Firestore leest: het veld ontbreekt gewoon.
+    const { kunstenaarId: _weg, ...legacyKunstwerk } = KUNSTWERK;
+    renderModal(() => {}, legacyKunstwerk as Kunstwerk);
+    expect(screen.queryByTestId('product-modal-order-blocked')).not.toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-confirm')).not.toBeDisabled();
+  });
+
+  it('fails closed while the kunstenaars collection has not loaded yet', () => {
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-open' }, null);
+    expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
+    expect(screen.getByTestId('product-modal-order-blocked')).toHaveTextContent(
+      'Dit kunstwerk kan op dit moment niet besteld worden. Probeer het later opnieuw.'
+    );
+  });
+
+  it('fails closed for a kunstenaarId that no longer exists in the loaded kunstenaars', () => {
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-verwijderd' });
+    expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
+    expect(screen.getByTestId('product-modal-order-blocked')).toHaveTextContent(
+      'Dit kunstwerk kan op dit moment niet besteld worden. Probeer het later opnieuw.'
+    );
+  });
+
+  it('still allows the kunstenaar to order their own exclusive, artist-only work', async () => {
+    vi.useRealTimers();
+    onAuthStateChangedMock.mockImplementation((_auth, callback) => {
+      callback({ uid: 'kunstenaar-uid', email: 'ka@example.com' });
+      return () => {};
+    });
+    getDocMock.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ status: 'Goedgekeurd', companyName: 'Atelier' }),
+    });
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-eigen' });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(screen.queryByTestId('product-modal-order-blocked')).not.toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-confirm')).not.toBeDisabled();
+  });
+
   it('shows the resolved description, defaults to the first materiaal/maat, and the matching price', () => {
     renderModal();
     expect(screen.getByText('Wellness paneel')).toBeInTheDocument();
     expect(screen.getByTestId('product-modal-materiaal')).toHaveValue('mat-1');
     expect(screen.getByTestId('product-modal-maat')).toHaveValue('maat-1');
     expect(screen.getByTestId('product-modal-prijs')).toHaveTextContent('€ 150,00');
-    expect(screen.getByTestId('product-modal-quantity-value')).toHaveTextContent('1');
+    expect(screen.getByTestId('product-modal-quantity-value')).toHaveValue(1);
   });
 
   it('defaults to the 4mm Veiligheidsglas materiaal when available, instead of the first-listed materiaal', () => {
@@ -150,6 +272,7 @@ describe('ProductModal', () => {
               materialen={MATERIALEN_ACRYL_EERST}
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN}
+              kunstenaars={KUNSTENAARS}
               onClose={() => {}}
             />
           </CartProvider>
@@ -191,13 +314,13 @@ describe('ProductModal', () => {
     );
   });
 
-  it('increments and decrements quantity, never below 1', () => {
+  it('increments and decrements quantity, never below the effective minimum', () => {
     renderModal();
     fireEvent.click(screen.getByTestId('product-modal-quantity-minus'));
-    expect(screen.getByTestId('product-modal-quantity-value')).toHaveTextContent('1');
+    expect(screen.getByTestId('product-modal-quantity-value')).toHaveValue(1);
     fireEvent.click(screen.getByTestId('product-modal-quantity-plus'));
     fireEvent.click(screen.getByTestId('product-modal-quantity-plus'));
-    expect(screen.getByTestId('product-modal-quantity-value')).toHaveTextContent('3');
+    expect(screen.getByTestId('product-modal-quantity-value')).toHaveValue(3);
   });
 
   it('calls onClose when the backdrop is clicked', () => {
@@ -238,6 +361,7 @@ describe('ProductModal', () => {
               materialen={MATERIALEN}
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN}
+              kunstenaars={KUNSTENAARS}
               onClose={onClose}
             />
             <Probe />
@@ -282,6 +406,7 @@ describe('ProductModal', () => {
               materialen={MATERIALEN}
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN}
+              kunstenaars={KUNSTENAARS}
               onClose={onClose}
             />
           </CartProvider>
@@ -303,6 +428,7 @@ describe('ProductModal', () => {
               materialen={MATERIALEN}
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN}
+              kunstenaars={KUNSTENAARS}
               onClose={onClose}
             />
           </CartProvider>
@@ -318,6 +444,7 @@ describe('ProductModal', () => {
               materialen={MATERIALEN}
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN}
+              kunstenaars={KUNSTENAARS}
               onClose={onClose}
             />
           </CartProvider>
@@ -418,6 +545,7 @@ describe('ProductModal', () => {
               materialen={MATERIALEN}
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN_MET_EIGEN_MAAT}
+              kunstenaars={KUNSTENAARS}
               onClose={() => {}}
             />
           </CartProvider>
@@ -442,6 +570,7 @@ describe('ProductModal', () => {
               materialen={MATERIALEN}
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN_MET_EIGEN_MAAT}
+              kunstenaars={KUNSTENAARS}
               onClose={() => {}}
             />
           </CartProvider>
@@ -468,6 +597,7 @@ describe('ProductModal', () => {
               materialen={MATERIALEN}
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN_MET_EIGEN_MAAT}
+              kunstenaars={KUNSTENAARS}
               onClose={() => {}}
             />
           </CartProvider>
@@ -499,6 +629,7 @@ describe('ProductModal', () => {
               materialen={MATERIALEN}
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN_MET_EIGEN_MAAT}
+              kunstenaars={KUNSTENAARS}
               onClose={() => {}}
             />
             <Probe />
@@ -547,6 +678,7 @@ describe('ProductModal', () => {
               materialen={MATERIALEN}
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN_MIXED}
+              kunstenaars={KUNSTENAARS}
               onClose={() => {}}
             />
           </CartProvider>
@@ -592,6 +724,7 @@ describe('ProductModal', () => {
               materialen={MATERIALEN}
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN}
+              kunstenaars={KUNSTENAARS}
               onClose={() => {}}
             />
             <Probe />
@@ -625,5 +758,130 @@ describe('ProductModal', () => {
       email: 'Onbekend',
       naam: 'Onbekend',
     });
+  });
+
+  function mockDocsByCollection(byCollection: Record<string, { exists: boolean; data?: object }>) {
+    getDocMock.mockImplementation((ref: { collection: string; id: string }) => {
+      const entry = byCollection[ref.collection];
+      if (!entry) {
+        return Promise.resolve({ exists: () => false });
+      }
+      return Promise.resolve({ exists: () => entry.exists, data: () => entry.data });
+    });
+  }
+
+  async function flushMicrotasks() {
+    // The suite defaults to fake timers (see the top-level beforeEach) for the
+    // CONFIRM_FEEDBACK_MS close-timer tests. The tests below don't touch that
+    // timer, but they DO need this setTimeout(0) to actually fire so the
+    // pending getDoc() promise (useFirestoreDocument/useCustomerAuth) can
+    // resolve, so switch to real timers before flushing.
+    vi.useRealTimers();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+  }
+
+  function renderTree(kunstwerk: Kunstwerk | null) {
+    return (
+      <NextIntlClientProvider locale="nl" messages={messages}>
+        <CustomerAuthProvider>
+          <CartProvider>
+            <ProductModal
+              kunstwerk={kunstwerk}
+              materialen={MATERIALEN}
+              maten={MATEN}
+              materiaalsoorten={MATERIAALSOORTEN}
+              kunstenaars={KUNSTENAARS}
+              onClose={() => {}}
+            />
+          </CartProvider>
+        </CustomerAuthProvider>
+      </NextIntlClientProvider>
+    );
+  }
+
+  // These 3 tests mount with kunstwerk=null first and only rerender with the
+  // real kunstwerk after the Firestore data has resolved. This mirrors the
+  // real-app lifecycle described by the kunstwerk-reset effect's comment in
+  // ProductModal.tsx (the popup is closed, i.e. kunstwerk is null, while
+  // useFirestoreDocument/useCustomerAuth resolve; it only becomes non-null
+  // once the customer opens a product). Mounting directly with a non-null
+  // kunstwerk (like renderModal() does) would fire the reset effect before
+  // the async data arrives, which is not what these tests are checking.
+  it('prefills quantity with the global minimale afname when there is no logged-in klant', async () => {
+    mockDocsByCollection({ instellingen: { exists: true, data: { minimaleAfname: 5 } } });
+    const { rerender } = render(renderTree(null));
+    await flushMicrotasks();
+    rerender(renderTree(KUNSTWERK));
+    expect(screen.getByTestId('product-modal-quantity-value')).toHaveValue(5);
+  });
+
+  it('prefills quantity with the klant override when it differs from the global minimum', async () => {
+    mockDocsByCollection({
+      klanten: { exists: true, data: { status: 'Goedgekeurd', minimaleAfname: 8 } },
+      instellingen: { exists: true, data: { minimaleAfname: 3 } },
+    });
+    onAuthStateChangedMock.mockImplementation((_auth, callback) => {
+      callback({ uid: 'uid-1', email: 'klant@example.com' });
+      return () => {};
+    });
+    const { rerender } = render(renderTree(null));
+    await flushMicrotasks();
+    rerender(renderTree(KUNSTWERK));
+    expect(screen.getByTestId('product-modal-quantity-value')).toHaveValue(8);
+  });
+
+  it('falls back to the global minimum when the klant has no override', async () => {
+    mockDocsByCollection({
+      klanten: { exists: true, data: { status: 'Goedgekeurd', minimaleAfname: null } },
+      instellingen: { exists: true, data: { minimaleAfname: 4 } },
+    });
+    onAuthStateChangedMock.mockImplementation((_auth, callback) => {
+      callback({ uid: 'uid-1', email: 'klant@example.com' });
+      return () => {};
+    });
+    const { rerender } = render(renderTree(null));
+    await flushMicrotasks();
+    rerender(renderTree(KUNSTWERK));
+    expect(screen.getByTestId('product-modal-quantity-value')).toHaveValue(4);
+  });
+
+  it('shows an error and disables confirm when the typed quantity is below the minimum', async () => {
+    mockDocsByCollection({ instellingen: { exists: true, data: { minimaleAfname: 5 } } });
+    renderModal();
+    await flushMicrotasks();
+    fireEvent.change(screen.getByTestId('product-modal-quantity-value'), { target: { value: '2' } });
+    expect(screen.getByTestId('product-modal-quantity-error')).toHaveTextContent('Minimaal 5 stuks');
+    expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
+  });
+
+  it('re-enables confirm once the typed quantity meets the minimum', async () => {
+    mockDocsByCollection({ instellingen: { exists: true, data: { minimaleAfname: 5 } } });
+    renderModal();
+    await flushMicrotasks();
+    fireEvent.change(screen.getByTestId('product-modal-quantity-value'), { target: { value: '2' } });
+    fireEvent.change(screen.getByTestId('product-modal-quantity-value'), { target: { value: '5' } });
+    expect(screen.queryByTestId('product-modal-quantity-error')).not.toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-confirm')).not.toBeDisabled();
+  });
+
+  it('shows an error when the quantity field is cleared', async () => {
+    mockDocsByCollection({ instellingen: { exists: true, data: { minimaleAfname: 5 } } });
+    renderModal();
+    await flushMicrotasks();
+    fireEvent.change(screen.getByTestId('product-modal-quantity-value'), { target: { value: '' } });
+    expect(screen.getByTestId('product-modal-quantity-error')).toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
+  });
+
+  it('the minus button never goes below the effective minimum', async () => {
+    mockDocsByCollection({ instellingen: { exists: true, data: { minimaleAfname: 3 } } });
+    renderModal();
+    await flushMicrotasks();
+    fireEvent.click(screen.getByTestId('product-modal-quantity-minus'));
+    fireEvent.click(screen.getByTestId('product-modal-quantity-minus'));
+    fireEvent.click(screen.getByTestId('product-modal-quantity-minus'));
+    expect(screen.getByTestId('product-modal-quantity-value')).toHaveValue(3);
   });
 });

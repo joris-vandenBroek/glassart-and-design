@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
+import { collection, deleteField, doc, getDoc, getDocs, limit, orderBy, query, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { GlassPanel } from '@/components/GlassPanel';
 import { BeheerNav, type BeheerSection } from './BeheerNav';
@@ -14,16 +14,22 @@ import { MatenSection } from './MatenSection';
 import { SegmentenSection } from './SegmentenSection';
 import { KunstwerkenSection } from './KunstwerkenSection';
 import { PrijsgroepenSection } from './PrijsgroepenSection';
+import { KunstenaarsSection } from './KunstenaarsSection';
+import { DrukkersSection } from './DrukkersSection';
 import { ActiviteitSection, type Activiteit } from './ActiviteitSection';
 import { GlassartDesignSection } from './GlassartDesignSection';
-import type { Materiaalsoort, Materiaal, Maat, Segment, Kunstwerk, Prijsgroep } from './materiaalTypes';
+import { InstellingenSection } from './InstellingenSection';
+import type { Materiaalsoort, Materiaal, Maat, Segment, Kunstwerk, Prijsgroep, Drukker } from './materiaalTypes';
+import type { Kunstenaar, KunstenaarUpdate } from './kunstenaarTypes';
 import type { Bedrijfsgegevens } from './bedrijfsgegevensTypes';
+import type { Bestelinstellingen } from './bestelinstellingenTypes';
 import type { ActiviteitType } from '@/lib/logActiviteit';
 import { useFirestoreCollection } from '@/lib/useFirestoreCollection';
 import { useFirestoreDocument } from '@/lib/useFirestoreDocument';
 import { MATERIAALSOORTEN_SEED, buildMaterialenSeed } from '@/data/materiaalsoortenSeed';
 import { SEGMENTEN_SEED, MATEN_SEED, buildKunstwerkenSeed } from '@/data/kunstwerkenSeed';
 import { BEDRIJFSGEGEVENS_SEED } from '@/data/bedrijfsgegevensSeed';
+import { BESTELINSTELLINGEN_SEED } from '@/data/bestelinstellingenSeed';
 
 interface BeheerShellProps {
   email: string;
@@ -62,8 +68,16 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
               address: data.address,
               postcode: data.postcode,
               city: data.city,
+              deliveryAddress: data.deliveryAddress ?? '',
+              deliveryPostcode: data.deliveryPostcode ?? '',
+              deliveryCity: data.deliveryCity ?? '',
+              invoiceAddress: data.invoiceAddress ?? '',
+              invoicePostcode: data.invoicePostcode ?? '',
+              invoiceCity: data.invoiceCity ?? '',
               status: data.status,
               prijsgroepId: data.prijsgroepId,
+              exclusieveKunstenaarIds: data.exclusieveKunstenaarIds ?? [],
+              minimaleAfname: data.minimaleAfname ?? null,
             } as Klant;
           })
         );
@@ -227,8 +241,42 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
     skip: !kunstwerkenReady,
   });
   const prijsgroepen = useFirestoreCollection<Prijsgroep>('prijsgroepen');
+  const kunstenaars = useFirestoreCollection<Kunstenaar>('kunstenaars');
+
+  /**
+   * Het ENIGE schrijfpad naar `kunstenaars/{id}`.
+   *
+   * Elke update moet het legacy `prijsafspraken`-veld strippen (zie KunstenaarUpdate),
+   * maar strippen zonder migreren zou de interne afspraken van een nog niet gemigreerde
+   * kunstenaar stilzwijgend wissen. Daarom staat "eerst migreren, dan strippen" hier op
+   * één plek in plaats van in elke aanroepende component: KunstenaarsSection (opslaan) en
+   * KlantModal (exclusiviteit) krijgen dit als gewone update-functie doorgegeven en hoeven
+   * van de splitsing niets te weten.
+   */
+  async function updateKunstenaarVeilig(
+    id: string,
+    data: Partial<Omit<Kunstenaar, 'id'>>
+  ): Promise<boolean> {
+    const kunstenaar = (kunstenaars.items ?? []).find((item) => item.id === id) as
+      | (Kunstenaar & { prijsafspraken?: string })
+      | undefined;
+    const legacyPrijsafspraken = kunstenaar?.prijsafspraken;
+    if (legacyPrijsafspraken) {
+      const afsprakenSnap = await getDoc(doc(db, 'kunstenaarAfspraken', id));
+      // Bestaat het afsprakendocument al, dan is dat de actuele waarde (of de zojuist
+      // opgeslagen invoer van de gebruiker) en mag de legacy-waarde die niet overschrijven.
+      if (!afsprakenSnap.exists()) {
+        await setDoc(doc(db, 'kunstenaarAfspraken', id), { prijsafspraken: legacyPrijsafspraken });
+      }
+    }
+    return kunstenaars.update(id, { ...data, prijsafspraken: deleteField() } as KunstenaarUpdate);
+  }
+  const drukkers = useFirestoreCollection<Drukker>('drukkers');
   const bedrijfsgegevens = useFirestoreDocument<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens', {
     seed: BEDRIJFSGEGEVENS_SEED,
+  });
+  const bestelinstellingen = useFirestoreDocument<Bestelinstellingen>('instellingen', 'bestelinstellingen', {
+    seed: BESTELINSTELLINGEN_SEED,
   });
 
   const klantenCount = (klanten ?? []).filter((klant) => klant.status === 'Beoordelen').length;
@@ -239,6 +287,8 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   const segmentenCount = (segmenten.items ?? []).length;
   const kunstwerkenCount = (kunstwerken.items ?? []).length;
   const prijsgroepenCount = (prijsgroepen.items ?? []).length;
+  const kunstenaarsCount = (kunstenaars.items ?? []).length;
+  const drukkersCount = (drukkers.items ?? []).length;
   const activiteitCount = (activiteiten ?? []).length;
 
   return (
@@ -261,7 +311,9 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
           matenCount={matenCount}
           segmentenCount={segmentenCount}
           kunstwerkenCount={kunstwerkenCount}
+          kunstenaarsCount={kunstenaarsCount}
           prijsgroepenCount={prijsgroepenCount}
+          drukkersCount={drukkersCount}
           activiteitCount={activiteitCount}
         />
       </GlassPanel>
@@ -270,8 +322,10 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
           <KlantenSection
             klanten={klanten}
             prijsgroepen={prijsgroepen.items}
+            kunstenaars={kunstenaars.items}
             loadError={loadError}
             onKlantUpdated={handleKlantUpdated}
+            onKunstenaarUpdated={updateKunstenaarVeilig}
           />
         ) : activeSection === 'bestellingen' ? (
           <BestellingenSection
@@ -280,6 +334,8 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             materialen={materialen.items}
             maten={maten.items}
             materiaalsoorten={materiaalsoorten.items}
+            klanten={klanten}
+            drukkers={drukkers.items}
             loadError={bestellingenLoadError}
             onBestellingUpdated={handleBestellingUpdated}
             onLinePrijsVastgesteld={handleLinePrijsVastgesteld}
@@ -332,10 +388,21 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             materialen={materialen.items}
             materiaalsoorten={materiaalsoorten.items}
             maten={maten.items}
+            kunstenaars={kunstenaars.items}
             loadError={kunstwerken.error === 'load' ? t('kunstwerkenLoadError') : null}
             onAdd={kunstwerken.add}
             onUpdate={kunstwerken.update}
             onRemove={kunstwerken.remove}
+          />
+        ) : activeSection === 'kunstenaars' ? (
+          <KunstenaarsSection
+            kunstenaars={kunstenaars.items}
+            klanten={klanten}
+            kunstwerken={kunstwerken.items}
+            loadError={kunstenaars.error === 'load' ? t('kunstenaarsLoadError') : null}
+            onUpdate={updateKunstenaarVeilig}
+            onRemove={kunstenaars.remove}
+            onRefetch={kunstenaars.refetch}
           />
         ) : activeSection === 'prijsgroepen' ? (
           <PrijsgroepenSection
@@ -346,11 +413,25 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             onUpdate={prijsgroepen.update}
             onRemove={prijsgroepen.remove}
           />
+        ) : activeSection === 'drukkers' ? (
+          <DrukkersSection
+            drukkers={drukkers.items}
+            loadError={drukkers.error === 'load' ? t('drukkersLoadError') : null}
+            onAdd={drukkers.add}
+            onUpdate={drukkers.update}
+            onRemove={drukkers.remove}
+          />
         ) : activeSection === 'glassartDesign' ? (
           <GlassartDesignSection
             bedrijfsgegevens={bedrijfsgegevens.data}
             loadError={bedrijfsgegevens.error === 'load' ? t('glassartDesignLoadError') : null}
             onSave={bedrijfsgegevens.save}
+          />
+        ) : activeSection === 'instellingen' ? (
+          <InstellingenSection
+            bestelinstellingen={bestelinstellingen.data}
+            loadError={bestelinstellingen.error === 'load' ? t('instellingenLoadError') : null}
+            onSave={bestelinstellingen.save}
           />
         ) : (
           <ActiviteitSection activiteiten={activiteiten} loadError={activiteitenLoadError} />

@@ -92,7 +92,7 @@ Onderwerp: Nieuwe order(s) voor de drukker – <datum>
 Afleveradres: <deliveryAddress/deliveryPostcode/deliveryCity, of anders
                address/postcode/city als delivery-velden leeg zijn>
 - <kunstwerk.omschrijvingNl> — <materiaaldikte>mm <materiaalsoort> — <omschrijving materiaal>,
-  maat <breedte>×<hoogte> cm, aantal <quantity>
+  maat <breedte>×<hoogte> cm<formaatSuffix>, aantal <quantity>
 - ...
 
 == <Bedrijfsnaam klant B> ==
@@ -100,7 +100,10 @@ Afleveradres: <deliveryAddress/deliveryPostcode/deliveryCity, of anders
 ```
 
 (Zelfde materiaal-notatie als nu al gebruikt in `BestellingModal`, bv. "6mm Glas —
-helder".)
+helder". `<formaatSuffix>` is ` (Liggend)` / ` (Staand)` als het kunstwerk dat formaat heeft, en leeg
+bij `vierkant` of een nog niet ingesteld formaat — zie
+`docs/superpowers/specs/2026-07-26-kunstwerk-formaat-design.md` Sectie D voor de volledige
+`formaatSuffix`-logica en herkomst van `kunstwerk.formaat`.)
 
 **Versturen**-knop-flow:
 1. POST naar `mail-server/send-drukker-order.php` met `{ secret, to: drukker.email,

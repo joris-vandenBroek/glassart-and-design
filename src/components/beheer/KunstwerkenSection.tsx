@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
@@ -9,7 +9,10 @@ import { resolveKunstwerkMateriaalLabel } from '@/lib/kunstwerkMateriaal';
 import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
-import type { Kunstwerk, Segment, Materiaal, Materiaalsoort, Maat } from './materiaalTypes';
+import type { Kunstwerk, Segment, Materiaal, Materiaalsoort, Maat, PrijsRegel, KunstwerkFormaat } from './materiaalTypes';
+import { isVierkanteMaat } from './materiaalTypes';
+import type { Kunstenaar } from './kunstenaarTypes';
+import { detectFormaatFromFile, detectFormaatFromImageUrl } from '@/lib/detectKunstwerkFormaat';
 
 interface KunstwerkenSectionProps {
   kunstwerken: Kunstwerk[] | null;
@@ -17,6 +20,7 @@ interface KunstwerkenSectionProps {
   materialen: Materiaal[] | null;
   materiaalsoorten: Materiaalsoort[] | null;
   maten: Maat[] | null;
+  kunstenaars: Kunstenaar[] | null;
   loadError: string | null;
   onAdd: (data: Omit<Kunstwerk, 'id'>) => Promise<boolean>;
   onUpdate: (id: string, data: Omit<Kunstwerk, 'id'>) => Promise<boolean>;
@@ -25,7 +29,7 @@ interface KunstwerkenSectionProps {
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; kunstwerk: Kunstwerk } | null;
 type PrijzenState = Record<string, string>;
-type KunstwerkRow = Kunstwerk & { segmentNamen: string };
+type KunstwerkRow = Kunstwerk & { segmentNamen: string; kunstenaarNaam: string };
 
 function prijsKey(materiaalId: string, maatId: string) {
   return `${materiaalId}:${maatId}`;
@@ -38,7 +42,8 @@ function toggle(list: string[], id: string): string[] {
 const LEGE_FORM = {
   foto: '',
   naam: '',
-  artiest: '',
+  kunstenaarId: '' as string,
+  formaat: null as KunstwerkFormaat | null,
   segmentIds: [] as string[],
   materiaalIds: [] as string[],
   maatIds: [] as string[],
@@ -56,6 +61,7 @@ export function KunstwerkenSection({
   materialen,
   materiaalsoorten,
   maten,
+  kunstenaars,
   loadError,
   onAdd,
   onUpdate,
@@ -67,7 +73,8 @@ export function KunstwerkenSection({
   const [modalState, setModalState] = useState<ModalState>(null);
   const [foto, setFoto] = useState(LEGE_FORM.foto);
   const [naam, setNaam] = useState(LEGE_FORM.naam);
-  const [artiest, setArtiest] = useState(LEGE_FORM.artiest);
+  const [kunstenaarId, setKunstenaarId] = useState(LEGE_FORM.kunstenaarId);
+  const [formaat, setFormaatState] = useState<KunstwerkFormaat | null>(LEGE_FORM.formaat);
   const [segmentIds, setSegmentIds] = useState<string[]>(LEGE_FORM.segmentIds);
   const [materiaalIds, setMateriaalIds] = useState<string[]>(LEGE_FORM.materiaalIds);
   const [maatIds, setMaatIds] = useState<string[]>(LEGE_FORM.maatIds);
@@ -80,6 +87,7 @@ export function KunstwerkenSection({
   const [actionError, setActionError] = useState<string | null>(null);
   const [isDraggingFoto, setIsDraggingFoto] = useState(false);
   const [backfillBezig, setBackfillBezig] = useState(false);
+  const formaatSessionRef = useRef(0);
 
   const segmentNaamById = useMemo(() => {
     const map = new Map<string, string>();
@@ -93,9 +101,26 @@ export function KunstwerkenSection({
     return map;
   }, [materiaalsoorten]);
 
+  const kunstenaarNaamById = useMemo(() => {
+    const map = new Map<string, string>();
+    (kunstenaars ?? []).forEach((kunstenaar) => map.set(kunstenaar.id, kunstenaar.naam));
+    return map;
+  }, [kunstenaars]);
+
   function materiaalLabel(materiaal: Materiaal): string {
     const soortNaam = materiaalsoortNaamById.get(materiaal.materiaalsoortId) ?? materiaal.materiaalsoortId;
     return `${materiaal.materiaaldikte}mm — ${soortNaam}`;
+  }
+
+  function setFormaat(optie: KunstwerkFormaat) {
+    setFormaatState(optie);
+    setMaatIds((current) =>
+      current.filter((id) => {
+        const maat = (maten ?? []).find((m) => m.id === id);
+        if (!maat) return true;
+        return optie === 'vierkant' ? isVierkanteMaat(maat) : !isVierkanteMaat(maat);
+      })
+    );
   }
 
   if (loadError) {
@@ -113,12 +138,14 @@ export function KunstwerkenSection({
   const rows: KunstwerkRow[] = kunstwerken.map((kunstwerk) => ({
     ...kunstwerk,
     segmentNamen: kunstwerk.segmentIds.map((id) => segmentNaamById.get(id) ?? id).join(', '),
+    kunstenaarNaam: kunstwerk.kunstenaarId ? kunstenaarNaamById.get(kunstwerk.kunstenaarId) ?? '' : '',
   }));
 
   function resetForm() {
     setFoto(LEGE_FORM.foto);
     setNaam(LEGE_FORM.naam);
-    setArtiest(LEGE_FORM.artiest);
+    setKunstenaarId(LEGE_FORM.kunstenaarId);
+    setFormaatState(LEGE_FORM.formaat);
     setSegmentIds(LEGE_FORM.segmentIds);
     setMateriaalIds((materialen ?? []).map((materiaal) => materiaal.id));
     setMaatIds((maten ?? []).map((maat) => maat.id));
@@ -132,14 +159,17 @@ export function KunstwerkenSection({
   }
 
   function openAdd() {
+    formaatSessionRef.current += 1;
     resetForm();
     setModalState({ mode: 'add' });
   }
 
   function openEdit(kunstwerk: Kunstwerk) {
+    formaatSessionRef.current += 1;
+    const session = formaatSessionRef.current;
     setFoto(kunstwerk.foto);
     setNaam(kunstwerk.naam ?? '');
-    setArtiest(kunstwerk.artiest ?? '');
+    setKunstenaarId(kunstwerk.kunstenaarId ?? '');
     setSegmentIds(kunstwerk.segmentIds);
     setMateriaalIds(kunstwerk.materiaalIds);
     setMaatIds(kunstwerk.maatIds);
@@ -154,17 +184,38 @@ export function KunstwerkenSection({
     setOmschrijvingDe(kunstwerk.omschrijvingDe);
     setOmschrijvingEn(kunstwerk.omschrijvingEn);
     setActionError(null);
+    const bestaandFormaat = kunstwerk.formaat ?? null;
+    setFormaatState(bestaandFormaat);
+    if (!bestaandFormaat && kunstwerk.foto) {
+      detectFormaatFromImageUrl(kunstwerk.foto).then((gedetecteerd) => {
+        if (!gedetecteerd || formaatSessionRef.current !== session) return;
+        const conflicteertMetOpgeslagenMaten = kunstwerk.maatIds.some((id) => {
+          const maat = (maten ?? []).find((m) => m.id === id);
+          if (!maat) return false;
+          return gedetecteerd === 'vierkant' ? !isVierkanteMaat(maat) : isVierkanteMaat(maat);
+        });
+        if (!conflicteertMetOpgeslagenMaten) {
+          setFormaat(gedetecteerd);
+        }
+      });
+    }
     setModalState({ mode: 'edit', kunstwerk });
   }
 
   function closeModal() {
+    formaatSessionRef.current += 1;
     setModalState(null);
   }
 
   async function handleFotoFile(file: File) {
+    const session = formaatSessionRef.current;
     const url = await upload(file);
     if (url) {
       setFoto(url);
+      const gedetecteerd = await detectFormaatFromFile(file);
+      if (gedetecteerd && formaatSessionRef.current === session) {
+        setFormaat(gedetecteerd);
+      }
     }
   }
 
@@ -201,6 +252,7 @@ export function KunstwerkenSection({
   );
   const opslaanDisabled =
     !foto ||
+    formaat === null ||
     uploading ||
     !naam ||
     segmentIds.length === 0 ||
@@ -214,7 +266,8 @@ export function KunstwerkenSection({
     const basisData = {
       foto,
       naam,
-      artiest,
+      kunstenaarId: kunstenaarId || null,
+      formaat,
       segmentIds,
       materiaalIds,
       maatIds: isMateriaalloos ? [] : maatIds,
@@ -297,7 +350,7 @@ export function KunstwerkenSection({
       render: (row) => <img src={row.foto} alt="" className="h-10 w-10 rounded object-cover" />,
     },
     { key: 'naam', label: t('kunstwerkenColNaam') },
-    { key: 'artiest', label: t('kunstwerkenColArtiest') },
+    { key: 'kunstenaarNaam', label: t('kunstwerkenColKunstenaar') },
     { key: 'segmentNamen', label: t('kunstwerkenColSegmenten') },
     { key: 'omschrijvingNl', label: t('kunstwerkenColOmschrijving') },
   ];
@@ -395,15 +448,47 @@ export function KunstwerkenSection({
             />
           </label>
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('kunstwerkenLabelArtiest')}
-            <input
-              type="text"
-              value={artiest}
-              onChange={(event) => setArtiest(event.target.value)}
-              data-testid="kunstwerk-modal-artiest"
+            {t('kunstwerkenLabelKunstenaar')}
+            <select
+              value={kunstenaarId}
+              onChange={(event) => setKunstenaarId(event.target.value)}
+              data-testid="kunstwerk-modal-kunstenaar"
               className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-            />
+            >
+              <option value="">{t('kunstwerkenKunstenaarGeen')}</option>
+              {(kunstenaars ?? []).map((kunstenaar) => (
+                <option key={kunstenaar.id} value={kunstenaar.id}>
+                  {kunstenaar.naam}
+                </option>
+              ))}
+            </select>
           </label>
+
+          <fieldset className="flex flex-col gap-1">
+            <legend className="text-xs uppercase tracking-wide text-white/60">
+              {t('kunstwerkenLabelFormaat')}
+            </legend>
+            <div className="flex gap-4">
+              {(['vierkant', 'liggend', 'staand'] as const).map((optie) => (
+                <label key={optie} className="flex items-center gap-2 text-sm text-white/80">
+                  <input
+                    type="radio"
+                    name="kunstwerk-formaat"
+                    checked={formaat === optie}
+                    onChange={() => setFormaat(optie)}
+                    data-testid={`kunstwerk-modal-formaat-${optie}`}
+                  />
+                  {t(`kunstwerkenFormaat_${optie}`)}
+                </label>
+              ))}
+            </div>
+            {formaat === null && (
+              <span data-testid="kunstwerk-modal-formaat-hint" className="text-xs text-white/50">
+                {t('kunstwerkenFormaatVerplicht')}
+              </span>
+            )}
+          </fieldset>
+
           {foto && (
             <img
               src={foto}
@@ -456,17 +541,25 @@ export function KunstwerkenSection({
 
             <fieldset className="flex flex-col gap-1">
               <legend className="text-xs uppercase tracking-wide text-white/60">{t('kunstwerkenLabelMaten')}</legend>
-              {(maten ?? []).map((maat) => (
-                <label key={maat.id} className="flex items-center gap-2 text-sm text-white/80">
-                  <input
-                    type="checkbox"
-                    checked={maatIds.includes(maat.id)}
-                    onChange={() => setMaatIds((current) => toggle(current, maat.id))}
-                    data-testid={`kunstwerk-modal-maat-${maat.id}`}
-                  />
-                  {`${maat.breedte}×${maat.hoogte} cm`}
-                </label>
-              ))}
+              {(maten ?? []).map((maat) => {
+                const incompatibel =
+                  formaat !== null && (formaat === 'vierkant' ? !isVierkanteMaat(maat) : isVierkanteMaat(maat));
+                return (
+                  <label
+                    key={maat.id}
+                    className={`flex items-center gap-2 text-sm text-white/80 ${incompatibel ? 'opacity-40' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      disabled={incompatibel}
+                      checked={maatIds.includes(maat.id)}
+                      onChange={() => setMaatIds((current) => toggle(current, maat.id))}
+                      data-testid={`kunstwerk-modal-maat-${maat.id}`}
+                    />
+                    {`${maat.breedte}×${maat.hoogte} cm`}
+                  </label>
+                );
+              })}
             </fieldset>
           </details>
 
@@ -615,7 +708,7 @@ export function KunstwerkenSection({
                 }
                 code={naam}
                 titel={omschrijvingNl}
-                artiest={artiest}
+                artiest={kunstenaarNaamById.get(kunstenaarId) ?? ''}
                 collectieLabels={segmentIds.map((segmentId) => segmentNaamById.get(segmentId) ?? segmentId)}
                 materiaalLabel={resolveKunstwerkMateriaalLabel({ materiaalIds }, materialen ?? [], materiaalsoorten ?? [])}
               />

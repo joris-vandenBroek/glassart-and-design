@@ -55,6 +55,43 @@ describe('ActiviteitSection', () => {
     expect(screen.getByTestId('data-table-row-log-4')).toHaveTextContent('Bedrijfsgegevens gewijzigd');
   });
 
+  it('shows the translated labels for the new kunstenaar and klant-exclusiviteit activity types', () => {
+    renderSection([
+      {
+        id: 'log-5',
+        type: 'kunstenaar_toegevoegd',
+        actorEmail: 'paul@glassartanddesign.com',
+        actorNaam: 'paul@glassartanddesign.com',
+        timestamp: new Date('2026-07-26T09:00:00'),
+      },
+      {
+        id: 'log-6',
+        type: 'kunstenaar_gewijzigd',
+        actorEmail: 'paul@glassartanddesign.com',
+        actorNaam: 'paul@glassartanddesign.com',
+        timestamp: new Date('2026-07-26T09:05:00'),
+      },
+      {
+        id: 'log-7',
+        type: 'kunstenaar_verwijderd',
+        actorEmail: 'paul@glassartanddesign.com',
+        actorNaam: 'paul@glassartanddesign.com',
+        timestamp: new Date('2026-07-26T09:10:00'),
+      },
+      {
+        id: 'log-8',
+        type: 'klant_exclusiviteit_gewijzigd',
+        actorEmail: 'paul@glassartanddesign.com',
+        actorNaam: 'paul@glassartanddesign.com',
+        timestamp: new Date('2026-07-26T09:15:00'),
+      },
+    ]);
+    expect(screen.getByTestId('data-table-row-log-5')).toHaveTextContent('Kunstenaar toegevoegd');
+    expect(screen.getByTestId('data-table-row-log-6')).toHaveTextContent('Kunstenaar gewijzigd');
+    expect(screen.getByTestId('data-table-row-log-7')).toHaveTextContent('Kunstenaar verwijderd');
+    expect(screen.getByTestId('data-table-row-log-8')).toHaveTextContent('Exclusiviteit gewijzigd voor klant');
+  });
+
   it('shows the load error banner when loadError is set', () => {
     renderSection([], 'Kon de activiteiten niet laden. Probeer de pagina te verversen.');
     expect(screen.getByTestId('activiteit-load-error')).toHaveTextContent(
@@ -88,5 +125,31 @@ describe('ActiviteitSection', () => {
       },
     ]);
     expect(screen.getByTestId('data-table-row-log-3')).toHaveTextContent('beheer_bezocht');
+  });
+
+  it('shows the translated label for bestelinstellingen_gewijzigd', () => {
+    renderSection([
+      {
+        id: 'log-5',
+        type: 'bestelinstellingen_gewijzigd',
+        actorEmail: 'paul@glassartanddesign.com',
+        actorNaam: 'paul@glassartanddesign.com',
+        timestamp: new Date('2026-07-26T11:00:00'),
+      },
+    ]);
+    expect(screen.getByTestId('data-table-row-log-5')).toHaveTextContent('Bestelinstellingen gewijzigd');
+  });
+
+  it('shows the translated label for klant_minimale_afname_gewijzigd', () => {
+    renderSection([
+      {
+        id: 'log-6',
+        type: 'klant_minimale_afname_gewijzigd',
+        actorEmail: 'paul@glassartanddesign.com',
+        actorNaam: 'paul@glassartanddesign.com',
+        timestamp: new Date('2026-07-26T12:00:00'),
+      },
+    ]);
+    expect(screen.getByTestId('data-table-row-log-6')).toHaveTextContent('Minimale afname gewijzigd voor klant');
   });
 });

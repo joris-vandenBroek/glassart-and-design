@@ -2119,36 +2119,19 @@ Add to `tests/components/beheer/BestellingenSection.test.tsx` (new fixture and d
   });
 ```
 
-Since `renderSection` currently returns callbacks only, extend its helper (used by the new `rerender` case above) to also return a `rerender` function. Change `renderSection` to:
+Since `renderSection` currently returns callbacks only, extend its helper (used by the new `rerender` case above) to also return a `rerender` function, sharing one JSX-building function between the initial render and the rerender instead of duplicating the element tree. Change `renderSection` to:
 
 ```tsx
 function renderSection(overrides: Partial<React.ComponentProps<typeof BestellingenSection>> = {}) {
   const onBestellingUpdated = vi.fn();
   const onLinePrijsVastgesteld = vi.fn();
   const onLineUpdated = vi.fn();
-  const { rerender: rtlRerender } = render(
-    <NextIntlClientProvider locale="nl" messages={messages}>
-      <BestellingenSection
-        bestellingen={BESTELLINGEN}
-        kunstwerken={KUNSTWERKEN}
-        materialen={MATERIALEN}
-        maten={MATEN}
-        materiaalsoorten={MATERIAALSOORTEN}
-        klanten={[]}
-        drukkers={[]}
-        loadError={null}
-        onBestellingUpdated={onBestellingUpdated}
-        onLinePrijsVastgesteld={onLinePrijsVastgesteld}
-        onLineUpdated={onLineUpdated}
-        {...overrides}
-      />
-    </NextIntlClientProvider>
-  );
-  function rerender(bestellingen: Bestelling[]) {
-    rtlRerender(
+
+  function element(props: Partial<React.ComponentProps<typeof BestellingenSection>>) {
+    return (
       <NextIntlClientProvider locale="nl" messages={messages}>
         <BestellingenSection
-          bestellingen={bestellingen}
+          bestellingen={BESTELLINGEN}
           kunstwerken={KUNSTWERKEN}
           materialen={MATERIALEN}
           maten={MATEN}
@@ -2159,9 +2142,15 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Bestelling
           onBestellingUpdated={onBestellingUpdated}
           onLinePrijsVastgesteld={onLinePrijsVastgesteld}
           onLineUpdated={onLineUpdated}
+          {...props}
         />
       </NextIntlClientProvider>
     );
+  }
+
+  const { rerender: rtlRerender } = render(element(overrides));
+  function rerender(bestellingen: Bestelling[]) {
+    rtlRerender(element({ bestellingen }));
   }
   return { onBestellingUpdated, onLinePrijsVastgesteld, onLineUpdated, rerender };
 }

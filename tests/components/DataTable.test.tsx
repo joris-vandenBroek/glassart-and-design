@@ -132,4 +132,87 @@ describe('DataTable', () => {
       expect(screen.queryByTestId('data-table-quick-all')).not.toBeInTheDocument();
     });
   });
+
+  describe('selection', () => {
+    function renderSelectable(overrides: Partial<React.ComponentProps<typeof DataTable<Row>>> = {}) {
+      const onToggle = vi.fn();
+      const onToggleAll = vi.fn();
+      const selection = {
+        selectedIds: new Set<string>(),
+        onToggle,
+        onToggleAll,
+        isSelectable: (row: Row) => row.status === 'Open',
+      };
+      renderTable({ selection, ...overrides });
+      return { onToggle, onToggleAll };
+    }
+
+    it('does not render selection checkboxes when no selection prop is passed', () => {
+      renderTable();
+      expect(screen.queryByTestId('data-table-select-all')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('data-table-row-select-a')).not.toBeInTheDocument();
+    });
+
+    it('renders a checkbox only for rows where isSelectable returns true', () => {
+      renderSelectable();
+      expect(screen.getByTestId('data-table-row-select-a')).toBeInTheDocument();
+      expect(screen.getByTestId('data-table-row-select-c')).toBeInTheDocument();
+      expect(screen.queryByTestId('data-table-row-select-b')).not.toBeInTheDocument();
+    });
+
+    it('calls onToggle with the row id and does not trigger onRowClick when a checkbox is clicked', () => {
+      const onToggle = vi.fn();
+      const onRowClick = vi.fn();
+      renderTable({
+        onRowClick,
+        selection: {
+          selectedIds: new Set<string>(),
+          onToggle,
+          onToggleAll: vi.fn(),
+          isSelectable: (row: Row) => row.status === 'Open',
+        },
+      });
+      fireEvent.click(screen.getByTestId('data-table-row-select-a'));
+      expect(onToggle).toHaveBeenCalledWith('a');
+      expect(onRowClick).not.toHaveBeenCalled();
+    });
+
+    it('reflects selectedIds as checked state', () => {
+      renderSelectable({
+        selection: {
+          selectedIds: new Set(['a']),
+          onToggle: vi.fn(),
+          onToggleAll: vi.fn(),
+          isSelectable: (row: Row) => row.status === 'Open',
+        },
+      });
+      expect(screen.getByTestId('data-table-row-select-a')).toBeChecked();
+      expect(screen.getByTestId('data-table-row-select-c')).not.toBeChecked();
+    });
+
+    it('calls onToggleAll with every currently visible selectable row id when the header checkbox is clicked', () => {
+      const { onToggleAll } = renderSelectable();
+      fireEvent.click(screen.getByTestId('data-table-select-all'));
+      expect(onToggleAll).toHaveBeenCalledWith(['a', 'c']);
+    });
+
+    it('checks the header checkbox only when every visible selectable row is selected', () => {
+      renderSelectable({
+        selection: {
+          selectedIds: new Set(['a', 'c']),
+          onToggle: vi.fn(),
+          onToggleAll: vi.fn(),
+          isSelectable: (row: Row) => row.status === 'Open',
+        },
+      });
+      expect(screen.getByTestId('data-table-select-all')).toBeChecked();
+    });
+
+    it('restricts onToggleAll ids to rows visible after search', () => {
+      const { onToggleAll } = renderSelectable();
+      fireEvent.change(screen.getByTestId('data-table-search'), { target: { value: 'Bravo' } });
+      fireEvent.click(screen.getByTestId('data-table-select-all'));
+      expect(onToggleAll).toHaveBeenCalledWith(['a']);
+    });
+  });
 });

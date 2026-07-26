@@ -20,6 +20,12 @@ export interface Maat {
   hoogte: number;
 }
 
+export type KunstwerkFormaat = 'vierkant' | 'liggend' | 'staand';
+
+export function isVierkanteMaat(maat: Maat): boolean {
+  return maat.breedte === maat.hoogte;
+}
+
 export interface Segment {
   id: string;
   omschrijving: string;
@@ -35,7 +41,8 @@ export interface Kunstwerk {
   id: string;
   foto: string;
   naam: string;
-  artiest: string;
+  kunstenaarId: string | null;
+  formaat?: KunstwerkFormaat | null;
   segmentIds: string[];
   materiaalIds: string[];
   maatIds: string[];
@@ -51,4 +58,14 @@ export interface Prijsgroep {
   id: string;
   naam: string;
   kortingspercentage: number;
+}
+
+export interface Drukker {
+  id: string;
+  naam: string;
+  adres: string;
+  postcode: string;
+  plaats: string;
+  email: string;
+  prijsafspraken: string;
 }

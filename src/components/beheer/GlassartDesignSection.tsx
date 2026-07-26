@@ -12,7 +12,19 @@ interface GlassartDesignSectionProps {
   onSave: (data: Bedrijfsgegevens) => Promise<boolean>;
 }
 
-const TALEN: Taal[] = ['nl', 'en', 'fr', 'de'];
+const ROL_TALEN: { taal: Taal; labelKey: string }[] = [
+  { taal: 'nl', labelKey: 'glassartDesignLabelRolNl' },
+  { taal: 'fr', labelKey: 'glassartDesignLabelRolFr' },
+  { taal: 'de', labelKey: 'glassartDesignLabelRolDe' },
+  { taal: 'en', labelKey: 'glassartDesignLabelRolEn' },
+];
+
+const OPENINGSTIJDEN_TALEN: { taal: Taal; labelKey: string }[] = [
+  { taal: 'nl', labelKey: 'glassartDesignLabelOpeningstijdenNl' },
+  { taal: 'fr', labelKey: 'glassartDesignLabelOpeningstijdenFr' },
+  { taal: 'de', labelKey: 'glassartDesignLabelOpeningstijdenDe' },
+  { taal: 'en', labelKey: 'glassartDesignLabelOpeningstijdenEn' },
+];
 
 const INPUT_CLASS = 'rounded-sm bg-black/40 px-3 py-2 text-sm text-white';
 const LABEL_CLASS = 'flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60';
@@ -30,7 +42,6 @@ export function GlassartDesignSection({ bedrijfsgegevens, loadError, onSave }: G
   const t = useTranslations('beheer');
   const { user } = useAdminAuth();
   const [form, setForm] = useState<Bedrijfsgegevens | null>(bedrijfsgegevens);
-  const [taal, setTaal] = useState<Taal>('nl');
   const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -53,7 +64,7 @@ export function GlassartDesignSection({ bedrijfsgegevens, loadError, onSave }: G
     setForm((current) => (current ? { ...current, [key]: value } : current));
   }
 
-  function updateOpeningstijden(waarde: string) {
+  function updateOpeningstijden(taal: Taal, waarde: string) {
     if (!form) return;
     updateField('openingstijden', { ...form.openingstijden, [taal]: waarde });
   }
@@ -79,7 +90,7 @@ export function GlassartDesignSection({ bedrijfsgegevens, loadError, onSave }: G
     );
   }
 
-  function updateContactpersoonRol(id: string, waarde: string) {
+  function updateContactpersoonRol(id: string, taal: Taal, waarde: string) {
     if (!form) return;
     updateField(
       'contactpersonen',
@@ -102,22 +113,6 @@ export function GlassartDesignSection({ bedrijfsgegevens, loadError, onSave }: G
 
   return (
     <div data-testid="glassart-design-section" className="flex flex-col gap-6 text-sm text-white/80">
-      <div className="flex gap-1">
-        {TALEN.map((item) => (
-          <button
-            key={item}
-            type="button"
-            data-testid={`glassart-design-taal-${item}`}
-            onClick={() => setTaal(item)}
-            className={`rounded-sm px-3 py-1 text-xs uppercase tracking-wide ${
-              taal === item ? 'bg-white/15 text-white' : 'text-white/50 hover:text-white'
-            }`}
-          >
-            {item}
-          </button>
-        ))}
-      </div>
-
       <label className={LABEL_CLASS}>
         {t('glassartDesignLabelBezoekadres')}
         <input
@@ -156,14 +151,18 @@ export function GlassartDesignSection({ bedrijfsgegevens, loadError, onSave }: G
                 data-testid={`glassart-design-contactpersoon-${persoon.id}-telefoon`}
                 className={INPUT_CLASS}
               />
-              <input
-                type="text"
-                value={persoon.rol[taal]}
-                onChange={(event) => updateContactpersoonRol(persoon.id, event.target.value)}
-                placeholder={t('glassartDesignLabelRol')}
-                data-testid={`glassart-design-contactpersoon-${persoon.id}-rol`}
-                className={INPUT_CLASS}
-              />
+              {ROL_TALEN.map(({ taal, labelKey }) => (
+                <label key={taal} className={LABEL_CLASS}>
+                  {t(labelKey)}
+                  <input
+                    type="text"
+                    value={persoon.rol[taal]}
+                    onChange={(event) => updateContactpersoonRol(persoon.id, taal, event.target.value)}
+                    data-testid={`glassart-design-contactpersoon-${persoon.id}-rol-${taal}`}
+                    className={INPUT_CLASS}
+                  />
+                </label>
+              ))}
               <button
                 type="button"
                 onClick={() => removeContactpersoon(persoon.id)}
@@ -240,16 +239,18 @@ export function GlassartDesignSection({ bedrijfsgegevens, loadError, onSave }: G
         />
       </label>
 
-      <label className={LABEL_CLASS}>
-        {t('glassartDesignLabelOpeningstijden')}
-        <input
-          type="text"
-          value={form.openingstijden[taal]}
-          onChange={(event) => updateOpeningstijden(event.target.value)}
-          data-testid="glassart-design-openingstijden"
-          className={INPUT_CLASS}
-        />
-      </label>
+      {OPENINGSTIJDEN_TALEN.map(({ taal, labelKey }) => (
+        <label key={taal} className={LABEL_CLASS}>
+          {t(labelKey)}
+          <input
+            type="text"
+            value={form.openingstijden[taal]}
+            onChange={(event) => updateOpeningstijden(taal, event.target.value)}
+            data-testid={`glassart-design-openingstijden-${taal}`}
+            className={INPUT_CLASS}
+          />
+        </label>
+      ))}
 
       {actionError && (
         <p data-testid="glassart-design-error-message" className="text-xs text-red-400">

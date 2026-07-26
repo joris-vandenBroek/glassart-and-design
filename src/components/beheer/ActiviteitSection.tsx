@@ -61,6 +61,16 @@ const TYPE_LABEL_KEYS: Record<ActiviteitType, string> = {
   prijsgroep_gewijzigd: 'activiteitTypePrijsgroepGewijzigd',
   prijsgroep_verwijderd: 'activiteitTypePrijsgroepVerwijderd',
   bedrijfsgegevens_gewijzigd: 'activiteitTypeBedrijfsgegevensGewijzigd',
+  kunstenaar_toegevoegd: 'activiteitTypeKunstenaarToegevoegd',
+  kunstenaar_gewijzigd: 'activiteitTypeKunstenaarGewijzigd',
+  kunstenaar_verwijderd: 'activiteitTypeKunstenaarVerwijderd',
+  klant_exclusiviteit_gewijzigd: 'activiteitTypeKlantExclusiviteitGewijzigd',
+  drukker_toegevoegd: 'activiteitTypeDrukkerToegevoegd',
+  drukker_gewijzigd: 'activiteitTypeDrukkerGewijzigd',
+  drukker_verwijderd: 'activiteitTypeDrukkerVerwijderd',
+  bestelling_verstuurd_naar_drukker: 'activiteitTypeBestellingVerstuurdNaarDrukker',
+  bestelinstellingen_gewijzigd: 'activiteitTypeBestelinstellingenGewijzigd',
+  klant_minimale_afname_gewijzigd: 'activiteitTypeKlantMinimaleAfnameGewijzigd',
 };
 
 export function ActiviteitSection({ activiteiten, loadError }: ActiviteitSectionProps) {

@@ -19,7 +19,7 @@ const BASE_KUNSTWERK: Kunstwerk = {
   id: 'kw-1',
   foto: '',
   naam: '',
-  artiest: '',
+  kunstenaarId: null,
   segmentIds: [],
   materiaalIds: [],
   maatIds: [],

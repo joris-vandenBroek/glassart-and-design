@@ -60,6 +60,7 @@ const KUNSTWERKEN = [
       materiaalIds: ['mat-1'],
       maatIds: ['maat-1'],
       prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 150 }],
+      kunstenaarId: 'ka-1',
       omschrijvingNl: 'Hotel paneel',
       omschrijvingFr: '',
       omschrijvingDe: '',
@@ -100,6 +101,22 @@ const MATERIALEN = [
 ];
 const MATEN = [{ id: 'maat-1', data: { breedte: 40, hoogte: 60 } }];
 const MATERIAALSOORTEN = [{ id: 'soort-1', data: { omschrijving: 'Veiligheidsglas' } }];
+const KUNSTENAARS = [
+  {
+    id: 'ka-1',
+    data: {
+      naam: 'Sabrina Glasser',
+      foto: null,
+      omschrijvingNl: 'Werkt met gesmolten glas.',
+      omschrijvingFr: '',
+      omschrijvingDe: '',
+      omschrijvingEn: '',
+      verkooprecht: 'open',
+      klantId: null,
+      exclusiefVoorKlantId: null,
+    },
+  },
+];
 
 function mockCollections() {
   const data: Record<string, Array<{ id: string; data: Record<string, unknown> }>> = {
@@ -108,6 +125,7 @@ function mockCollections() {
     materialen: MATERIALEN,
     maten: MATEN,
     materiaalsoorten: MATERIAALSOORTEN,
+    kunstenaars: KUNSTENAARS,
   };
   getDocsMock.mockImplementation((collectionRef: { name: string }) =>
     Promise.resolve(makeSnapshot(data[collectionRef.name] ?? []))
@@ -240,5 +258,15 @@ describe('ProductsGrid', () => {
     renderProductsGrid();
     const cards = await screen.findAllByTestId('product-card');
     expect(cards[0]).toHaveTextContent('4mm Veiligheidsglas');
+  });
+
+  it('filters by kunstenaar and shows the artist info banner with their description', async () => {
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+    fireEvent.focus(screen.getByTestId('kunstenaar-filter'));
+    fireEvent.click(screen.getByTestId('kunstenaar-filter-option-ka-1'));
+    expect(screen.getByTestId('kunstenaar-banner')).toHaveTextContent('Sabrina Glasser');
+    expect(screen.getByTestId('kunstenaar-banner')).toHaveTextContent('Werkt met gesmolten glas.');
+    expect(screen.getAllByTestId('product-card')).toHaveLength(1);
   });
 });

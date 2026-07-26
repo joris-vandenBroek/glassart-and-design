@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { KlantModal } from '@/components/beheer/KlantModal';
 import type { Klant } from '@/components/beheer/KlantenSection';
 import type { Prijsgroep } from '@/components/beheer/materiaalTypes';
+import type { Kunstenaar } from '@/components/beheer/kunstenaarTypes';
 import messages from '../../../messages/nl.json';
 
 const updateDocMock = vi.fn();
@@ -41,8 +42,15 @@ const KLANT: Klant = {
   address: 'Teststraat 1',
   postcode: '1234 AB',
   city: 'Teststad',
+  deliveryAddress: '',
+  deliveryPostcode: '',
+  deliveryCity: '',
+  invoiceAddress: '',
+  invoicePostcode: '',
+  invoiceCity: '',
   status: 'Beoordelen',
   prijsgroepId: null,
+  exclusieveKunstenaarIds: [],
 };
 
 const PRIJSGROEPEN: Prijsgroep[] = [
@@ -50,15 +58,55 @@ const PRIJSGROEPEN: Prijsgroep[] = [
   { id: 'pg-2', naam: 'Premium', kortingspercentage: 10 },
 ];
 
-function renderModal(klant: Klant | null, prijsgroepen: Prijsgroep[] | null = PRIJSGROEPEN) {
+const KUNSTENAARS: Kunstenaar[] = [
+  {
+    id: 'ka-1',
+    naam: 'Sabrina Glasser',
+    foto: null,
+    omschrijvingNl: 'Werkt met glas.',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+    verkooprecht: 'open',
+    klantId: null,
+    exclusiefVoorKlantId: null,
+  },
+  {
+    id: 'ka-2',
+    naam: 'Bram Steen',
+    foto: null,
+    omschrijvingNl: 'Werkt met steen.',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+    verkooprecht: 'open',
+    klantId: null,
+    exclusiefVoorKlantId: 'uid-2',
+  },
+];
+
+function renderModal(
+  klant: Klant | null,
+  prijsgroepen: Prijsgroep[] | null = PRIJSGROEPEN,
+  kunstenaars: Kunstenaar[] | null = KUNSTENAARS,
+  onKunstenaarUpdatedOverride?: (id: string, data: Partial<Omit<Kunstenaar, 'id'>>) => Promise<boolean>
+) {
   const onClose = vi.fn();
   const onUpdated = vi.fn();
+  const onKunstenaarUpdated = onKunstenaarUpdatedOverride ?? vi.fn().mockResolvedValue(true);
   render(
     <NextIntlClientProvider locale="nl" messages={messages}>
-      <KlantModal klant={klant} prijsgroepen={prijsgroepen} onClose={onClose} onUpdated={onUpdated} />
+      <KlantModal
+        klant={klant}
+        prijsgroepen={prijsgroepen}
+        kunstenaars={kunstenaars}
+        onKunstenaarUpdated={onKunstenaarUpdated}
+        onClose={onClose}
+        onUpdated={onUpdated}
+      />
     </NextIntlClientProvider>
   );
-  return { onClose, onUpdated };
+  return { onClose, onUpdated, onKunstenaarUpdated };
 }
 
 beforeEach(() => {
@@ -124,6 +172,57 @@ describe('KlantModal', () => {
     expect(screen.queryByTestId('klant-modal-prijsgroep-opslaan')).not.toBeInTheDocument();
   });
 
+  it('pre-fills the minimale afname override input from klant.minimaleAfname', () => {
+    renderModal({ ...KLANT, minimaleAfname: 7 });
+    expect(screen.getByTestId('klant-modal-minimale-afname')).toHaveValue(7);
+  });
+
+  it('shows an empty minimale afname input when the klant has no override', () => {
+    renderModal({ ...KLANT, minimaleAfname: null });
+    expect(screen.getByTestId('klant-modal-minimale-afname')).toHaveValue(null);
+  });
+
+  it('shows the minimale afname override input even for a klant still "Beoordelen"', () => {
+    renderModal({ ...KLANT, status: 'Beoordelen' });
+    expect(screen.getByTestId('klant-modal-minimale-afname')).toBeInTheDocument();
+  });
+
+  it('saves the minimale afname override and logs klant_minimale_afname_gewijzigd', async () => {
+    updateDocMock.mockResolvedValue(undefined);
+    const { onUpdated } = renderModal({ ...KLANT, minimaleAfname: null });
+    fireEvent.change(screen.getByTestId('klant-modal-minimale-afname'), { target: { value: '6' } });
+    fireEvent.click(screen.getByTestId('klant-modal-minimale-afname-opslaan'));
+    await waitFor(() =>
+      expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), { minimaleAfname: 6 })
+    );
+    expect(logActiviteitMock).toHaveBeenCalledWith('klant_minimale_afname_gewijzigd', {
+      id: 'staff-1',
+      email: 'paul@glassartanddesign.com',
+      naam: 'paul@glassartanddesign.com',
+    });
+    expect(onUpdated).toHaveBeenCalledWith(expect.objectContaining({ minimaleAfname: 6 }));
+  });
+
+  it('clears the override to null when saving an empty value', async () => {
+    updateDocMock.mockResolvedValue(undefined);
+    renderModal({ ...KLANT, minimaleAfname: 6 });
+    fireEvent.change(screen.getByTestId('klant-modal-minimale-afname'), { target: { value: '' } });
+    fireEvent.click(screen.getByTestId('klant-modal-minimale-afname-opslaan'));
+    await waitFor(() =>
+      expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), { minimaleAfname: null })
+    );
+  });
+
+  it('clamps a saved override below 1 up to 1', async () => {
+    updateDocMock.mockResolvedValue(undefined);
+    renderModal({ ...KLANT, minimaleAfname: null });
+    fireEvent.change(screen.getByTestId('klant-modal-minimale-afname'), { target: { value: '0' } });
+    fireEvent.click(screen.getByTestId('klant-modal-minimale-afname-opslaan'));
+    await waitFor(() =>
+      expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), { minimaleAfname: 1 })
+    );
+  });
+
   it('keeps the other fields read-only until Bewerken is clicked', () => {
     renderModal(KLANT);
     expect(screen.queryByTestId('klant-modal-companyName')).not.toBeInTheDocument();
@@ -152,6 +251,12 @@ describe('KlantModal', () => {
           address: 'Teststraat 1',
           postcode: '1234 AB',
           city: 'Teststad',
+          deliveryAddress: '',
+          deliveryPostcode: '',
+          deliveryCity: '',
+          invoiceAddress: '',
+          invoicePostcode: '',
+          invoiceCity: '',
         }
       )
     );
@@ -162,6 +267,56 @@ describe('KlantModal', () => {
       naam: 'paul@glassartanddesign.com',
     });
     expect(screen.queryByTestId('klant-modal-companyName')).not.toBeInTheDocument();
+  });
+
+  it('shows "Gebruikt standaardadres" for afleveradres and factuuradres when both are empty', () => {
+    renderModal(KLANT);
+    expect(screen.getByTestId('klant-modal-afleveradres-leeg')).toHaveTextContent('Gebruikt standaardadres');
+    expect(screen.getByTestId('klant-modal-factuuradres-leeg')).toHaveTextContent('Gebruikt standaardadres');
+  });
+
+  it('shows the afleveradres fields read-only when set, instead of the "gebruikt standaardadres" label', () => {
+    renderModal({ ...KLANT, deliveryAddress: 'Havenweg 5', deliveryPostcode: '5678 CD', deliveryCity: 'Havenstad' });
+    expect(screen.queryByTestId('klant-modal-afleveradres-leeg')).not.toBeInTheDocument();
+    expect(screen.getByTestId('klant-modal')).toHaveTextContent('Havenweg 5');
+    expect(screen.getByTestId('klant-modal')).toHaveTextContent('Havenstad');
+  });
+
+  it('edits and saves the afleveradres and factuuradres fields via Opslaan', async () => {
+    updateDocMock.mockResolvedValue(undefined);
+    const { onUpdated } = renderModal(KLANT);
+    fireEvent.click(screen.getByTestId('klant-modal-bewerken'));
+    fireEvent.change(screen.getByTestId('klant-modal-deliveryAddress'), { target: { value: 'Havenweg 5' } });
+    fireEvent.change(screen.getByTestId('klant-modal-deliveryPostcode'), { target: { value: '5678 CD' } });
+    fireEvent.change(screen.getByTestId('klant-modal-deliveryCity'), { target: { value: 'Havenstad' } });
+    fireEvent.change(screen.getByTestId('klant-modal-invoiceAddress'), { target: { value: 'Factuurlaan 9' } });
+    fireEvent.change(screen.getByTestId('klant-modal-invoicePostcode'), { target: { value: '9999 ZZ' } });
+    fireEvent.change(screen.getByTestId('klant-modal-invoiceCity'), { target: { value: 'Factuurstad' } });
+    fireEvent.click(screen.getByTestId('klant-modal-velden-opslaan'));
+
+    await waitFor(() =>
+      expect(updateDocMock).toHaveBeenCalledWith(
+        { collectionName: 'klanten', id: 'uid-1' },
+        {
+          companyName: 'Testbedrijf BV',
+          kvk: '12345678',
+          contactPerson: 'Jan Jansen',
+          contactPreference: 'email',
+          email: 'jan@example.com',
+          phone: '0612345678',
+          address: 'Teststraat 1',
+          postcode: '1234 AB',
+          city: 'Teststad',
+          deliveryAddress: 'Havenweg 5',
+          deliveryPostcode: '5678 CD',
+          deliveryCity: 'Havenstad',
+          invoiceAddress: 'Factuurlaan 9',
+          invoicePostcode: '9999 ZZ',
+          invoiceCity: 'Factuurstad',
+        }
+      )
+    );
+    expect(onUpdated).toHaveBeenCalled();
   });
 
   it('discards edits when Annuleren is clicked', () => {
@@ -255,5 +410,67 @@ describe('KlantModal', () => {
     fireEvent.click(screen.getByTestId('klant-modal-afwijzen'));
     await screen.findByTestId('klant-modal-error');
     expect(logActiviteitMock).not.toHaveBeenCalled();
+  });
+
+  it('toggles a kunstenaar checkbox on and saves exclusieveKunstenaarIds, updating the kunstenaar back-pointer', async () => {
+    const { onUpdated, onKunstenaarUpdated } = renderModal(KLANT);
+    fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-1'));
+    fireEvent.click(screen.getByTestId('klant-modal-exclusiviteit-opslaan'));
+    await waitFor(() => expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), { exclusieveKunstenaarIds: ['ka-1'] }));
+    // Plain payload: stripping/migrating prijsafspraken is the job of
+    // BeheerShell.updateKunstenaarVeilig, which backs this prop.
+    await waitFor(() => expect(onKunstenaarUpdated).toHaveBeenCalledWith('ka-1', { exclusiefVoorKlantId: 'uid-1' }));
+    expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, exclusieveKunstenaarIds: ['ka-1'] });
+    expect(logActiviteitMock).toHaveBeenCalledWith('klant_exclusiviteit_gewijzigd', {
+      id: 'staff-1',
+      email: 'paul@glassartanddesign.com',
+      naam: 'paul@glassartanddesign.com',
+    });
+  });
+
+  it('blocks checking a kunstenaar that another klant already holds exclusively', () => {
+    renderModal(KLANT);
+    fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-2'));
+    expect(screen.getByTestId('klant-modal-error')).toHaveTextContent(
+      'Deze kunstenaar is al exclusief toegewezen aan een andere klant.'
+    );
+    expect(screen.getByTestId('klant-modal-exclusief-ka-2')).not.toBeChecked();
+  });
+
+  it('allows unchecking a kunstenaar this klant already holds exclusively, clearing the back-pointer on save', async () => {
+    const { onKunstenaarUpdated } = renderModal({ ...KLANT, exclusieveKunstenaarIds: ['ka-2'] }, PRIJSGROEPEN, [
+      { ...KUNSTENAARS[1], exclusiefVoorKlantId: 'uid-1' },
+    ]);
+    fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-2'));
+    fireEvent.click(screen.getByTestId('klant-modal-exclusiviteit-opslaan'));
+    await waitFor(() => expect(onKunstenaarUpdated).toHaveBeenCalledWith('ka-2', { exclusiefVoorKlantId: null }));
+  });
+
+  it('shows an error and does not report success when a kunstenaar back-pointer write fails', async () => {
+    const onKunstenaarUpdated = vi.fn().mockResolvedValue(false);
+    const { onUpdated } = renderModal(KLANT, PRIJSGROEPEN, KUNSTENAARS, onKunstenaarUpdated);
+    fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-1'));
+    fireEvent.click(screen.getByTestId('klant-modal-exclusiviteit-opslaan'));
+
+    expect(await screen.findByTestId('klant-modal-error')).toHaveTextContent(
+      'Er is iets misgegaan. Probeer het opnieuw.'
+    );
+    expect(onUpdated).not.toHaveBeenCalled();
+    expect(logActiviteitMock).not.toHaveBeenCalled();
+    // De back-pointer is wat de Firestore-regels en de winkel-UI lezen; mislukt die, dan
+    // mag het klantdocument geen exclusiviteit claimen die nergens gehandhaafd wordt.
+    expect(updateDocMock).not.toHaveBeenCalled();
+  });
+
+  it('writes the kunstenaar back-pointer before the klant document', async () => {
+    const onKunstenaarUpdated = vi.fn().mockResolvedValue(true);
+    renderModal(KLANT, PRIJSGROEPEN, KUNSTENAARS, onKunstenaarUpdated);
+    fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-1'));
+    fireEvent.click(screen.getByTestId('klant-modal-exclusiviteit-opslaan'));
+
+    await waitFor(() => expect(updateDocMock).toHaveBeenCalled());
+    expect(onKunstenaarUpdated.mock.invocationCallOrder[0]).toBeLessThan(
+      updateDocMock.mock.invocationCallOrder[0]
+    );
   });
 });
