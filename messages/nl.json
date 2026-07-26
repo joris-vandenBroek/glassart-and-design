@@ -423,6 +423,7 @@
     "kunstwerkenLabelOmschrijvingEn": "Omschrijving (EN)",
     "kunstwerkenToevoegen": "Kunstwerk toevoegen",
     "kunstwerkenBackfillNamen": "Namen aanvullen ({count})",
+    "kunstwerkenBackfillMaterialenMaten": "Materialen/maten aanvullen ({count})",
     "kunstwerkenOpslaan": "Opslaan",
     "kunstwerkenVerwijderen": "Verwijderen",
     "prijsgroepenLoadError": "Kon de prijsgroepen niet laden. Probeer de pagina te verversen.",

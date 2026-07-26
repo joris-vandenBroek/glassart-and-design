@@ -118,8 +118,8 @@ export function KunstwerkenSection({
     setNaam(LEGE_FORM.naam);
     setArtiest(LEGE_FORM.artiest);
     setSegmentIds(LEGE_FORM.segmentIds);
-    setMateriaalIds(LEGE_FORM.materiaalIds);
-    setMaatIds(LEGE_FORM.maatIds);
+    setMateriaalIds((materialen ?? []).map((materiaal) => materiaal.id));
+    setMaatIds((maten ?? []).map((maat) => maat.id));
     setPrijzen(LEGE_FORM.prijzen);
     setOmschrijvingNl(LEGE_FORM.omschrijvingNl);
     setOmschrijvingFr(LEGE_FORM.omschrijvingFr);
@@ -261,6 +261,26 @@ export function KunstwerkenSection({
     setBackfillBezig(false);
   }
 
+  const alleMateriaalIds = (materialen ?? []).map((materiaal) => materiaal.id);
+  const alleMaatIds = (maten ?? []).map((maat) => maat.id);
+  const kunstwerkenZonderAlleMaterialenMaten = kunstwerken.filter(
+    (kunstwerk) =>
+      alleMateriaalIds.some((id) => !kunstwerk.materiaalIds.includes(id)) ||
+      alleMaatIds.some((id) => !kunstwerk.maatIds.includes(id))
+  );
+
+  async function handleBackfillMaterialenMaten() {
+    setBackfillBezig(true);
+    for (const kunstwerk of kunstwerkenZonderAlleMaterialenMaten) {
+      const { id, ...data } = kunstwerk;
+      const success = await onUpdate(id, { ...data, materiaalIds: alleMateriaalIds, maatIds: alleMaatIds });
+      if (success) {
+        void logActiviteit('kunstwerk_gewijzigd', actorFromMedewerker(user));
+      }
+    }
+    setBackfillBezig(false);
+  }
+
   const columns: Column<KunstwerkRow>[] = [
     {
       key: 'foto',
@@ -286,6 +306,17 @@ export function KunstwerkenSection({
             className="rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
           >
             {t('kunstwerkenBackfillNamen', { count: kunstwerkenZonderNaam.length })}
+          </button>
+        )}
+        {kunstwerkenZonderAlleMaterialenMaten.length > 0 && (
+          <button
+            type="button"
+            onClick={handleBackfillMaterialenMaten}
+            disabled={backfillBezig}
+            data-testid="kunstwerken-backfill-materialen-maten"
+            className="rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
+          >
+            {t('kunstwerkenBackfillMaterialenMaten', { count: kunstwerkenZonderAlleMaterialenMaten.length })}
           </button>
         )}
         <button
