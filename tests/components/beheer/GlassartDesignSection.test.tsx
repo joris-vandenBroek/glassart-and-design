@@ -76,22 +76,23 @@ describe('GlassartDesignSection', () => {
     expect(screen.getByTestId('glassart-design-iban')).toHaveValue('NL00 BANK 0123 4567 89');
     expect(screen.getByTestId('glassart-design-kvk')).toHaveValue('12345678');
     expect(screen.getByTestId('glassart-design-btw')).toHaveValue('NL123456789B01');
-    expect(screen.getByTestId('glassart-design-openingstijden')).toHaveValue('Ma–vr: 09:00 – 17:00');
+    expect(screen.getByTestId('glassart-design-openingstijden-nl')).toHaveValue('Ma–vr: 09:00 – 17:00');
+    expect(screen.getByTestId('glassart-design-openingstijden-en')).toHaveValue('');
     expect(screen.getByTestId('glassart-design-contactpersoon-p1-naam')).toHaveValue('Paul van den Hout');
     expect(screen.getByTestId('glassart-design-contactpersoon-p1-telefoon')).toHaveValue('+31651404089');
-    expect(screen.getByTestId('glassart-design-contactpersoon-p1-rol')).toHaveValue('Voor projecten, hotels etc.');
+    expect(screen.getByTestId('glassart-design-contactpersoon-p1-rol-nl')).toHaveValue(
+      'Voor projecten, hotels etc.'
+    );
+    expect(screen.getByTestId('glassart-design-contactpersoon-p1-rol-en')).toHaveValue('');
   });
 
-  it('switches the openingstijden and rol fields to the EN tab without losing the NL values', () => {
+  it('keeps the openingstijden and rol fields for each language independent', () => {
     renderSection();
-    fireEvent.click(screen.getByTestId('glassart-design-taal-en'));
-    expect(screen.getByTestId('glassart-design-openingstijden')).toHaveValue('');
-    expect(screen.getByTestId('glassart-design-contactpersoon-p1-rol')).toHaveValue('');
-    fireEvent.change(screen.getByTestId('glassart-design-openingstijden'), {
+    fireEvent.change(screen.getByTestId('glassart-design-openingstijden-en'), {
       target: { value: 'Mon-Fri: 9-17' },
     });
-    fireEvent.click(screen.getByTestId('glassart-design-taal-nl'));
-    expect(screen.getByTestId('glassart-design-openingstijden')).toHaveValue('Ma–vr: 09:00 – 17:00');
+    expect(screen.getByTestId('glassart-design-openingstijden-nl')).toHaveValue('Ma–vr: 09:00 – 17:00');
+    expect(screen.getByTestId('glassart-design-openingstijden-en')).toHaveValue('Mon-Fri: 9-17');
   });
 
   it('adds a new empty contactpersoon row', () => {

@@ -442,14 +442,20 @@
     "glassartDesignLabelContactpersonen": "Contactpersonen",
     "glassartDesignLabelNaam": "Naam",
     "glassartDesignLabelTelefoon": "Telefoonnummer",
-    "glassartDesignLabelRol": "Rol",
+    "glassartDesignLabelRolNl": "Rol (NL)",
+    "glassartDesignLabelRolFr": "Rol (FR)",
+    "glassartDesignLabelRolDe": "Rol (DE)",
+    "glassartDesignLabelRolEn": "Rol (EN)",
     "glassartDesignContactpersoonToevoegen": "+ Contactpersoon toevoegen",
     "glassartDesignLabelEmail": "E-mailadres",
     "glassartDesignLabelWhatsapp": "WhatsApp-nummer",
     "glassartDesignLabelIban": "IBAN",
     "glassartDesignLabelKvk": "KvK-nummer",
     "glassartDesignLabelBtw": "BTW-nummer",
-    "glassartDesignLabelOpeningstijden": "Openingstijden",
+    "glassartDesignLabelOpeningstijdenNl": "Openingstijden (NL)",
+    "glassartDesignLabelOpeningstijdenFr": "Openingstijden (FR)",
+    "glassartDesignLabelOpeningstijdenDe": "Openingstijden (DE)",
+    "glassartDesignLabelOpeningstijdenEn": "Openingstijden (EN)",
     "glassartDesignOpslaan": "Opslaan"
   }
 }
