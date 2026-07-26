@@ -14,9 +14,11 @@ import { MatenSection } from './MatenSection';
 import { SegmentenSection } from './SegmentenSection';
 import { KunstwerkenSection } from './KunstwerkenSection';
 import { PrijsgroepenSection } from './PrijsgroepenSection';
+import { KunstenaarsSection } from './KunstenaarsSection';
 import { ActiviteitSection, type Activiteit } from './ActiviteitSection';
 import { GlassartDesignSection } from './GlassartDesignSection';
 import type { Materiaalsoort, Materiaal, Maat, Segment, Kunstwerk, Prijsgroep } from './materiaalTypes';
+import type { Kunstenaar } from './kunstenaarTypes';
 import type { Bedrijfsgegevens } from './bedrijfsgegevensTypes';
 import type { ActiviteitType } from '@/lib/logActiviteit';
 import { useFirestoreCollection } from '@/lib/useFirestoreCollection';
@@ -227,6 +229,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
     skip: !kunstwerkenReady,
   });
   const prijsgroepen = useFirestoreCollection<Prijsgroep>('prijsgroepen');
+  const kunstenaars = useFirestoreCollection<Kunstenaar>('kunstenaars');
   const bedrijfsgegevens = useFirestoreDocument<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens', {
     seed: BEDRIJFSGEGEVENS_SEED,
   });
@@ -239,6 +242,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   const segmentenCount = (segmenten.items ?? []).length;
   const kunstwerkenCount = (kunstwerken.items ?? []).length;
   const prijsgroepenCount = (prijsgroepen.items ?? []).length;
+  const kunstenaarsCount = (kunstenaars.items ?? []).length;
   const activiteitCount = (activiteiten ?? []).length;
 
   return (
@@ -261,6 +265,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
           matenCount={matenCount}
           segmentenCount={segmentenCount}
           kunstwerkenCount={kunstwerkenCount}
+          kunstenaarsCount={kunstenaarsCount}
           prijsgroepenCount={prijsgroepenCount}
           activiteitCount={activiteitCount}
         />
@@ -336,6 +341,15 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             onAdd={kunstwerken.add}
             onUpdate={kunstwerken.update}
             onRemove={kunstwerken.remove}
+          />
+        ) : activeSection === 'kunstenaars' ? (
+          <KunstenaarsSection
+            kunstenaars={kunstenaars.items}
+            klanten={klanten}
+            loadError={kunstenaars.error === 'load' ? t('kunstenaarsLoadError') : null}
+            onAdd={kunstenaars.add}
+            onUpdate={kunstenaars.update}
+            onRemove={kunstenaars.remove}
           />
         ) : activeSection === 'prijsgroepen' ? (
           <PrijsgroepenSection

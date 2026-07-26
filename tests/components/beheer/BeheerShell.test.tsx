@@ -89,6 +89,7 @@ const DEFAULT_COLLECTIONS: Record<string, Array<{ id: string; data: Record<strin
       },
     },
   ],
+  kunstenaars: [],
 };
 
 const BEDRIJFSGEGEVENS_FIXTURE = {
@@ -297,6 +298,19 @@ describe('BeheerShell', () => {
     screen.getByTestId('beheer-nav-prijsgroepen').click();
     expect(await screen.findByTestId('prijsgroepen-section')).toBeInTheDocument();
     expect(screen.getByTestId('data-table-row-pg-1')).toHaveTextContent('Standaard');
+  });
+
+  it('shows the count and switches to the Kunstenaars section', async () => {
+    mockCollections({
+      kunstenaars: [
+        { id: 'ka-1', data: { naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', prijsafspraken: '', verkooprecht: 'open', klantId: null, exclusiefVoorKlantId: null } },
+      ],
+    });
+    renderShell();
+    await waitFor(() => expect(screen.getByTestId('beheer-nav-kunstenaars')).toHaveTextContent('1'));
+    screen.getByTestId('beheer-nav-kunstenaars').click();
+    expect(await screen.findByTestId('kunstenaars-section')).toBeInTheDocument();
+    expect(screen.getByTestId('data-table-row-ka-1')).toHaveTextContent('Sabrina Glasser');
   });
 
   it('shows the Glassart & Design section with the loaded bedrijfsgegevens when the nav item is clicked', async () => {

@@ -18,6 +18,7 @@ function renderNav(
     matenCount: 2,
     segmentenCount: 6,
     kunstwerkenCount: 36,
+    kunstenaarsCount: 8,
     prijsgroepenCount: 9,
     activiteitCount: 12,
   };
@@ -35,6 +36,7 @@ function renderNav(
         matenCount={counts.matenCount}
         segmentenCount={counts.segmentenCount}
         kunstwerkenCount={counts.kunstwerkenCount}
+        kunstenaarsCount={counts.kunstenaarsCount}
         prijsgroepenCount={counts.prijsgroepenCount}
         activiteitCount={counts.activiteitCount}
       />
@@ -44,7 +46,7 @@ function renderNav(
 }
 
 describe('BeheerNav', () => {
-  it('renders the 10 active items with their counters, and no disabled placeholder items', () => {
+  it('renders the 11 active items with their counters, and no disabled placeholder items', () => {
     renderNav();
     expect(screen.getByTestId('beheer-nav-klanten')).toHaveTextContent('Klanten');
     expect(screen.getByTestId('beheer-nav-klanten')).toHaveTextContent('3');
@@ -57,6 +59,8 @@ describe('BeheerNav', () => {
     expect(screen.getByTestId('beheer-nav-segmenten')).toHaveTextContent('6');
     expect(screen.getByTestId('beheer-nav-kunstwerken')).toHaveTextContent('Kunstwerken');
     expect(screen.getByTestId('beheer-nav-kunstwerken')).toHaveTextContent('36');
+    expect(screen.getByTestId('beheer-nav-kunstenaars')).toHaveTextContent('Kunstenaars');
+    expect(screen.getByTestId('beheer-nav-kunstenaars')).toHaveTextContent('8');
     expect(screen.getByTestId('beheer-nav-prijsgroepen')).toHaveTextContent('Prijsgroepen');
     expect(screen.getByTestId('beheer-nav-prijsgroepen')).toHaveTextContent('9');
     expect(screen.getByTestId('beheer-nav-activiteit')).toHaveTextContent('Activiteitenlog');
