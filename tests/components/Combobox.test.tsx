@@ -71,4 +71,22 @@ describe('Combobox', () => {
     fireEvent.focus(screen.getByTestId('combo'));
     expect(screen.queryByTestId('combo-option-clear')).not.toBeInTheDocument();
   });
+
+  it('keeps the dropdown open if the input is refocused before the blur-close timer fires', () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <Combobox options={OPTIONS} value={null} onChange={vi.fn()} placeholder="Zoek…" noResultsLabel="Niets gevonden" testId="combo" />
+      );
+      fireEvent.focus(screen.getByTestId('combo'));
+      expect(screen.getByTestId('combo-option-a')).toBeInTheDocument();
+      fireEvent.blur(screen.getByTestId('combo'));
+      vi.advanceTimersByTime(100);
+      fireEvent.focus(screen.getByTestId('combo'));
+      vi.advanceTimersByTime(100);
+      expect(screen.getByTestId('combo-option-a')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

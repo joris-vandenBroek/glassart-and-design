@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 export interface ComboboxOption {
   value: string;
@@ -20,6 +20,7 @@ interface ComboboxProps {
 export function Combobox({ options, value, onChange, placeholder, noResultsLabel, clearLabel, testId }: ComboboxProps) {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const blurTimeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
 
   const selectedLabel = options.find((option) => option.value === value)?.label ?? '';
 
@@ -35,6 +36,14 @@ export function Combobox({ options, value, onChange, placeholder, noResultsLabel
     setIsOpen(false);
   }
 
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current !== null) {
+        window.clearTimeout(blurTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div className="relative">
       <input
@@ -45,11 +54,18 @@ export function Combobox({ options, value, onChange, placeholder, noResultsLabel
           setIsOpen(true);
         }}
         onFocus={() => {
+          if (blurTimeoutRef.current !== null) {
+            window.clearTimeout(blurTimeoutRef.current);
+            blurTimeoutRef.current = null;
+          }
           setQuery('');
           setIsOpen(true);
         }}
         onBlur={() => {
-          window.setTimeout(() => setIsOpen(false), 150);
+          blurTimeoutRef.current = window.setTimeout(() => {
+            setIsOpen(false);
+            blurTimeoutRef.current = null;
+          }, 150);
         }}
         placeholder={placeholder}
         data-testid={testId}
