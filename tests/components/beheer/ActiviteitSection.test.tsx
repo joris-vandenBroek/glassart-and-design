@@ -152,4 +152,13 @@ describe('ActiviteitSection', () => {
     ]);
     expect(screen.getByTestId('data-table-row-log-6')).toHaveTextContent('Minimale afname gewijzigd voor klant');
   });
+
+  it('shows Dutch labels for the new Stijl and Onderwerp activiteit types', () => {
+    renderSection([
+      { id: 'log-3', type: 'stijl_toegevoegd', actorEmail: 'paul@glassartanddesign.com', actorNaam: 'Paul', timestamp: null },
+      { id: 'log-4', type: 'onderwerp_verwijderd', actorEmail: 'paul@glassartanddesign.com', actorNaam: 'Paul', timestamp: null },
+    ]);
+    expect(screen.getByTestId('data-table-row-log-3')).toHaveTextContent('Stijl toegevoegd');
+    expect(screen.getByTestId('data-table-row-log-4')).toHaveTextContent('Onderwerp verwijderd');
+  });
 });
