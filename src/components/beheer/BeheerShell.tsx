@@ -412,11 +412,15 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             materialen={materialen.items}
             materiaalsoorten={materiaalsoorten.items}
             maten={maten.items}
+            stijlen={stijlen.items}
+            onderwerpen={onderwerpen.items}
             kunstenaars={kunstenaars.items}
             loadError={kunstwerken.error === 'load' ? t('kunstwerkenLoadError') : null}
             onAdd={kunstwerken.add}
             onUpdate={kunstwerken.update}
             onRemove={kunstwerken.remove}
+            onAddStijl={stijlen.add}
+            onAddOnderwerp={onderwerpen.add}
           />
         ) : activeSection === 'kunstenaars' ? (
           <KunstenaarsSection
