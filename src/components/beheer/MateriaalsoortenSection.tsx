@@ -89,7 +89,8 @@ export function MateriaalsoortenSection({
     if (success) {
       void logActiviteit(
         modalState.mode === 'add' ? 'materiaalsoort_toegevoegd' : 'materiaalsoort_gewijzigd',
-        actorFromMedewerker(user)
+        actorFromMedewerker(user),
+        omschrijving
       );
       closeModal();
     } else {
@@ -108,7 +109,7 @@ export function MateriaalsoortenSection({
     }
     const success = await onRemove(modalState.materiaalsoort.id);
     if (success) {
-      void logActiviteit('materiaalsoort_verwijderd', actorFromMedewerker(user));
+      void logActiviteit('materiaalsoort_verwijderd', actorFromMedewerker(user), modalState.materiaalsoort.omschrijving);
       closeModal();
     } else {
       setActionError(t('materiaalsoortenActionError'));

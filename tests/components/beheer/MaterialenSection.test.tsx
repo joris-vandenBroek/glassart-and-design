@@ -182,11 +182,11 @@ describe('MaterialenSection', () => {
     fireEvent.change(screen.getByTestId('materiaal-modal-omschrijving'), { target: { value: 'Nieuw' } });
     fireEvent.click(screen.getByTestId('materiaal-modal-opslaan'));
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('materiaal_toegevoegd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'materiaal_toegevoegd',
+        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+        'Nieuw'
+      )
     );
   });
 
@@ -196,11 +196,11 @@ describe('MaterialenSection', () => {
     fireEvent.change(screen.getByTestId('materiaal-modal-omschrijving'), { target: { value: 'Bijgewerkt' } });
     fireEvent.click(screen.getByTestId('materiaal-modal-opslaan'));
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('materiaal_gewijzigd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'materiaal_gewijzigd',
+        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+        'Bijgewerkt'
+      )
     );
   });
 
@@ -209,11 +209,11 @@ describe('MaterialenSection', () => {
     fireEvent.click(screen.getByTestId('data-table-row-mat-2'));
     fireEvent.click(screen.getByTestId('materiaal-modal-verwijderen'));
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('materiaal_verwijderd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'materiaal_verwijderd',
+        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+        'Licht en helder'
+      )
     );
   });
 

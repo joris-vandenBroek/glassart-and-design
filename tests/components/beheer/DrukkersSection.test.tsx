@@ -105,11 +105,11 @@ describe('DrukkersSection', () => {
       })
     );
     await waitFor(() => expect(screen.queryByTestId('drukker-modal')).not.toBeInTheDocument());
-    expect(logActiviteitMock).toHaveBeenCalledWith('drukker_toegevoegd', {
-      id: 'staff-1',
-      email: 'paul@glassartanddesign.com',
-      naam: 'paul@glassartanddesign.com',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'drukker_toegevoegd',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'Nieuwe Drukker'
+    );
   });
 
   it('disables Opslaan until naam and email are filled in', () => {
@@ -138,11 +138,11 @@ describe('DrukkersSection', () => {
         prijsafspraken: '10% korting boven 50 stuks.',
       })
     );
-    expect(logActiviteitMock).toHaveBeenCalledWith('drukker_gewijzigd', {
-      id: 'staff-1',
-      email: 'paul@glassartanddesign.com',
-      naam: 'paul@glassartanddesign.com',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'drukker_gewijzigd',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'Drukkerij Janssen'
+    );
   });
 
   it('deletes a drukker with no zendingen and logs drukker_verwijderd', async () => {
@@ -151,11 +151,11 @@ describe('DrukkersSection', () => {
     await waitFor(() => expect(screen.getByTestId('drukker-modal-verwijderen')).not.toBeDisabled());
     fireEvent.click(screen.getByTestId('drukker-modal-verwijderen'));
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith('drukker-1'));
-    expect(logActiviteitMock).toHaveBeenCalledWith('drukker_verwijderd', {
-      id: 'staff-1',
-      email: 'paul@glassartanddesign.com',
-      naam: 'paul@glassartanddesign.com',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'drukker_verwijderd',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'Drukkerij Janssen'
+    );
   });
 
   it('shows an action error and does not log when adding fails', async () => {

@@ -198,11 +198,11 @@ describe('KunstenaarsSection', () => {
       { prijsafspraken: '30% commissie' }
     );
     expect(onRefetch).toHaveBeenCalled();
-    expect(logActiviteitMock).toHaveBeenCalledWith('kunstenaar_toegevoegd', {
-      id: 'staff-1',
-      email: 'paul@glassartanddesign.com',
-      naam: 'paul@glassartanddesign.com',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'kunstenaar_toegevoegd',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'Nieuwe Kunstenaar'
+    );
   });
 
   it('never writes prijsafspraken onto the publicly readable kunstenaars document', async () => {
@@ -286,7 +286,11 @@ describe('KunstenaarsSection', () => {
         { prijsafspraken: '20% commissie' }
       )
     );
-    expect(logActiviteitMock).toHaveBeenCalledWith('kunstenaar_gewijzigd', expect.anything());
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'kunstenaar_gewijzigd',
+      expect.anything(),
+      'Sabrina G.'
+    );
   });
 
   it('deletes a kunstenaar and logs kunstenaar_verwijderd', async () => {
@@ -294,7 +298,11 @@ describe('KunstenaarsSection', () => {
     fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
     fireEvent.click(screen.getByTestId('kunstenaar-modal-verwijderen'));
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith('ka-1'));
-    expect(logActiviteitMock).toHaveBeenCalledWith('kunstenaar_verwijderd', expect.anything());
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'kunstenaar_verwijderd',
+      expect.anything(),
+      'Sabrina Glasser'
+    );
   });
 
   it('also deletes the kunstenaarAfspraken companion document when deleting a kunstenaar', async () => {
@@ -419,7 +427,11 @@ describe('KunstenaarsSection', () => {
 
     // Both writes are durable, so a read-side failure must not present the save as failed.
     await waitFor(() => expect(screen.queryByTestId('kunstenaar-modal')).not.toBeInTheDocument());
-    expect(logActiviteitMock).toHaveBeenCalledWith('kunstenaar_toegevoegd', expect.anything());
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'kunstenaar_toegevoegd',
+      expect.anything(),
+      'Nieuw'
+    );
   });
 
   it('blocks deleting a kunstenaar that is still linked to a kunstwerk', async () => {

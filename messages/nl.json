@@ -43,7 +43,6 @@
   "kunstwerkSpecCard": {
     "collectie": "Collectie",
     "materiaal": "Materiaal",
-    "formaten": "Formaten",
     "tagline": "Gallery quality printing"
   },
   "segments": {
@@ -283,6 +282,7 @@
     "activiteitColType": "Type",
     "activiteitColKlant": "Klant",
     "activiteitColEmail": "E-mailadres",
+    "activiteitColOmschrijving": "Omschrijving",
     "activiteitTypeKunstwerkBekeken": "Kunstwerk bekeken",
     "activiteitTypeMandjeToegevoegd": "Toegevoegd aan mandje",
     "activiteitTypeMandjeEigenMaatToegevoegd": "Eigen maat toegevoegd aan mandje",
@@ -465,9 +465,11 @@
     "kunstwerkenFormaat_staand": "Staand",
     "kunstwerkenFormaatVerplicht": "Kies een formaat.",
     "kunstwerkenLabelSegmenten": "Segmenten",
+    "kunstwerkenLabelMaterialenMaten": "Materialen en maten",
     "kunstwerkenLabelMaterialen": "Materialen",
     "kunstwerkenLabelMaten": "Maten",
     "kunstwerkenLabelPrijzen": "Prijzen per materiaal en maat",
+    "kunstwerkenLabelPrijsPerM2": "Prijs per m²",
     "kunstwerkenLabelPreview": "Voorbeeld op de collectiepagina",
     "kunstwerkenLabelOmschrijvingNl": "Omschrijving (NL)",
     "kunstwerkenLabelOmschrijvingFr": "Omschrijving (FR)",
@@ -475,6 +477,7 @@
     "kunstwerkenLabelOmschrijvingEn": "Omschrijving (EN)",
     "kunstwerkenToevoegen": "Kunstwerk toevoegen",
     "kunstwerkenBackfillNamen": "Namen aanvullen ({count})",
+    "kunstwerkenBackfillMaterialenMaten": "Materialen/maten aanvullen ({count})",
     "kunstwerkenOpslaan": "Opslaan",
     "kunstwerkenVerwijderen": "Verwijderen",
     "kunstenaarsLoadError": "Kon de kunstenaars niet laden. Probeer de pagina te verversen.",

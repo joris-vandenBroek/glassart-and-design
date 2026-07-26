@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useFirestoreCollection } from '@/lib/useFirestoreCollection';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
+import { resolveKunstwerkMateriaalLabel } from '@/lib/kunstwerkMateriaal';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
 import { WatermarkedImage } from './WatermarkedImage';
-import { ProductModal, materiaalLabel, maatLabel } from './ProductModal';
+import { ProductModal } from './ProductModal';
 import { KunstwerkSpecCard } from './KunstwerkSpecCard';
 import { Combobox } from './Combobox';
 import { resolveKunstenaarOmschrijving } from '@/lib/resolveKunstenaarOmschrijving';
@@ -46,9 +47,6 @@ export function ProductsGrid() {
     ? (kunstenaars.items ?? []).find((kunstenaar) => kunstenaar.id === kunstenaarFilter) ?? null
     : null;
 
-  const materiaalsoortNaamById = new Map(
-    (materiaalsoorten.items ?? []).map((soort) => [soort.id, soort.omschrijving])
-  );
   const kunstenaarNaamById = new Map((kunstenaars.items ?? []).map((kunstenaar) => [kunstenaar.id, kunstenaar.naam]));
 
   function filterButtonClass(isActive: boolean) {
@@ -60,7 +58,7 @@ export function ProductsGrid() {
   function handleSelect(kunstwerk: Kunstwerk) {
     setSelectedKunstwerk(kunstwerk);
     if (user) {
-      void logActiviteit('kunstwerk_bekeken', actorFromCustomer(user));
+      void logActiviteit('kunstwerk_bekeken', actorFromCustomer(user), kunstwerk.naam);
     }
   }
 
@@ -127,10 +125,6 @@ export function ProductsGrid() {
       >
         {visibleKunstwerken.map((kunstwerk) => {
           const omschrijving = resolveKunstwerkOmschrijving(kunstwerk, locale);
-          const beschikbareMaterialen = (materialen.items ?? []).filter((materiaal) =>
-            kunstwerk.materiaalIds.includes(materiaal.id)
-          );
-          const beschikbareMaten = (maten.items ?? []).filter((maat) => kunstwerk.maatIds.includes(maat.id));
           const collectieLabels = kunstwerk.segmentIds.map(
             (segmentId) => segmenten.items?.find((segment) => segment.id === segmentId)?.omschrijving ?? segmentId
           );
@@ -164,10 +158,7 @@ export function ProductsGrid() {
                 titel={omschrijving}
                 artiest={kunstwerk.kunstenaarId ? kunstenaarNaamById.get(kunstwerk.kunstenaarId) ?? '' : ''}
                 collectieLabels={collectieLabels}
-                materiaalLabels={beschikbareMaterialen.map((materiaal) =>
-                  materiaalLabel(materiaal, materiaalsoortNaamById.get(materiaal.materiaalsoortId) ?? materiaal.materiaalsoortId)
-                )}
-                maatLabels={beschikbareMaten.map(maatLabel)}
+                materiaalLabel={resolveKunstwerkMateriaalLabel(kunstwerk, materialen.items ?? [], materiaalsoorten.items ?? [])}
               />
             </div>
           );

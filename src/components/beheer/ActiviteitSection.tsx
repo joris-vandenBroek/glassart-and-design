@@ -10,6 +10,7 @@ export interface Activiteit {
   type: ActiviteitType;
   actorEmail: string;
   actorNaam: string;
+  omschrijving?: string;
   timestamp: Date | null;
 }
 
@@ -17,6 +18,7 @@ interface ActiviteitRow {
   id: string;
   tijdstip: string;
   typeLabel: string;
+  omschrijving: string;
   actorNaam: string;
   actorEmail: string;
 }
@@ -84,6 +86,7 @@ export function ActiviteitSection({ activiteiten, loadError }: ActiviteitSection
           id: activiteit.id,
           tijdstip: activiteit.timestamp ? activiteit.timestamp.toLocaleString('nl-NL') : '',
           typeLabel: labelKey ? t(labelKey) : activiteit.type,
+          omschrijving: activiteit.omschrijving ?? '–',
           actorNaam: activiteit.actorNaam,
           actorEmail: activiteit.actorEmail,
         };
@@ -94,6 +97,7 @@ export function ActiviteitSection({ activiteiten, loadError }: ActiviteitSection
   const columns: Column<ActiviteitRow>[] = [
     { key: 'tijdstip', label: t('activiteitColTijdstip') },
     { key: 'typeLabel', label: t('activiteitColType') },
+    { key: 'omschrijving', label: t('activiteitColOmschrijving') },
     { key: 'actorNaam', label: t('activiteitColKlant') },
     { key: 'actorEmail', label: t('activiteitColEmail') },
   ];

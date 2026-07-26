@@ -54,8 +54,10 @@ const SEGMENTEN = [
 const KUNSTWERKEN = [
   {
     id: 'kw-1',
+    naam: 'Kunstwerk 1',
     data: {
       foto: 'https://example.com/kw-1.jpg',
+      naam: 'Kunstwerk 1',
       segmentIds: ['seg-hotel'],
       materiaalIds: ['mat-1'],
       maatIds: ['maat-1'],
@@ -69,8 +71,10 @@ const KUNSTWERKEN = [
   },
   {
     id: 'kw-2',
+    naam: 'Kunstwerk 2',
     data: {
       foto: 'https://example.com/kw-2.jpg',
+      naam: 'Kunstwerk 2',
       segmentIds: ['seg-wellness'],
       materiaalIds: ['mat-1'],
       maatIds: ['maat-1'],
@@ -83,8 +87,10 @@ const KUNSTWERKEN = [
   },
   {
     id: 'kw-3',
+    naam: 'Kunstwerk 3',
     data: {
       foto: 'https://example.com/kw-3.jpg',
+      naam: 'Kunstwerk 3',
       segmentIds: ['seg-hotel', 'seg-wellness'],
       materiaalIds: ['mat-1'],
       maatIds: ['maat-1'],
@@ -100,6 +106,7 @@ const MATERIALEN = [
   { id: 'mat-1', data: { materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Veiligheidsglas' } },
 ];
 const MATEN = [{ id: 'maat-1', data: { breedte: 40, hoogte: 60 } }];
+const MATERIAALSOORTEN = [{ id: 'soort-1', data: { omschrijving: 'Veiligheidsglas' } }];
 const KUNSTENAARS = [
   {
     id: 'ka-1',
@@ -123,6 +130,7 @@ function mockCollections() {
     kunstwerken: KUNSTWERKEN,
     materialen: MATERIALEN,
     maten: MATEN,
+    materiaalsoorten: MATERIAALSOORTEN,
     kunstenaars: KUNSTENAARS,
   };
   getDocsMock.mockImplementation((collectionRef: { name: string }) =>
@@ -236,11 +244,11 @@ describe('ProductsGrid', () => {
     await waitFor(() => expect(getDocMock).toHaveBeenCalled());
     fireEvent.click(cards[0]);
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('kunstwerk_bekeken', {
-        id: 'uid-1',
-        email: 'klant@example.com',
-        naam: 'Testbedrijf BV',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'kunstwerk_bekeken',
+        { id: 'uid-1', email: 'klant@example.com', naam: 'Testbedrijf BV' },
+        KUNSTWERKEN[0].naam
+      )
     );
   });
 
@@ -250,6 +258,12 @@ describe('ProductsGrid', () => {
     fireEvent.click(cards[0]);
     expect(screen.getByTestId('product-modal')).toBeInTheDocument();
     expect(logActiviteitMock).not.toHaveBeenCalled();
+  });
+
+  it('shows the resolved materiaal label on each kunstwerk card', async () => {
+    renderProductsGrid();
+    const cards = await screen.findAllByTestId('product-card');
+    expect(cards[0]).toHaveTextContent('4mm Veiligheidsglas');
   });
 
   it('filters by kunstenaar and shows the artist info banner with their description', async () => {

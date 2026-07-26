@@ -73,11 +73,24 @@ const BESTELLING: Bestelling = {
   id: 'header-1',
   klantId: 'uid-1',
   companyName: 'Testbedrijf BV',
+  bestelnr: 'GD-00201',
   besteldatum: '1-7-2026',
   status: 'Te versturen naar drukker',
   lineCount: 1,
   totalQuantity: 2,
   lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
+};
+
+const BESTELLING_2: Bestelling = {
+  id: 'header-2',
+  klantId: 'uid-1',
+  companyName: 'Testbedrijf BV',
+  bestelnr: 'GD-00202',
+  besteldatum: '2-7-2026',
+  status: 'Te versturen naar drukker',
+  lineCount: 1,
+  totalQuantity: 1,
+  lines: [{ id: 'line-2', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
 };
 
 function renderDialog(overrides: Partial<React.ComponentProps<typeof VersturenNaarDrukkerDialog>> = {}) {
@@ -154,13 +167,30 @@ describe('VersturenNaarDrukkerDialog', () => {
         })
       )
     );
-    expect(logActiviteitMock).toHaveBeenCalledWith('bestelling_verstuurd_naar_drukker', {
-      id: 'staff-1',
-      email: 'paul@glassartanddesign.com',
-      naam: 'paul@glassartanddesign.com',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'bestelling_verstuurd_naar_drukker',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'GD-00201'
+    );
     expect(onVerstuurd).toHaveBeenCalledWith([{ ...BESTELLING, status: 'Verstuurd naar drukker' }]);
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('joins bestelnummers with a comma when sending a batch of multiple bestellingen', async () => {
+    fetchMock.mockResolvedValue({ ok: true });
+    updateDocMock.mockResolvedValue(undefined);
+    addDocMock.mockResolvedValue(undefined);
+    renderDialog({ bestellingen: [BESTELLING, BESTELLING_2] });
+
+    fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
+
+    await waitFor(() =>
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'bestelling_verstuurd_naar_drukker',
+        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+        'GD-00201, GD-00202'
+      )
+    );
   });
 
   it('shows an error and does not update anything when the mail request fails', async () => {

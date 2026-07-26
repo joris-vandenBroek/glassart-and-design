@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
 import { KunstwerkSpecCard } from '@/components/KunstwerkSpecCard';
+import { resolveKunstwerkMateriaalLabel } from '@/lib/kunstwerkMateriaal';
 import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
@@ -47,6 +48,7 @@ const LEGE_FORM = {
   materiaalIds: [] as string[],
   maatIds: [] as string[],
   prijzen: {} as PrijzenState,
+  prijsPerM2: '',
   omschrijvingNl: '',
   omschrijvingFr: '',
   omschrijvingDe: '',
@@ -77,6 +79,7 @@ export function KunstwerkenSection({
   const [materiaalIds, setMateriaalIds] = useState<string[]>(LEGE_FORM.materiaalIds);
   const [maatIds, setMaatIds] = useState<string[]>(LEGE_FORM.maatIds);
   const [prijzen, setPrijzen] = useState<PrijzenState>(LEGE_FORM.prijzen);
+  const [prijsPerM2, setPrijsPerM2] = useState(LEGE_FORM.prijsPerM2);
   const [omschrijvingNl, setOmschrijvingNl] = useState(LEGE_FORM.omschrijvingNl);
   const [omschrijvingFr, setOmschrijvingFr] = useState(LEGE_FORM.omschrijvingFr);
   const [omschrijvingDe, setOmschrijvingDe] = useState(LEGE_FORM.omschrijvingDe);
@@ -144,9 +147,10 @@ export function KunstwerkenSection({
     setKunstenaarId(LEGE_FORM.kunstenaarId);
     setFormaatState(LEGE_FORM.formaat);
     setSegmentIds(LEGE_FORM.segmentIds);
-    setMateriaalIds(LEGE_FORM.materiaalIds);
-    setMaatIds(LEGE_FORM.maatIds);
+    setMateriaalIds((materialen ?? []).map((materiaal) => materiaal.id));
+    setMaatIds((maten ?? []).map((maat) => maat.id));
     setPrijzen(LEGE_FORM.prijzen);
+    setPrijsPerM2(LEGE_FORM.prijsPerM2);
     setOmschrijvingNl(LEGE_FORM.omschrijvingNl);
     setOmschrijvingFr(LEGE_FORM.omschrijvingFr);
     setOmschrijvingDe(LEGE_FORM.omschrijvingDe);
@@ -174,6 +178,7 @@ export function KunstwerkenSection({
       prijzenMap[prijsKey(regel.materiaalId, regel.maatId)] = String(regel.prijs);
     });
     setPrijzen(prijzenMap);
+    setPrijsPerM2(kunstwerk.prijsPerM2 != null ? String(kunstwerk.prijsPerM2) : '');
     setOmschrijvingNl(kunstwerk.omschrijvingNl);
     setOmschrijvingFr(kunstwerk.omschrijvingFr);
     setOmschrijvingDe(kunstwerk.omschrijvingDe);
@@ -238,6 +243,7 @@ export function KunstwerkenSection({
     await handleFotoFile(file);
   }
 
+  const isMateriaalloos = materiaalIds.length === 0;
   const prijsCombinaties = materiaalIds.flatMap((materiaalId) =>
     maatIds.map((maatId) => ({ materiaalId, maatId }))
   );
@@ -250,37 +256,40 @@ export function KunstwerkenSection({
     uploading ||
     !naam ||
     segmentIds.length === 0 ||
-    materiaalIds.length === 0 ||
-    maatIds.length === 0 ||
-    !allePrijzenIngevuld ||
+    (isMateriaalloos
+      ? !prijsPerM2 || Number(prijsPerM2) <= 0
+      : maatIds.length === 0 || !allePrijzenIngevuld) ||
     !omschrijvingNl;
 
   async function handleSave() {
     if (!modalState) return;
-    const prijzenArray: PrijsRegel[] = prijsCombinaties.map(({ materiaalId, maatId }) => ({
-      materiaalId,
-      maatId,
-      prijs: Number(prijzen[prijsKey(materiaalId, maatId)]),
-    }));
-    const data = {
+    const basisData = {
       foto,
       naam,
       kunstenaarId: kunstenaarId || null,
       formaat,
       segmentIds,
       materiaalIds,
-      maatIds,
-      prijzen: prijzenArray,
+      maatIds: isMateriaalloos ? [] : maatIds,
+      prijzen: isMateriaalloos
+        ? []
+        : prijsCombinaties.map(({ materiaalId, maatId }) => ({
+            materiaalId,
+            maatId,
+            prijs: Number(prijzen[prijsKey(materiaalId, maatId)]),
+          })),
       omschrijvingNl,
       omschrijvingFr,
       omschrijvingDe,
       omschrijvingEn,
     };
+    const data = isMateriaalloos ? { ...basisData, prijsPerM2: Number(prijsPerM2) } : basisData;
     const success = modalState.mode === 'add' ? await onAdd(data) : await onUpdate(modalState.kunstwerk.id, data);
     if (success) {
       void logActiviteit(
         modalState.mode === 'add' ? 'kunstwerk_toegevoegd' : 'kunstwerk_gewijzigd',
-        actorFromMedewerker(user)
+        actorFromMedewerker(user),
+        naam
       );
       closeModal();
     } else {
@@ -292,7 +301,7 @@ export function KunstwerkenSection({
     if (modalState?.mode !== 'edit') return;
     const success = await onRemove(modalState.kunstwerk.id);
     if (success) {
-      void logActiviteit('kunstwerk_verwijderd', actorFromMedewerker(user));
+      void logActiviteit('kunstwerk_verwijderd', actorFromMedewerker(user), modalState.kunstwerk.naam);
       closeModal();
     } else {
       setActionError(t('kunstwerkenActionError'));
@@ -305,7 +314,29 @@ export function KunstwerkenSection({
     setBackfillBezig(true);
     for (const kunstwerk of kunstwerkenZonderNaam) {
       const { id, ...data } = kunstwerk;
-      const success = await onUpdate(id, { ...data, naam: kunstwerk.omschrijvingNl || kunstwerk.id });
+      const nieuweNaam = kunstwerk.omschrijvingNl || kunstwerk.id;
+      const success = await onUpdate(id, { ...data, naam: nieuweNaam });
+      if (success) {
+        void logActiviteit('kunstwerk_gewijzigd', actorFromMedewerker(user), nieuweNaam);
+      }
+    }
+    setBackfillBezig(false);
+  }
+
+  const alleMateriaalIds = (materialen ?? []).map((materiaal) => materiaal.id);
+  const alleMaatIds = (maten ?? []).map((maat) => maat.id);
+  const kunstwerkenZonderAlleMaterialenMaten = kunstwerken.filter(
+    (kunstwerk) =>
+      kunstwerk.materiaalIds.length > 0 &&
+      (alleMateriaalIds.some((id) => !kunstwerk.materiaalIds.includes(id)) ||
+        alleMaatIds.some((id) => !kunstwerk.maatIds.includes(id)))
+  );
+
+  async function handleBackfillMaterialenMaten() {
+    setBackfillBezig(true);
+    for (const kunstwerk of kunstwerkenZonderAlleMaterialenMaten) {
+      const { id, ...data } = kunstwerk;
+      const success = await onUpdate(id, { ...data, materiaalIds: alleMateriaalIds, maatIds: alleMaatIds });
       if (success) {
         void logActiviteit('kunstwerk_gewijzigd', actorFromMedewerker(user));
       }
@@ -338,6 +369,17 @@ export function KunstwerkenSection({
             className="rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
           >
             {t('kunstwerkenBackfillNamen', { count: kunstwerkenZonderNaam.length })}
+          </button>
+        )}
+        {kunstwerkenZonderAlleMaterialenMaten.length > 0 && (
+          <button
+            type="button"
+            onClick={handleBackfillMaterialenMaten}
+            disabled={backfillBezig}
+            data-testid="kunstwerken-backfill-materialen-maten"
+            className="rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
+          >
+            {t('kunstwerkenBackfillMaterialenMaten', { count: kunstwerkenZonderAlleMaterialenMaten.length })}
           </button>
         )}
         <button
@@ -475,45 +517,53 @@ export function KunstwerkenSection({
             ))}
           </fieldset>
 
-          <fieldset className="flex flex-col gap-1">
-            <legend className="text-xs uppercase tracking-wide text-white/60">
-              {t('kunstwerkenLabelMaterialen')}
-            </legend>
-            {(materialen ?? []).map((materiaal) => (
-              <label key={materiaal.id} className="flex items-center gap-2 text-sm text-white/80">
-                <input
-                  type="checkbox"
-                  checked={materiaalIds.includes(materiaal.id)}
-                  onChange={() => setMateriaalIds((current) => toggle(current, materiaal.id))}
-                  data-testid={`kunstwerk-modal-materiaal-${materiaal.id}`}
-                />
-                {materiaalLabel(materiaal)}
-              </label>
-            ))}
-          </fieldset>
-
-          <fieldset className="flex flex-col gap-1">
-            <legend className="text-xs uppercase tracking-wide text-white/60">{t('kunstwerkenLabelMaten')}</legend>
-            {(maten ?? []).map((maat) => {
-              const incompatibel =
-                formaat !== null && (formaat === 'vierkant' ? !isVierkanteMaat(maat) : isVierkanteMaat(maat));
-              return (
-                <label
-                  key={maat.id}
-                  className={`flex items-center gap-2 text-sm text-white/80 ${incompatibel ? 'opacity-40' : ''}`}
-                >
+          <details className="flex flex-col gap-3 rounded-sm border border-white/10 px-3 py-2">
+            <summary
+              data-testid="kunstwerk-modal-materialen-maten-toggle"
+              className="cursor-pointer text-xs uppercase tracking-wide text-white/60"
+            >
+              {t('kunstwerkenLabelMaterialenMaten')}
+            </summary>
+            <fieldset className="flex flex-col gap-1">
+              <legend className="text-xs uppercase tracking-wide text-white/60">
+                {t('kunstwerkenLabelMaterialen')}
+              </legend>
+              {(materialen ?? []).map((materiaal) => (
+                <label key={materiaal.id} className="flex items-center gap-2 text-sm text-white/80">
                   <input
                     type="checkbox"
-                    disabled={incompatibel}
-                    checked={maatIds.includes(maat.id)}
-                    onChange={() => setMaatIds((current) => toggle(current, maat.id))}
-                    data-testid={`kunstwerk-modal-maat-${maat.id}`}
+                    checked={materiaalIds.includes(materiaal.id)}
+                    onChange={() => setMateriaalIds((current) => toggle(current, materiaal.id))}
+                    data-testid={`kunstwerk-modal-materiaal-${materiaal.id}`}
                   />
-                  {`${maat.breedte}×${maat.hoogte} cm`}
+                  {materiaalLabel(materiaal)}
                 </label>
-              );
-            })}
-          </fieldset>
+              ))}
+            </fieldset>
+
+            <fieldset className="flex flex-col gap-1">
+              <legend className="text-xs uppercase tracking-wide text-white/60">{t('kunstwerkenLabelMaten')}</legend>
+              {(maten ?? []).map((maat) => {
+                const incompatibel =
+                  formaat !== null && (formaat === 'vierkant' ? !isVierkanteMaat(maat) : isVierkanteMaat(maat));
+                return (
+                  <label
+                    key={maat.id}
+                    className={`flex items-center gap-2 text-sm text-white/80 ${incompatibel ? 'opacity-40' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      disabled={incompatibel}
+                      checked={maatIds.includes(maat.id)}
+                      onChange={() => setMaatIds((current) => toggle(current, maat.id))}
+                      data-testid={`kunstwerk-modal-maat-${maat.id}`}
+                    />
+                    {`${maat.breedte}×${maat.hoogte} cm`}
+                  </label>
+                );
+              })}
+            </fieldset>
+          </details>
 
           {materiaalIds.length > 0 && maatIds.length > 0 && (
             <div className="flex flex-col gap-1">
@@ -565,6 +615,22 @@ export function KunstwerkenSection({
                 </tbody>
               </table>
             </div>
+          )}
+
+          {isMateriaalloos && (
+            <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+              {t('kunstwerkenLabelPrijsPerM2')}
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-white/50">€</span>
+                <input
+                  type="number"
+                  value={prijsPerM2}
+                  onChange={(event) => setPrijsPerM2(event.target.value)}
+                  data-testid="kunstwerk-modal-prijs-per-m2"
+                  className="w-24 rounded-sm bg-black/40 px-2 py-1 text-sm text-white"
+                />
+              </div>
+            </label>
           )}
 
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
@@ -646,12 +712,7 @@ export function KunstwerkenSection({
                 titel={omschrijvingNl}
                 artiest={kunstenaarNaamById.get(kunstenaarId) ?? ''}
                 collectieLabels={segmentIds.map((segmentId) => segmentNaamById.get(segmentId) ?? segmentId)}
-                materiaalLabels={(materialen ?? [])
-                  .filter((materiaal) => materiaalIds.includes(materiaal.id))
-                  .map(materiaalLabel)}
-                maatLabels={(maten ?? [])
-                  .filter((maat) => maatIds.includes(maat.id))
-                  .map((maat) => `${maat.breedte}×${maat.hoogte} cm`)}
+                materiaalLabel={resolveKunstwerkMateriaalLabel({ materiaalIds }, materialen ?? [], materiaalsoorten ?? [])}
               />
             </div>
           </div>

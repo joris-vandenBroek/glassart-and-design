@@ -121,6 +121,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             return {
               id: headerDoc.id,
               klantId: data.klantId,
+              bestelnr: data.bestelnr ?? headerDoc.id,
               besteldatum: data.besteldatum?.toDate().toLocaleDateString('nl-NL') ?? '',
               status: data.status,
               lineCount: lines.length,
@@ -161,6 +162,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
               type: data.type as ActiviteitType,
               actorEmail: data.actorEmail,
               actorNaam: data.actorNaam,
+              omschrijving: data.omschrijving,
               timestamp: data.timestamp?.toDate() ?? null,
             } as Activiteit;
           })

@@ -46,6 +46,26 @@ describe('logActiviteit', () => {
     addDocMock.mockRejectedValue(new Error('permission-denied'));
     await expect(logActiviteit('mandje_toegevoegd', ONBEKENDE_ACTOR)).resolves.toBeUndefined();
   });
+
+  it('includes the omschrijving field when provided', async () => {
+    addDocMock.mockResolvedValue({ id: 'log-2' });
+    await logActiviteit(
+      'materiaalsoort_verwijderd',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'Helder glas'
+    );
+    expect(addDocMock).toHaveBeenCalledWith(
+      { name: 'activiteitenlog' },
+      {
+        type: 'materiaalsoort_verwijderd',
+        actorId: 'staff-1',
+        actorEmail: 'paul@glassartanddesign.com',
+        actorNaam: 'paul@glassartanddesign.com',
+        timestamp: 'SERVER_TIMESTAMP',
+        omschrijving: 'Helder glas',
+      }
+    );
+  });
 });
 
 describe('actorFromCustomer', () => {

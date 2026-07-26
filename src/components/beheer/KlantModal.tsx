@@ -111,7 +111,7 @@ export function KlantModal({
     if (!klant || !fields) return;
     try {
       await updateDoc(doc(db, 'klanten', klant.id), { ...fields });
-      void logActiviteit('klant_gewijzigd', actorFromMedewerker(user));
+      void logActiviteit('klant_gewijzigd', actorFromMedewerker(user), klant.companyName);
       onUpdated({ ...klant, ...fields });
       setIsEditing(false);
     } catch {
@@ -123,7 +123,7 @@ export function KlantModal({
     if (!klant) return;
     try {
       await updateDoc(doc(db, 'klanten', klant.id), { prijsgroepId });
-      void logActiviteit('klant_prijsgroep_gewijzigd', actorFromMedewerker(user));
+      void logActiviteit('klant_prijsgroep_gewijzigd', actorFromMedewerker(user), klant.companyName);
       onUpdated({ ...klant, prijsgroepId });
     } catch {
       setError(t('klantenActionError'));
@@ -168,7 +168,7 @@ export function KlantModal({
         }
       }
       await updateDoc(doc(db, 'klanten', klant.id), { exclusieveKunstenaarIds });
-      void logActiviteit('klant_exclusiviteit_gewijzigd', actorFromMedewerker(user));
+      void logActiviteit('klant_exclusiviteit_gewijzigd', actorFromMedewerker(user), klant.companyName);
       onUpdated({ ...klant, exclusieveKunstenaarIds });
     } catch {
       setError(t('klantenActionError'));
@@ -181,7 +181,7 @@ export function KlantModal({
     const parsed = trimmed === '' ? null : Math.max(1, Math.round(Number(trimmed)) || 1);
     try {
       await updateDoc(doc(db, 'klanten', klant.id), { minimaleAfname: parsed });
-      void logActiviteit('klant_minimale_afname_gewijzigd', actorFromMedewerker(user));
+      void logActiviteit('klant_minimale_afname_gewijzigd', actorFromMedewerker(user), klant.companyName);
       onUpdated({ ...klant, minimaleAfname: parsed });
       setMinimaleAfname(parsed != null ? String(parsed) : '');
     } catch {
@@ -193,7 +193,7 @@ export function KlantModal({
     if (!klant) return;
     try {
       await updateDoc(doc(db, 'klanten', klant.id), { status: 'Goedgekeurd', prijsgroepId });
-      void logActiviteit('klant_goedgekeurd', actorFromMedewerker(user));
+      void logActiviteit('klant_goedgekeurd', actorFromMedewerker(user), klant.companyName);
       onUpdated({ ...klant, status: 'Goedgekeurd', prijsgroepId });
     } catch {
       setError(t('klantenActionError'));
@@ -204,7 +204,7 @@ export function KlantModal({
     if (!klant) return;
     try {
       await updateDoc(doc(db, 'klanten', klant.id), { status: 'Afgewezen' });
-      void logActiviteit('klant_afgewezen', actorFromMedewerker(user));
+      void logActiviteit('klant_afgewezen', actorFromMedewerker(user), klant.companyName);
       onUpdated({ ...klant, status: 'Afgewezen' });
     } catch {
       setError(t('klantenActionError'));
