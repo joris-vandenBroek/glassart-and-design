@@ -121,7 +121,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             return {
               id: headerDoc.id,
               klantId: data.klantId,
-              bestelnr: data.bestelnr,
+              bestelnr: data.bestelnr ?? headerDoc.id,
               besteldatum: data.besteldatum?.toDate().toLocaleDateString('nl-NL') ?? '',
               status: data.status,
               lineCount: lines.length,

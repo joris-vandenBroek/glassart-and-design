@@ -65,7 +65,7 @@ export function MatenSection({ maten, kunstwerken, loadError, onAdd, onUpdate, o
       void logActiviteit(
         modalState.mode === 'add' ? 'maat_toegevoegd' : 'maat_gewijzigd',
         actorFromMedewerker(user),
-        `${breedte}×${hoogte} cm`
+        `${Number(breedte)}×${Number(hoogte)} cm`
       );
       closeModal();
     } else {
