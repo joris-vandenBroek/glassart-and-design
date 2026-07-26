@@ -148,7 +148,7 @@ describe('DrukkersSection', () => {
   it('deletes a drukker with no zendingen and logs drukker_verwijderd', async () => {
     const { onRemove } = renderSection();
     fireEvent.click(screen.getByTestId('data-table-row-drukker-1'));
-    await screen.findByTestId('drukker-modal-verwijderen');
+    await waitFor(() => expect(screen.getByTestId('drukker-modal-verwijderen')).not.toBeDisabled());
     fireEvent.click(screen.getByTestId('drukker-modal-verwijderen'));
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith('drukker-1'));
     expect(logActiviteitMock).toHaveBeenCalledWith('drukker_verwijderd', {

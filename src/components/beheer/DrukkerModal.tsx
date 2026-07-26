@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Modal } from '@/components/Modal';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
+import { useDrukkerZendingen } from '@/lib/useDrukkerZendingen';
 import type { Drukker } from './materiaalTypes';
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; drukker: Drukker } | null;
@@ -33,6 +34,9 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
   const { user } = useAdminAuth();
   const [fields, setFields] = useState<FormFields>(EMPTY_FIELDS);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [expandedZendingId, setExpandedZendingId] = useState<string | null>(null);
+  const drukkerId = state?.mode === 'edit' ? state.drukker.id : null;
+  const { zendingen } = useDrukkerZendingen(drukkerId);
 
   useEffect(() => {
     if (state?.mode === 'edit') {
@@ -42,6 +46,7 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
       setFields(EMPTY_FIELDS);
     }
     setActionError(null);
+    setExpandedZendingId(null);
   }, [state]);
 
   function setField<K extends keyof FormFields>(key: K, value: FormFields[K]) {
@@ -61,6 +66,10 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
 
   async function handleRemove() {
     if (state?.mode !== 'edit') return;
+    if ((zendingen?.length ?? 0) > 0) {
+      setActionError(t('drukkersVerwijderBlocked'));
+      return;
+    }
     const success = await onRemove(state.drukker.id);
     if (success) {
       void logActiviteit('drukker_verwijderd', actorFromMedewerker(user));
@@ -156,11 +165,52 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
             <button
               type="button"
               onClick={handleRemove}
+              disabled={zendingen === null}
               data-testid="drukker-modal-verwijderen"
               className="rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
             >
               {t('drukkersVerwijderen')}
             </button>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
+          <span className="text-xs uppercase tracking-wide text-white/60">{t('drukkersZendingenTitel')}</span>
+          {zendingen === null ? null : zendingen.length === 0 ? (
+            <p data-testid="drukker-modal-zendingen-leeg" className="text-white/50">
+              {t('drukkersZendingenLeeg')}
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {zendingen.map((zending) => (
+                <li key={zending.id} data-testid={`drukker-zending-${zending.id}`} className="rounded-sm bg-black/30 p-2 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span>
+                      {zending.verzondenOp ? zending.verzondenOp.toLocaleString('nl-NL') : ''} —{' '}
+                      {t('drukkersZendingenSamenvatting', {
+                        klanten: zending.aantalKlanten,
+                        regels: zending.aantalRegels,
+                      })}
+                    </span>
+                    <button
+                      type="button"
+                      data-testid={`drukker-zending-bekijken-${zending.id}`}
+                      onClick={() =>
+                        setExpandedZendingId((current) => (current === zending.id ? null : zending.id))
+                      }
+                      className="shrink-0 text-white/50 underline underline-offset-2 hover:text-white"
+                    >
+                      {expandedZendingId === zending.id
+                        ? t('drukkersZendingenVerbergen')
+                        : t('drukkersZendingenBekijken')}
+                    </button>
+                  </div>
+                  {expandedZendingId === zending.id && (
+                    <pre className="mt-2 whitespace-pre-wrap text-white/70">{zending.body}</pre>
+                  )}
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       </div>
