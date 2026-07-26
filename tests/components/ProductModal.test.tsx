@@ -104,6 +104,18 @@ const KUNSTENAARS: Kunstenaar[] = [
     klantId: null,
     exclusiefVoorKlantId: null,
   },
+  {
+    id: 'ka-eigen',
+    naam: 'Eigen Artiest',
+    foto: null,
+    omschrijvingNl: '',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+    verkooprecht: 'alleen-kunstenaar',
+    klantId: 'kunstenaar-uid',
+    exclusiefVoorKlantId: 'ander-klant-uid',
+  },
 ];
 
 function renderModal(
@@ -177,6 +189,40 @@ describe('ProductModal', () => {
     expect(screen.queryByTestId('product-modal-order-blocked')).not.toBeInTheDocument();
     renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-open' });
     expect(screen.queryByTestId('product-modal-order-blocked')).not.toBeInTheDocument();
+  });
+
+  it('fails closed while the kunstenaars collection has not loaded yet', () => {
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-open' }, null);
+    expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
+    expect(screen.getByTestId('product-modal-order-blocked')).toHaveTextContent(
+      'Dit kunstwerk kan op dit moment niet besteld worden. Probeer het later opnieuw.'
+    );
+  });
+
+  it('fails closed for a kunstenaarId that no longer exists in the loaded kunstenaars', () => {
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-verwijderd' });
+    expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
+    expect(screen.getByTestId('product-modal-order-blocked')).toHaveTextContent(
+      'Dit kunstwerk kan op dit moment niet besteld worden. Probeer het later opnieuw.'
+    );
+  });
+
+  it('still allows the kunstenaar to order their own exclusive, artist-only work', async () => {
+    vi.useRealTimers();
+    onAuthStateChangedMock.mockImplementation((_auth, callback) => {
+      callback({ uid: 'kunstenaar-uid', email: 'ka@example.com' });
+      return () => {};
+    });
+    getDocMock.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ status: 'Goedgekeurd', companyName: 'Atelier' }),
+    });
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-eigen' });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(screen.queryByTestId('product-modal-order-blocked')).not.toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-confirm')).not.toBeDisabled();
   });
 
   it('shows the resolved description, defaults to the first materiaal/maat, and the matching price', () => {
@@ -267,6 +313,7 @@ describe('ProductModal', () => {
               materialen={MATERIALEN}
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN}
+              kunstenaars={KUNSTENAARS}
               onClose={onClose}
             />
             <Probe />
@@ -311,6 +358,7 @@ describe('ProductModal', () => {
               materialen={MATERIALEN}
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN}
+              kunstenaars={KUNSTENAARS}
               onClose={onClose}
             />
           </CartProvider>
@@ -332,6 +380,7 @@ describe('ProductModal', () => {
               materialen={MATERIALEN}
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN}
+              kunstenaars={KUNSTENAARS}
               onClose={onClose}
             />
           </CartProvider>
@@ -347,6 +396,7 @@ describe('ProductModal', () => {
               materialen={MATERIALEN}
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN}
+              kunstenaars={KUNSTENAARS}
               onClose={onClose}
             />
           </CartProvider>
@@ -447,6 +497,7 @@ describe('ProductModal', () => {
               materialen={MATERIALEN}
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN_MET_EIGEN_MAAT}
+              kunstenaars={KUNSTENAARS}
               onClose={() => {}}
             />
           </CartProvider>
@@ -471,6 +522,7 @@ describe('ProductModal', () => {
               materialen={MATERIALEN}
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN_MET_EIGEN_MAAT}
+              kunstenaars={KUNSTENAARS}
               onClose={() => {}}
             />
           </CartProvider>
@@ -497,6 +549,7 @@ describe('ProductModal', () => {
               materialen={MATERIALEN}
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN_MET_EIGEN_MAAT}
+              kunstenaars={KUNSTENAARS}
               onClose={() => {}}
             />
           </CartProvider>
@@ -528,6 +581,7 @@ describe('ProductModal', () => {
               materialen={MATERIALEN}
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN_MET_EIGEN_MAAT}
+              kunstenaars={KUNSTENAARS}
               onClose={() => {}}
             />
             <Probe />
@@ -576,6 +630,7 @@ describe('ProductModal', () => {
               materialen={MATERIALEN}
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN_MIXED}
+              kunstenaars={KUNSTENAARS}
               onClose={() => {}}
             />
           </CartProvider>

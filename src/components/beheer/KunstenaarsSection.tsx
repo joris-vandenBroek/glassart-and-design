@@ -259,7 +259,13 @@ export function KunstenaarsSection({
 
   async function handleRemove() {
     if (modalState?.mode !== 'edit') return;
-    const inUse = (kunstwerken ?? []).some((kunstwerk) => kunstwerk.kunstenaarId === modalState.kunstenaar.id);
+    // Nog niet geladen kunstwerken mogen niet als "niet in gebruik" gelezen worden: dat
+    // zou een kunstwerk met een dangling kunstenaarId achterlaten.
+    if (kunstwerken === null) {
+      setActionError(t('kunstenaarsVerwijderOnbekend'));
+      return;
+    }
+    const inUse = kunstwerken.some((kunstwerk) => kunstwerk.kunstenaarId === modalState.kunstenaar.id);
     if (inUse) {
       setActionError(t('kunstenaarsVerwijderBlocked'));
       return;

@@ -8,6 +8,7 @@ import messages from '../../messages/nl.json';
 
 const onAuthStateChangedMock = vi.fn();
 const getDocMock = vi.fn();
+const getDocsMock = vi.fn();
 const addDocMock = vi.fn();
 const fetchMock = vi.fn();
 const logActiviteitMock = vi.fn();
@@ -51,11 +52,39 @@ const runTransactionMock = vi.fn(async (...args: unknown[]) => {
 vi.mock('firebase/firestore', () => ({
   doc: vi.fn((_db, collection, id) => ({ collection, id })),
   getDoc: (...args: unknown[]) => getDocMock(...args),
+  getDocs: (...args: unknown[]) => getDocsMock(...args),
   collection: vi.fn((_db, ...path) => ({ path })),
   addDoc: (...args: unknown[]) => addDocMock(...args),
+  updateDoc: vi.fn(),
+  deleteDoc: vi.fn(),
   serverTimestamp: () => 'SERVER_TIMESTAMP',
   runTransaction: (...args: unknown[]) => runTransactionMock(...args),
 }));
+
+type SeededDoc = { id: string; data: Record<string, unknown> };
+
+// kw-1/kw-2 are the kunstwerken the cart seeds below refer to; without a kunstenaar they
+// are orderable by anyone, which is what the pre-existing tests assume.
+const DEFAULT_COLLECTIONS: Record<string, SeededDoc[]> = {
+  kunstwerken: [
+    { id: 'kw-1', data: { kunstenaarId: null } },
+    { id: 'kw-2', data: { kunstenaarId: null } },
+  ],
+  kunstenaars: [],
+};
+
+let collections: Record<string, SeededDoc[]> = DEFAULT_COLLECTIONS;
+
+function mockCollections(overrides: Record<string, SeededDoc[]> = {}) {
+  collections = { ...DEFAULT_COLLECTIONS, ...overrides };
+}
+
+function makeSnapshot(docsData: SeededDoc[]) {
+  return {
+    empty: docsData.length === 0,
+    docs: docsData.map(({ id, data }) => ({ id, data: () => data })),
+  };
+}
 
 const SEED_ITEM = {
   kunstwerkId: 'kw-1',
@@ -113,6 +142,11 @@ beforeEach(() => {
   window.localStorage.clear();
   onAuthStateChangedMock.mockReset();
   getDocMock.mockReset();
+  getDocsMock.mockReset();
+  mockCollections();
+  getDocsMock.mockImplementation(async (ref: { path: string[] }) =>
+    makeSnapshot(collections[ref.path[0]] ?? [])
+  );
   addDocMock.mockReset();
   fetchMock.mockReset();
   logActiviteitMock.mockReset();
@@ -207,6 +241,50 @@ describe('CartPanel', () => {
       { path: ['bestelheaders', 'header-1', 'bestellines'] },
       { kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }
     );
+  });
+
+  it('refuses to create the bestelheader when a cart item is no longer orderable by this klant', async () => {
+    // The item was added while the kunstwerk was still free; only afterwards was it linked
+    // to a kunstenaar who may only sell their own work.
+    mockCollections({
+      kunstwerken: [{ id: 'kw-1', data: { kunstenaarId: 'ka-1' } }],
+      kunstenaars: [
+        {
+          id: 'ka-1',
+          data: { naam: 'Solo Artiest', verkooprecht: 'alleen-kunstenaar', klantId: 'andere-uid', exclusiefVoorKlantId: null },
+        },
+      ],
+    });
+    renderCartPanel();
+    fireEvent.click(screen.getByTestId('seed-cart'));
+    fireEvent.click(screen.getByTestId('cart-icon'));
+    await waitFor(() => expect(screen.getByTestId('cart-place-order')).not.toBeDisabled());
+    await waitFor(() => expect(getDocsMock).toHaveBeenCalled());
+    fireEvent.click(screen.getByTestId('cart-place-order'));
+
+    expect(await screen.findByTestId('cart-place-order-error')).toHaveTextContent(
+      'Kan de bestelling niet plaatsen: "Wellness paneel" is niet (meer) beschikbaar voor jou. Verwijder dit artikel uit je mandje en probeer opnieuw.'
+    );
+    expect(addDocMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId('cart-badge')).toHaveTextContent('2');
+  });
+
+  it('places the order normally when the cart item is linked to an open kunstenaar', async () => {
+    mockCollections({
+      kunstwerken: [{ id: 'kw-1', data: { kunstenaarId: 'ka-1' } }],
+      kunstenaars: [
+        { id: 'ka-1', data: { naam: 'Open Artiest', verkooprecht: 'open', klantId: null, exclusiefVoorKlantId: null } },
+      ],
+    });
+    addDocMock.mockResolvedValueOnce({ id: 'header-1' }).mockResolvedValue({ id: 'line-1' });
+    renderCartPanel();
+    fireEvent.click(screen.getByTestId('seed-cart'));
+    fireEvent.click(screen.getByTestId('cart-icon'));
+    await waitFor(() => expect(screen.getByTestId('cart-place-order')).not.toBeDisabled());
+    fireEvent.click(screen.getByTestId('cart-place-order'));
+
+    expect(await screen.findByTestId('cart-order-confirmation')).toBeInTheDocument();
+    expect(addDocMock).toHaveBeenNthCalledWith(1, { path: ['bestelheaders'] }, expect.anything());
   });
 
   it('sends a confirmation email via fetch when the order succeeds and mail env vars are set', async () => {

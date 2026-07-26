@@ -7,12 +7,16 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useCart } from '@/lib/useCart';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
+import { useFirestoreCollection } from '@/lib/useFirestoreCollection';
 import { generateBestelnr } from '@/lib/generateBestelnr';
 import { useOverlayDismiss } from '@/lib/useOverlayDismiss';
 import { formatCurrency } from '@/lib/formatCurrency';
+import { resolveOrderRight } from '@/lib/resolveOrderRight';
 import { WatermarkedImage } from './WatermarkedImage';
 import { Link } from '@/i18n/navigation';
 import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
+import type { Kunstwerk } from './beheer/materiaalTypes';
+import type { Kunstenaar } from './beheer/kunstenaarTypes';
 
 export function CartPanel() {
   const t = useTranslations('cart');
@@ -22,6 +26,10 @@ export function CartPanel() {
   const [emailError, setEmailError] = useState(false);
   const { items, isHydrated, totalQuantity, totalPrice, unpricedLineCount, removeItem, clear } = useCart();
   const { user, isCustomer } = useCustomerAuth();
+  // Het mandje leeft in localStorage en kan dagen oud zijn; de verkooprechten worden
+  // daarom vlak vóór het plaatsen opnieuw uit de actuele collecties gelezen.
+  const kunstwerken = useFirestoreCollection<Kunstwerk>('kunstwerken');
+  const kunstenaars = useFirestoreCollection<Kunstenaar>('kunstenaars');
   const panelRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -44,6 +52,18 @@ export function CartPanel() {
     }
     setPlaceOrderError(null);
     setEmailError(false);
+    // Vóór de header, niet erna: `bestelheaders/{id}` mag niet verwijderd worden, dus een
+    // regel die door de Firestore-regels geweigerd wordt zou een half geschreven bestelling
+    // achterlaten die niemand nog kan opruimen.
+    const blockedItem = items.find((item) => {
+      const kunstwerk = (kunstwerken.items ?? []).find((kw) => kw.id === item.kunstwerkId);
+      if (!kunstwerk) return true; // huidige staat niet te controleren — behandel als geblokkeerd
+      return !resolveOrderRight(kunstwerk.kunstenaarId, kunstenaars.items, user.uid).canOrder;
+    });
+    if (blockedItem) {
+      setPlaceOrderError(t('placeOrderBlockedItem', { omschrijving: blockedItem.omschrijving }));
+      return;
+    }
     try {
       const bestelnr = await generateBestelnr();
       const headerDoc = await addDoc(collection(db, 'bestelheaders'), {

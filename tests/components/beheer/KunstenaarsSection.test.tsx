@@ -428,4 +428,15 @@ describe('KunstenaarsSection', () => {
     expect(onRemove).not.toHaveBeenCalled();
     expect(deleteDocMock).not.toHaveBeenCalled();
   });
+
+  it('blocks deleting while the kunstwerken have not loaded, instead of assuming "not in use"', async () => {
+    const { onRemove } = renderSection({ kunstwerken: null });
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-verwijderen'));
+    expect(await screen.findByTestId('kunstenaar-modal-error')).toHaveTextContent(
+      'Kan nog niet controleren of deze kunstenaar in gebruik is. Probeer het opnieuw.'
+    );
+    expect(onRemove).not.toHaveBeenCalled();
+    expect(deleteDocMock).not.toHaveBeenCalled();
+  });
 });

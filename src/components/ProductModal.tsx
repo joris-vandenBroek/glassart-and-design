@@ -7,6 +7,7 @@ import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
 import { useOverlayDismiss } from '@/lib/useOverlayDismiss';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
+import { resolveOrderRight } from '@/lib/resolveOrderRight';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { WatermarkedImage } from './WatermarkedImage';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from './beheer/materiaalTypes';
@@ -90,14 +91,9 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, k
     return null;
   }
 
-  const kunstenaar = kunstwerk.kunstenaarId
-    ? (kunstenaars ?? []).find((item) => item.id === kunstwerk.kunstenaarId) ?? null
-    : null;
-  const isOwnArtwork = kunstenaar?.klantId != null && kunstenaar.klantId === user?.uid;
-  const isExclusiveToOther = kunstenaar?.exclusiefVoorKlantId != null && kunstenaar.exclusiefVoorKlantId !== user?.uid;
-  const isArtistOnlyForOthers = kunstenaar?.verkooprecht === 'alleen-kunstenaar' && !isOwnArtwork;
-  const canOrder = !kunstenaar || isOwnArtwork || (!isExclusiveToOther && !isArtistOnlyForOthers);
-  const blockedReason: 'exclusive' | 'artistOnly' | null = canOrder ? null : isExclusiveToOther ? 'exclusive' : 'artistOnly';
+  // Dezelfde helper als CartPanel gebruikt bij het plaatsen van de bestelling, zodat de
+  // UI-blokkade niet uit de pas kan lopen met de controle vlak vóór het wegschrijven.
+  const { canOrder, blockedReason } = resolveOrderRight(kunstwerk.kunstenaarId, kunstenaars, user?.uid);
 
   const beschikbareMaterialen = (materialen ?? []).filter((materiaal) =>
     kunstwerk.materiaalIds.includes(materiaal.id)
@@ -331,7 +327,11 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, k
           </div>
           {blockedReason && (
             <p data-testid="product-modal-order-blocked" className="text-xs text-amber-400">
-              {blockedReason === 'exclusive' ? t('orderBlockedExclusive') : t('orderBlockedArtistOnly')}
+              {blockedReason === 'exclusive'
+                ? t('orderBlockedExclusive')
+                : blockedReason === 'artistOnly'
+                ? t('orderBlockedArtistOnly')
+                : t('orderBlockedUnavailable')}
             </p>
           )}
           <button

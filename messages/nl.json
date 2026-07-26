@@ -89,7 +89,9 @@
     "priceOnRequest": "Prijs op aanvraag",
     "customSizeNote": "{count, plural, one {+ # artikel, prijs volgt na offerte} other {+ # artikelen, prijs volgt na offerte}}",
     "orderBlockedExclusive": "Dit kunstwerk is exclusief voorbehouden aan een andere klant.",
-    "orderBlockedArtistOnly": "Dit kunstwerk kan alleen door de kunstenaar zelf besteld worden."
+    "orderBlockedArtistOnly": "Dit kunstwerk kan alleen door de kunstenaar zelf besteld worden.",
+    "orderBlockedUnavailable": "Dit kunstwerk kan op dit moment niet besteld worden. Probeer het later opnieuw.",
+    "placeOrderBlockedItem": "Kan de bestelling niet plaatsen: \"{omschrijving}\" is niet (meer) beschikbaar voor jou. Verwijder dit artikel uit je mandje en probeer opnieuw."
   },
   "contactPage": {
     "title": "Contact",
@@ -466,6 +468,7 @@
     "kunstenaarsOpslaan": "Opslaan",
     "kunstenaarsVerwijderen": "Verwijderen",
     "kunstenaarsVerwijderBlocked": "Deze kunstenaar is nog aan een kunstwerk gekoppeld en kan niet verwijderd worden.",
+    "kunstenaarsVerwijderOnbekend": "Kan nog niet controleren of deze kunstenaar in gebruik is. Probeer het opnieuw.",
     "navKunstenaars": "Kunstenaars",
     "prijsgroepenLoadError": "Kon de prijsgroepen niet laden. Probeer de pagina te verversen.",
     "prijsgroepenActionError": "Er is iets misgegaan. Probeer het opnieuw.",

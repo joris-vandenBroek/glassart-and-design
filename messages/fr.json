@@ -89,7 +89,9 @@
     "priceOnRequest": "Prix sur demande",
     "customSizeNote": "{count, plural, one {+ # article, prix à confirmer après devis} other {+ # articles, prix à confirmer après devis}}",
     "orderBlockedExclusive": "Cette œuvre est exclusivement réservée à un autre client.",
-    "orderBlockedArtistOnly": "Cette œuvre ne peut être commandée que par l'artiste lui-même."
+    "orderBlockedArtistOnly": "Cette œuvre ne peut être commandée que par l'artiste lui-même.",
+    "orderBlockedUnavailable": "Cette œuvre ne peut pas être commandée pour le moment. Veuillez réessayer plus tard.",
+    "placeOrderBlockedItem": "Impossible de passer la commande : \"{omschrijving}\" n'est plus disponible pour vous. Retirez cet article de votre panier et réessayez."
   },
   "contactPage": {
     "title": "Contact",
