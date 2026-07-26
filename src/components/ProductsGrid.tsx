@@ -179,6 +179,7 @@ export function ProductsGrid() {
         materialen={materialen.items}
         maten={maten.items}
         materiaalsoorten={materiaalsoorten.items}
+        kunstenaars={kunstenaars.items}
         onClose={() => setSelectedKunstwerk(null)}
       />
     </>

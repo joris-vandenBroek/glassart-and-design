@@ -87,7 +87,9 @@
     "customSizeMaxError": "This size is too large. Maximum {maxBreedte}×{maxHoogte} cm.",
     "customSizeLeadTime": "Note: this size has a lead time of at least {months, plural, one {# month} other {# months}}.",
     "priceOnRequest": "Price on request",
-    "customSizeNote": "{count, plural, one {+ # item, price to follow after quote} other {+ # items, price to follow after quote}}"
+    "customSizeNote": "{count, plural, one {+ # item, price to follow after quote} other {+ # items, price to follow after quote}}",
+    "orderBlockedExclusive": "This artwork is exclusively reserved for another customer.",
+    "orderBlockedArtistOnly": "This artwork can only be ordered by the artist themselves."
   },
   "contactPage": {
     "title": "Contact",

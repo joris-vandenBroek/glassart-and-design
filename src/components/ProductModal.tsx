@@ -10,6 +10,7 @@ import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving
 import { formatCurrency } from '@/lib/formatCurrency';
 import { WatermarkedImage } from './WatermarkedImage';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from './beheer/materiaalTypes';
+import type { Kunstenaar } from './beheer/kunstenaarTypes';
 
 const CONFIRM_FEEDBACK_MS = 600;
 const CUSTOM_MAAT_VALUE = '__eigen_maat__';
@@ -36,10 +37,11 @@ interface ProductModalProps {
   materialen: Materiaal[] | null;
   maten: Maat[] | null;
   materiaalsoorten: Materiaalsoort[] | null;
+  kunstenaars: Kunstenaar[] | null;
   onClose: () => void;
 }
 
-export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, onClose }: ProductModalProps) {
+export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, kunstenaars, onClose }: ProductModalProps) {
   const t = useTranslations('cart');
   const locale = useLocale();
   const [materiaalId, setMateriaalId] = useState('');
@@ -87,6 +89,15 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
   if (!kunstwerk) {
     return null;
   }
+
+  const kunstenaar = kunstwerk.kunstenaarId
+    ? (kunstenaars ?? []).find((item) => item.id === kunstwerk.kunstenaarId) ?? null
+    : null;
+  const isOwnArtwork = kunstenaar?.klantId != null && kunstenaar.klantId === user?.uid;
+  const isExclusiveToOther = kunstenaar?.exclusiefVoorKlantId != null && kunstenaar.exclusiefVoorKlantId !== user?.uid;
+  const isArtistOnlyForOthers = kunstenaar?.verkooprecht === 'alleen-kunstenaar' && !isOwnArtwork;
+  const canOrder = !kunstenaar || isOwnArtwork || (!isExclusiveToOther && !isArtistOnlyForOthers);
+  const blockedReason: 'exclusive' | 'artistOnly' | null = canOrder ? null : isExclusiveToOther ? 'exclusive' : 'artistOnly';
 
   const beschikbareMaterialen = (materialen ?? []).filter((materiaal) =>
     kunstwerk.materiaalIds.includes(materiaal.id)
@@ -318,11 +329,16 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, o
               </button>
             </div>
           </div>
+          {blockedReason && (
+            <p data-testid="product-modal-order-blocked" className="text-xs text-amber-400">
+              {blockedReason === 'exclusive' ? t('orderBlockedExclusive') : t('orderBlockedArtistOnly')}
+            </p>
+          )}
           <button
             type="button"
             data-testid="product-modal-confirm"
             onClick={handleConfirm}
-            disabled={isConfirmed || !canConfirm}
+            disabled={isConfirmed || !canConfirm || !canOrder}
             className={`rounded-sm px-4 py-2.5 text-xs tracking-[0.15em] transition disabled:opacity-40 ${
               isConfirmed ? 'cursor-default bg-green-500 text-white' : 'btn-gold'
             }`}

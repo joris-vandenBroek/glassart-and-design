@@ -87,7 +87,9 @@
     "customSizeMaxError": "Deze maat is te groot. Maximaal {maxBreedte}×{maxHoogte} cm.",
     "customSizeLeadTime": "Let op: bij deze maat is de levertijd minimaal {months, plural, one {# maand} other {# maanden}}.",
     "priceOnRequest": "Prijs op aanvraag",
-    "customSizeNote": "{count, plural, one {+ # artikel, prijs volgt na offerte} other {+ # artikelen, prijs volgt na offerte}}"
+    "customSizeNote": "{count, plural, one {+ # artikel, prijs volgt na offerte} other {+ # artikelen, prijs volgt na offerte}}",
+    "orderBlockedExclusive": "Dit kunstwerk is exclusief voorbehouden aan een andere klant.",
+    "orderBlockedArtistOnly": "Dit kunstwerk kan alleen door de kunstenaar zelf besteld worden."
   },
   "contactPage": {
     "title": "Contact",
