@@ -77,23 +77,33 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Bestelling
   const onBestellingUpdated = vi.fn();
   const onLinePrijsVastgesteld = vi.fn();
   const onLineUpdated = vi.fn();
-  render(
-    <NextIntlClientProvider locale="nl" messages={messages}>
-      <BestellingenSection
-        bestellingen={BESTELLINGEN}
-        kunstwerken={KUNSTWERKEN}
-        materialen={MATERIALEN}
-        maten={MATEN}
-        materiaalsoorten={MATERIAALSOORTEN}
-        loadError={null}
-        onBestellingUpdated={onBestellingUpdated}
-        onLinePrijsVastgesteld={onLinePrijsVastgesteld}
-        onLineUpdated={onLineUpdated}
-        {...overrides}
-      />
-    </NextIntlClientProvider>
-  );
-  return { onBestellingUpdated, onLinePrijsVastgesteld, onLineUpdated };
+
+  function element(props: Partial<React.ComponentProps<typeof BestellingenSection>>) {
+    return (
+      <NextIntlClientProvider locale="nl" messages={messages}>
+        <BestellingenSection
+          bestellingen={BESTELLINGEN}
+          kunstwerken={KUNSTWERKEN}
+          materialen={MATERIALEN}
+          maten={MATEN}
+          materiaalsoorten={MATERIAALSOORTEN}
+          klanten={[]}
+          drukkers={[]}
+          loadError={null}
+          onBestellingUpdated={onBestellingUpdated}
+          onLinePrijsVastgesteld={onLinePrijsVastgesteld}
+          onLineUpdated={onLineUpdated}
+          {...props}
+        />
+      </NextIntlClientProvider>
+    );
+  }
+
+  const { rerender: rtlRerender } = render(element(overrides));
+  function rerender(bestellingen: Bestelling[]) {
+    rtlRerender(element({ bestellingen }));
+  }
+  return { onBestellingUpdated, onLinePrijsVastgesteld, onLineUpdated, rerender };
 }
 
 beforeEach(() => {
@@ -164,5 +174,48 @@ describe('BestellingenSection', () => {
     await waitFor(() => expect(onLinePrijsVastgesteld).toHaveBeenCalledWith('header-1', 'line-3', 275));
     expect(screen.getByTestId('bestelling-modal')).toBeInTheDocument();
     expect(screen.getByTestId('bestelling-modal-line-line-3')).toHaveTextContent('€ 275,00');
+  });
+
+  describe('bulk selection', () => {
+    it('shows a checkbox only for bestellingen with status "Te versturen naar drukker"', () => {
+      const bestellingen = [
+        { ...BESTELLINGEN[0], status: 'Te versturen naar drukker' as const },
+        BESTELLINGEN[1],
+      ];
+      renderSection({ bestellingen });
+      fireEvent.click(screen.getByTestId('data-table-quick-all'));
+      expect(screen.getByTestId('data-table-row-select-header-1')).toBeInTheDocument();
+      expect(screen.queryByTestId('data-table-row-select-header-2')).not.toBeInTheDocument();
+    });
+
+    it('shows the selection bar with a count once a bestelling is selected, and hides it when deselected', () => {
+      const bestellingen = [{ ...BESTELLINGEN[0], status: 'Te versturen naar drukker' as const }];
+      renderSection({ bestellingen });
+      expect(screen.queryByTestId('bestellingen-selectie-balk')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByTestId('data-table-row-select-header-1'));
+      expect(screen.getByTestId('bestellingen-selectie-balk')).toHaveTextContent('1 bestellingen geselecteerd (1 klanten)');
+      fireEvent.click(screen.getByTestId('data-table-row-select-header-1'));
+      expect(screen.queryByTestId('bestellingen-selectie-balk')).not.toBeInTheDocument();
+    });
+
+    it('counts distinct klanten in the selection bar', () => {
+      const bestellingen = [
+        { ...BESTELLINGEN[0], status: 'Te versturen naar drukker' as const },
+        { ...BESTELLINGEN[1], id: 'header-3', status: 'Te versturen naar drukker' as const },
+      ];
+      renderSection({ bestellingen });
+      fireEvent.click(screen.getByTestId('data-table-row-select-header-1'));
+      fireEvent.click(screen.getByTestId('data-table-row-select-header-3'));
+      expect(screen.getByTestId('bestellingen-selectie-balk')).toHaveTextContent('2 bestellingen geselecteerd (2 klanten)');
+    });
+
+    it('clears the selection when the underlying bestellingen list changes to no longer include a selected id', () => {
+      const bestellingen = [{ ...BESTELLINGEN[0], status: 'Te versturen naar drukker' as const }];
+      const { rerender } = renderSection({ bestellingen });
+      fireEvent.click(screen.getByTestId('data-table-row-select-header-1'));
+      expect(screen.getByTestId('bestellingen-selectie-balk')).toBeInTheDocument();
+      rerender(bestellingen.map((b) => ({ ...b, status: 'Verstuurd naar drukker' as const })));
+      expect(screen.queryByTestId('bestellingen-selectie-balk')).not.toBeInTheDocument();
+    });
   });
 });

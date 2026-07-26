@@ -290,6 +290,8 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             materialen={materialen.items}
             maten={maten.items}
             materiaalsoorten={materiaalsoorten.items}
+            klanten={klanten}
+            drukkers={drukkers.items}
             loadError={bestellingenLoadError}
             onBestellingUpdated={handleBestellingUpdated}
             onLinePrijsVastgesteld={handleLinePrijsVastgesteld}

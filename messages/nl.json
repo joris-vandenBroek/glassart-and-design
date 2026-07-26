@@ -397,6 +397,8 @@
     "bestellingenAfwijzen": "Afwijzen",
     "bestellingenQuickTeVersturenNaarDrukker": "Te versturen naar drukker",
     "bestellingenQuickAlle": "Alle bestellingen",
+    "bestellingenGeselecteerd": "{count} bestellingen geselecteerd ({klanten} klanten)",
+    "bestellingenVersturenNaarDrukker": "Versturen naar drukker",
     "navSegmenten": "Segmenten",
     "segmentenLoadError": "Kon de segmenten niet laden. Probeer de pagina te verversen.",
     "segmentenActionError": "Er is iets misgegaan. Probeer het opnieuw.",
