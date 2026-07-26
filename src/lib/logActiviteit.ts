@@ -55,7 +55,11 @@ export interface ActiviteitActor {
 
 export const ONBEKENDE_ACTOR: ActiviteitActor = { id: null, email: 'Onbekend', naam: 'Onbekend' };
 
-export async function logActiviteit(type: ActiviteitType, actor: ActiviteitActor): Promise<void> {
+export async function logActiviteit(
+  type: ActiviteitType,
+  actor: ActiviteitActor,
+  omschrijving?: string
+): Promise<void> {
   try {
     await addDoc(collection(db, 'activiteitenlog'), {
       type,
@@ -63,6 +67,7 @@ export async function logActiviteit(type: ActiviteitType, actor: ActiviteitActor
       actorEmail: actor.email,
       actorNaam: actor.naam,
       timestamp: serverTimestamp(),
+      ...(omschrijving ? { omschrijving } : {}),
     });
   } catch {
     // Fire-and-forget: a failed log write must never block or surface an
