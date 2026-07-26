@@ -1,6 +1,17 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function magKunstwerkBestellen(kunstwerkId, klantUid) {
+      let kw = get(/databases/$(database)/documents/kunstwerken/$(kunstwerkId)).data;
+      return !('kunstenaarId' in kw) || kw.kunstenaarId == null ||
+        magKunstenaarBestellen(kw.kunstenaarId, klantUid);
+    }
+    function magKunstenaarBestellen(kunstenaarId, klantUid) {
+      let ka = get(/databases/$(database)/documents/kunstenaars/$(kunstenaarId)).data;
+      return (ka.verkooprecht == 'open' && ka.exclusiefVoorKlantId == null) ||
+        ka.exclusiefVoorKlantId == klantUid ||
+        ka.klantId == klantUid;
+    }
     match /medewerkers/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow write: if false;
@@ -87,7 +98,8 @@ service cloud.firestore {
           request.resource.data.maatId is string &&
           request.resource.data.materiaalId is string && request.resource.data.materiaalId.size() > 0 &&
           (request.resource.data.prijs == null || (request.resource.data.prijs is number && request.resource.data.prijs > 0)) &&
-          request.resource.data.quantity is int && request.resource.data.quantity > 0;
+          request.resource.data.quantity is int && request.resource.data.quantity > 0 &&
+          magKunstwerkBestellen(request.resource.data.kunstwerkId, request.auth.uid);
         allow read: if request.auth != null &&
           (request.auth.uid == get(/databases/$(database)/documents/bestelheaders/$(id)).data.klantId ||
            exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid)));
