@@ -5,7 +5,7 @@ export const pageAvailability = {
   collecties: false,
   wordKlant: false,
   inloggen: false,
-  beheer: false,
+  beheer: true,
   account: false,
   contact: false,
 };

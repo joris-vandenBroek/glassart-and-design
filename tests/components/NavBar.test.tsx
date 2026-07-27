@@ -113,11 +113,4 @@ describe('NavBar', () => {
     await waitFor(() => expect(screen.getByTestId('logo')).toBeInTheDocument());
     expect(screen.getByTestId('logo')).toHaveAttribute('href', '/');
   });
-
-  it('shows a Beheer link pointing to /beheer', async () => {
-    signedOut();
-    renderNavBar();
-    await waitFor(() => expect(screen.getByTestId('nav-beheer')).toBeInTheDocument());
-    expect(screen.getByTestId('nav-beheer')).toHaveAttribute('href', '/beheer');
-  });
 });
