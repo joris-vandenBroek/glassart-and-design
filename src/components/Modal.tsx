@@ -44,7 +44,7 @@ export function Modal({ isOpen, onClose, closeLabel, children, wide = false, tit
       />
       <div
         className={`relative z-10 max-h-[85vh] w-full overflow-y-auto rounded-lg border border-white/10 bg-charcoal p-6 ${
-          wide ? 'max-w-6xl' : 'max-w-lg'
+          wide ? 'max-w-[1400px]' : 'max-w-lg'
         }`}
       >
         <button
