@@ -107,29 +107,6 @@ export function KlantModal({
     setIsEditing(false);
   }
 
-  async function handleOpslaanVelden() {
-    if (!klant || !fields) return;
-    try {
-      await updateDoc(doc(db, 'klanten', klant.id), { ...fields });
-      void logActiviteit('klant_gewijzigd', actorFromMedewerker(user), klant.companyName);
-      onUpdated({ ...klant, ...fields });
-      setIsEditing(false);
-    } catch {
-      setError(t('klantenActionError'));
-    }
-  }
-
-  async function handleOpslaanPrijsgroep() {
-    if (!klant) return;
-    try {
-      await updateDoc(doc(db, 'klanten', klant.id), { prijsgroepId });
-      void logActiviteit('klant_prijsgroep_gewijzigd', actorFromMedewerker(user), klant.companyName);
-      onUpdated({ ...klant, prijsgroepId });
-    } catch {
-      setError(t('klantenActionError'));
-    }
-  }
-
   function toggle(list: string[], id: string): string[] {
     return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
   }
@@ -145,45 +122,69 @@ export function KlantModal({
     setExclusieveKunstenaarIds((current) => toggle(current, kunstenaarId));
   }
 
-  async function handleOpslaanExclusiviteit() {
-    if (!klant) return;
+  async function handleOpslaan() {
+    if (!klant || !fields) return;
+    setError(null);
+
+    const origineleFields = fieldsFromKlant(klant);
+    const veldenGewijzigd =
+      isEditing && (Object.keys(origineleFields) as (keyof EditableFields)[]).some((key) => fields[key] !== origineleFields[key]);
+    const prijsgroepGewijzigd =
+      klant.status === 'Goedgekeurd' && prijsgroepId !== '' && prijsgroepId !== (klant.prijsgroepId ?? '');
+    const exclusiviteitGewijzigd =
+      exclusieveKunstenaarIds.length !== klant.exclusieveKunstenaarIds.length ||
+      exclusieveKunstenaarIds.some((id) => !klant.exclusieveKunstenaarIds.includes(id));
+    const trimmedMinimaleAfname = minimaleAfname.trim();
+    const parsedMinimaleAfname =
+      trimmedMinimaleAfname === '' ? null : Math.max(1, Math.round(Number(trimmedMinimaleAfname)) || 1);
+    const minimaleAfnameGewijzigd = parsedMinimaleAfname !== (klant.minimaleAfname ?? null);
+
+    if (!veldenGewijzigd && !prijsgroepGewijzigd && !exclusiviteitGewijzigd && !minimaleAfnameGewijzigd) {
+      setIsEditing(false);
+      return;
+    }
+
     try {
-      const added = exclusieveKunstenaarIds.filter((id) => !klant.exclusieveKunstenaarIds.includes(id));
-      const removed = klant.exclusieveKunstenaarIds.filter((id) => !exclusieveKunstenaarIds.includes(id));
       // Eerst de back-pointers op de kunstenaars, dán pas het klantdocument. Alleen
       // `Kunstenaar.exclusiefVoorKlantId` wordt door de Firestore-regels en de winkel-UI
       // gelezen; `Klant.exclusieveKunstenaarIds` is puur administratief. Faalt een
       // back-pointer halverwege, dan stoppen we met het klantdocument ONGEWIJZIGD in
       // plaats van met een klant die een niet-gehandhaafde exclusiviteit claimt.
-      for (const id of added) {
-        if (!(await onKunstenaarUpdated(id, { exclusiefVoorKlantId: klant.id }))) {
-          setError(t('klantenActionError'));
-          return;
+      if (exclusiviteitGewijzigd) {
+        const added = exclusieveKunstenaarIds.filter((id) => !klant.exclusieveKunstenaarIds.includes(id));
+        const removed = klant.exclusieveKunstenaarIds.filter((id) => !exclusieveKunstenaarIds.includes(id));
+        for (const id of added) {
+          if (!(await onKunstenaarUpdated(id, { exclusiefVoorKlantId: klant.id }))) {
+            setError(t('klantenActionError'));
+            return;
+          }
+        }
+        for (const id of removed) {
+          if (!(await onKunstenaarUpdated(id, { exclusiefVoorKlantId: null }))) {
+            setError(t('klantenActionError'));
+            return;
+          }
         }
       }
-      for (const id of removed) {
-        if (!(await onKunstenaarUpdated(id, { exclusiefVoorKlantId: null }))) {
-          setError(t('klantenActionError'));
-          return;
-        }
-      }
-      await updateDoc(doc(db, 'klanten', klant.id), { exclusieveKunstenaarIds });
-      void logActiviteit('klant_exclusiviteit_gewijzigd', actorFromMedewerker(user), klant.companyName);
-      onUpdated({ ...klant, exclusieveKunstenaarIds });
-    } catch {
-      setError(t('klantenActionError'));
-    }
-  }
 
-  async function handleOpslaanMinimaleAfname() {
-    if (!klant) return;
-    const trimmed = minimaleAfname.trim();
-    const parsed = trimmed === '' ? null : Math.max(1, Math.round(Number(trimmed)) || 1);
-    try {
-      await updateDoc(doc(db, 'klanten', klant.id), { minimaleAfname: parsed });
-      void logActiviteit('klant_minimale_afname_gewijzigd', actorFromMedewerker(user), klant.companyName);
-      onUpdated({ ...klant, minimaleAfname: parsed });
-      setMinimaleAfname(parsed != null ? String(parsed) : '');
+      const updates: Partial<Klant> = {};
+      if (veldenGewijzigd) Object.assign(updates, fields);
+      if (prijsgroepGewijzigd) updates.prijsgroepId = prijsgroepId;
+      if (exclusiviteitGewijzigd) updates.exclusieveKunstenaarIds = exclusieveKunstenaarIds;
+      if (minimaleAfnameGewijzigd) updates.minimaleAfname = parsedMinimaleAfname;
+
+      await updateDoc(doc(db, 'klanten', klant.id), updates);
+
+      if (veldenGewijzigd) void logActiviteit('klant_gewijzigd', actorFromMedewerker(user), klant.companyName);
+      if (prijsgroepGewijzigd) void logActiviteit('klant_prijsgroep_gewijzigd', actorFromMedewerker(user), klant.companyName);
+      if (exclusiviteitGewijzigd) void logActiviteit('klant_exclusiviteit_gewijzigd', actorFromMedewerker(user), klant.companyName);
+      if (minimaleAfnameGewijzigd) void logActiviteit('klant_minimale_afname_gewijzigd', actorFromMedewerker(user), klant.companyName);
+
+      onUpdated({ ...klant, ...updates });
+      if (minimaleAfnameGewijzigd) {
+        setMinimaleAfname(parsedMinimaleAfname != null ? String(parsedMinimaleAfname) : '');
+      }
+      setIsEditing(false);
     } catch {
       setError(t('klantenActionError'));
     }
@@ -232,7 +233,7 @@ export function KlantModal({
                 type="button"
                 onClick={handleBewerken}
                 data-testid="klant-modal-bewerken"
-                className="rounded-sm border border-white/20 px-3 py-1.5 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-3 py-1.5 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
               >
                 {t('bewerken')}
               </button>
@@ -387,17 +388,9 @@ export function KlantModal({
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={handleOpslaanVelden}
-                data-testid="klant-modal-velden-opslaan"
-                className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
-              >
-                {t('klantenOpslaan')}
-              </button>
-              <button
-                type="button"
                 onClick={handleAnnuleren}
                 data-testid="klant-modal-annuleren"
-                className="rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
               >
                 {t('annuleren')}
               </button>
@@ -423,17 +416,6 @@ export function KlantModal({
                 ))}
               </select>
             </label>
-            {klant.status === 'Goedgekeurd' && (
-              <button
-                type="button"
-                onClick={handleOpslaanPrijsgroep}
-                disabled={!prijsgroepId}
-                data-testid="klant-modal-prijsgroep-opslaan"
-                className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
-              >
-                {t('klantenOpslaan')}
-              </button>
-            )}
           </div>
 
           <fieldset className="flex flex-col gap-1">
@@ -452,14 +434,6 @@ export function KlantModal({
               </label>
             ))}
           </fieldset>
-          <button
-            type="button"
-            onClick={handleOpslaanExclusiviteit}
-            data-testid="klant-modal-exclusiviteit-opslaan"
-            className="w-fit rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
-          >
-            {t('klantenOpslaan')}
-          </button>
 
           <div className="flex items-end gap-2">
             <label className="flex flex-1 flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
@@ -473,15 +447,16 @@ export function KlantModal({
                 className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
               />
             </label>
-            <button
-              type="button"
-              onClick={handleOpslaanMinimaleAfname}
-              data-testid="klant-modal-minimale-afname-opslaan"
-              className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
-            >
-              {t('klantenOpslaan')}
-            </button>
           </div>
+
+          <button
+            type="button"
+            onClick={handleOpslaan}
+            data-testid="klant-modal-opslaan"
+            className="btn-beheer-primary w-fit rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+          >
+            {t('klantenOpslaan')}
+          </button>
 
           {error && (
             <p data-testid="klant-modal-error" className="text-xs text-red-400">
@@ -497,7 +472,7 @@ export function KlantModal({
                   onClick={handleGoedkeuren}
                   disabled={!prijsgroepId}
                   data-testid="klant-modal-goedkeuren"
-                  className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+                  className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
                 >
                   {t('klantenGoedkeuren')}
                 </button>
@@ -506,7 +481,7 @@ export function KlantModal({
                 type="button"
                 onClick={handleAfwijzen}
                 data-testid="klant-modal-afwijzen"
-                className="rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
               >
                 {t('klantenAfwijzen')}
               </button>

@@ -155,7 +155,7 @@ export function BestellingenSection({
             type="button"
             onClick={() => setShowVersturenDialog(true)}
             data-testid="bestellingen-versturen-naar-drukker"
-            className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+            className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
           >
             {t('bestellingenVersturenNaarDrukker')}
           </button>

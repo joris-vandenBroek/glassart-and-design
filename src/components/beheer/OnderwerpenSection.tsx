@@ -90,7 +90,7 @@ export function OnderwerpenSection({ onderwerpen, loadError, onAdd, onUpdate, on
           type="button"
           onClick={openAdd}
           data-testid="onderwerpen-add"
-          className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+          className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
         >
           {t('onderwerpenToevoegen')}
         </button>
@@ -128,7 +128,7 @@ export function OnderwerpenSection({ onderwerpen, loadError, onAdd, onUpdate, on
               onClick={handleSave}
               disabled={!omschrijving}
               data-testid="onderwerp-modal-opslaan"
-              className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
             >
               {t('onderwerpenOpslaan')}
             </button>
@@ -137,7 +137,7 @@ export function OnderwerpenSection({ onderwerpen, loadError, onAdd, onUpdate, on
                 type="button"
                 onClick={handleRemove}
                 data-testid="onderwerp-modal-verwijderen"
-                className="rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
               >
                 {t('onderwerpenVerwijderen')}
               </button>

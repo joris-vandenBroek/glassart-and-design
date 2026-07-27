@@ -105,7 +105,7 @@ export function MatenSection({ maten, kunstwerken, loadError, onAdd, onUpdate, o
           type="button"
           onClick={openAdd}
           data-testid="maten-add"
-          className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+          className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
         >
           {t('matenToevoegen')}
         </button>
@@ -153,7 +153,7 @@ export function MatenSection({ maten, kunstwerken, loadError, onAdd, onUpdate, o
               onClick={handleSave}
               disabled={!breedte || !hoogte || Number(breedte) <= 0 || Number(hoogte) <= 0}
               data-testid="maat-modal-opslaan"
-              className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
             >
               {t('matenOpslaan')}
             </button>
@@ -162,7 +162,7 @@ export function MatenSection({ maten, kunstwerken, loadError, onAdd, onUpdate, o
                 type="button"
                 onClick={handleRemove}
                 data-testid="maat-modal-verwijderen"
-                className="rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
               >
                 {t('matenVerwijderen')}
               </button>

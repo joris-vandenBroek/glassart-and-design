@@ -76,7 +76,7 @@ export function InstellingenSection({ bestelinstellingen, loadError, onSave }: I
         type="button"
         onClick={handleSave}
         data-testid="instellingen-opslaan"
-        className="self-start rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+        className="self-start btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
       >
         {t('instellingenOpslaan')}
       </button>

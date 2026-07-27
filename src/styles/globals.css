@@ -17,6 +17,14 @@ body {
   .badge-gold {
     @apply rounded-full border border-gold/30 bg-gold/10 px-2 py-1 font-head text-[0.6rem] uppercase tracking-wide text-gold;
   }
+
+  .btn-beheer-primary {
+    @apply transition duration-150 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(226,228,232,0.25)] disabled:pointer-events-none;
+  }
+
+  .btn-beheer-secondary {
+    @apply transition duration-150 hover:-translate-y-0.5 disabled:pointer-events-none;
+  }
 }
 
 /* This project's Tailwind config uses the classic @tailwind directives with

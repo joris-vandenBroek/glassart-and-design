@@ -91,7 +91,7 @@ export function SegmentenSection({ segmenten, loadError, onAdd, onUpdate, onRemo
           type="button"
           onClick={openAdd}
           data-testid="segmenten-add"
-          className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+          className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
         >
           {t('segmentenToevoegen')}
         </button>
@@ -129,7 +129,7 @@ export function SegmentenSection({ segmenten, loadError, onAdd, onUpdate, onRemo
               onClick={handleSave}
               disabled={!omschrijving}
               data-testid="segment-modal-opslaan"
-              className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
             >
               {t('segmentenOpslaan')}
             </button>
@@ -138,7 +138,7 @@ export function SegmentenSection({ segmenten, loadError, onAdd, onUpdate, onRemo
                 type="button"
                 onClick={handleRemove}
                 data-testid="segment-modal-verwijderen"
-                className="rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
               >
                 {t('segmentenVerwijderen')}
               </button>

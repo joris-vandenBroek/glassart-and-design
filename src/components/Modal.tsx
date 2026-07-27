@@ -2,6 +2,7 @@
 
 import { useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslations } from 'next-intl';
 import { useOverlayDismiss } from '@/lib/useOverlayDismiss';
 
 interface ModalProps {
@@ -15,6 +16,7 @@ interface ModalProps {
 }
 
 export function Modal({ isOpen, onClose, closeLabel, children, wide = false, title, subtitle }: ModalProps) {
+  const t = useTranslations('modal');
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -64,6 +66,17 @@ export function Modal({ isOpen, onClose, closeLabel, children, wide = false, tit
           </div>
         )}
         {children}
+        <div className="mt-4 flex justify-end border-t border-white/10 pt-4">
+          <button
+            type="button"
+            data-testid="modal-footer-close"
+            onClick={onClose}
+            title={t('closeTooltip')}
+            className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+          >
+            {closeLabel}
+          </button>
+        </div>
       </div>
     </div>,
     document.body

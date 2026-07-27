@@ -178,7 +178,7 @@ export function GlassartDesignSection({ bedrijfsgegevens, loadError, onSave }: G
           type="button"
           onClick={addContactpersoon}
           data-testid="glassart-design-contactpersoon-toevoegen"
-          className="mt-3 rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+          className="mt-3 btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
         >
           {t('glassartDesignContactpersoonToevoegen')}
         </button>
@@ -262,7 +262,7 @@ export function GlassartDesignSection({ bedrijfsgegevens, loadError, onSave }: G
         type="button"
         onClick={handleSave}
         data-testid="glassart-design-opslaan"
-        className="self-start rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+        className="self-start btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
       >
         {t('glassartDesignOpslaan')}
       </button>

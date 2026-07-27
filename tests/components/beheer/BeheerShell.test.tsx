@@ -359,7 +359,7 @@ describe('BeheerShell', () => {
       renderShell();
       fireEvent.click(await screen.findByTestId('data-table-row-uid-1'));
       fireEvent.click(await screen.findByTestId('klant-modal-exclusief-ka-1'));
-      fireEvent.click(screen.getByTestId('klant-modal-exclusiviteit-opslaan'));
+      fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
     }
 
     function kunstenaarUpdateCall() {

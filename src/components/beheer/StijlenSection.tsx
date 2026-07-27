@@ -85,7 +85,7 @@ export function StijlenSection({ stijlen, loadError, onAdd, onUpdate, onRemove }
           type="button"
           onClick={openAdd}
           data-testid="stijlen-add"
-          className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+          className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
         >
           {t('stijlenToevoegen')}
         </button>
@@ -123,7 +123,7 @@ export function StijlenSection({ stijlen, loadError, onAdd, onUpdate, onRemove }
               onClick={handleSave}
               disabled={!omschrijving}
               data-testid="stijl-modal-opslaan"
-              className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
             >
               {t('stijlenOpslaan')}
             </button>
@@ -132,7 +132,7 @@ export function StijlenSection({ stijlen, loadError, onAdd, onUpdate, onRemove }
                 type="button"
                 onClick={handleRemove}
                 data-testid="stijl-modal-verwijderen"
-                className="rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
               >
                 {t('stijlenVerwijderen')}
               </button>

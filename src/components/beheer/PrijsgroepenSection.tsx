@@ -110,7 +110,7 @@ export function PrijsgroepenSection({
           type="button"
           onClick={openAdd}
           data-testid="prijsgroepen-add"
-          className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+          className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
         >
           {t('prijsgroepenToevoegen')}
         </button>
@@ -158,7 +158,7 @@ export function PrijsgroepenSection({
               onClick={handleSave}
               disabled={!naam}
               data-testid="prijsgroep-modal-opslaan"
-              className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
             >
               {t('prijsgroepenOpslaan')}
             </button>
@@ -167,7 +167,7 @@ export function PrijsgroepenSection({
                 type="button"
                 onClick={handleRemove}
                 data-testid="prijsgroep-modal-verwijderen"
-                className="rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
               >
                 {t('prijsgroepenVerwijderen')}
               </button>

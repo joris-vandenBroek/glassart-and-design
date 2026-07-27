@@ -129,7 +129,7 @@ export function MaterialenSection({
           type="button"
           onClick={openAdd}
           data-testid="materialen-add"
-          className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+          className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
         >
           {t('materialenToevoegen')}
         </button>
@@ -192,7 +192,7 @@ export function MaterialenSection({
               onClick={handleSave}
               disabled={!materiaalsoortId || materiaaldikte === '' || !omschrijving}
               data-testid="materiaal-modal-opslaan"
-              className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
             >
               {t('materialenOpslaan')}
             </button>
@@ -201,7 +201,7 @@ export function MaterialenSection({
                 type="button"
                 onClick={handleRemove}
                 data-testid="materiaal-modal-verwijderen"
-                className="rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
               >
                 {t('materialenVerwijderen')}
               </button>

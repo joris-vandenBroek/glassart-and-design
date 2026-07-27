@@ -45,7 +45,7 @@ export function DrukkersSection({ drukkers, loadError, onAdd, onUpdate, onRemove
           type="button"
           onClick={() => setModalState({ mode: 'add' })}
           data-testid="drukkers-add"
-          className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+          className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
         >
           {t('drukkersToevoegen')}
         </button>

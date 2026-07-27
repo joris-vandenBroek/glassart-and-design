@@ -161,7 +161,7 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
             onClick={handleSave}
             disabled={!fields.naam || !fields.email}
             data-testid="drukker-modal-opslaan"
-            className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+            className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
           >
             {t('drukkersOpslaan')}
           </button>
@@ -171,7 +171,7 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
               onClick={handleRemove}
               disabled={zendingen === null}
               data-testid="drukker-modal-verwijderen"
-              className="rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+              className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
             >
               {t('drukkersVerwijderen')}
             </button>

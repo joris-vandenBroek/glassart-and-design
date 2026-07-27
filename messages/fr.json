@@ -266,5 +266,8 @@
       "deleteAccountError": "Mot de passe incorrect, compte non supprimé.",
       "deleteAccountPartialError": "Vos données ont été supprimées, mais un problème est survenu lors de la suppression complète de votre compte. Veuillez nous contacter."
     }
+  },
+  "modal": {
+    "closeTooltip": "Fermez cet écran, les modifications éventuelles ne seront pas enregistrées !"
   }
 }

@@ -296,5 +296,8 @@
       "deleteAccountError": "Incorrect password, account not deleted.",
       "deleteAccountPartialError": "Your data has been deleted, but something went wrong completing account deletion. Please contact us."
     }
+  },
+  "modal": {
+    "closeTooltip": "Close this screen, any changes will not be saved!"
   }
 }

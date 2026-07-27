@@ -261,7 +261,7 @@ export function BestellingModal({
                                 data-testid={`bestelling-modal-prijs-vaststellen-${line.id}`}
                                 onClick={() => handlePrijsVaststellen(line)}
                                 disabled={!prijsDrafts[line.id] || Number(prijsDrafts[line.id]) <= 0}
-                                className="rounded-sm border border-white/20 px-2 py-1 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
+                                className="btn-beheer-secondary rounded-sm border border-white/20 px-2 py-1 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
                               >
                                 {t('bestellingenModalPrijsVaststellen')}
                               </button>
@@ -374,7 +374,7 @@ export function BestellingModal({
                               type="button"
                               onClick={() => handleOpslaanRegel(line)}
                               data-testid={`bestelling-modal-regel-opslaan-${line.id}`}
-                              className="rounded-sm bg-silver px-3 py-1.5 text-xs tracking-wide text-ink"
+                              className="btn-beheer-primary rounded-sm bg-silver px-3 py-1.5 text-xs tracking-wide text-ink"
                             >
                               {t('bestellingenModalRegelOpslaan')}
                             </button>
@@ -382,7 +382,7 @@ export function BestellingModal({
                               type="button"
                               onClick={cancelEditRegel}
                               data-testid={`bestelling-modal-regel-annuleren-${line.id}`}
-                              className="rounded-sm border border-white/20 px-3 py-1.5 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                              className="btn-beheer-secondary rounded-sm border border-white/20 px-3 py-1.5 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
                             >
                               {t('annuleren')}
                             </button>
@@ -417,7 +417,7 @@ export function BestellingModal({
                 onClick={handleGoedkeuren}
                 disabled={heeftOngeprijsdeRegel}
                 data-testid="bestelling-modal-goedkeuren"
-                className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+                className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
               >
                 {t('bestellingenGoedkeuren')}
               </button>
@@ -425,7 +425,7 @@ export function BestellingModal({
                 type="button"
                 onClick={handleAfwijzen}
                 data-testid="bestelling-modal-afwijzen"
-                className="rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
               >
                 {t('bestellingenAfwijzen')}
               </button>

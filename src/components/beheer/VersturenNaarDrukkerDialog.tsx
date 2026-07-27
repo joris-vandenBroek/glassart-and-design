@@ -186,7 +186,7 @@ export function VersturenNaarDrukkerDialog({
             onClick={handleVersturen}
             disabled={isSending || !drukkerId || mailSent || heeftOntbrekendeKlantgegevens}
             data-testid="drukker-versturen-versturen"
-            className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+            className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
           >
             {t('drukkerVersturenVersturen')}
           </button>
@@ -195,7 +195,7 @@ export function VersturenNaarDrukkerDialog({
             onClick={handleDialogClose}
             disabled={isSending}
             data-testid="drukker-versturen-annuleren"
-            className="rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
+            className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
           >
             {t('annuleren')}
           </button>

@@ -140,12 +140,11 @@ describe('KlantModal', () => {
     expect(screen.getByTestId('klant-modal-afwijzen')).toBeInTheDocument();
   });
 
-  it('shows a prijsgroep Opslaan button once Goedgekeurd, and saves just the prijsgroep', async () => {
+  it('saves a changed prijsgroep via the single Opslaan button once Goedgekeurd', async () => {
     updateDocMock.mockResolvedValue(undefined);
     const { onUpdated } = renderModal({ ...KLANT, status: 'Goedgekeurd', prijsgroepId: 'pg-1' });
-    expect(screen.getByTestId('klant-modal-prijsgroep-opslaan')).toBeInTheDocument();
     fireEvent.change(screen.getByTestId('klant-modal-prijsgroep'), { target: { value: 'pg-2' } });
-    fireEvent.click(screen.getByTestId('klant-modal-prijsgroep-opslaan'));
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
 
     await waitFor(() =>
       expect(updateDocMock).toHaveBeenCalledWith(
@@ -167,9 +166,12 @@ describe('KlantModal', () => {
     );
   });
 
-  it('does not show the prijsgroep Opslaan button while still Beoordelen', () => {
+  it('does not persist a changed prijsgroep while still Beoordelen', async () => {
     renderModal({ ...KLANT, status: 'Beoordelen' });
-    expect(screen.queryByTestId('klant-modal-prijsgroep-opslaan')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('klant-modal-prijsgroep'), { target: { value: 'pg-2' } });
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(updateDocMock).not.toHaveBeenCalled();
   });
 
   it('pre-fills the minimale afname override input from klant.minimaleAfname', () => {
@@ -191,7 +193,7 @@ describe('KlantModal', () => {
     updateDocMock.mockResolvedValue(undefined);
     const { onUpdated } = renderModal({ ...KLANT, minimaleAfname: null });
     fireEvent.change(screen.getByTestId('klant-modal-minimale-afname'), { target: { value: '6' } });
-    fireEvent.click(screen.getByTestId('klant-modal-minimale-afname-opslaan'));
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
     await waitFor(() =>
       expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), { minimaleAfname: 6 })
     );
@@ -207,7 +209,7 @@ describe('KlantModal', () => {
     updateDocMock.mockResolvedValue(undefined);
     renderModal({ ...KLANT, minimaleAfname: 6 });
     fireEvent.change(screen.getByTestId('klant-modal-minimale-afname'), { target: { value: '' } });
-    fireEvent.click(screen.getByTestId('klant-modal-minimale-afname-opslaan'));
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
     await waitFor(() =>
       expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), { minimaleAfname: null })
     );
@@ -217,7 +219,7 @@ describe('KlantModal', () => {
     updateDocMock.mockResolvedValue(undefined);
     renderModal({ ...KLANT, minimaleAfname: null });
     fireEvent.change(screen.getByTestId('klant-modal-minimale-afname'), { target: { value: '0' } });
-    fireEvent.click(screen.getByTestId('klant-modal-minimale-afname-opslaan'));
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
     await waitFor(() =>
       expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), { minimaleAfname: 1 })
     );
@@ -236,7 +238,7 @@ describe('KlantModal', () => {
     const { onUpdated } = renderModal(KLANT);
     fireEvent.click(screen.getByTestId('klant-modal-bewerken'));
     fireEvent.change(screen.getByTestId('klant-modal-contactPerson'), { target: { value: 'Piet Pietersen' } });
-    fireEvent.click(screen.getByTestId('klant-modal-velden-opslaan'));
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
 
     await waitFor(() =>
       expect(updateDocMock).toHaveBeenCalledWith(
@@ -292,7 +294,7 @@ describe('KlantModal', () => {
     fireEvent.change(screen.getByTestId('klant-modal-invoiceAddress'), { target: { value: 'Factuurlaan 9' } });
     fireEvent.change(screen.getByTestId('klant-modal-invoicePostcode'), { target: { value: '9999 ZZ' } });
     fireEvent.change(screen.getByTestId('klant-modal-invoiceCity'), { target: { value: 'Factuurstad' } });
-    fireEvent.click(screen.getByTestId('klant-modal-velden-opslaan'));
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
 
     await waitFor(() =>
       expect(updateDocMock).toHaveBeenCalledWith(
@@ -415,7 +417,7 @@ describe('KlantModal', () => {
   it('toggles a kunstenaar checkbox on and saves exclusieveKunstenaarIds, updating the kunstenaar back-pointer', async () => {
     const { onUpdated, onKunstenaarUpdated } = renderModal(KLANT);
     fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-1'));
-    fireEvent.click(screen.getByTestId('klant-modal-exclusiviteit-opslaan'));
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
     await waitFor(() => expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), { exclusieveKunstenaarIds: ['ka-1'] }));
     // Plain payload: stripping/migrating prijsafspraken is the job of
     // BeheerShell.updateKunstenaarVeilig, which backs this prop.
@@ -442,7 +444,7 @@ describe('KlantModal', () => {
       { ...KUNSTENAARS[1], exclusiefVoorKlantId: 'uid-1' },
     ]);
     fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-2'));
-    fireEvent.click(screen.getByTestId('klant-modal-exclusiviteit-opslaan'));
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
     await waitFor(() => expect(onKunstenaarUpdated).toHaveBeenCalledWith('ka-2', { exclusiefVoorKlantId: null }));
   });
 
@@ -450,7 +452,7 @@ describe('KlantModal', () => {
     const onKunstenaarUpdated = vi.fn().mockResolvedValue(false);
     const { onUpdated } = renderModal(KLANT, PRIJSGROEPEN, KUNSTENAARS, onKunstenaarUpdated);
     fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-1'));
-    fireEvent.click(screen.getByTestId('klant-modal-exclusiviteit-opslaan'));
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
 
     expect(await screen.findByTestId('klant-modal-error')).toHaveTextContent(
       'Er is iets misgegaan. Probeer het opnieuw.'
@@ -466,7 +468,7 @@ describe('KlantModal', () => {
     const onKunstenaarUpdated = vi.fn().mockResolvedValue(true);
     renderModal(KLANT, PRIJSGROEPEN, KUNSTENAARS, onKunstenaarUpdated);
     fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-1'));
-    fireEvent.click(screen.getByTestId('klant-modal-exclusiviteit-opslaan'));
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
 
     await waitFor(() => expect(updateDocMock).toHaveBeenCalled());
     expect(onKunstenaarUpdated.mock.invocationCallOrder[0]).toBeLessThan(

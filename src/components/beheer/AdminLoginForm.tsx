@@ -74,7 +74,7 @@ export function AdminLoginForm() {
       <button
         type="submit"
         data-testid="beheer-login-submit"
-        className="mt-2 rounded-sm bg-silver px-4 py-2.5 text-xs tracking-[0.15em] text-ink"
+        className="btn-beheer-primary mt-2 rounded-sm bg-silver px-4 py-2.5 text-xs tracking-[0.15em] text-ink"
       >
         {t('submit')}
       </button>

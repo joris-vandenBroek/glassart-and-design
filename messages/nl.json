@@ -607,5 +607,8 @@
     "glassartDesignLabelOpeningstijdenDe": "Openingstijden (DE)",
     "glassartDesignLabelOpeningstijdenEn": "Openingstijden (EN)",
     "glassartDesignOpslaan": "Opslaan"
+  },
+  "modal": {
+    "closeTooltip": "Sluit dit scherm, eventuele wijzigingen worden niet opgeslagen!"
   }
 }

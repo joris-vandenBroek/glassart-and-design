@@ -301,7 +301,7 @@ export function KunstenaarsSection({
           type="button"
           onClick={openAdd}
           data-testid="kunstenaars-add"
-          className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+          className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
         >
           {t('kunstenaarsToevoegen')}
         </button>
@@ -454,7 +454,7 @@ export function KunstenaarsSection({
               onClick={handleSave}
               disabled={opslaanDisabled}
               data-testid="kunstenaar-modal-opslaan"
-              className="rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
             >
               {t('kunstenaarsOpslaan')}
             </button>
@@ -463,7 +463,7 @@ export function KunstenaarsSection({
                 type="button"
                 onClick={handleRemove}
                 data-testid="kunstenaar-modal-verwijderen"
-                className="rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
               >
                 {t('kunstenaarsVerwijderen')}
               </button>

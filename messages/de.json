@@ -266,5 +266,8 @@
       "deleteAccountError": "Falsches Passwort, Konto wurde nicht gelöscht.",
       "deleteAccountPartialError": "Ihre Daten wurden gelöscht, aber beim vollständigen Löschen Ihres Kontos ist etwas schiefgelaufen. Bitte kontaktieren Sie uns."
     }
+  },
+  "modal": {
+    "closeTooltip": "Schließen Sie dieses Fenster, etwaige Änderungen werden nicht gespeichert!"
   }
 }
