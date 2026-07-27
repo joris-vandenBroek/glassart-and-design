@@ -18,4 +18,10 @@ describe('StagingBanner', () => {
     render(<StagingBanner />);
     expect(screen.queryByTestId('staging-banner')).not.toBeInTheDocument();
   });
+
+  it('renders nothing when NEXT_PUBLIC_ENVIRONMENT_LABEL is a different value', () => {
+    vi.stubEnv('NEXT_PUBLIC_ENVIRONMENT_LABEL', 'production');
+    render(<StagingBanner />);
+    expect(screen.queryByTestId('staging-banner')).not.toBeInTheDocument();
+  });
 });
