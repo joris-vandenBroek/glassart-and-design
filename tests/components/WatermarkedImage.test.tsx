@@ -72,5 +72,25 @@ describe('WatermarkedImage', () => {
       expect(screen.queryByTestId('watermark-overlay')).not.toBeInTheDocument();
       expect(screen.queryByRole('img', { name: 'Een kunstwerk' })?.tagName).toBe('CANVAS');
     });
+
+    it('fills the contain-mode letterbox with white by default, or ink when fitBackground="ink" is set', async () => {
+      const fakeCtx = mockCanvasAndImage();
+      let fillStyleAtFillRect: string | undefined;
+      fakeCtx.fillRect = vi.fn(() => {
+        fillStyleAtFillRect = fakeCtx.fillStyle as string;
+      });
+
+      const { rerender } = render(
+        <WatermarkedImage src="https://example.com/foto.jpg" alt="Een kunstwerk" fit="contain" />
+      );
+      await waitFor(() => expect(fakeCtx.fillRect).toHaveBeenCalled());
+      expect(fillStyleAtFillRect).toBe('#ffffff');
+
+      fillStyleAtFillRect = undefined;
+      rerender(
+        <WatermarkedImage src="https://example.com/foto.jpg" alt="Een kunstwerk" fit="contain" fitBackground="ink" />
+      );
+      await waitFor(() => expect(fillStyleAtFillRect).toBe('#060607'));
+    });
   });
 });

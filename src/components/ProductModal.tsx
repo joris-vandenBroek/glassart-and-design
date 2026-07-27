@@ -264,6 +264,7 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, k
           src={kunstwerk.foto}
           alt={omschrijving}
           fit="contain"
+          fitBackground="ink"
           className="h-56 w-full border-b border-gold/50 bg-ink sm:h-full sm:border-b-0 sm:border-r"
         />
         <div className="flex flex-col gap-4 p-6">

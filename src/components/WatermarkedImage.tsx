@@ -7,11 +7,17 @@ export interface WatermarkedImageProps {
   alt: string;
   className?: string;
   fit?: 'cover' | 'contain';
+  fitBackground?: 'white' | 'ink';
 }
 
 const WATERMARK_TEXT = '© Glassart & Design';
 
-export function WatermarkedImage({ src, alt, className, fit = 'cover' }: WatermarkedImageProps) {
+const FIT_BACKGROUND_COLORS: Record<'white' | 'ink', string> = {
+  white: '#ffffff',
+  ink: '#060607',
+};
+
+export function WatermarkedImage({ src, alt, className, fit = 'cover', fitBackground = 'white' }: WatermarkedImageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [canvasReady, setCanvasReady] = useState(false);
@@ -42,7 +48,7 @@ export function WatermarkedImage({ src, alt, className, fit = 'cover' }: Waterma
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       if (fit === 'contain') {
-        ctx!.fillStyle = '#ffffff';
+        ctx!.fillStyle = FIT_BACKGROUND_COLORS[fitBackground];
         ctx!.fillRect(0, 0, w, h);
       }
 
@@ -95,7 +101,7 @@ export function WatermarkedImage({ src, alt, className, fit = 'cover' }: Waterma
       cancelled = true;
       resizeObserver?.disconnect();
     };
-  }, [src, fit]);
+  }, [src, fit, fitBackground]);
 
   return (
     <div ref={containerRef} data-testid="watermarked-image" className={`relative overflow-hidden ${className ?? ''}`}>
