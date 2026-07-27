@@ -429,6 +429,7 @@ export function ProductsGrid() {
             })}
           </div>
         </div>
+      </div>
 
       <ProductModal
         kunstwerk={selectedKunstwerk}

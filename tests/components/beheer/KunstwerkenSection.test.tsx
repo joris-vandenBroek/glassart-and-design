@@ -512,6 +512,9 @@ describe('KunstwerkenSection', () => {
         segmentIds: ['seg-1'],
         materiaalIds: [],
         maatIds: [],
+        stijlIds: [],
+        onderwerpIds: [],
+        aiGegenereerd: false,
         prijzen: [],
         prijsPerM2: 180,
         omschrijvingNl: 'Verbetert de akoestiek.',
@@ -644,10 +647,14 @@ describe('KunstwerkenSection', () => {
     fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
     fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Test' } });
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-1'));
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-1'));
+    // materiaal/maat now default to "all checked" (materiaal-maat-defaults feature) — narrow
+    // down to just mat-1 + maat-1 before picking a formaat, since an incompatible maat's
+    // checkbox becomes disabled (and thus stuck) once a formaat is chosen.
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-3'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-mat-1-maat-1'), { target: { value: '100' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Test omschrijving' } });
 
