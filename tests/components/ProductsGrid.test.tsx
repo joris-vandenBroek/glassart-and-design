@@ -382,4 +382,19 @@ describe('ProductsGrid', () => {
     expect(screen.getByTestId('facet-ai-gegenereerd')).not.toBeChecked();
     expect(screen.getAllByTestId('product-card')).toHaveLength(3);
   });
+
+  it('pre-selects the segment given via the initialSegmentId prop', async () => {
+    render(
+      <NextIntlClientProvider locale="nl" messages={messages}>
+        <CustomerAuthProvider>
+          <CartProvider>
+            <ProductsGrid initialSegmentId="seg-wellness" />
+          </CartProvider>
+        </CustomerAuthProvider>
+      </NextIntlClientProvider>
+    );
+    await screen.findAllByTestId('product-card');
+    expect(screen.getByTestId('filter-seg-wellness')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByTestId('product-card')).toHaveLength(2); // kw-2 and kw-3
+  });
 });

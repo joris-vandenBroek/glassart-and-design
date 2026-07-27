@@ -18,10 +18,10 @@ import type { Kunstenaar } from './beheer/kunstenaarTypes';
 
 const ALL_FILTER = 'all';
 
-export function ProductsGrid() {
+export function ProductsGrid({ initialSegmentId }: { initialSegmentId?: string } = {}) {
   const locale = useLocale();
   const tCollections = useTranslations('collectionsPage');
-  const [activeFilter, setActiveFilter] = useState(ALL_FILTER);
+  const [activeFilter, setActiveFilter] = useState(initialSegmentId ?? ALL_FILTER);
   const [kunstenaarFilter, setKunstenaarFilter] = useState<string | null>(null);
   const [formaatFilters, setFormaatFilters] = useState<Set<KunstwerkFormaat>>(new Set());
   const [stijlFilters, setStijlFilters] = useState<Set<string>>(new Set());
