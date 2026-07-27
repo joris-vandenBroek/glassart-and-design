@@ -1,8 +1,34 @@
-import { describe, expect, it } from 'vitest';
-import { pageAvailability } from '@/config/pageAvailability';
+import { describe, expect, it, vi, afterEach } from 'vitest';
 
 describe('pageAvailability', () => {
-  it('keeps beheer live while the other launch-scoped routes stay under construction', () => {
+  const originalEnv = process.env.MIJNHOST_BUILD;
+
+  afterEach(() => {
+    if (originalEnv === undefined) {
+      delete process.env.MIJNHOST_BUILD;
+    } else {
+      process.env.MIJNHOST_BUILD = originalEnv;
+    }
+  });
+
+  it('keeps everything available (incl. beheer) when MIJNHOST_BUILD is not set', async () => {
+    delete process.env.MIJNHOST_BUILD;
+    vi.resetModules();
+    const { pageAvailability } = await import('@/config/pageAvailability');
+    expect(pageAvailability).toEqual({
+      collecties: true,
+      wordKlant: true,
+      inloggen: true,
+      beheer: true,
+      account: true,
+      contact: true,
+    });
+  });
+
+  it('gates every launch-scoped route except beheer when MIJNHOST_BUILD=true', async () => {
+    process.env.MIJNHOST_BUILD = 'true';
+    vi.resetModules();
+    const { pageAvailability } = await import('@/config/pageAvailability');
     expect(pageAvailability).toEqual({
       collecties: false,
       wordKlant: false,
