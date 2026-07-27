@@ -66,8 +66,8 @@ Beide pools (`prodPool`, `testPool`) zijn permanent geïnitialiseerd zodra de se
   - `testModusActief BOOLEAN`
   - `gewijzigdOp DATETIME`
 
-  Geen `gewijzigdDoor`-kolom: aangezien alleen Joris de schakelaar mag bedienen (zie
-  hieronder), zou die kolom altijd dezelfde waarde bevatten en voegt niets toe.
+  Geen `gewijzigdDoor`-kolom: aangezien alleen Joris de schakelaar bedient (zie hieronder),
+  zou die kolom altijd dezelfde waarde bevatten en voegt niets toe.
 
 - **`resolveDataPool(session)`** — server-only helperfunctie, geïmplementeerd naast
   `getPool()` in `src/lib/server/db.ts`. Voert de beslisboom uit het architectuurdiagram uit.
@@ -75,20 +75,21 @@ Beide pools (`prodPool`, `testPool`) zijn permanent geïnitialiseerd zodra de se
   activiteitenlog, materialen, maten, etc.) roept deze aan in plaats van een vaste pool te
   gebruiken. Auth-routes (`sessions`, login/registratie) blijven altijd `prodPool` gebruiken.
 
+- **Geen API-endpoint om de vlag te zetten.** Joris zet `testModusActief` rechtstreeks om
+  via phpMyAdmin of SSH op de productiedatabase — geen `POST`-route, geen app-side
+  autorisatiecheck nodig, want databasetoegang zelf is al de toegangscontrole (alleen Joris
+  heeft credentials voor de productiedatabase). Dit scheelt een heel component: geen
+  endpoint, geen 403-logica, geen bijbehorende autorisatietest.
+
 - **`GET /api/beheer/test-modus`** — geeft `{ testModusActief: boolean }` terug. Toegankelijk
-  voor elke ingelogde medewerker (nodig om de banner te kunnen tonen).
+  voor elke ingelogde medewerker (nodig om de banner te kunnen tonen). Dit leesgedeelte blijft
+  ongeacht hoe de vlag gezet wordt.
 
-- **`POST /api/beheer/test-modus`** — zet de vlag om. Retourneert `403` tenzij
-  `session.email === 'joris.vandenbroek@gmail.com'` — deze check gebeurt **server-side**,
-  onafhankelijk van wat de UI toont.
-
-- **Sessie-infocall** (bestaande "wie ben ik"-route, bv. `/api/auth/me`) krijgt twee extra
-  velden:
-  - `testModusActief` — vlagstatus, om te bepalen of *deze sessie* naar test gerouteerd wordt
-    (dus na toepassing van de identiteitsregel — een echte klant krijgt hier dus `false` te
-    zien, ook als de globale vlag aanstaat).
-  - `magSchakelen` — `true` alleen voor Joris' sessie; bepaalt of de frontend de
-    schakelknop toont.
+- **Sessie-infocall** (bestaande "wie ben ik"-route, bv. `/api/auth/me`) krijgt één extra
+  veld: `testModusActief` — of *deze sessie* naar test gerouteerd wordt (dus na toepassing
+  van de identiteitsregel — een echte klant krijgt hier dus `false` te zien, ook als de
+  globale vlag aanstaat). Geen `magSchakelen`-veld nodig — er is geen schakelknop in de UI
+  (zie Optie A hieronder), dus niemand hoeft er frontend-zichtbaarheid op te baseren.
 
 - **Bannercomponent** — getoond in zowel de beheer-shell als de klant-facing layout, zodra
   de sessie-infocall `testModusActief: true` teruggeeft voor de huidige sessie.
@@ -107,8 +108,9 @@ record staat".
 
 ## Foutafhandeling & beveiliging
 
-- **Autorisatie:** `POST /api/beheer/test-modus` faalt met `403` voor elke sessie behalve
-  Joris', ongeacht wat de UI verbergt of toont.
+- **Autorisatie:** geen app-side autorisatiecheck nodig — de vlag wordt uitsluitend via
+  directe databasetoegang (phpMyAdmin/SSH) gezet, en alleen Joris heeft die credentials.
+  Databasetoegang zelf is hier de toegangscontrole.
 - **Geen silent fallback:** als `resolveDataPool` besluit dat een aanvraag `testPool` moet
   gebruiken maar die verbinding faalt, wordt de aanvraag met een expliciete serverfout
   afgebroken (bv. `500`) — nooit stilzwijgend terugvallen op `prodPool`.
@@ -129,13 +131,13 @@ record staat".
   rest van het migratieplan): vier combinaties — vlag uit (altijd prod), vlag aan +
   `@glassartanddesign.com`-e-mail (test), vlag aan + `joris.vandenbroek@gmail.com` (test),
   vlag aan + externe klant-e-mail (altijd prod).
-- **Autorisatietest op `POST /api/beheer/test-modus`:** Joris' sessie → `200` + vlag
-  wisselt; elke andere sessie → `403` + vlag ongewijzigd.
-- **Bannertest:** sessie-infocall geeft `testModusActief`/`magSchakelen` correct terug voor
-  de drie rollen (Joris, medewerker, klant).
+- **Bannertest:** sessie-infocall geeft `testModusActief` correct terug voor de drie rollen
+  (Joris, medewerker, klant).
 
 ## Buiten scope
 
+- Geen `POST`-endpoint of app-side autorisatielogica om de vlag te zetten (Optie A: direct
+  in de database via phpMyAdmin/SSH).
 - Geen mail-redirect-logica in code (opgelost via testdata, zie hierboven).
 - Geen `gewijzigdDoor`-kolom of ander auditveld voor "wie schakelde" (kan alleen Joris zijn).
 - Geen realtime/websocket-push van de bannerstatus.
