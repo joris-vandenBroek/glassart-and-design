@@ -288,7 +288,7 @@ export function ProductModal({
         fit="contain"
         fitBackground="ink"
         className={`h-56 w-full border-b border-gold/50 bg-ink ${
-          variant === 'dialog' ? 'sm:h-full sm:border-b-0 sm:border-r' : ''
+          variant === 'dialog' ? 'sm:h-full sm:border-b-0 sm:border-r' : 'pm-preview-image'
         }`}
       />
       <div className="flex flex-col gap-4 p-6">
@@ -498,18 +498,22 @@ export function ProductModal({
     </>
   );
 
-  // The preview variant is embedded in a fixed-width beheer sidebar (see
-  // KunstwerkenSection's 320px column) rather than centered in the full
-  // viewport, so the sm: breakpoint below doesn't reflect its actual
-  // available width — it must always stay single-column.
+  // The preview variant is embedded in a beheer sidebar rather than centered
+  // in the full viewport, so it can't rely on Tailwind's viewport-based sm:
+  // breakpoint to know when there's room for a side-by-side layout. Instead
+  // it gets a real CSS container query (.pm-preview-frame/.pm-preview-panel/
+  // .pm-preview-image in globals.css) that reacts to the panel's actual
+  // rendered width, so it can't drift out of sync with the sidebar again.
   const panelClassName = `relative z-10 grid w-full max-w-2xl grid-cols-1 overflow-hidden rounded-lg border border-white/10 bg-charcoal ${
-    variant === 'dialog' ? 'sm:grid-cols-2' : ''
+    variant === 'dialog' ? 'sm:grid-cols-2' : 'pm-preview-panel'
   }`;
 
   if (variant === 'preview') {
     return (
-      <div data-testid="product-modal" className={panelClassName}>
-        {body}
+      <div className="pm-preview-frame">
+        <div data-testid="product-modal" className={panelClassName}>
+          {body}
+        </div>
       </div>
     );
   }

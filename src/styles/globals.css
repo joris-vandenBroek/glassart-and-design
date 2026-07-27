@@ -18,3 +18,26 @@ body {
     @apply rounded-full border border-gold/30 bg-gold/10 px-2 py-1 font-head text-[0.6rem] uppercase tracking-wide text-gold;
   }
 }
+
+/* Unlayered on purpose: Tailwind's own utility classes (grid-cols-1, h-56,
+   border-b, ...) live in the native `utilities` cascade layer and would
+   otherwise win over anything placed in `@layer components` at equal
+   specificity. Rules outside any @layer always beat layered rules, so this
+   is the only reliable way for .pm-preview-panel/.pm-preview-image to
+   override the base utility classes ProductModal.tsx also applies. */
+.pm-preview-frame {
+  container-type: inline-size;
+}
+
+@container (min-width: 480px) {
+  .pm-preview-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pm-preview-image {
+    height: 100%;
+    border-bottom-width: 0;
+    border-right-width: 1px;
+    border-right-color: rgba(212, 175, 55, 0.5);
+  }
+}

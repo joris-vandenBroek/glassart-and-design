@@ -974,7 +974,7 @@ describe('ProductModal', () => {
     expect(screen.getByTestId('product-modal')).not.toHaveAttribute('role', 'dialog');
   });
 
-  it('preview variant: never switches to the two-column layout, since it is embedded in a fixed-width sidebar rather than the full viewport', () => {
+  it('preview variant: never uses the viewport-based sm: breakpoint for its two-column layout (that caused the sidebar squeeze bug)', () => {
     renderModal(() => {}, KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, ONDERWERPEN, 'preview');
     expect(screen.getByTestId('product-modal').className).not.toMatch(/(^|\s)sm:grid-cols-2(\s|$)/);
   });
@@ -983,6 +983,21 @@ describe('ProductModal', () => {
     renderModal();
     const panel = screen.getByTestId('product-modal-backdrop').nextElementSibling;
     expect(panel?.className).toMatch(/(^|\s)sm:grid-cols-2(\s|$)/);
+  });
+
+  it('preview variant: wraps the panel in a container-query frame with width-driven column markers', () => {
+    renderModal(() => {}, KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, ONDERWERPEN, 'preview');
+    const panel = screen.getByTestId('product-modal');
+    expect(panel.parentElement).toHaveClass('pm-preview-frame');
+    expect(panel.className).toMatch(/(^|\s)pm-preview-panel(\s|$)/);
+    expect(screen.getByTestId('watermarked-image').className).toMatch(/(^|\s)pm-preview-image(\s|$)/);
+  });
+
+  it('dialog variant: does not carry the preview container-query markers', () => {
+    renderModal();
+    const panel = screen.getByTestId('product-modal-backdrop').nextElementSibling as HTMLElement;
+    expect(panel.className).not.toMatch(/pm-preview/);
+    expect(screen.getByTestId('watermarked-image').className).not.toMatch(/pm-preview/);
   });
 
   it('preview variant: disables the confirm button and never adds to the cart', () => {
