@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 $config = require __DIR__ . '/config.php';
 
-header('Access-Control-Allow-Origin: ' . $config['allowed_origin']);
+$requestOrigin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (in_array($requestOrigin, $config['allowed_origins'], true)) {
+    header('Access-Control-Allow-Origin: ' . $requestOrigin);
+}
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 

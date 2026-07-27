@@ -11,5 +11,8 @@ return [
     'from_email' => 'info@glassartanddesign.com',
     'from_name' => 'Glassart & Design',
     'shared_secret' => 'VUL_HIER_EEN_LANGE_WILLEKEURIGE_SLEUTEL_IN',
-    'allowed_origin' => 'https://joris-vandenbroek.github.io',
+    'allowed_origins' => [
+        'https://joris-vandenbroek.github.io',
+        'https://glassartanddesign.com',
+    ],
 ];
