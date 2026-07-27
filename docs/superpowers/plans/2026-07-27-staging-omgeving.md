@@ -445,10 +445,11 @@ Auth), Vitest + Testing Library (existing).
 
   `dangerous-clean-slate: true` mirrors the old `rsync --delete` behavior (removes files on
   the server that no longer exist in `out/`) — safe here because the FTP account from Task 4
-  is scoped to only the staging directory, never production. `server-dir: ./` assumes that
-  scoped FTP account's root **is** `domains/staging.glassartanddesign.com/public_html/`
-  (Task 4, Step 2) — if the account instead roots at the main domain, change this to
-  `./domains/staging.glassartanddesign.com/public_html/`.
+  is scoped to only the staging directory, never production. `server-dir: ./public_html/`
+  matches the FTP account actually created in Task 4 (root at
+  `domains/staging.glassartanddesign.com`, one level above `public_html/` — DirectAdmin's
+  Custom-directory picker didn't descend into `public_html` itself) — adjust this if a future
+  FTP account is scoped one level deeper.
 
 - [ ] **Step 2: commit**
 
