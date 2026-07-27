@@ -8,8 +8,6 @@ export function generateStaticParams() {
   return [{ locale: 'nl' }];
 }
 
-export const dynamicParams = false;
-
 export default async function BeheerPage({
   params,
 }: {
