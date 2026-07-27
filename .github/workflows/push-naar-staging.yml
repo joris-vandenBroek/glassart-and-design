@@ -1,4 +1,3 @@
-# .github/workflows/push-naar-staging.yml
 name: Push naar staging
 
 on:
@@ -41,19 +40,18 @@ jobs:
 
       - name: Add Basic Auth .htaccess
         run: |
-          sed "s#USERNAME#${{ secrets.STAGING_SSH_USER }}#" deploy/staging.htaccess > out/.htaccess
+          sed "s#USERNAME#${{ vars.STAGING_SYSTEM_USERNAME }}#" deploy/staging.htaccess > out/.htaccess
 
-      - name: Load deploy SSH key
-        uses: webfactory/ssh-agent@v0.9.0
+      - name: Upload to staging.glassartanddesign.com via FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          ssh-private-key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
-
-      - name: Upload to staging.glassartanddesign.com
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H "${{ secrets.STAGING_SSH_HOST }}" >> ~/.ssh/known_hosts
-          rsync -avz --delete out/ \
-            "${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_SSH_HOST }}:domains/staging.glassartanddesign.com/public_html/"
+          server: ${{ secrets.STAGING_FTP_HOST }}
+          username: ${{ secrets.STAGING_FTP_USERNAME }}
+          password: ${{ secrets.STAGING_FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./out/
+          server-dir: ./
+          dangerous-clean-slate: true
 
       - name: Smoke check
         run: |
