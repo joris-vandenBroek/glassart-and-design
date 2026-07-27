@@ -7,6 +7,7 @@ import messages from '../../messages/nl.json';
 
 const onAuthStateChangedMock = vi.fn();
 const getDocMock = vi.fn();
+const usePathnameMock = vi.fn(() => '/');
 
 vi.mock('@/i18n/navigation', () => ({
   Link: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
@@ -14,7 +15,7 @@ vi.mock('@/i18n/navigation', () => ({
       {children}
     </a>
   ),
-  usePathname: () => '/',
+  usePathname: () => usePathnameMock(),
   useRouter: () => ({ replace: vi.fn() }),
 }));
 
@@ -64,6 +65,7 @@ function signedInAsApprovedCustomer() {
 beforeEach(() => {
   onAuthStateChangedMock.mockReset();
   getDocMock.mockReset();
+  usePathnameMock.mockReturnValue('/');
 });
 
 describe('NavBar', () => {
@@ -112,5 +114,12 @@ describe('NavBar', () => {
     renderNavBar();
     await waitFor(() => expect(screen.getByTestId('logo')).toBeInTheDocument());
     expect(screen.getByTestId('logo')).toHaveAttribute('href', '/');
+  });
+
+  it('renders nothing on /beheer', () => {
+    usePathnameMock.mockReturnValue('/beheer');
+    signedOut();
+    const { container } = renderNavBar();
+    expect(container).toBeEmptyDOMElement();
   });
 });

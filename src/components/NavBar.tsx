@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Link } from '@/i18n/navigation';
+import { Link, usePathname } from '@/i18n/navigation';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { Logo } from './Logo';
 import { LanguageSwitcher } from './LanguageSwitcher';
@@ -10,6 +10,11 @@ import { CartPanel } from './CartPanel';
 export function NavBar() {
   const t = useTranslations('nav');
   const { isCustomer, isHydrated } = useCustomerAuth();
+  const pathname = usePathname();
+
+  if (pathname.startsWith('/beheer')) {
+    return null;
+  }
 
   return (
     <nav

@@ -296,7 +296,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   return (
     <div
       data-testid="beheer-dashboard"
-      className="mx-auto grid max-w-6xl grid-cols-1 gap-8 lg:grid-cols-[280px_1fr]"
+      className="mx-auto grid max-w-none grid-cols-1 gap-8 lg:grid-cols-[280px_1fr]"
     >
       <GlassPanel className="w-full !max-w-none !px-5">
         <p data-testid="beheer-logged-in-as" className="mb-4 text-xs text-white/60">
