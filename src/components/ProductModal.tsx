@@ -260,7 +260,12 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, k
         >
           ×
         </button>
-        <WatermarkedImage src={kunstwerk.foto} alt={omschrijving} className="h-56 w-full sm:h-full" />
+        <WatermarkedImage
+          src={kunstwerk.foto}
+          alt={omschrijving}
+          fit="contain"
+          className="h-56 w-full border-b border-gold/50 bg-ink sm:h-full sm:border-b-0 sm:border-r"
+        />
         <div className="flex flex-col gap-4 p-6">
           <p data-testid="product-modal-omschrijving" className="text-sm leading-relaxed text-white/80">
             {omschrijving}

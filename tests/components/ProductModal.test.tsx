@@ -491,6 +491,13 @@ describe('ProductModal', () => {
     expect(screen.getByTestId('watermark-overlay')).toBeInTheDocument();
   });
 
+  it('shows the full artwork on a dark, gold-bordered panel instead of a cropped white one', () => {
+    renderModal();
+    const image = screen.getByTestId('watermarked-image');
+    expect(image).toHaveClass('border-gold/50');
+    expect(image).toHaveClass('bg-ink');
+  });
+
   it('logs mandje_toegevoegd with the logged-in klant when confirmed', async () => {
     vi.useRealTimers();
     getDocMock.mockResolvedValue({
