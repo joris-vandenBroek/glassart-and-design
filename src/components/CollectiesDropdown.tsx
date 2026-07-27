@@ -17,8 +17,16 @@ export function CollectiesDropdown() {
       className="relative"
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}
+      onFocus={() => setIsOpen(true)}
+      onBlur={() => setIsOpen(false)}
     >
-      <Link href="/collecties" data-testid="nav-collections" className="hover:text-gold">
+      <Link
+        href="/collecties"
+        data-testid="nav-collections"
+        className="hover:text-gold"
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+      >
         {t('collections')}
       </Link>
       {isOpen && segmenten.items && segmenten.items.length > 0 && (

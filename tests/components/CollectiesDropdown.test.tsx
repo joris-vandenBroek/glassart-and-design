@@ -69,6 +69,7 @@ describe('CollectiesDropdown', () => {
       'href',
       '/collecties?segment=seg-wellness'
     );
+    expect(screen.getByTestId('collections-dropdown-item-all')).toHaveAttribute('href', '/collecties');
   });
 
   it('hides the dropdown again on mouse leave', async () => {

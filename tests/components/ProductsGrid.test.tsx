@@ -11,6 +11,11 @@ const getDocMock = vi.fn();
 const onAuthStateChangedMock = vi.fn();
 const logActiviteitMock = vi.fn();
 
+let currentSearchParams = new URLSearchParams();
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => currentSearchParams,
+}));
+
 vi.mock('@/lib/firebase', () => ({
   db: {},
   auth: {},
@@ -150,6 +155,21 @@ function mockCollections() {
   );
 }
 
+function mockCollectionsWithExtraKunstwerken(extra: Array<{ id: string; data: Record<string, unknown> }>) {
+  const data: Record<string, Array<{ id: string; data: Record<string, unknown> }>> = {
+    segmenten: SEGMENTEN,
+    kunstwerken: [...KUNSTWERKEN, ...extra],
+    materialen: MATERIALEN,
+    maten: MATEN,
+    kunstenaars: KUNSTENAARS,
+    stijlen: STIJLEN,
+    onderwerpen: ONDERWERPEN,
+  };
+  getDocsMock.mockImplementation((collectionRef: { name: string }) =>
+    Promise.resolve(makeSnapshot(data[collectionRef.name] ?? []))
+  );
+}
+
 function renderProductsGrid() {
   return render(
     <NextIntlClientProvider locale="nl" messages={messages}>
@@ -167,6 +187,7 @@ beforeEach(() => {
   getDocMock.mockReset();
   onAuthStateChangedMock.mockReset();
   logActiviteitMock.mockReset();
+  currentSearchParams = new URLSearchParams();
   mockCollections();
   getDocMock.mockResolvedValue({ exists: () => false });
   onAuthStateChangedMock.mockImplementation((_auth, callback) => {
@@ -383,18 +404,58 @@ describe('ProductsGrid', () => {
     expect(screen.getAllByTestId('product-card')).toHaveLength(3);
   });
 
-  it('pre-selects the segment given via the initialSegmentId prop', async () => {
-    render(
+  it('pre-selects the segment given via the ?segment= URL query param', async () => {
+    currentSearchParams = new URLSearchParams('segment=seg-wellness');
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+    expect(screen.getByTestId('filter-seg-wellness')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByTestId('product-card')).toHaveLength(2); // kw-2 and kw-3
+  });
+
+  it('re-syncs the segment filter when the ?segment= query param changes on an already-mounted page', async () => {
+    currentSearchParams = new URLSearchParams('segment=seg-hotel');
+    const { rerender } = renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+    expect(screen.getByTestId('filter-seg-hotel')).toHaveAttribute('aria-pressed', 'true');
+
+    currentSearchParams = new URLSearchParams('segment=seg-wellness');
+    rerender(
       <NextIntlClientProvider locale="nl" messages={messages}>
         <CustomerAuthProvider>
           <CartProvider>
-            <ProductsGrid initialSegmentId="seg-wellness" />
+            <ProductsGrid />
           </CartProvider>
         </CustomerAuthProvider>
       </NextIntlClientProvider>
     );
-    await screen.findAllByTestId('product-card');
-    expect(screen.getByTestId('filter-seg-wellness')).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getAllByTestId('product-card')).toHaveLength(2); // kw-2 and kw-3
+    await waitFor(() => expect(screen.getByTestId('filter-seg-wellness')).toHaveAttribute('aria-pressed', 'true'));
+    expect(screen.getByTestId('filter-seg-hotel')).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('excludes a kunstwerk with no formaat when a formaat filter is active, without crashing', async () => {
+    mockCollectionsWithExtraKunstwerken([
+      {
+        id: 'kw-4',
+        data: {
+          foto: 'https://example.com/kw-4.jpg',
+          segmentIds: ['seg-hotel'],
+          materiaalIds: ['mat-1'],
+          maatIds: ['maat-1'],
+          prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 220 }],
+          stijlIds: [],
+          onderwerpIds: [],
+          omschrijvingNl: 'Kunstwerk zonder formaat',
+          omschrijvingFr: '',
+          omschrijvingDe: '',
+          omschrijvingEn: '',
+        },
+      },
+    ]);
+    renderProductsGrid();
+    expect(await screen.findAllByTestId('product-card')).toHaveLength(4);
+
+    fireEvent.click(screen.getByTestId('facet-formaat-option-staand'));
+    const filtered = screen.getAllByTestId('product-card');
+    expect(filtered).toHaveLength(1); // only kw-1, kw-4 has no formaat so never matches
   });
 });

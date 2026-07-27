@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
+import { useSearchParams } from 'next/navigation';
 import { useFirestoreCollection } from '@/lib/useFirestoreCollection';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
@@ -18,10 +19,12 @@ import type { Kunstenaar } from './beheer/kunstenaarTypes';
 
 const ALL_FILTER = 'all';
 
-export function ProductsGrid({ initialSegmentId }: { initialSegmentId?: string } = {}) {
+export function ProductsGrid() {
   const locale = useLocale();
   const tCollections = useTranslations('collectionsPage');
-  const [activeFilter, setActiveFilter] = useState(initialSegmentId ?? ALL_FILTER);
+  const searchParams = useSearchParams();
+  const segmentParam = searchParams.get('segment');
+  const [activeFilter, setActiveFilter] = useState(segmentParam ?? ALL_FILTER);
   const [kunstenaarFilter, setKunstenaarFilter] = useState<string | null>(null);
   const [formaatFilters, setFormaatFilters] = useState<Set<KunstwerkFormaat>>(new Set());
   const [stijlFilters, setStijlFilters] = useState<Set<string>>(new Set());
@@ -29,6 +32,10 @@ export function ProductsGrid({ initialSegmentId }: { initialSegmentId?: string }
   const [aiGegenereerdFilter, setAiGegenereerdFilter] = useState(false);
   const [selectedKunstwerk, setSelectedKunstwerk] = useState<Kunstwerk | null>(null);
   const { user } = useCustomerAuth();
+
+  useEffect(() => {
+    setActiveFilter(segmentParam ?? ALL_FILTER);
+  }, [segmentParam]);
 
   const segmenten = useFirestoreCollection<Segment>('segmenten');
   const kunstwerken = useFirestoreCollection<Kunstwerk>('kunstwerken');
@@ -44,23 +51,53 @@ export function ProductsGrid({ initialSegmentId }: { initialSegmentId?: string }
   }
 
   const allKunstwerken = kunstwerken.items;
-  const bySegment =
-    activeFilter === ALL_FILTER
-      ? allKunstwerken
-      : allKunstwerken.filter((kunstwerk) => kunstwerk.segmentIds.includes(activeFilter));
-  const byFormaat =
-    formaatFilters.size === 0 ? bySegment : bySegment.filter((kunstwerk) => kunstwerk.formaat != null && formaatFilters.has(kunstwerk.formaat));
-  const byStijl =
-    stijlFilters.size === 0
-      ? byFormaat
-      : byFormaat.filter((kunstwerk) => (kunstwerk.stijlIds ?? []).some((id) => stijlFilters.has(id)));
-  const byOnderwerp =
-    onderwerpFilters.size === 0
-      ? byStijl
-      : byStijl.filter((kunstwerk) => (kunstwerk.onderwerpIds ?? []).some((id) => onderwerpFilters.has(id)));
-  const byAiGegenereerd = aiGegenereerdFilter ? byOnderwerp.filter((kunstwerk) => kunstwerk.aiGegenereerd === true) : byOnderwerp;
-  const visibleKunstwerken =
-    kunstenaarFilter === null ? byAiGegenereerd : byAiGegenereerd.filter((kunstwerk) => kunstwerk.kunstenaarId === kunstenaarFilter);
+
+  function matchesSegment(kunstwerk: Kunstwerk) {
+    return activeFilter === ALL_FILTER || kunstwerk.segmentIds.includes(activeFilter);
+  }
+  function matchesFormaat(kunstwerk: Kunstwerk) {
+    return formaatFilters.size === 0 || (kunstwerk.formaat != null && formaatFilters.has(kunstwerk.formaat));
+  }
+  function matchesStijl(kunstwerk: Kunstwerk) {
+    return stijlFilters.size === 0 || (kunstwerk.stijlIds ?? []).some((id) => stijlFilters.has(id));
+  }
+  function matchesOnderwerp(kunstwerk: Kunstwerk) {
+    return onderwerpFilters.size === 0 || (kunstwerk.onderwerpIds ?? []).some((id) => onderwerpFilters.has(id));
+  }
+  function matchesAiGegenereerd(kunstwerk: Kunstwerk) {
+    return !aiGegenereerdFilter || kunstwerk.aiGegenereerd === true;
+  }
+  function matchesKunstenaar(kunstwerk: Kunstwerk) {
+    return kunstenaarFilter === null || kunstwerk.kunstenaarId === kunstenaarFilter;
+  }
+
+  const visibleKunstwerken = allKunstwerken.filter(
+    (kunstwerk) =>
+      matchesSegment(kunstwerk) &&
+      matchesFormaat(kunstwerk) &&
+      matchesStijl(kunstwerk) &&
+      matchesOnderwerp(kunstwerk) &&
+      matchesAiGegenereerd(kunstwerk) &&
+      matchesKunstenaar(kunstwerk)
+  );
+
+  const segmentCountBase = allKunstwerken.filter(
+    (kunstwerk) =>
+      matchesFormaat(kunstwerk) && matchesStijl(kunstwerk) && matchesOnderwerp(kunstwerk) && matchesAiGegenereerd(kunstwerk) && matchesKunstenaar(kunstwerk)
+  );
+  const formaatCountBase = allKunstwerken.filter(
+    (kunstwerk) =>
+      matchesSegment(kunstwerk) && matchesStijl(kunstwerk) && matchesOnderwerp(kunstwerk) && matchesAiGegenereerd(kunstwerk) && matchesKunstenaar(kunstwerk)
+  );
+  const stijlCountBase = allKunstwerken.filter(
+    (kunstwerk) =>
+      matchesSegment(kunstwerk) && matchesFormaat(kunstwerk) && matchesOnderwerp(kunstwerk) && matchesAiGegenereerd(kunstwerk) && matchesKunstenaar(kunstwerk)
+  );
+  const onderwerpCountBase = allKunstwerken.filter(
+    (kunstwerk) =>
+      matchesSegment(kunstwerk) && matchesFormaat(kunstwerk) && matchesStijl(kunstwerk) && matchesAiGegenereerd(kunstwerk) && matchesKunstenaar(kunstwerk)
+  );
+
   const geselecteerdeKunstenaar = kunstenaarFilter
     ? (kunstenaars.items ?? []).find((kunstenaar) => kunstenaar.id === kunstenaarFilter) ?? null
     : null;
@@ -127,7 +164,7 @@ export function ProductsGrid({ initialSegmentId }: { initialSegmentId?: string }
   };
 
   const geselecteerdSegment =
-    activeFilter === ALL_FILTER ? null : (segmenten.items ?? []).find((segment) => segment.id === activeFilter) ?? null;
+    activeFilter === ALL_FILTER ? null : segmenten.items.find((segment) => segment.id === activeFilter) ?? null;
 
   const breadcrumbItems = [
     { label: tCollections('breadcrumbHome'), href: '/' },
@@ -189,7 +226,7 @@ export function ProductsGrid({ initialSegmentId }: { initialSegmentId?: string }
                 onClick={() => setActiveFilter(ALL_FILTER)}
                 className={filterButtonClass(activeFilter === ALL_FILTER)}
               >
-                {tCollections('filterAll')} ({allKunstwerken.length})
+                {tCollections('filterAll')} ({segmentCountBase.length})
               </button>
               {segmenten.items.map((segment) => (
                 <button
@@ -201,7 +238,7 @@ export function ProductsGrid({ initialSegmentId }: { initialSegmentId?: string }
                   className={filterButtonClass(activeFilter === segment.id)}
                 >
                   {segment.omschrijving} (
-                  {allKunstwerken.filter((kunstwerk) => kunstwerk.segmentIds.includes(segment.id)).length})
+                  {segmentCountBase.filter((kunstwerk) => kunstwerk.segmentIds.includes(segment.id)).length})
                 </button>
               ))}
             </div>
@@ -222,7 +259,7 @@ export function ProductsGrid({ initialSegmentId }: { initialSegmentId?: string }
           <FilterSection title={tCollections('formaatFacetTitle')} testId="formaat">
             {FORMAAT_OPTIES.map((formaat) => {
               const isChecked = formaatFilters.has(formaat);
-              const count = bySegment.filter((kunstwerk) => kunstwerk.formaat === formaat).length;
+              const count = formaatCountBase.filter((kunstwerk) => kunstwerk.formaat === formaat).length;
               return (
                 <label
                   key={formaat}
@@ -245,7 +282,7 @@ export function ProductsGrid({ initialSegmentId }: { initialSegmentId?: string }
           <FilterSection title={tCollections('stijlFacetTitle')} testId="stijl">
             {(stijlen.items ?? []).map((stijl) => {
               const isChecked = stijlFilters.has(stijl.id);
-              const count = byFormaat.filter((kunstwerk) => (kunstwerk.stijlIds ?? []).includes(stijl.id)).length;
+              const count = stijlCountBase.filter((kunstwerk) => (kunstwerk.stijlIds ?? []).includes(stijl.id)).length;
               return (
                 <label
                   key={stijl.id}
@@ -268,7 +305,7 @@ export function ProductsGrid({ initialSegmentId }: { initialSegmentId?: string }
           <FilterSection title={tCollections('onderwerpFacetTitle')} testId="onderwerp">
             {(onderwerpen.items ?? []).map((onderwerp) => {
               const isChecked = onderwerpFilters.has(onderwerp.id);
-              const count = byStijl.filter((kunstwerk) => (kunstwerk.onderwerpIds ?? []).includes(onderwerp.id)).length;
+              const count = onderwerpCountBase.filter((kunstwerk) => (kunstwerk.onderwerpIds ?? []).includes(onderwerp.id)).length;
               return (
                 <label
                   key={onderwerp.id}
