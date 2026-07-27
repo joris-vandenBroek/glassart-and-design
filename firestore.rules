@@ -31,6 +31,14 @@ service cloud.firestore {
       allow read: if true;
       allow write: if request.auth != null && exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid));
     }
+    match /stijlen/{id} {
+      allow read: if true;
+      allow write: if request.auth != null && exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid));
+    }
+    match /onderwerpen/{id} {
+      allow read: if true;
+      allow write: if request.auth != null && exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid));
+    }
     match /kunstwerken/{id} {
       allow read: if true;
       allow write: if request.auth != null && exists(/databases/$(database)/documents/medewerkers/$(request.auth.uid));
@@ -91,7 +99,9 @@ service cloud.firestore {
            'prijsgroep_toegevoegd','prijsgroep_gewijzigd','prijsgroep_verwijderd',
            'bedrijfsgegevens_gewijzigd','mandje_eigen_maat_toegevoegd','bestelling_prijs_vastgesteld',
            'kunstenaar_toegevoegd','kunstenaar_gewijzigd','kunstenaar_verwijderd','klant_exclusiviteit_gewijzigd',
-           'bestelling_verstuurd_naar_drukker','bestelinstellingen_gewijzigd','klant_minimale_afname_gewijzigd']
+           'bestelling_verstuurd_naar_drukker','bestelinstellingen_gewijzigd','klant_minimale_afname_gewijzigd',
+           'stijl_toegevoegd','stijl_gewijzigd','stijl_verwijderd',
+           'onderwerp_toegevoegd','onderwerp_gewijzigd','onderwerp_verwijderd']
         && request.resource.data.keys().hasOnly(['type','actorId','actorEmail','actorNaam','timestamp','omschrijving'])
         && request.resource.data.actorEmail is string
         && request.resource.data.actorNaam is string;

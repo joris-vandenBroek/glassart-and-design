@@ -11,6 +11,11 @@ const getDocMock = vi.fn();
 const onAuthStateChangedMock = vi.fn();
 const logActiviteitMock = vi.fn();
 
+let currentSearchParams = new URLSearchParams();
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => currentSearchParams,
+}));
+
 vi.mock('@/lib/firebase', () => ({
   db: {},
   auth: {},
@@ -61,8 +66,11 @@ const KUNSTWERKEN = [
       segmentIds: ['seg-hotel'],
       materiaalIds: ['mat-1'],
       maatIds: ['maat-1'],
+      formaat: 'staand',
       prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 150 }],
       kunstenaarId: 'ka-1',
+      stijlIds: ['stijl-abstract'],
+      onderwerpIds: ['onderwerp-bloemen'],
       omschrijvingNl: 'Hotel paneel',
       omschrijvingFr: '',
       omschrijvingDe: '',
@@ -78,7 +86,11 @@ const KUNSTWERKEN = [
       segmentIds: ['seg-wellness'],
       materiaalIds: ['mat-1'],
       maatIds: ['maat-1'],
+      formaat: 'liggend',
       prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 200 }],
+      stijlIds: ['stijl-minimalistisch'],
+      onderwerpIds: ['onderwerp-dieren'],
+      aiGegenereerd: true,
       omschrijvingNl: 'Wellness paneel',
       omschrijvingFr: '',
       omschrijvingDe: '',
@@ -94,7 +106,10 @@ const KUNSTWERKEN = [
       segmentIds: ['seg-hotel', 'seg-wellness'],
       materiaalIds: ['mat-1'],
       maatIds: ['maat-1'],
+      formaat: 'vierkant',
       prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 175 }],
+      stijlIds: ['stijl-abstract', 'stijl-minimalistisch'],
+      onderwerpIds: [],
       omschrijvingNl: 'Kunstwerk in beide segmenten',
       omschrijvingFr: '',
       omschrijvingDe: '',
@@ -123,6 +138,14 @@ const KUNSTENAARS = [
     },
   },
 ];
+const STIJLEN = [
+  { id: 'stijl-abstract', data: { omschrijving: 'Abstract' } },
+  { id: 'stijl-minimalistisch', data: { omschrijving: 'Minimalistisch' } },
+];
+const ONDERWERPEN = [
+  { id: 'onderwerp-bloemen', data: { omschrijving: 'Bloemen' } },
+  { id: 'onderwerp-dieren', data: { omschrijving: 'Dieren' } },
+];
 
 function mockCollections() {
   const data: Record<string, Array<{ id: string; data: Record<string, unknown> }>> = {
@@ -132,6 +155,23 @@ function mockCollections() {
     maten: MATEN,
     materiaalsoorten: MATERIAALSOORTEN,
     kunstenaars: KUNSTENAARS,
+    stijlen: STIJLEN,
+    onderwerpen: ONDERWERPEN,
+  };
+  getDocsMock.mockImplementation((collectionRef: { name: string }) =>
+    Promise.resolve(makeSnapshot(data[collectionRef.name] ?? []))
+  );
+}
+
+function mockCollectionsWithExtraKunstwerken(extra: Array<{ id: string; data: Record<string, unknown> }>) {
+  const data: Record<string, Array<{ id: string; data: Record<string, unknown> }>> = {
+    segmenten: SEGMENTEN,
+    kunstwerken: [...KUNSTWERKEN, ...extra],
+    materialen: MATERIALEN,
+    maten: MATEN,
+    kunstenaars: KUNSTENAARS,
+    stijlen: STIJLEN,
+    onderwerpen: ONDERWERPEN,
   };
   getDocsMock.mockImplementation((collectionRef: { name: string }) =>
     Promise.resolve(makeSnapshot(data[collectionRef.name] ?? []))
@@ -155,6 +195,7 @@ beforeEach(() => {
   getDocMock.mockReset();
   onAuthStateChangedMock.mockReset();
   logActiviteitMock.mockReset();
+  currentSearchParams = new URLSearchParams();
   mockCollections();
   getDocMock.mockResolvedValue({ exists: () => false });
   onAuthStateChangedMock.mockImplementation((_auth, callback) => {
@@ -266,6 +307,20 @@ describe('ProductsGrid', () => {
     expect(cards[0]).toHaveTextContent('4mm Veiligheidsglas');
   });
 
+  it('shows a breadcrumb that ends on "Collecties" when no segment is selected, and on the segment name once one is', async () => {
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+    expect(screen.getByTestId('breadcrumb-item-0')).toHaveTextContent('Home');
+    expect(screen.getByTestId('breadcrumb-item-1')).toHaveTextContent('Collecties');
+    expect(screen.getByTestId('breadcrumb-item-1')).toHaveAttribute('aria-current', 'page');
+
+    fireEvent.click(screen.getByTestId('filter-seg-hotel'));
+    expect(screen.getByTestId('breadcrumb-item-1')).toHaveTextContent('Collecties');
+    expect(screen.getByTestId('breadcrumb-item-1')).not.toHaveAttribute('aria-current');
+    expect(screen.getByTestId('breadcrumb-item-2')).toHaveTextContent('Hotel');
+    expect(screen.getByTestId('breadcrumb-item-2')).toHaveAttribute('aria-current', 'page');
+  });
+
   it('filters by kunstenaar and shows the artist info banner with their description', async () => {
     renderProductsGrid();
     await screen.findAllByTestId('product-card');
@@ -274,5 +329,147 @@ describe('ProductsGrid', () => {
     expect(screen.getByTestId('kunstenaar-banner')).toHaveTextContent('Sabrina Glasser');
     expect(screen.getByTestId('kunstenaar-banner')).toHaveTextContent('Werkt met gesmolten glas.');
     expect(screen.getAllByTestId('product-card')).toHaveLength(1);
+  });
+
+  it('filters by formaat, combines with segment via AND, and shows counts per formaat option', async () => {
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+
+    expect(screen.getByTestId('facet-formaat-option-staand')).toHaveTextContent('1');
+    expect(screen.getByTestId('facet-formaat-option-liggend')).toHaveTextContent('1');
+    expect(screen.getByTestId('facet-formaat-option-vierkant')).toHaveTextContent('1');
+
+    fireEvent.click(screen.getByTestId('facet-formaat-option-vierkant'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(1); // only kw-3
+
+    fireEvent.click(screen.getByTestId('filter-seg-wellness'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(1); // kw-3 is in both seg-wellness and vierkant
+
+    fireEvent.click(screen.getByTestId('facet-formaat-option-vierkant'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(2); // seg-wellness alone: kw-2 and kw-3
+  });
+
+  it('filters by stijl (OR within the facet) combined with segment via AND', async () => {
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+
+    expect(screen.getByTestId('facet-stijl-option-stijl-abstract')).toHaveTextContent('2'); // kw-1, kw-3
+    expect(screen.getByTestId('facet-stijl-option-stijl-minimalistisch')).toHaveTextContent('2'); // kw-2, kw-3
+
+    fireEvent.click(screen.getByTestId('facet-stijl-option-stijl-abstract'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(2); // kw-1, kw-3
+
+    fireEvent.click(screen.getByTestId('facet-stijl-option-stijl-minimalistisch'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(3); // OR: any of the 2 stijlen matches all 3
+  });
+
+  it('filters by onderwerp (OR within the facet) combined with segment via AND', async () => {
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+
+    expect(screen.getByTestId('facet-onderwerp-option-onderwerp-bloemen')).toHaveTextContent('1'); // kw-1
+    expect(screen.getByTestId('facet-onderwerp-option-onderwerp-dieren')).toHaveTextContent('1'); // kw-2
+
+    fireEvent.click(screen.getByTestId('facet-onderwerp-option-onderwerp-bloemen'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(1); // only kw-1 (kw-3 has no onderwerpen)
+  });
+
+  it('filters to only AI-gegenereerd kunstwerken when that checkbox is checked', async () => {
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+    expect(screen.getAllByTestId('product-card')).toHaveLength(3);
+
+    fireEvent.click(screen.getByTestId('facet-ai-gegenereerd'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(1); // only kw-2
+
+    fireEvent.click(screen.getByTestId('facet-ai-gegenereerd'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(3);
+  });
+
+  it('shows a removable chip per active filter across every facet, and clears everything via "wis filters"', async () => {
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+    expect(screen.queryByTestId('active-filter-chips')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('filter-seg-hotel'));
+    fireEvent.focus(screen.getByTestId('kunstenaar-filter'));
+    fireEvent.click(screen.getByTestId('kunstenaar-filter-option-ka-1'));
+    fireEvent.click(screen.getByTestId('facet-formaat-option-staand'));
+    fireEvent.click(screen.getByTestId('facet-stijl-option-stijl-abstract'));
+    fireEvent.click(screen.getByTestId('facet-onderwerp-option-onderwerp-bloemen'));
+    fireEvent.click(screen.getByTestId('facet-ai-gegenereerd'));
+
+    expect(screen.getByTestId('active-filter-chip-segment')).toHaveTextContent('Hotel');
+    expect(screen.getByTestId('active-filter-chip-kunstenaar')).toHaveTextContent('Sabrina Glasser');
+    expect(screen.getByTestId('active-filter-chip-formaat-staand')).toHaveTextContent('Staand');
+    expect(screen.getByTestId('active-filter-chip-stijl-stijl-abstract')).toHaveTextContent('Abstract');
+    expect(screen.getByTestId('active-filter-chip-onderwerp-onderwerp-bloemen')).toHaveTextContent('Bloemen');
+    expect(screen.getByTestId('active-filter-chip-ai-gegenereerd')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('active-filter-chip-formaat-staand-remove'));
+    expect(screen.queryByTestId('active-filter-chip-formaat-staand')).not.toBeInTheDocument();
+    expect(screen.getByTestId('active-filter-chip-segment')).toBeInTheDocument();
+    expect(screen.getByTestId('active-filter-chip-kunstenaar')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('clear-all-filters'));
+    expect(screen.queryByTestId('active-filter-chips')).not.toBeInTheDocument();
+    expect(screen.getByTestId('filter-all')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('facet-ai-gegenereerd')).not.toBeChecked();
+    expect(screen.getAllByTestId('product-card')).toHaveLength(3);
+  });
+
+  it('pre-selects the segment given via the ?segment= URL query param', async () => {
+    currentSearchParams = new URLSearchParams('segment=seg-wellness');
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+    expect(screen.getByTestId('filter-seg-wellness')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByTestId('product-card')).toHaveLength(2); // kw-2 and kw-3
+  });
+
+  it('re-syncs the segment filter when the ?segment= query param changes on an already-mounted page', async () => {
+    currentSearchParams = new URLSearchParams('segment=seg-hotel');
+    const { rerender } = renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+    expect(screen.getByTestId('filter-seg-hotel')).toHaveAttribute('aria-pressed', 'true');
+
+    currentSearchParams = new URLSearchParams('segment=seg-wellness');
+    rerender(
+      <NextIntlClientProvider locale="nl" messages={messages}>
+        <CustomerAuthProvider>
+          <CartProvider>
+            <ProductsGrid />
+          </CartProvider>
+        </CustomerAuthProvider>
+      </NextIntlClientProvider>
+    );
+    await waitFor(() => expect(screen.getByTestId('filter-seg-wellness')).toHaveAttribute('aria-pressed', 'true'));
+    expect(screen.getByTestId('filter-seg-hotel')).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('excludes a kunstwerk with no formaat when a formaat filter is active, without crashing', async () => {
+    mockCollectionsWithExtraKunstwerken([
+      {
+        id: 'kw-4',
+        data: {
+          foto: 'https://example.com/kw-4.jpg',
+          segmentIds: ['seg-hotel'],
+          materiaalIds: ['mat-1'],
+          maatIds: ['maat-1'],
+          prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 220 }],
+          stijlIds: [],
+          onderwerpIds: [],
+          omschrijvingNl: 'Kunstwerk zonder formaat',
+          omschrijvingFr: '',
+          omschrijvingDe: '',
+          omschrijvingEn: '',
+        },
+      },
+    ]);
+    renderProductsGrid();
+    expect(await screen.findAllByTestId('product-card')).toHaveLength(4);
+
+    fireEvent.click(screen.getByTestId('facet-formaat-option-staand'));
+    const filtered = screen.getAllByTestId('product-card');
+    expect(filtered).toHaveLength(1); // only kw-1, kw-4 has no formaat so never matches
   });
 });

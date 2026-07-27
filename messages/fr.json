@@ -24,7 +24,8 @@
     "login": "Connexion",
     "logout": "Déconnexion",
     "myOrders": "Mes commandes",
-    "myAccount": "Mon compte"
+    "myAccount": "Mon compte",
+    "allCollectionsLink": "Toutes les collections"
   },
   "underConstruction": {
     "eyebrow": "Bientôt",
@@ -38,7 +39,19 @@
     "filterAll": "Tous",
     "kunstenaarFilterPlaceholder": "Rechercher par artiste…",
     "kunstenaarFilterClear": "Tous les artistes",
-    "kunstenaarFilterNoResults": "Aucun artiste trouvé"
+    "kunstenaarFilterNoResults": "Aucun artiste trouvé",
+    "breadcrumbHome": "Accueil",
+    "collectieFacetTitle": "Collection",
+    "kunstenaarFacetTitle": "Artiste",
+    "formaatFacetTitle": "Format",
+    "formaatStaand": "Portrait",
+    "formaatLiggend": "Paysage",
+    "formaatVierkant": "Carré",
+    "stijlFacetTitle": "Style",
+    "onderwerpFacetTitle": "Sujet",
+    "aiGegenereerdFacetLabel": "Généré par IA uniquement",
+    "clearAllFilters": "Effacer les filtres",
+    "removeFilterAria": "Supprimer le filtre {label}"
   },
   "kunstwerkSpecCard": {
     "collectie": "Collection",

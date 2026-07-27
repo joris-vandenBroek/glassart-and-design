@@ -12,6 +12,8 @@ import { MateriaalsoortenSection } from './MateriaalsoortenSection';
 import { MaterialenSection } from './MaterialenSection';
 import { MatenSection } from './MatenSection';
 import { SegmentenSection } from './SegmentenSection';
+import { StijlenSection } from './StijlenSection';
+import { OnderwerpenSection } from './OnderwerpenSection';
 import { KunstwerkenSection } from './KunstwerkenSection';
 import { PrijsgroepenSection } from './PrijsgroepenSection';
 import { KunstenaarsSection } from './KunstenaarsSection';
@@ -19,7 +21,7 @@ import { DrukkersSection } from './DrukkersSection';
 import { ActiviteitSection, type Activiteit } from './ActiviteitSection';
 import { GlassartDesignSection } from './GlassartDesignSection';
 import { InstellingenSection } from './InstellingenSection';
-import type { Materiaalsoort, Materiaal, Maat, Segment, Kunstwerk, Prijsgroep, Drukker } from './materiaalTypes';
+import type { Materiaalsoort, Materiaal, Maat, Segment, Stijl, Onderwerp, Kunstwerk, Prijsgroep, Drukker } from './materiaalTypes';
 import type { Kunstenaar, KunstenaarUpdate } from './kunstenaarTypes';
 import type { Bedrijfsgegevens } from './bedrijfsgegevensTypes';
 import type { Bestelinstellingen } from './bestelinstellingenTypes';
@@ -228,6 +230,8 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   });
   const maten = useFirestoreCollection<Maat>('maten', { seed: MATEN_SEED });
   const segmenten = useFirestoreCollection<Segment>('segmenten', { seed: SEGMENTEN_SEED });
+  const stijlen = useFirestoreCollection<Stijl>('stijlen');
+  const onderwerpen = useFirestoreCollection<Onderwerp>('onderwerpen');
 
   const kunstwerkenReady = segmenten.items !== null && materialen.items !== null && maten.items !== null;
   const kunstwerkenSeed = kunstwerkenReady
@@ -287,6 +291,8 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   const materialenCount = (materialen.items ?? []).length;
   const matenCount = (maten.items ?? []).length;
   const segmentenCount = (segmenten.items ?? []).length;
+  const stijlenCount = (stijlen.items ?? []).length;
+  const onderwerpenCount = (onderwerpen.items ?? []).length;
   const kunstwerkenCount = (kunstwerken.items ?? []).length;
   const prijsgroepenCount = (prijsgroepen.items ?? []).length;
   const kunstenaarsCount = (kunstenaars.items ?? []).length;
@@ -312,6 +318,8 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
           materialenCount={materialenCount}
           matenCount={matenCount}
           segmentenCount={segmentenCount}
+          stijlenCount={stijlenCount}
+          onderwerpenCount={onderwerpenCount}
           kunstwerkenCount={kunstwerkenCount}
           kunstenaarsCount={kunstenaarsCount}
           prijsgroepenCount={prijsgroepenCount}
@@ -383,6 +391,22 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             onUpdate={segmenten.update}
             onRemove={segmenten.remove}
           />
+        ) : activeSection === 'stijlen' ? (
+          <StijlenSection
+            stijlen={stijlen.items}
+            loadError={stijlen.error === 'load' ? t('stijlenLoadError') : null}
+            onAdd={stijlen.add}
+            onUpdate={stijlen.update}
+            onRemove={stijlen.remove}
+          />
+        ) : activeSection === 'onderwerpen' ? (
+          <OnderwerpenSection
+            onderwerpen={onderwerpen.items}
+            loadError={onderwerpen.error === 'load' ? t('onderwerpenLoadError') : null}
+            onAdd={onderwerpen.add}
+            onUpdate={onderwerpen.update}
+            onRemove={onderwerpen.remove}
+          />
         ) : activeSection === 'kunstwerken' ? (
           <KunstwerkenSection
             kunstwerken={kunstwerken.items}
@@ -390,11 +414,15 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             materialen={materialen.items}
             materiaalsoorten={materiaalsoorten.items}
             maten={maten.items}
+            stijlen={stijlen.items}
+            onderwerpen={onderwerpen.items}
             kunstenaars={kunstenaars.items}
             loadError={kunstwerken.error === 'load' ? t('kunstwerkenLoadError') : null}
             onAdd={kunstwerken.add}
             onUpdate={kunstwerken.update}
             onRemove={kunstwerken.remove}
+            onAddStijl={stijlen.add}
+            onAddOnderwerp={onderwerpen.add}
           />
         ) : activeSection === 'kunstenaars' ? (
           <KunstenaarsSection

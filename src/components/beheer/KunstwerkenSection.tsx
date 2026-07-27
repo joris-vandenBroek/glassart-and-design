@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
@@ -9,7 +9,7 @@ import { resolveKunstwerkMateriaalLabel } from '@/lib/kunstwerkMateriaal';
 import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
-import type { Kunstwerk, Segment, Materiaal, Materiaalsoort, Maat, PrijsRegel, KunstwerkFormaat } from './materiaalTypes';
+import type { Kunstwerk, Segment, Materiaal, Materiaalsoort, Maat, PrijsRegel, KunstwerkFormaat, Stijl, Onderwerp } from './materiaalTypes';
 import { isVierkanteMaat } from './materiaalTypes';
 import type { Kunstenaar } from './kunstenaarTypes';
 import { detectFormaatFromFile, detectFormaatFromImageUrl } from '@/lib/detectKunstwerkFormaat';
@@ -20,11 +20,15 @@ interface KunstwerkenSectionProps {
   materialen: Materiaal[] | null;
   materiaalsoorten: Materiaalsoort[] | null;
   maten: Maat[] | null;
+  stijlen: Stijl[] | null;
+  onderwerpen: Onderwerp[] | null;
   kunstenaars: Kunstenaar[] | null;
   loadError: string | null;
   onAdd: (data: Omit<Kunstwerk, 'id'>) => Promise<boolean>;
   onUpdate: (id: string, data: Omit<Kunstwerk, 'id'>) => Promise<boolean>;
   onRemove: (id: string) => Promise<boolean>;
+  onAddStijl: (data: Omit<Stijl, 'id'>) => Promise<boolean>;
+  onAddOnderwerp: (data: Omit<Onderwerp, 'id'>) => Promise<boolean>;
 }
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; kunstwerk: Kunstwerk } | null;
@@ -47,6 +51,9 @@ const LEGE_FORM = {
   segmentIds: [] as string[],
   materiaalIds: [] as string[],
   maatIds: [] as string[],
+  stijlIds: [] as string[],
+  onderwerpIds: [] as string[],
+  aiGegenereerd: false,
   prijzen: {} as PrijzenState,
   prijsPerM2: '',
   omschrijvingNl: '',
@@ -61,11 +68,15 @@ export function KunstwerkenSection({
   materialen,
   materiaalsoorten,
   maten,
+  stijlen,
+  onderwerpen,
   kunstenaars,
   loadError,
   onAdd,
   onUpdate,
   onRemove,
+  onAddStijl,
+  onAddOnderwerp,
 }: KunstwerkenSectionProps) {
   const t = useTranslations('beheer');
   const { uploading, error: fotoUploadError, upload } = useKunstwerkFotoUpload();
@@ -78,6 +89,15 @@ export function KunstwerkenSection({
   const [segmentIds, setSegmentIds] = useState<string[]>(LEGE_FORM.segmentIds);
   const [materiaalIds, setMateriaalIds] = useState<string[]>(LEGE_FORM.materiaalIds);
   const [maatIds, setMaatIds] = useState<string[]>(LEGE_FORM.maatIds);
+  const [stijlIds, setStijlIds] = useState<string[]>(LEGE_FORM.stijlIds);
+  const [onderwerpIds, setOnderwerpIds] = useState<string[]>(LEGE_FORM.onderwerpIds);
+  const [aiGegenereerd, setAiGegenereerd] = useState<boolean>(LEGE_FORM.aiGegenereerd);
+  const [nieuweStijlNaam, setNieuweStijlNaam] = useState('');
+  const [nieuweOnderwerpNaam, setNieuweOnderwerpNaam] = useState('');
+  const [pendingNieuweStijlNaam, setPendingNieuweStijlNaam] = useState<string | null>(null);
+  const [pendingNieuweOnderwerpNaam, setPendingNieuweOnderwerpNaam] = useState<string | null>(null);
+  const [stijlToevoegenError, setStijlToevoegenError] = useState<string | null>(null);
+  const [onderwerpToevoegenError, setOnderwerpToevoegenError] = useState<string | null>(null);
   const [prijzen, setPrijzen] = useState<PrijzenState>(LEGE_FORM.prijzen);
   const [prijsPerM2, setPrijsPerM2] = useState(LEGE_FORM.prijsPerM2);
   const [omschrijvingNl, setOmschrijvingNl] = useState(LEGE_FORM.omschrijvingNl);
@@ -88,6 +108,68 @@ export function KunstwerkenSection({
   const [isDraggingFoto, setIsDraggingFoto] = useState(false);
   const [backfillBezig, setBackfillBezig] = useState(false);
   const formaatSessionRef = useRef(0);
+
+  useEffect(() => {
+    if (!pendingNieuweStijlNaam) return;
+    const gevonden = (stijlen ?? []).find((stijl) => stijl.omschrijving === pendingNieuweStijlNaam);
+    if (gevonden) {
+      setStijlIds((current) => (current.includes(gevonden.id) ? current : [...current, gevonden.id]));
+      setPendingNieuweStijlNaam(null);
+      setNieuweStijlNaam('');
+    }
+  }, [stijlen, pendingNieuweStijlNaam]);
+
+  useEffect(() => {
+    if (!pendingNieuweOnderwerpNaam) return;
+    const gevonden = (onderwerpen ?? []).find((onderwerp) => onderwerp.omschrijving === pendingNieuweOnderwerpNaam);
+    if (gevonden) {
+      setOnderwerpIds((current) => (current.includes(gevonden.id) ? current : [...current, gevonden.id]));
+      setPendingNieuweOnderwerpNaam(null);
+      setNieuweOnderwerpNaam('');
+    }
+  }, [onderwerpen, pendingNieuweOnderwerpNaam]);
+
+  async function handleAddNieuweStijl() {
+    const naam = nieuweStijlNaam.trim();
+    if (!naam) return;
+    setStijlToevoegenError(null);
+    const bestaande = (stijlen ?? []).find((stijl) => stijl.omschrijving.toLowerCase() === naam.toLowerCase());
+    if (bestaande) {
+      setStijlIds((current) => (current.includes(bestaande.id) ? current : [...current, bestaande.id]));
+      setNieuweStijlNaam('');
+      return;
+    }
+    setPendingNieuweStijlNaam(naam);
+    const success = await onAddStijl({ omschrijving: naam });
+    if (success) {
+      void logActiviteit('stijl_toegevoegd', actorFromMedewerker(user));
+    } else {
+      setPendingNieuweStijlNaam(null);
+      setStijlToevoegenError(t('kunstwerkenNieuweStijlError'));
+    }
+  }
+
+  async function handleAddNieuweOnderwerp() {
+    const naam = nieuweOnderwerpNaam.trim();
+    if (!naam) return;
+    setOnderwerpToevoegenError(null);
+    const bestaande = (onderwerpen ?? []).find(
+      (onderwerp) => onderwerp.omschrijving.toLowerCase() === naam.toLowerCase()
+    );
+    if (bestaande) {
+      setOnderwerpIds((current) => (current.includes(bestaande.id) ? current : [...current, bestaande.id]));
+      setNieuweOnderwerpNaam('');
+      return;
+    }
+    setPendingNieuweOnderwerpNaam(naam);
+    const success = await onAddOnderwerp({ omschrijving: naam });
+    if (success) {
+      void logActiviteit('onderwerp_toegevoegd', actorFromMedewerker(user));
+    } else {
+      setPendingNieuweOnderwerpNaam(null);
+      setOnderwerpToevoegenError(t('kunstwerkenNieuweOnderwerpError'));
+    }
+  }
 
   const segmentNaamById = useMemo(() => {
     const map = new Map<string, string>();
@@ -149,6 +231,15 @@ export function KunstwerkenSection({
     setSegmentIds(LEGE_FORM.segmentIds);
     setMateriaalIds((materialen ?? []).map((materiaal) => materiaal.id));
     setMaatIds((maten ?? []).map((maat) => maat.id));
+    setStijlIds(LEGE_FORM.stijlIds);
+    setOnderwerpIds(LEGE_FORM.onderwerpIds);
+    setAiGegenereerd(LEGE_FORM.aiGegenereerd);
+    setNieuweStijlNaam('');
+    setNieuweOnderwerpNaam('');
+    setPendingNieuweStijlNaam(null);
+    setPendingNieuweOnderwerpNaam(null);
+    setStijlToevoegenError(null);
+    setOnderwerpToevoegenError(null);
     setPrijzen(LEGE_FORM.prijzen);
     setPrijsPerM2(LEGE_FORM.prijsPerM2);
     setOmschrijvingNl(LEGE_FORM.omschrijvingNl);
@@ -173,6 +264,9 @@ export function KunstwerkenSection({
     setSegmentIds(kunstwerk.segmentIds);
     setMateriaalIds(kunstwerk.materiaalIds);
     setMaatIds(kunstwerk.maatIds);
+    setStijlIds(kunstwerk.stijlIds ?? []);
+    setOnderwerpIds(kunstwerk.onderwerpIds ?? []);
+    setAiGegenereerd(kunstwerk.aiGegenereerd ?? false);
     const prijzenMap: PrijzenState = {};
     kunstwerk.prijzen.forEach((regel) => {
       prijzenMap[prijsKey(regel.materiaalId, regel.maatId)] = String(regel.prijs);
@@ -271,6 +365,9 @@ export function KunstwerkenSection({
       segmentIds,
       materiaalIds,
       maatIds: isMateriaalloos ? [] : maatIds,
+      stijlIds,
+      onderwerpIds,
+      aiGegenereerd,
       prijzen: isMateriaalloos
         ? []
         : prijsCombinaties.map(({ materiaalId, maatId }) => ({
@@ -564,6 +661,98 @@ export function KunstwerkenSection({
               })}
             </fieldset>
           </details>
+
+          <fieldset className="flex flex-col gap-1">
+            <legend className="text-xs uppercase tracking-wide text-white/60">
+              {t('kunstwerkenLabelStijlen')}
+            </legend>
+            {(stijlen ?? []).map((stijl) => (
+              <label key={stijl.id} className="flex items-center gap-2 text-sm text-white/80">
+                <input
+                  type="checkbox"
+                  checked={stijlIds.includes(stijl.id)}
+                  onChange={() => setStijlIds((current) => toggle(current, stijl.id))}
+                  data-testid={`kunstwerk-modal-stijl-${stijl.id}`}
+                />
+                {stijl.omschrijving}
+              </label>
+            ))}
+            <div className="mt-1 flex gap-2">
+              <input
+                type="text"
+                value={nieuweStijlNaam}
+                onChange={(event) => setNieuweStijlNaam(event.target.value)}
+                placeholder={t('kunstwerkenNieuweStijlPlaceholder')}
+                data-testid="kunstwerk-modal-nieuwe-stijl-naam"
+                className="flex-1 rounded-sm bg-black/40 px-3 py-1.5 text-sm text-white"
+              />
+              <button
+                type="button"
+                onClick={handleAddNieuweStijl}
+                disabled={!nieuweStijlNaam.trim()}
+                data-testid="kunstwerk-modal-nieuwe-stijl-toevoegen"
+                className="rounded-sm border border-white/20 px-3 py-1.5 text-xs text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
+              >
+                {t('kunstwerkenNieuweStijlToevoegen')}
+              </button>
+            </div>
+            {stijlToevoegenError && (
+              <span data-testid="kunstwerk-modal-nieuwe-stijl-error" className="text-xs text-red-400">
+                {stijlToevoegenError}
+              </span>
+            )}
+          </fieldset>
+
+          <fieldset className="flex flex-col gap-1">
+            <legend className="text-xs uppercase tracking-wide text-white/60">
+              {t('kunstwerkenLabelOnderwerpen')}
+            </legend>
+            {(onderwerpen ?? []).map((onderwerp) => (
+              <label key={onderwerp.id} className="flex items-center gap-2 text-sm text-white/80">
+                <input
+                  type="checkbox"
+                  checked={onderwerpIds.includes(onderwerp.id)}
+                  onChange={() => setOnderwerpIds((current) => toggle(current, onderwerp.id))}
+                  data-testid={`kunstwerk-modal-onderwerp-${onderwerp.id}`}
+                />
+                {onderwerp.omschrijving}
+              </label>
+            ))}
+            <div className="mt-1 flex gap-2">
+              <input
+                type="text"
+                value={nieuweOnderwerpNaam}
+                onChange={(event) => setNieuweOnderwerpNaam(event.target.value)}
+                placeholder={t('kunstwerkenNieuweOnderwerpPlaceholder')}
+                data-testid="kunstwerk-modal-nieuwe-onderwerp-naam"
+                className="flex-1 rounded-sm bg-black/40 px-3 py-1.5 text-sm text-white"
+              />
+              <button
+                type="button"
+                onClick={handleAddNieuweOnderwerp}
+                disabled={!nieuweOnderwerpNaam.trim()}
+                data-testid="kunstwerk-modal-nieuwe-onderwerp-toevoegen"
+                className="rounded-sm border border-white/20 px-3 py-1.5 text-xs text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
+              >
+                {t('kunstwerkenNieuweOnderwerpToevoegen')}
+              </button>
+            </div>
+            {onderwerpToevoegenError && (
+              <span data-testid="kunstwerk-modal-nieuwe-onderwerp-error" className="text-xs text-red-400">
+                {onderwerpToevoegenError}
+              </span>
+            )}
+          </fieldset>
+
+          <label className="flex items-center gap-2 text-sm text-white/80">
+            <input
+              type="checkbox"
+              checked={aiGegenereerd}
+              onChange={(event) => setAiGegenereerd(event.target.checked)}
+              data-testid="kunstwerk-modal-ai-gegenereerd"
+            />
+            {t('kunstwerkenLabelAiGegenereerd')}
+          </label>
 
           {materiaalIds.length > 0 && maatIds.length > 0 && (
             <div className="flex flex-col gap-1">

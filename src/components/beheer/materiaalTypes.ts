@@ -31,6 +31,16 @@ export interface Segment {
   omschrijving: string;
 }
 
+export interface Stijl {
+  id: string;
+  omschrijving: string;
+}
+
+export interface Onderwerp {
+  id: string;
+  omschrijving: string;
+}
+
 export interface PrijsRegel {
   materiaalId: string;
   maatId: string;
@@ -46,6 +56,9 @@ export interface Kunstwerk {
   segmentIds: string[];
   materiaalIds: string[];
   maatIds: string[];
+  stijlIds?: string[];
+  onderwerpIds?: string[];
+  aiGegenereerd?: boolean;
   prijzen: PrijsRegel[];
   prijsPerM2?: number;
   omschrijvingNl: string;

@@ -24,7 +24,8 @@
     "login": "Anmelden",
     "logout": "Abmelden",
     "myOrders": "Meine Bestellungen",
-    "myAccount": "Mein Konto"
+    "myAccount": "Mein Konto",
+    "allCollectionsLink": "Alle Kollektionen"
   },
   "underConstruction": {
     "eyebrow": "In Kürze",
@@ -38,7 +39,19 @@
     "filterAll": "Alle",
     "kunstenaarFilterPlaceholder": "Nach Künstler suchen…",
     "kunstenaarFilterClear": "Alle Künstler",
-    "kunstenaarFilterNoResults": "Keine Künstler gefunden"
+    "kunstenaarFilterNoResults": "Keine Künstler gefunden",
+    "breadcrumbHome": "Home",
+    "collectieFacetTitle": "Kollektion",
+    "kunstenaarFacetTitle": "Künstler",
+    "formaatFacetTitle": "Format",
+    "formaatStaand": "Hochformat",
+    "formaatLiggend": "Querformat",
+    "formaatVierkant": "Quadratisch",
+    "stijlFacetTitle": "Stil",
+    "onderwerpFacetTitle": "Motiv",
+    "aiGegenereerdFacetLabel": "Nur KI-generiert",
+    "clearAllFilters": "Filter zurücksetzen",
+    "removeFilterAria": "Filter {label} entfernen"
   },
   "kunstwerkSpecCard": {
     "collectie": "Kollektion",

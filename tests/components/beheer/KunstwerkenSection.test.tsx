@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { KunstwerkenSection } from '@/components/beheer/KunstwerkenSection';
-import type { Kunstwerk, Segment, Materiaal, Maat } from '@/components/beheer/materiaalTypes';
+import type { Kunstwerk, Segment, Materiaal, Maat, Stijl, Onderwerp } from '@/components/beheer/materiaalTypes';
 import type { Kunstenaar } from '@/components/beheer/kunstenaarTypes';
 import messages from '../../../messages/nl.json';
 
@@ -49,6 +49,14 @@ const MATEN: Maat[] = [
   { id: 'maat-2', breedte: 60, hoogte: 90 },
   { id: 'maat-3', breedte: 50, hoogte: 50 },
 ];
+const STIJLEN: Stijl[] = [
+  { id: 'stijl-1', omschrijving: 'Abstract' },
+  { id: 'stijl-2', omschrijving: 'Minimalistisch' },
+];
+const ONDERWERPEN: Onderwerp[] = [
+  { id: 'onderwerp-1', omschrijving: 'Bloemen' },
+  { id: 'onderwerp-2', omschrijving: 'Landschappen' },
+];
 const KUNSTENAARS: Kunstenaar[] = [
   {
     id: 'ka-1',
@@ -85,23 +93,29 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Kunstwerke
   const onAdd = overrides.onAdd ?? vi.fn().mockResolvedValue(true);
   const onUpdate = overrides.onUpdate ?? vi.fn().mockResolvedValue(true);
   const onRemove = overrides.onRemove ?? vi.fn().mockResolvedValue(true);
-  render(
+  const onAddStijl = overrides.onAddStijl ?? vi.fn().mockResolvedValue(true);
+  const onAddOnderwerp = overrides.onAddOnderwerp ?? vi.fn().mockResolvedValue(true);
+  const result = render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <KunstwerkenSection
         kunstwerken={KUNSTWERKEN}
         segmenten={SEGMENTEN}
         materialen={MATERIALEN}
         maten={MATEN}
+        stijlen={STIJLEN}
+        onderwerpen={ONDERWERPEN}
         kunstenaars={KUNSTENAARS}
         loadError={null}
         onAdd={onAdd}
         onUpdate={onUpdate}
         onRemove={onRemove}
+        onAddStijl={onAddStijl}
+        onAddOnderwerp={onAddOnderwerp}
         {...overrides}
       />
     </NextIntlClientProvider>
   );
-  return { onAdd, onUpdate, onRemove };
+  return { onAdd, onUpdate, onRemove, onAddStijl, onAddOnderwerp, rerender: result.rerender };
 }
 
 beforeEach(() => {
@@ -218,6 +232,9 @@ describe('KunstwerkenSection', () => {
         segmentIds: ['seg-1'],
         materiaalIds: ['mat-1'],
         maatIds: ['maat-1'],
+        stijlIds: [],
+        onderwerpIds: [],
+        aiGegenereerd: false,
         prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 99 }],
         omschrijvingNl: 'Nieuw kunstwerk',
         omschrijvingFr: '',
@@ -250,6 +267,9 @@ describe('KunstwerkenSection', () => {
         segmentIds: ['seg-1'],
         materiaalIds: ['mat-1'],
         maatIds: ['maat-1'],
+        stijlIds: [],
+        onderwerpIds: [],
+        aiGegenereerd: false,
         prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 175 }],
         omschrijvingNl: 'Hotel paneel 1',
         omschrijvingFr: '',
@@ -614,5 +634,71 @@ describe('KunstwerkenSection', () => {
 
     resolvers[1]('staand');
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-formaat-staand')).toBeChecked());
+  });
+
+  it('toggles an existing stijl/onderwerp checkbox and an AI-gegenereerd checkbox into the saved payload', async () => {
+    uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
+    const { onAdd } = renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    const file = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Test' } });
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-1'));
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-mat-1-maat-1'), { target: { value: '100' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Test omschrijving' } });
+
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-stijl-stijl-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-onderwerp-onderwerp-2'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-ai-gegenereerd'));
+
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith(
+        expect.objectContaining({
+          stijlIds: ['stijl-1'],
+          onderwerpIds: ['onderwerp-2'],
+          aiGegenereerd: true,
+        })
+      )
+    );
+  });
+
+  it('creates a brand-new stijl inline, adds it to the Stijlen table, and auto-selects it on the kunstwerk', async () => {
+    const onAddStijl = vi.fn().mockResolvedValue(true);
+    const { rerender } = renderSection({ onAddStijl });
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-nieuwe-stijl-naam'), { target: { value: 'Jugendstil' } });
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-nieuwe-stijl-toevoegen'));
+    await waitFor(() => expect(onAddStijl).toHaveBeenCalledWith({ omschrijving: 'Jugendstil' }));
+
+    // Simulate BeheerShell re-rendering this component with the freshly-refetched stijlen list,
+    // the way it really would once useFirestoreCollection('stijlen').add() resolves.
+    rerender(
+      <NextIntlClientProvider locale="nl" messages={messages}>
+        <KunstwerkenSection
+          kunstwerken={KUNSTWERKEN}
+          segmenten={SEGMENTEN}
+          materialen={MATERIALEN}
+          materiaalsoorten={null}
+          maten={MATEN}
+          stijlen={[...STIJLEN, { id: 'stijl-3', omschrijving: 'Jugendstil' }]}
+          onderwerpen={ONDERWERPEN}
+          kunstenaars={KUNSTENAARS}
+          loadError={null}
+          onAdd={vi.fn().mockResolvedValue(true)}
+          onUpdate={vi.fn().mockResolvedValue(true)}
+          onRemove={vi.fn().mockResolvedValue(true)}
+          onAddStijl={onAddStijl}
+          onAddOnderwerp={vi.fn().mockResolvedValue(true)}
+        />
+      </NextIntlClientProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-stijl-stijl-3')).toBeChecked());
   });
 });

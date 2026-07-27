@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { GlassPanel } from '@/components/GlassPanel';
 import { ProductsGrid } from '@/components/ProductsGrid';
@@ -26,7 +27,9 @@ export default async function CollectiesPage({
         <p className="mt-3 text-sm text-white/70">{t('intro')}</p>
       </GlassPanel>
 
-      <ProductsGrid />
+      <Suspense fallback={null}>
+        <ProductsGrid />
+      </Suspense>
 
       <div className="mx-auto mt-10 max-w-3xl text-center">
         <BecomeClientCta />
