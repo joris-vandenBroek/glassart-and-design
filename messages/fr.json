@@ -24,7 +24,8 @@
     "login": "Connexion",
     "logout": "Déconnexion",
     "myOrders": "Mes commandes",
-    "myAccount": "Mon compte"
+    "myAccount": "Mon compte",
+    "allCollectionsLink": "Toutes les collections"
   },
   "collectionsPage": {
     "title": "Collections",

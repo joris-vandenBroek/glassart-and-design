@@ -24,7 +24,8 @@
     "login": "Log in",
     "logout": "Log out",
     "myOrders": "My orders",
-    "myAccount": "My account"
+    "myAccount": "My account",
+    "allCollectionsLink": "All collections"
   },
   "collectionsPage": {
     "title": "Collections",

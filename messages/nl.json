@@ -24,7 +24,8 @@
     "login": "Inloggen",
     "logout": "Uitloggen",
     "myOrders": "Mijn bestellingen",
-    "myAccount": "Mijn account"
+    "myAccount": "Mijn account",
+    "allCollectionsLink": "Alle collecties"
   },
   "collectionsPage": {
     "title": "Collecties",
