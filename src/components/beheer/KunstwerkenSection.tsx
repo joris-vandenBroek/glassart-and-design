@@ -4,8 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
-import { KunstwerkSpecCard } from '@/components/KunstwerkSpecCard';
-import { resolveKunstwerkMateriaalLabel } from '@/lib/kunstwerkMateriaal';
+import { ProductModal } from '@/components/ProductModal';
 import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
@@ -189,6 +188,62 @@ export function KunstwerkenSection({
     return map;
   }, [kunstenaars]);
 
+  function buildKunstwerkData(): Omit<Kunstwerk, 'id'> {
+    const materiaalloos = materiaalIds.length === 0;
+    const combinaties = materiaalIds.flatMap((materiaalId) => maatIds.map((maatId) => ({ materiaalId, maatId })));
+    const basis = {
+      foto,
+      naam,
+      kunstenaarId: kunstenaarId || null,
+      formaat,
+      segmentIds,
+      materiaalIds,
+      maatIds: materiaalloos ? [] : maatIds,
+      stijlIds,
+      onderwerpIds,
+      aiGegenereerd,
+      prijzen: materiaalloos
+        ? []
+        : combinaties.map(({ materiaalId, maatId }) => ({
+            materiaalId,
+            maatId,
+            prijs: Number(prijzen[prijsKey(materiaalId, maatId)]),
+          })),
+      omschrijvingNl,
+      omschrijvingFr,
+      omschrijvingDe,
+      omschrijvingEn,
+    };
+    return materiaalloos ? { ...basis, prijsPerM2: Number(prijsPerM2) } : basis;
+  }
+
+  const previewKunstwerk: Kunstwerk = useMemo(
+    () => ({
+      id: modalState?.mode === 'edit' ? modalState.kunstwerk.id : 'nieuw-kunstwerk',
+      ...buildKunstwerkData(),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      foto,
+      naam,
+      kunstenaarId,
+      formaat,
+      segmentIds,
+      materiaalIds,
+      maatIds,
+      stijlIds,
+      onderwerpIds,
+      aiGegenereerd,
+      prijzen,
+      prijsPerM2,
+      omschrijvingNl,
+      omschrijvingFr,
+      omschrijvingDe,
+      omschrijvingEn,
+      modalState,
+    ]
+  );
+
   function materiaalLabel(materiaal: Materiaal): string {
     const soortNaam = materiaalsoortNaamById.get(materiaal.materiaalsoortId) ?? materiaal.materiaalsoortId;
     return `${materiaal.materiaaldikte}mm — ${soortNaam}`;
@@ -357,30 +412,7 @@ export function KunstwerkenSection({
 
   async function handleSave() {
     if (!modalState) return;
-    const basisData = {
-      foto,
-      naam,
-      kunstenaarId: kunstenaarId || null,
-      formaat,
-      segmentIds,
-      materiaalIds,
-      maatIds: isMateriaalloos ? [] : maatIds,
-      stijlIds,
-      onderwerpIds,
-      aiGegenereerd,
-      prijzen: isMateriaalloos
-        ? []
-        : prijsCombinaties.map(({ materiaalId, maatId }) => ({
-            materiaalId,
-            maatId,
-            prijs: Number(prijzen[prijsKey(materiaalId, maatId)]),
-          })),
-      omschrijvingNl,
-      omschrijvingFr,
-      omschrijvingDe,
-      omschrijvingEn,
-    };
-    const data = isMateriaalloos ? { ...basisData, prijsPerM2: Number(prijsPerM2) } : basisData;
+    const data = buildKunstwerkData();
     const success = modalState.mode === 'add' ? await onAdd(data) : await onUpdate(modalState.kunstwerk.id, data);
     if (success) {
       void logActiviteit(
@@ -891,17 +923,17 @@ export function KunstwerkenSection({
           <div className="lg:sticky lg:top-0 lg:pt-10">
             <div className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wide text-white/60">{t('kunstwerkenLabelPreview')}</span>
-              <KunstwerkSpecCard
-                fotoSlot={
-                  foto ? (
-                    <img src={foto} alt={naam} data-testid="kunstwerk-spec-card-foto" className="h-full w-full object-contain" />
-                  ) : undefined
-                }
-                code={naam}
-                titel={omschrijvingNl}
-                artiest={kunstenaarNaamById.get(kunstenaarId) ?? ''}
-                collectieLabels={segmentIds.map((segmentId) => segmentNaamById.get(segmentId) ?? segmentId)}
-                materiaalLabel={resolveKunstwerkMateriaalLabel({ materiaalIds }, materialen ?? [], materiaalsoorten ?? [])}
+              <ProductModal
+                variant="preview"
+                kunstwerk={previewKunstwerk}
+                materialen={materialen}
+                maten={maten}
+                materiaalsoorten={materiaalsoorten}
+                kunstenaars={kunstenaars}
+                segmenten={segmenten}
+                stijlen={stijlen}
+                onderwerpen={onderwerpen}
+                onClose={() => {}}
               />
             </div>
           </div>

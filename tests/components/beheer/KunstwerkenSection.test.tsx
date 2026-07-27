@@ -4,7 +4,27 @@ import { NextIntlClientProvider } from 'next-intl';
 import { KunstwerkenSection } from '@/components/beheer/KunstwerkenSection';
 import type { Kunstwerk, Segment, Materiaal, Maat, Stijl, Onderwerp } from '@/components/beheer/materiaalTypes';
 import type { Kunstenaar } from '@/components/beheer/kunstenaarTypes';
+import { CustomerAuthProvider } from '@/lib/useCustomerAuth';
+import { CartProvider } from '@/lib/useCart';
 import messages from '../../../messages/nl.json';
+
+const onAuthStateChangedMock = vi.fn();
+const getDocMock = vi.fn();
+
+vi.mock('@/lib/firebase', () => ({
+  auth: {},
+  db: {},
+}));
+
+vi.mock('firebase/auth', () => ({
+  onAuthStateChanged: (...args: unknown[]) => onAuthStateChangedMock(...args),
+}));
+
+vi.mock('firebase/firestore', () => ({
+  doc: vi.fn((_db, collection, id) => ({ collection, id })),
+  getDoc: (...args: unknown[]) => getDocMock(...args),
+  setDoc: vi.fn(),
+}));
 
 const uploadMock = vi.fn();
 let mockUploading = false;
@@ -97,22 +117,26 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Kunstwerke
   const onAddOnderwerp = overrides.onAddOnderwerp ?? vi.fn().mockResolvedValue(true);
   const result = render(
     <NextIntlClientProvider locale="nl" messages={messages}>
-      <KunstwerkenSection
-        kunstwerken={KUNSTWERKEN}
-        segmenten={SEGMENTEN}
-        materialen={MATERIALEN}
-        maten={MATEN}
-        stijlen={STIJLEN}
-        onderwerpen={ONDERWERPEN}
-        kunstenaars={KUNSTENAARS}
-        loadError={null}
-        onAdd={onAdd}
-        onUpdate={onUpdate}
-        onRemove={onRemove}
-        onAddStijl={onAddStijl}
-        onAddOnderwerp={onAddOnderwerp}
-        {...overrides}
-      />
+      <CustomerAuthProvider>
+        <CartProvider>
+          <KunstwerkenSection
+            kunstwerken={KUNSTWERKEN}
+            segmenten={SEGMENTEN}
+            materialen={MATERIALEN}
+            maten={MATEN}
+            stijlen={STIJLEN}
+            onderwerpen={ONDERWERPEN}
+            kunstenaars={KUNSTENAARS}
+            loadError={null}
+            onAdd={onAdd}
+            onUpdate={onUpdate}
+            onRemove={onRemove}
+            onAddStijl={onAddStijl}
+            onAddOnderwerp={onAddOnderwerp}
+            {...overrides}
+          />
+        </CartProvider>
+      </CustomerAuthProvider>
     </NextIntlClientProvider>
   );
   return { onAdd, onUpdate, onRemove, onAddStijl, onAddOnderwerp, rerender: result.rerender };
@@ -127,6 +151,14 @@ beforeEach(() => {
   detectFormaatFromFileMock.mockResolvedValue(null);
   detectFormaatFromImageUrlMock.mockReset();
   detectFormaatFromImageUrlMock.mockResolvedValue(null);
+  onAuthStateChangedMock.mockReset();
+  getDocMock.mockReset();
+  onAuthStateChangedMock.mockImplementation((_auth, callback) => {
+    callback(null);
+    return () => {};
+  });
+  getDocMock.mockResolvedValue({ exists: () => false });
+  window.localStorage.clear();
 });
 
 describe('KunstwerkenSection', () => {
@@ -687,25 +719,66 @@ describe('KunstwerkenSection', () => {
     // the way it really would once useFirestoreCollection('stijlen').add() resolves.
     rerender(
       <NextIntlClientProvider locale="nl" messages={messages}>
-        <KunstwerkenSection
-          kunstwerken={KUNSTWERKEN}
-          segmenten={SEGMENTEN}
-          materialen={MATERIALEN}
-          materiaalsoorten={null}
-          maten={MATEN}
-          stijlen={[...STIJLEN, { id: 'stijl-3', omschrijving: 'Jugendstil' }]}
-          onderwerpen={ONDERWERPEN}
-          kunstenaars={KUNSTENAARS}
-          loadError={null}
-          onAdd={vi.fn().mockResolvedValue(true)}
-          onUpdate={vi.fn().mockResolvedValue(true)}
-          onRemove={vi.fn().mockResolvedValue(true)}
-          onAddStijl={onAddStijl}
-          onAddOnderwerp={vi.fn().mockResolvedValue(true)}
-        />
+        <CustomerAuthProvider>
+          <CartProvider>
+            <KunstwerkenSection
+              kunstwerken={KUNSTWERKEN}
+              segmenten={SEGMENTEN}
+              materialen={MATERIALEN}
+              materiaalsoorten={null}
+              maten={MATEN}
+              stijlen={[...STIJLEN, { id: 'stijl-3', omschrijving: 'Jugendstil' }]}
+              onderwerpen={ONDERWERPEN}
+              kunstenaars={KUNSTENAARS}
+              loadError={null}
+              onAdd={vi.fn().mockResolvedValue(true)}
+              onUpdate={vi.fn().mockResolvedValue(true)}
+              onRemove={vi.fn().mockResolvedValue(true)}
+              onAddStijl={onAddStijl}
+              onAddOnderwerp={vi.fn().mockResolvedValue(true)}
+            />
+          </CartProvider>
+        </CustomerAuthProvider>
       </NextIntlClientProvider>
     );
 
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-stijl-stijl-3')).toBeChecked());
+  });
+
+  describe('klant-dialoog preview', () => {
+    it('shows a live ProductModal preview instead of the old print-label card when the add form is open', () => {
+      renderSection();
+      fireEvent.click(screen.getByTestId('kunstwerken-add'));
+      expect(screen.getByTestId('product-modal')).toBeInTheDocument();
+      expect(screen.queryByTestId('kunstwerk-spec-card')).not.toBeInTheDocument();
+    });
+
+    it('updates the preview omschrijving as the admin types it', () => {
+      renderSection();
+      fireEvent.click(screen.getByTestId('kunstwerken-add'));
+      fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), {
+        target: { value: 'Nieuw kunstwerk in wording' },
+      });
+      expect(screen.getByTestId('product-modal-omschrijving')).toHaveTextContent('Nieuw kunstwerk in wording');
+    });
+
+    it('disables ordering in the preview', () => {
+      renderSection();
+      fireEvent.click(screen.getByTestId('kunstwerken-add'));
+      expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
+    });
+
+    it('reflects the segment checkboxes as the collectie label in the preview', () => {
+      renderSection();
+      fireEvent.click(screen.getByTestId('kunstwerken-add'));
+      fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
+      expect(screen.getByTestId('product-modal-collecties')).toHaveTextContent('Hotel');
+    });
+
+    it('preloads the preview with the existing kunstwerk data when editing', () => {
+      renderSection();
+      fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+      expect(screen.getByTestId('product-modal-omschrijving')).toHaveTextContent('Hotel paneel 1');
+    });
   });
 });
