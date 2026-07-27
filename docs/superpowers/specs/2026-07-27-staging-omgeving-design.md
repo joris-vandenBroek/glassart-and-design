@@ -88,9 +88,16 @@ handmatige proces — dat verandert dit ontwerp niet.
 ## Foutafhandeling & beveiliging
 
 - **Build faalt in GitHub Actions:** workflow stopt met een duidelijke fout, er wordt niets
-  geüpload — staging blijft op de vorige werkende versie staan.
-- **SSH/rsync-upload faalt:** workflow faalt expliciet; voor een staging-omgeving zonder
-  klantverkeer is een mislukte upload geen ramp — het commando wordt gewoon opnieuw gedraaid.
+  geüpload — staging blijft op de vorige werkende versie staan. **Let op:** deze garantie
+  geldt alleen voor build-fouten (die optreden vóórdat er geüpload wordt, dus er wordt niets
+  aangeraakt). Ze geldt **niet** voor fouten tijdens de upload-stap zelf — de shipped
+  workflow gebruikt `dangerous-clean-slate: true` op de FTP-upload-actie, wat de remote map
+  eerst leegmaakt om die exact te laten overeenkomen met de lokale `out/`-map (hetzelfde
+  effect als het oude `rsync --delete`-gedrag) vóórdat de nieuwe bestanden gekopieerd worden.
+  Een mislukte/afgebroken upload kan staging dus tijdelijk leeg of half-gedeployed
+  achterlaten, niet op de vorige werkende versie.
+- **Upload faalt:** workflow faalt expliciet; voor een staging-omgeving zonder klantverkeer
+  is een mislukte upload geen ramp — het commando wordt gewoon opnieuw gedraaid.
 - **Smoke-check na herstart:** de workflow haalt na de herstart-stap een bekend
   health-/versie-endpoint op om te bevestigen dat de nieuwe build daadwerkelijk draait, in
   plaats van blind te vertrouwen dat de Passenger-herstart is gelukt.
@@ -101,7 +108,22 @@ handmatige proces — dat verandert dit ontwerp niet.
   acceptabel; geen aparte derde database.
 - **Mail-hygiëne:** `drukkers`-records in de test-database hebben een veilig (test-)
   e-mailadres, ongeacht of de aanvraag van lokale ontwikkeling of van staging komt — zelfde
-  afspraak als in de vervangen schakelaar-spec.
+  afspraak als in de vervangen schakelaar-spec (zie de "Testdata-afspraak (geen code)"-sectie
+  daar).
+- **Gedeelde PHP mail-/upload-server-endpoints zijn bewust en veilig gedeeld:** staging
+  hergebruikt dezelfde productie-`mail-server`/`upload-server` PHP-endpoints op mijn.host
+  (met de staging-origin toegevoegd aan hun CORS-allowlist, zie Task 4 Stap 5 van het
+  implementatieplan) in plaats van eigen staging-only endpoints te krijgen. Dat lijkt op het
+  eerste gezicht risicovol — zou een teststuring per ongeluk een echte klant- of
+  drukker-e-mail kunnen bereiken? — maar is dat niet: het endpoint is een dom SMTP-relay
+  zonder eigen toegang tot Firestore-data; het "aan"-adres van elke order-bevestigings- of
+  drukker-notificatiemail komt uitsluitend uit het **klant**- of **drukker**-Firestore-record
+  dat de bestelling plaatst/ontvangt, en staging gebruikt daarvoor zijn eigen, volledig
+  gescheiden Firebase-project (`glassart-and-design-staging`) met lege
+  `klanten`/`drukkers`-collecties. Het endpoint weet niet en het maakt niet uit welke
+  omgeving de data leverde. Zolang wie test-klant-/drukker-records in staging's Firestore
+  seedt de hierboven afgesproken veilige testadressen gebruikt, is er dus geen risico op
+  lekken naar echte adressen — en is er geen reden om aparte staging-PHP-endpoints te bouwen.
 
 ## Testen
 
