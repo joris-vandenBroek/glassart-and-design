@@ -270,9 +270,12 @@ Auth), Vitest + Testing Library (existing).
   ```
 
   The `AuthUserFile` path's `USERNAME` placeholder is replaced by the workflow at deploy
-  time (Task 5, Step 4) using the `STAGING_SSH_USER` secret — DirectAdmin accounts' home
-  directories are `/home/<username>/`, and `AuthUserFile` must be an absolute filesystem
-  path, not a URL.
+  time (Task 5, Step 4) using the `STAGING_SYSTEM_USERNAME` GitHub repo variable (the
+  DirectAdmin account's system username — not a secret, just needed to construct the
+  absolute path) — DirectAdmin accounts' home directories are `/home/<username>/`, and
+  `AuthUserFile` must be an absolute filesystem path, not a URL. This applies regardless of
+  whether the file itself is uploaded via SSH or FTP — Apache reads `AuthUserFile` from the
+  local filesystem either way.
 
 - [ ] **Step 2: commit**
 
@@ -283,13 +286,21 @@ Auth), Vitest + Testing Library (existing).
 
 ---
 
-## Task 4: mijn.host subdomain + deploy SSH key + CORS allowlist
+## Task 4: mijn.host subdomain + deploy FTP account + CORS allowlist
 
-**Files:** none in the repo (server-side/account configuration + local key generation)
+> **Revised 2026-07-27:** this task originally used a dedicated SSH keypair. That was
+> abandoned after the same approach failed for the controller's own SSH access on this
+> DirectAdmin panel (no dedicated "SSH Keys" page exists; `authorized_keys` edited via File
+> Manager was rejected with `Permission denied (publickey,password)`, root cause
+> undiagnosed). DirectAdmin does expose ordinary FTP Management, so the deploy method is now
+> FTP/FTPS with a dedicated, directory-scoped FTP account instead of SSH.
+
+**Files:** none in the repo (server-side/account configuration)
 
 **Interfaces:**
-- Produces: `STAGING_SSH_HOST`, `STAGING_SSH_USER`, `STAGING_SSH_PRIVATE_KEY`,
-  `STAGING_BASIC_AUTH_PASSWORD` GitHub secrets, consumed by Task 5's workflow.
+- Produces: `STAGING_FTP_HOST`, `STAGING_FTP_USERNAME`, `STAGING_FTP_PASSWORD`,
+  `STAGING_BASIC_AUTH_PASSWORD` GitHub secrets, and a `STAGING_SYSTEM_USERNAME` GitHub repo
+  variable, all consumed by Task 5's workflow.
 
 - [ ] **Step 1 (manual, you): create the subdomain**
 
@@ -298,38 +309,27 @@ Auth), Vitest + Testing Library (existing).
   separate directory tree from the main domain (confirmed during the earlier `nodetest`
   experiment, not a subfolder of the main domain's `public_html`).
 
-- [ ] **Step 2: generate a dedicated deploy-only SSH keypair**
+- [ ] **Step 2 (manual, you): create a dedicated, directory-scoped FTP account**
+
+  DirectAdmin → Account Manager → FTP Management → Create FTP Account. Choose the
+  **"Custom" / restricted-directory** account type if offered (not "Domain" — that grants
+  access to the whole account), and set its root/path to
+  `domains/staging.glassartanddesign.com/public_html`, so this account can only ever touch
+  the staging directory, never production. Pick a username (e.g. `staging-deploy`) and a
+  strong password.
+
+- [ ] **Step 3: store the FTP secrets and the system username in GitHub**
 
   ```bash
-  ssh-keygen -t ed25519 -C "github-actions-deploy-staging" -f staging_deploy_key -N ""
+  gh secret set STAGING_FTP_HOST --body "<your mijn.host FTP hostname, e.g. h64.mijn.host>"
+  gh secret set STAGING_FTP_USERNAME --body "<the FTP username from Step 2>"
+  gh secret set STAGING_FTP_PASSWORD --body "<the FTP password from Step 2>"
+  gh variable set STAGING_SYSTEM_USERNAME --body "<your DirectAdmin account username>"
   ```
-  This creates `staging_deploy_key` (private) and `staging_deploy_key.pub` (public) in the
-  current directory. Print the public key to paste into DirectAdmin:
-  ```bash
-  cat staging_deploy_key.pub
-  ```
+  (`STAGING_SYSTEM_USERNAME` is not sensitive — it's only used to build the absolute
+  `AuthUserFile` path in Task 3's `.htaccess`, so it's a `vars` entry, not a secret.)
 
-- [ ] **Step 3 (manual, you): install the public key on mijn.host**
-
-  DirectAdmin → Advanced Features (Extra Kenmerken) → SSH Keys → paste the public key
-  printed in Step 2 → Save.
-
-- [ ] **Step 4: store the deploy secrets in GitHub**
-
-  ```bash
-  gh secret set STAGING_SSH_PRIVATE_KEY < staging_deploy_key
-  gh secret set STAGING_SSH_HOST --body "<your mijn.host SSH hostname, e.g. h64.mijn.host>"
-  gh secret set STAGING_SSH_USER --body "<your DirectAdmin username>"
-  ```
-  (`STAGING_SSH_HOST`/`STAGING_SSH_USER`: you'll find both on your mijn.host/DirectAdmin
-  account overview page if you don't already know them.)
-
-  Then delete the local key files — they're now only needed inside the GitHub secret:
-  ```bash
-  rm staging_deploy_key staging_deploy_key.pub
-  ```
-
-- [ ] **Step 5: pick and store the Basic Auth password**
+- [ ] **Step 4: pick and store the Basic Auth password**
 
   ```bash
   gh secret set STAGING_BASIC_AUTH_PASSWORD --body "<a password you choose>"
@@ -337,7 +337,7 @@ Auth), Vitest + Testing Library (existing).
   Share this password with the medewerkers who need staging access (e.g. via your password
   manager) — it's the same password for everyone, per the approved design.
 
-- [ ] **Step 6 (manual, you): add the staging origin to the live CORS allowlist**
+- [ ] **Step 5 (manual, you): add the staging origin to the live CORS allowlist**
 
   `mail-server/config.php` and `upload-server/config.php` on the **live mijn.host server**
   (git-ignored, not in this repo) each have an `allowed_origins` array. Add
@@ -345,26 +345,32 @@ Auth), Vitest + Testing Library (existing).
   `https://glassartanddesign.com` and `https://joris-vandenbroek.github.io` entries — without
   this, order-confirmation/upload requests from staging will be rejected by CORS.
 
-- [ ] **Step 7: verify SSH connectivity**
+- [ ] **Step 6: verify the secrets/variable are stored**
 
   ```bash
   gh secret list
+  gh variable list
   ```
-  Expected: `STAGING_SSH_PRIVATE_KEY`, `STAGING_SSH_HOST`, `STAGING_SSH_USER`,
-  `STAGING_BASIC_AUTH_PASSWORD` all listed. (The private key itself can't be tested locally
-  since it was deleted in Step 4 — Task 6's first real workflow run is the real connectivity
-  test.)
+  Expected: `STAGING_FTP_HOST`, `STAGING_FTP_USERNAME`, `STAGING_FTP_PASSWORD`,
+  `STAGING_BASIC_AUTH_PASSWORD` in the secrets list; `STAGING_SYSTEM_USERNAME` in the
+  variables list. (Real FTP connectivity can only be confirmed by Task 6's first real
+  workflow run.)
 
 ---
 
 ## Task 5: "Push naar staging" GitHub Actions workflow
+
+> **Revised 2026-07-27:** upload mechanism changed from SSH/rsync to FTP/FTPS — see the note
+> at the top of Task 4. `webfactory/ssh-agent` + `rsync` is replaced by
+> `SamKirkland/FTP-Deploy-Action`.
 
 **Files:**
 - Create: `.github/workflows/push-naar-staging.yml`
 
 **Interfaces:**
 - Consumes: `STAGING_NEXT_PUBLIC_FIREBASE_*` vars (Task 1), `deploy/staging.htaccess`
-  (Task 3), `STAGING_SSH_*` + `STAGING_BASIC_AUTH_PASSWORD` secrets (Task 4).
+  (Task 3), `STAGING_FTP_*` + `STAGING_BASIC_AUTH_PASSWORD` secrets and
+  `STAGING_SYSTEM_USERNAME` var (Task 4).
 - Produces: a manually-triggerable workflow named "Push naar staging" that builds and
   deploys the site to `staging.glassartanddesign.com`.
 
@@ -414,19 +420,18 @@ Auth), Vitest + Testing Library (existing).
 
         - name: Add Basic Auth .htaccess
           run: |
-            sed "s#USERNAME#${{ secrets.STAGING_SSH_USER }}#" deploy/staging.htaccess > out/.htaccess
+            sed "s#USERNAME#${{ vars.STAGING_SYSTEM_USERNAME }}#" deploy/staging.htaccess > out/.htaccess
 
-        - name: Load deploy SSH key
-          uses: webfactory/ssh-agent@v0.9.0
+        - name: Upload to staging.glassartanddesign.com via FTPS
+          uses: SamKirkland/FTP-Deploy-Action@v4.3.5
           with:
-            ssh-private-key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
-
-        - name: Upload to staging.glassartanddesign.com
-          run: |
-            mkdir -p ~/.ssh
-            ssh-keyscan -H "${{ secrets.STAGING_SSH_HOST }}" >> ~/.ssh/known_hosts
-            rsync -avz --delete out/ \
-              "${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_SSH_HOST }}:domains/staging.glassartanddesign.com/public_html/"
+            server: ${{ secrets.STAGING_FTP_HOST }}
+            username: ${{ secrets.STAGING_FTP_USERNAME }}
+            password: ${{ secrets.STAGING_FTP_PASSWORD }}
+            protocol: ftps
+            local-dir: ./out/
+            server-dir: ./
+            dangerous-clean-slate: true
 
         - name: Smoke check
           run: |
@@ -437,6 +442,13 @@ Auth), Vitest + Testing Library (existing).
               exit 1
             fi
   ```
+
+  `dangerous-clean-slate: true` mirrors the old `rsync --delete` behavior (removes files on
+  the server that no longer exist in `out/`) — safe here because the FTP account from Task 4
+  is scoped to only the staging directory, never production. `server-dir: ./` assumes that
+  scoped FTP account's root **is** `domains/staging.glassartanddesign.com/public_html/`
+  (Task 4, Step 2) — if the account instead roots at the main domain, change this to
+  `./domains/staging.glassartanddesign.com/public_html/`.
 
 - [ ] **Step 2: commit**
 
