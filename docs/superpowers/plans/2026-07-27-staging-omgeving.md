@@ -175,6 +175,12 @@ for data isolation), Apache `.htaccess`/`.htpasswd` (Basic Auth), Vitest + Testi
       render(<StagingBanner />);
       expect(screen.queryByTestId('staging-banner')).not.toBeInTheDocument();
     });
+
+    it('renders nothing when NEXT_PUBLIC_ENVIRONMENT_LABEL is a different value', () => {
+      vi.stubEnv('NEXT_PUBLIC_ENVIRONMENT_LABEL', 'production');
+      render(<StagingBanner />);
+      expect(screen.queryByTestId('staging-banner')).not.toBeInTheDocument();
+    });
   });
   ```
 
@@ -197,7 +203,7 @@ for data isolation), Apache `.htaccess`/`.htpasswd` (Basic Auth), Vitest + Testi
     return (
       <div
         data-testid="staging-banner"
-        className="w-full bg-yellow-400 text-center text-sm font-semibold text-black py-1"
+        className="fixed bottom-0 left-0 z-[60] w-full bg-yellow-400 text-center text-sm font-semibold text-black py-1"
       >
         STAGING — dit is niet de live site
       </div>
@@ -294,9 +300,13 @@ for data isolation), Apache `.htaccess`/`.htpasswd` (Basic Auth), Vitest + Testi
   ```apache
   # deploy/staging.htaccess
   AuthType Basic
-  AuthName "Glassart & Design — staging"
-  AuthUserFile /home/USERNAME/domains/staging.glassartanddesign.com/.htpasswd
+  AuthName "Glassart & Design - staging"
+  AuthUserFile /home/USERNAME/domains/staging.glassartanddesign.com/public_html/.htpasswd
   Require valid-user
+
+  <Files ".htpasswd">
+    Require all denied
+  </Files>
   ```
 
   The `AuthUserFile` path's `USERNAME` placeholder is replaced by the workflow at deploy
@@ -305,7 +315,13 @@ for data isolation), Apache `.htaccess`/`.htpasswd` (Basic Auth), Vitest + Testi
   absolute path) — DirectAdmin accounts' home directories are `/home/<username>/`, and
   `AuthUserFile` must be an absolute filesystem path, not a URL. This applies regardless of
   whether the file itself is uploaded via SSH or FTP — Apache reads `AuthUserFile` from the
-  local filesystem either way.
+  local filesystem either way. Note the path includes `public_html/` — that's where the
+  workflow actually uploads `.htpasswd` to (Task 5's `local-dir`/`server-dir`), matching the
+  FTP account's actual root from Task 4. The `<Files>` block denies direct HTTP access to
+  `.htpasswd` now that it lives inside the document root. The `AuthName` uses a plain hyphen
+  rather than an em dash, since the realm string is emitted in a header nominally interpreted
+  as ISO-8859-1 and a non-ASCII character can render as mojibake in some browsers' login
+  prompts.
 
 - [ ] **Step 2: commit**
 
@@ -345,17 +361,16 @@ for data isolation), Apache `.htaccess`/`.htpasswd` (Basic Auth), Vitest + Testi
 
   DirectAdmin → Account Manager → FTP Management → Create FTP Account. Choose the
   **"Custom" / restricted-directory** account type if offered (not "Domain" — that grants
-  access to the whole account), and set its root/path to
-  `domains/staging.glassartanddesign.com/public_html`, so this account can only ever touch
-  the staging directory, never production. Pick a username (e.g. `staging-deploy`) and a
-  strong password.
+  access to the whole account). Pick a username (e.g. `staging-deploy`) and a strong
+  password.
 
-  **Known DirectAdmin quirk:** the Custom-directory picker may not let you descend into
-  `public_html` itself — it may stop one level higher, at
-  `domains/staging.glassartanddesign.com`. That's fine; don't fight the picker or recreate
-  the account trying to force it deeper. If you land there, just make sure Task 5's workflow
-  `server-dir` includes the `public_html/` segment to compensate (it already does — see Task
-  5, Step 1).
+  **Directory:** in practice, DirectAdmin's Custom-directory picker does not let you descend
+  into `public_html` itself — it stops one level higher, at
+  `domains/staging.glassartanddesign.com`. Use that as the account's root; don't fight the
+  picker or recreate the account trying to force it deeper. This is why Task 5's workflow
+  `server-dir` includes an extra `public_html/` segment (`./public_html/`, not `./`) — it
+  compensates for the FTP root landing one level above the web root. Either way, this account
+  can only ever touch the staging directory, never production.
 
 - [ ] **Step 3: store the FTP secrets and the system username in GitHub**
 
