@@ -1,0 +1,65 @@
+# .github/workflows/push-naar-staging.yml
+name: Push naar staging
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build static export
+        run: npm run build
+        env:
+          NEXT_PUBLIC_ENVIRONMENT_LABEL: 'staging'
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.STAGING_NEXT_PUBLIC_FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.STAGING_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.STAGING_NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.STAGING_NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ vars.STAGING_NEXT_PUBLIC_FIREBASE_APP_ID }}
+          NEXT_PUBLIC_MAIL_ENDPOINT_URL: ${{ vars.NEXT_PUBLIC_MAIL_ENDPOINT_URL }}
+          NEXT_PUBLIC_MAIL_SECRET: ${{ secrets.NEXT_PUBLIC_MAIL_SECRET }}
+          NEXT_PUBLIC_UPLOAD_ENDPOINT_URL: ${{ vars.NEXT_PUBLIC_UPLOAD_ENDPOINT_URL }}
+
+      - name: Install apache2-utils (for htpasswd)
+        run: sudo apt-get update && sudo apt-get install -y apache2-utils
+
+      - name: Generate .htpasswd
+        run: htpasswd -bc out/.htpasswd glassart "${{ secrets.STAGING_BASIC_AUTH_PASSWORD }}"
+
+      - name: Add Basic Auth .htaccess
+        run: |
+          sed "s#USERNAME#${{ secrets.STAGING_SSH_USER }}#" deploy/staging.htaccess > out/.htaccess
+
+      - name: Load deploy SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+
+      - name: Upload to staging.glassartanddesign.com
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.STAGING_SSH_HOST }}" >> ~/.ssh/known_hosts
+          rsync -avz --delete out/ \
+            "${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_SSH_HOST }}:domains/staging.glassartanddesign.com/public_html/"
+
+      - name: Smoke check
+        run: |
+          sleep 5
+          status=$(curl -s -o /dev/null -w "%{http_code}" -u "glassart:${{ secrets.STAGING_BASIC_AUTH_PASSWORD }}" "https://staging.glassartanddesign.com/nl/")
+          if [ "$status" != "200" ]; then
+            echo "Staging did not respond with 200 (got $status)"
+            exit 1
+          fi
