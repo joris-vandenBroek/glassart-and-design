@@ -5,7 +5,7 @@
 **Goal:** Stand up a permanent `staging.glassartanddesign.com` deployment of the current
 Firestore-backed static-export site, isolated from production data via a second Firebase
 project, deployable only via a manually-triggered GitHub Actions workflow named
-"Push naar staging".
+"Deploy naar Staging".
 
 **Architecture:** Same Next.js static export (`output: 'export'`) as production and GitHub
 Pages today — no server/Passenger/MySQL involved yet (that only applies once the separate,
@@ -358,27 +358,27 @@ Auth), Vitest + Testing Library (existing).
 
 ---
 
-## Task 5: "Push naar staging" GitHub Actions workflow
+## Task 5: "Deploy naar Staging" GitHub Actions workflow
 
 > **Revised 2026-07-27:** upload mechanism changed from SSH/rsync to FTP/FTPS — see the note
 > at the top of Task 4. `webfactory/ssh-agent` + `rsync` is replaced by
 > `SamKirkland/FTP-Deploy-Action`.
 
 **Files:**
-- Create: `.github/workflows/push-naar-staging.yml`
+- Create: `.github/workflows/deploy-naar-staging.yml`
 
 **Interfaces:**
 - Consumes: `STAGING_NEXT_PUBLIC_FIREBASE_*` vars (Task 1), `deploy/staging.htaccess`
   (Task 3), `STAGING_FTP_*` + `STAGING_BASIC_AUTH_PASSWORD` secrets and
   `STAGING_SYSTEM_USERNAME` var (Task 4).
-- Produces: a manually-triggerable workflow named "Push naar staging" that builds and
+- Produces: a manually-triggerable workflow named "Deploy naar Staging" that builds and
   deploys the site to `staging.glassartanddesign.com`.
 
 - [ ] **Step 1: write the workflow**
 
   ```yaml
-  # .github/workflows/push-naar-staging.yml
-  name: Push naar staging
+  # .github/workflows/deploy-naar-staging.yml
+  name: Deploy naar Staging
 
   on:
     workflow_dispatch:
@@ -454,8 +454,8 @@ Auth), Vitest + Testing Library (existing).
 - [ ] **Step 2: commit**
 
   ```bash
-  git add .github/workflows/push-naar-staging.yml
-  git commit -m "feat: add manually-triggered Push naar staging deploy workflow"
+  git add .github/workflows/deploy-naar-staging.yml
+  git commit -m "feat: add manually-triggered Deploy naar Staging deploy workflow"
   ```
 
 ---
@@ -470,7 +470,7 @@ Auth), Vitest + Testing Library (existing).
 - [ ] **Step 1: trigger the workflow**
 
   ```bash
-  gh workflow run "Push naar staging"
+  gh workflow run "Deploy naar Staging"
   ```
 
 - [ ] **Step 2: watch it run**
@@ -509,5 +509,5 @@ Auth), Vitest + Testing Library (existing).
 - [ ] **Step 6: update the hosting-architecture memory**
 
   Record in project memory that staging is live, which Firebase project backs it, and that
-  it deploys only via `gh workflow run "Push naar staging"` — so future sessions don't
+  it deploys only via `gh workflow run "Deploy naar Staging"` — so future sessions don't
   need to rediscover this by reading the workflow file.
