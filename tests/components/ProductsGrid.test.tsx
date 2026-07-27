@@ -357,12 +357,15 @@ describe('ProductsGrid', () => {
     expect(screen.queryByTestId('active-filter-chips')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('filter-seg-hotel'));
+    fireEvent.focus(screen.getByTestId('kunstenaar-filter'));
+    fireEvent.click(screen.getByTestId('kunstenaar-filter-option-ka-1'));
     fireEvent.click(screen.getByTestId('facet-formaat-option-staand'));
     fireEvent.click(screen.getByTestId('facet-stijl-option-stijl-abstract'));
     fireEvent.click(screen.getByTestId('facet-onderwerp-option-onderwerp-bloemen'));
     fireEvent.click(screen.getByTestId('facet-ai-gegenereerd'));
 
     expect(screen.getByTestId('active-filter-chip-segment')).toHaveTextContent('Hotel');
+    expect(screen.getByTestId('active-filter-chip-kunstenaar')).toHaveTextContent('Sabrina Glasser');
     expect(screen.getByTestId('active-filter-chip-formaat-staand')).toHaveTextContent('Staand');
     expect(screen.getByTestId('active-filter-chip-stijl-stijl-abstract')).toHaveTextContent('Abstract');
     expect(screen.getByTestId('active-filter-chip-onderwerp-onderwerp-bloemen')).toHaveTextContent('Bloemen');
@@ -371,6 +374,7 @@ describe('ProductsGrid', () => {
     fireEvent.click(screen.getByTestId('active-filter-chip-formaat-staand-remove'));
     expect(screen.queryByTestId('active-filter-chip-formaat-staand')).not.toBeInTheDocument();
     expect(screen.getByTestId('active-filter-chip-segment')).toBeInTheDocument();
+    expect(screen.getByTestId('active-filter-chip-kunstenaar')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('clear-all-filters'));
     expect(screen.queryByTestId('active-filter-chips')).not.toBeInTheDocument();
