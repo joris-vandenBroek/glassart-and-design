@@ -81,6 +81,7 @@ const KUNSTWERKEN = [
       prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 200 }],
       stijlIds: ['stijl-minimalistisch'],
       onderwerpIds: ['onderwerp-dieren'],
+      aiGegenereerd: true,
       omschrijvingNl: 'Wellness paneel',
       omschrijvingFr: '',
       omschrijvingDe: '',
@@ -336,5 +337,17 @@ describe('ProductsGrid', () => {
 
     fireEvent.click(screen.getByTestId('facet-onderwerp-option-onderwerp-bloemen'));
     expect(screen.getAllByTestId('product-card')).toHaveLength(1); // only kw-1 (kw-3 has no onderwerpen)
+  });
+
+  it('filters to only AI-gegenereerd kunstwerken when that checkbox is checked', async () => {
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+    expect(screen.getAllByTestId('product-card')).toHaveLength(3);
+
+    fireEvent.click(screen.getByTestId('facet-ai-gegenereerd'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(1); // only kw-2
+
+    fireEvent.click(screen.getByTestId('facet-ai-gegenereerd'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(3);
   });
 });

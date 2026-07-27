@@ -41,7 +41,8 @@
     "formaatLiggend": "Landscape",
     "formaatVierkant": "Square",
     "stijlFacetTitle": "Style",
-    "onderwerpFacetTitle": "Subject"
+    "onderwerpFacetTitle": "Subject",
+    "aiGegenereerdFacetLabel": "AI-generated only"
   },
   "kunstwerkSpecCard": {
     "collectie": "Collection",

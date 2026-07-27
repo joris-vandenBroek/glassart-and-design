@@ -41,7 +41,8 @@
     "formaatLiggend": "Liggend",
     "formaatVierkant": "Vierkant",
     "stijlFacetTitle": "Stijl",
-    "onderwerpFacetTitle": "Onderwerp"
+    "onderwerpFacetTitle": "Onderwerp",
+    "aiGegenereerdFacetLabel": "Alleen AI-gegenereerd"
   },
   "kunstwerkSpecCard": {
     "collectie": "Collectie",

@@ -41,7 +41,8 @@
     "formaatLiggend": "Querformat",
     "formaatVierkant": "Quadratisch",
     "stijlFacetTitle": "Stil",
-    "onderwerpFacetTitle": "Motiv"
+    "onderwerpFacetTitle": "Motiv",
+    "aiGegenereerdFacetLabel": "Nur KI-generiert"
   },
   "kunstwerkSpecCard": {
     "collectie": "Kollektion",

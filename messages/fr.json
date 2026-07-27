@@ -41,7 +41,8 @@
     "formaatLiggend": "Paysage",
     "formaatVierkant": "Carré",
     "stijlFacetTitle": "Style",
-    "onderwerpFacetTitle": "Sujet"
+    "onderwerpFacetTitle": "Sujet",
+    "aiGegenereerdFacetLabel": "Généré par IA uniquement"
   },
   "kunstwerkSpecCard": {
     "collectie": "Collection",

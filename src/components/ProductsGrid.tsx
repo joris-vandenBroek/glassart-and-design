@@ -26,6 +26,7 @@ export function ProductsGrid() {
   const [formaatFilters, setFormaatFilters] = useState<Set<KunstwerkFormaat>>(new Set());
   const [stijlFilters, setStijlFilters] = useState<Set<string>>(new Set());
   const [onderwerpFilters, setOnderwerpFilters] = useState<Set<string>>(new Set());
+  const [aiGegenereerdFilter, setAiGegenereerdFilter] = useState(false);
   const [selectedKunstwerk, setSelectedKunstwerk] = useState<Kunstwerk | null>(null);
   const { user } = useCustomerAuth();
 
@@ -57,8 +58,9 @@ export function ProductsGrid() {
     onderwerpFilters.size === 0
       ? byStijl
       : byStijl.filter((kunstwerk) => (kunstwerk.onderwerpIds ?? []).some((id) => onderwerpFilters.has(id)));
+  const byAiGegenereerd = aiGegenereerdFilter ? byOnderwerp.filter((kunstwerk) => kunstwerk.aiGegenereerd === true) : byOnderwerp;
   const visibleKunstwerken =
-    kunstenaarFilter === null ? byOnderwerp : byOnderwerp.filter((kunstwerk) => kunstwerk.kunstenaarId === kunstenaarFilter);
+    kunstenaarFilter === null ? byAiGegenereerd : byAiGegenereerd.filter((kunstwerk) => kunstwerk.kunstenaarId === kunstenaarFilter);
   const geselecteerdeKunstenaar = kunstenaarFilter
     ? (kunstenaars.items ?? []).find((kunstenaar) => kunstenaar.id === kunstenaarFilter) ?? null
     : null;
@@ -248,6 +250,17 @@ export function ProductsGrid() {
               );
             })}
           </FilterSection>
+
+          <label className="flex cursor-pointer items-center gap-2 border-t border-white/10 pt-4 text-xs text-white/70">
+            <input
+              type="checkbox"
+              checked={aiGegenereerdFilter}
+              onChange={(event) => setAiGegenereerdFilter(event.target.checked)}
+              data-testid="facet-ai-gegenereerd"
+              className="h-3.5 w-3.5 accent-gold"
+            />
+            <span className={aiGegenereerdFilter ? 'text-white' : ''}>{tCollections('aiGegenereerdFacetLabel')}</span>
+          </label>
         </aside>
 
         <div>
