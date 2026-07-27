@@ -2,79 +2,46 @@
 
 ## Status
 
-**Dit is GEEN spec voor een deelproject dat nu gebouwd wordt.** Dit document legt requirements vast die de klant heeft aangegeven, zodat ze niet verloren gaan — maar de bouw ervan vereist een fundamenteel andere architectuur (echte backend, database, authenticatie, facturatie) dan de huidige, volledig statische site (`output: 'export'`, geen server, geen middleware). Dit hoort bij de "B2B-portaal" en "Beheeromgeving" uit de oorspronkelijke afspraken, die toen al bewust als aparte, latere deelprojecten zijn benoemd.
+**Dit is GEEN spec voor een deelproject dat nu gebouwd wordt.** Dit document legt requirements vast die de klant heeft aangegeven, zodat ze niet verloren gaan. Losse onderdelen zijn intussen wél via de normale brainstorm→spec→plan-cyclus opgepakt en gebouwd (zie "Al gerealiseerd" hieronder) — wat overblijft, vereist grotendeels nog een fundamenteel andere architectuur (echte facturatie/boekhouding, rollen/rechten) dan waar de huidige site al mee werkt (Firebase Auth/Firestore, static export).
 
-Zodra dit deelproject aan de beurt is, doorloopt het alsnog het volledige traject: brainstorm → architectuurkeuze (auth-provider, database, hosting die een backend ondersteunt) → spec → implementatieplan.
+**2026-07-23: dit document is kritisch tegen de daadwerkelijke code gecontroleerd** (niet tegen documentatie of memory — een eerdere status-memory bleek een ander gebouwd feature nog wekenlang als "niet gebouwd" te vermelden). Alle onderstaande statussen zijn geverifieerd door de broncode te lezen, niet aangenomen.
 
-## Website — paginastructuur en functionaliteit
+Zodra een resterend onderdeel wordt opgepakt, doorloopt het alsnog het volledige traject: brainstorm → (indien nodig) architectuurkeuze → spec → implementatieplan.
 
-Voor een compleet beeld: dit is de volledige paginastructuur en functionaliteit die de website moet bieden. De echte backend/beheeromgeving hieronder moet al deze onderdelen ondersteunen, niet alleen de nieuwe beheerfunctie-punten.
+## Al gerealiseerd (geverifieerd in code, 2026-07-23)
 
-- **Homepage** — hero met korte pitch, "Over ons"-sectie, "Waarom Glassart & Design" met USP-iconen en een overzicht van materiaalsoorten, uitgelichte werken, contactsamenvatting.
-- **Collecties-pagina** — overzicht van kunstwerken, gefilterd per segment (Hotel, Restaurant, Wellness, Kantoor, Abstract, Artist Collections). Klikken op een kunstwerk opent een detailweergave (maat kiezen, aantal, toevoegen aan winkelmandje).
-- **Winkelmandje** — icoon met aantal-badge in de navigatiebalk, overzicht van gekozen items, bestelling plaatsen (resulteert in een orderaanvraag met status "Aangevraagd").
-- **Contactpagina** — bezoekadres met routebeschrijving, contactpersonen per doelgroep (projecten/hotels vs. zakelijke klanten), e-mail, WhatsApp, openingstijden, bedrijfsgegevens (KvK, BTW, IBAN), contactformulier.
-- **"Word klant"-pagina** — aanvraagformulier voor een nieuw klantaccount: keuze Zakelijk/Particulier (Zakelijk standaard), bedrijfsgegevens (naam, KvK, contactpersoon), adres met optioneel afwijkend aflever- en factuuradres, e-mailadres, telefoonnummer, wachtwoord (met bevestiging), voorkeur voor contactvorm (e-mail/telefonisch/WhatsApp).
-- **Klant-accountpagina** — bereikbaar via het account-icoon na inloggen, met een linker menu en zes onderdelen: Bestellingen, Te betalen facturen, Betaalde facturen, Retourneren (bestelling selecteren + reden en toelichting opgeven), Gesprekgeschiedenis (WhatsApp-gesprekken), Instellingen (klantgegevens, wachtwoord, contactvoorkeur en taalvoorkeur wijzigen).
-- **Taalkeuze** — bezoeker kan schakelen tussen Nederlands, Engels, Duits en Frans; de hele site, inclusief alle bovenstaande pagina's, moet in alle vier de talen beschikbaar zijn.
-- **Merkidentiteit** — logo en merknaam in de navigatiebalk, consistente huisstijl (zwart/zilver met goud accent) door de hele site heen.
+- **Klantaanvragen beoordelen** (goedkeuren/afwijzen + koppelen aan prijsgroep, prijzen afgeschermd tot goedkeuring) — `KlantenSection`/`KlantModal`, echte Firestore-data.
+- **Orderaanvragen beoordelen** (goedkeuren/afwijzen) — `BestellingenSection`/`BestellingModal`, echte Firestore-data (`bestelheaders`/`bestellines`). **Let op afwijkende naamgeving:** dit document sprak van status "Aangevraagd"; de gebouwde code gebruikt `Te beoordelen → Goedgekeurd/Afgewezen`. Functioneel hetzelfde beginpunt, maar een eventuele latere "In productie"-stap (zie onder "Nog niet gerealiseerd") sluit dus aan op `Goedgekeurd`, niet op een aparte "Aangevraagd"-status.
+- **Beheer maten, kunstwerken, segmenten, materiaalsoorten en prijzen** — volledig, met stevige CRUD-secties (`MatenSection`, `KunstwerkenSection`, `SegmentenSection`, `MateriaalsoortenSection`, `MaterialenSection`, `PrijsgroepenSection`) en prijzen per kunstwerk/materiaal/maat-combinatie.
+- **Copyright-watermerk** — echt geïmplementeerd (`WatermarkedImage.tsx`, bakt het watermerk in via canvas op elke klant-gerichte afbeelding, nooit in beheer).
+- **Bestellingen op de klant-accountpagina** — echte Firestore-data (`useAllOrders`), geen mockdata meer.
+- **Datamodel:** Maten, Kunstwerken, Segmenten, Materiaalsoorten (+ hun N-op-N-koppeltabellen), Klanten, Prijsgroepen (+ koppeltabel klant↔prijsgroep), Prijzen, en Orders/Orderitems (als `bestelheaders`/`bestellines`) bestaan allemaal echt in Firestore.
 
-## Beheerfunctie (voor het bedrijf)
+## Op pauze gezet — geen "nog te bouwen", maar bewust stopgezet
 
-- Beoordelen van nieuwe klantaanvragen (goedkeuren/afwijzen, koppelen aan een prijsgroep — zie de oorspronkelijke afspraken) en daarmee vrijgeven dat die klant prijzen mag zien (prijzen blijven verborgen/afgeschermd totdat een klant is goedgekeurd).
-- Beoordelen van nieuwe orderaanvragen (de bestellingen die klanten vanuit het winkelmandje plaatsen, status "Aangevraagd").
-- Een order aanmaken voor de drukker op basis van een aangevraagde bestelling.
-- Zodra een bestelling is doorgezet naar de drukker: status wijzigt automatisch van "Aangevraagd" naar "In productie".
-- Factuur maken voor een bestelling, met keuze van prijsgroep (hoe dit zich verhoudt tot de per-klant-prijsgroep uit de goedkeuringsstap moet nog worden uitgewerkt bij de daadwerkelijke brainstorm/spec).
-- Betaling van een factuur kunnen afhandelen: status van de factuur wijzigen naar "Betaald" (open vraag voor de daadwerkelijke brainstorm: gebeurt dit handmatig na een bankoverschrijving, of via een koppeling met een online betaalprovider zoals iDEAL/Mollie die de status automatisch bijwerkt?).
-- Afhandelen van retouren die klanten via hun accountpagina aanmelden (de mock-versie in de huidige site registreert alleen de aanvraag zelf — een echte beheerkant om retouren te beoordelen/verwerken ontbreekt nog).
-- Rollen/rechten voor medewerkers die in de beheeromgeving werken (bv. iemand die alleen orders mag verwerken vs. iemand die ook klanten mag goedkeuren) — exacte rolindeling nog uit te werken.
-- Koppeling met een boekhoudpakket (bv. Exact, Moneybird) voor facturen/omzet/BTW, of blijft dit handmatig — nog te bepalen.
-- Automatische notificaties naar de klant bij statuswijzigingen (bv. "bestelling in productie", "factuur verstuurd", "retour verwerkt") — kanaal (e-mail/WhatsApp) nog te bepalen.
+**Facturen én Retouren zijn niet simpelweg nog niet begonnen — ze zíjn gebouwd geweest en daarna weer volledig verwijderd** (commit `20d8269`, boodschap: *"on hold for now"*). Zowel de klantkant (Retourneren-tab, `ReturnsSection`) als de beheerkant (`FacturenSection`, `useReturns`) zijn weg, inclusief de mockdata. Dit vraagt om een bewuste heroverweging met de klant of dit weer wordt opgepakt, niet om gewoon verder te bouwen als losstaande to-do:
 
-### Beheer maten, kunstwerken, segmenten, materiaalsoorten en prijzen
+- Factuur maken voor een bestelling, met keuze van prijsgroep.
+- Betaling van een factuur afhandelen (status → "Betaald"; handmatig vs. koppeling met iDEAL/Mollie).
+- Koppeling met een boekhoudpakket (bv. Exact, Moneybird) — hangt af van of facturatie sowieso wordt hervat.
+- Retouren afhandelen, zowel klant- als beheerkant.
 
-- **Maten:** beheerfunctie om maten (afmetingen) aan te maken/wijzigen, en te koppelen aan specifieke kunstwerken (niet elk kunstwerk is per se in elke maat leverbaar).
-- **Kunstwerken:** beheerfunctie om kunstwerken te beheren, inclusief een beschrijving per kunstwerk. Naast de webafbeelding (met watermerk, zie hieronder) moet ook het hoge-resolutie productiebestand voor de drukker beheerd/geüpload kunnen worden — dit is een apart bestand, niet dezelfde afbeelding als de (verwaterde) webweergave.
-- **Segmenten:** beheerfunctie om segmenten (Hotel, Restaurant, Wellness, etc.) te beheren met een beschrijving; een kunstwerk moet aan één of meerdere segmenten gekoppeld kunnen worden (dus een N-op-N-relatie, geen kunstwerk gebonden aan precies één segment).
-- **Materiaalsoorten:** beheerfunctie om materiaalsoorten (4mm veiligheidsglas, acryl 3/5/10mm, dibond, akoestische stof, etc.) te beheren, én om per kunstwerk vast te leggen welke materiaalsoorten daarvoor mogelijk zijn (niet elk kunstwerk is in elk materiaal leverbaar).
-- **Prijzen:** prijs kunnen toekennen aan een kunstwerk (basisprijs), plus extra kosten (toeslag) voor andere/grotere maten bovenop die basisprijs. Hoe dit precies samenhangt met de prijsgroepen (bv. is de basisprijs zelf al per prijsgroep verschillend, of is de prijsgroep een percentage/korting op één vaste basisprijs) moet nog worden uitgewerkt bij de daadwerkelijke brainstorm/spec.
-- **Copyright-watermerk:** kunstwerkafbeeldingen die getoond worden (in ieder geval publiek, buiten het afgeschermde bestelproces) moeten een watermerk krijgen ter bescherming van het copyright — exacte plek/uitvoering (bv. alleen op preview-afbeeldingen, of ook op de uiteindelijke besteldata) nog uit te werken bij de daadwerkelijke brainstorm/spec.
+## Nog niet gerealiseerd
 
-## Datamodel (voorlopige tabellen)
+- **Order doorzetten naar de drukker.** Geen concept van "In productie" in de code — alleen `Te beoordelen | Goedgekeurd | Afgewezen` bestaat als status. Er is geen actie om een goedgekeurde bestelling naar een volgende productiestatus te zetten.
+- **Rollen/rechten voor medewerkers.** Nu een platte ja/nee-toegang (`medewerkers`-collectie, geen rolveld) — geen onderscheid tussen bijvoorbeeld iemand die alleen orders mag verwerken en iemand die ook klanten mag goedkeuren.
+- **Automatische notificaties bij statuswijzigingen** (bv. "bestelling in productie", "retour verwerkt"). Er bestaat alleen een eenmalige orderbevestigingsmail bij het plaatsen van een bestelling (`mail-server/send-order-confirmation.php`, aangeroepen vanuit `CartPanel`) — geen enkele statuswijziging in Beheer triggert een mail of ander bericht.
+- **Gesprekgeschiedenis (WhatsApp).** Nog volledig mockdata (`ConversationsSection` rendert `MOCK_CONVERSATIONS`), geen echte koppeling.
+- **Taalvoorkeur gekoppeld aan account.** Nog steeds alleen per browser/sessie (`useMockProfile`, lokale route-taal-wissel) — niet opgeslagen op het echte Firestore-klantdocument, dus niet automatisch toegepast bij het opnieuw inloggen.
+- **Apart hi-res productiebestand per kunstwerk.** Enige losse gat in de verder afgeronde kunstwerken-beheer: `Kunstwerk` heeft alleen een `foto`-veld (de watermerk-webfoto), geen apart veld voor een niet-verwaterd productiebestand voor de drukker.
+- **Idee bij "Word klant" (onderzocht, nog niet gebouwd):** bedrijfsnaam/adres automatisch opvragen op basis van het ingevoerde KVK-nummer (NL), en adres op basis van postcode+huisnummer (NL/FR/DE/UK). Volledig onderzoek (API's, kosten, snelheid, architectuur) staat in [`2026-07-23-kvk-postcode-lookup-research.md`](2026-07-23-kvk-postcode-lookup-research.md).
 
-Zodra dit deelproject een echte backend krijgt, zijn in ieder geval de volgende tabellen nodig (exact schema/kolommen nog te ontwerpen bij de daadwerkelijke brainstorm/spec):
+## Twee punten die prioriteit verdienen, geen "ooit"
 
-- **Maten** — de beschikbare afmetingen.
-- **Orders** — met een status (bv. Aangevraagd / In productie / Verzonden / Geleverd). "Retour aangemeld" is geen aparte status in deze reeks, maar een overlay op een bestaande order zodra er een retour voor is geregistreerd (zo werkt het ook al in de huidige mock-versie) — vermoedelijk dus een apart veld/vlag, geen vervanging van de status.
-- **Orderitems** — de regels binnen een order (kunstwerk, maat, materiaalsoort, aantal).
-- **Facturen** — met een status (bv. Te betalen / Betaald).
-- **Klanten**.
-- **Prijsgroepen**.
-- **Koppeltabel prijsgroep ↔ klanten** (welke klant hoort bij welke prijsgroep).
-- **Prijzen** — basisprijs per kunstwerk, plus toeslagen per maat (en mogelijk per materiaalsoort/prijsgroep — exacte opzet nog te ontwerpen).
-- **Rollen** (voor medewerkers in de beheeromgeving) en een koppeling medewerker ↔ rol.
-- Impliciet, volgend uit de beheerfunctie hierboven: **Kunstwerken**, **Segmenten** en **Materiaalsoorten** als eigen tabellen, plus koppeltabellen kunstwerk↔segment (N-op-N) en kunstwerk↔materiaalsoort (N-op-N), en een koppeling kunstwerk↔maat.
-
-## Klantaccount (voor de klant, ingelogd) — van mock naar echt
-
-De zes onderdelen van de klant-accountpagina staan hierboven al beschreven (zie "Website — paginastructuur en functionaliteit"). Dit zijn de punten waarop de huidige mock-versie moet worden vervangen door echte data/functionaliteit:
-
-- **Bestellingen, Te betalen facturen, Betaalde facturen:** nu nepdata in `localStorage`, moet backend-data worden.
-- **Retourneren:** nu registreert de klant alleen zelf een retouraanvraag (ook nepdata); moet gekoppeld worden aan de echte beheerkant die deze retouren afhandelt (zie Beheerfunctie hierboven).
-- **Gesprekgeschiedenis:** nu volledig nepdata; moet een echte koppeling worden met WhatsApp-conversaties (eigen inbox vs. WhatsApp Business API — moet nog worden uitgewerkt).
-- **Instellingen:** nu een los mock-profiel zonder koppeling met de "Word klant"-aanvraag; moet één samenhangend, echt klantprofiel worden (wachtwoord, taalvoorkeur, contactpersoon, bedrijfsnaam, e-mailadres, telefoonnummer, adres, afleveradres, factuuradres, contactvoorkeur).
-
-## Taalvoorkeur gekoppeld aan account
-
-- Zodra er echte klantaccounts zijn: taalvoorkeur opslaan bij het account (niet alleen lokaal in de browser, zoals nu), zodat een klant bij het inloggen automatisch in de eerder gekozen taal terechtkomt.
-- Tot die tijd blijft taalkeuze werken zoals nu: per bezoek/browser, via de taalkeuze-knop in de navigatiebalk (zie het aparte deelproject "Taalkeuze-dropdown met vlaggen").
-
-## Privacy / AVG
-
-- Zodra er echte klantgegevens worden opgeslagen: een klant moet zijn account/gegevens kunnen laten verwijderen (recht op verwijdering onder de AVG). Exacte uitwerking (zelfbediening vs. aanvraag bij het bedrijf, bewaartermijn voor facturen i.v.m. boekhoudplicht) nog uit te werken bij de daadwerkelijke brainstorm/spec.
+1. **AVG-verwijderregel is niet meer "wacht op echte orders" — de blokkade is al weg.** [[project_klantgoedkeuring_future_rules]] stelde deze regel destijds uit omdat orders toen nog mockdata waren. Dat klopt niet meer: Bestellingen zijn nu echt. Een klant kan op dit moment zijn account instant zelf verwijderen (`SettingsSection.handleDeleteAccount` doet direct `deleteDoc`/`deleteUser`, geen controle op openstaande bestellingen, geen review door Beheer) terwijl er een echte, gekoppelde bestelling bestaat — precies het scenario dat de regel moest voorkomen.
+2. **Instellingen/profiel is een architecturaal gat, geen nice-to-have.** Het echte klantprofiel (Firestore, gekoppeld aan bestellingen via `klantId`) en het profiel dat de klant op zijn Instellingen-pagina ziet en bewerkt zijn twee volledig gescheiden databronnen: Instellingen leest/schrijft nog altijd een los `localStorage`-mockprofiel (`useMockProfile`), zonder enige koppeling aan het echte `klanten`-document. Zodra dit "echt" wordt, is dat geen simpele klus maar een samenvoeging van twee datamodellen.
 
 ## Niet in scope van dit document
 
-- Concrete technische keuzes (database, auth-provider, hosting) — dat gebeurt bij de daadwerkelijke brainstorm voor dit deelproject, niet hier.
-- Een tijdlijn of prioriteit t.o.v. de overige openstaande deelprojecten. Van de oorspronkelijke lijst (mandje, contactpagina, registratiepagina, logo, klant-accountpagina, visuele polijst, taal-dropdown) is inmiddels alles gebouwd behalve **visuele polijst** — die blijft, zoals eerder afgesproken, vóór dit deelproject staan.
+- Concrete technische keuzes (database, auth-provider, hosting) voor wat nog gebouwd moet worden — dat gebeurt bij de daadwerkelijke brainstorm voor dat deelproject, niet hier.
+- Een tijdlijn of prioriteit t.o.v. overige werk — met uitzondering van de twee punten hierboven die expliciet als prioriteit zijn gemarkeerd.
