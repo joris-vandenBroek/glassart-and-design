@@ -13,11 +13,13 @@ not-yet-started Firebase→MySQL migration happens). A new GitHub Actions workfl
 only by `workflow_dispatch`, builds the site with a second Firebase project's config and
 `NEXT_PUBLIC_ENVIRONMENT_LABEL=staging`, then uploads the `out/` folder plus a
 staging-only `.htaccess` (HTTP Basic Auth) to `staging.glassartanddesign.com` on mijn.host
-via `rsync` over SSH.
+via FTPS (a dedicated, directory-scoped FTP account — see Task 4's revision note for why
+this replaced the originally-planned SSH/rsync approach).
 
-**Tech Stack:** Next.js 14 (App Router, static export), GitHub Actions (`webfactory/ssh-agent`,
-`rsync`), Firebase (second project for data isolation), Apache `.htaccess`/`.htpasswd` (Basic
-Auth), Vitest + Testing Library (existing).
+**Tech Stack:** Next.js 14 (App Router, static export), GitHub Actions
+(`SamKirkland/FTP-Deploy-Action` over FTPS — no SSH key involved), Firebase (second project
+for data isolation), Apache `.htaccess`/`.htpasswd` (Basic Auth), Vitest + Testing Library
+(existing).
 
 ## Global Constraints
 
@@ -33,7 +35,7 @@ Auth), Vitest + Testing Library (existing).
   approved spec.
 - No secrets or real credentials ever committed to the repo — GitHub repo `vars` for
   non-secret config (matching the existing `deploy-pages.yml` pattern), GitHub `secrets` for
-  anything sensitive (SSH key, Basic Auth password).
+  anything sensitive (FTP credentials, Basic Auth password).
 
 ---
 
@@ -318,6 +320,13 @@ Auth), Vitest + Testing Library (existing).
   the staging directory, never production. Pick a username (e.g. `staging-deploy`) and a
   strong password.
 
+  **Known DirectAdmin quirk:** the Custom-directory picker may not let you descend into
+  `public_html` itself — it may stop one level higher, at
+  `domains/staging.glassartanddesign.com`. That's fine; don't fight the picker or recreate
+  the account trying to force it deeper. If you land there, just make sure Task 5's workflow
+  `server-dir` includes the `public_html/` segment to compensate (it already does — see Task
+  5, Step 1).
+
 - [ ] **Step 3: store the FTP secrets and the system username in GitHub**
 
   ```bash
@@ -430,7 +439,7 @@ Auth), Vitest + Testing Library (existing).
             password: ${{ secrets.STAGING_FTP_PASSWORD }}
             protocol: ftps
             local-dir: ./out/
-            server-dir: ./
+            server-dir: ./public_html/
             dangerous-clean-slate: true
 
         - name: Smoke check
