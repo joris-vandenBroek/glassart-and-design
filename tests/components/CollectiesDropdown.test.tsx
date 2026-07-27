@@ -79,4 +79,23 @@ describe('CollectiesDropdown', () => {
     fireEvent.mouseLeave(screen.getByTestId('collections-dropdown-trigger'));
     expect(screen.queryByTestId('collections-dropdown')).not.toBeInTheDocument();
   });
+
+  it('opens on focus and stays open when focus moves to an item inside it (keyboard tabbing)', async () => {
+    renderDropdown();
+    fireEvent.focus(screen.getByTestId('nav-collections'));
+    await waitFor(() => expect(screen.getByTestId('collections-dropdown')).toBeInTheDocument());
+
+    const firstItem = screen.getByTestId('collections-dropdown-item-seg-hotel');
+    fireEvent.blur(screen.getByTestId('nav-collections'), { relatedTarget: firstItem });
+    expect(screen.getByTestId('collections-dropdown')).toBeInTheDocument();
+  });
+
+  it('closes on blur when focus moves outside the dropdown entirely', async () => {
+    renderDropdown();
+    fireEvent.focus(screen.getByTestId('nav-collections'));
+    await waitFor(() => expect(screen.getByTestId('collections-dropdown')).toBeInTheDocument());
+
+    fireEvent.blur(screen.getByTestId('nav-collections'), { relatedTarget: document.body });
+    expect(screen.queryByTestId('collections-dropdown')).not.toBeInTheDocument();
+  });
 });

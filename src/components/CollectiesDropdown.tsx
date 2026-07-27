@@ -18,7 +18,11 @@ export function CollectiesDropdown() {
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}
       onFocus={() => setIsOpen(true)}
-      onBlur={() => setIsOpen(false)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setIsOpen(false);
+        }
+      }}
     >
       <Link
         href="/collecties"
