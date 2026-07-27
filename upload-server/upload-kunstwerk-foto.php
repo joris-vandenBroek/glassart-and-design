@@ -89,10 +89,11 @@ function findAuthorizedProjectId(string $idToken, array $projectIds): ?string
 }
 
 $idToken = (string) ($_POST['idToken'] ?? '');
-$candidateProjectIds = array_values(array_filter([
-    $config['firebase_project_id'] ?? null,
-    $config['staging_firebase_project_id'] ?? null,
-]));
+$productionProjectId = (string) ($config['firebase_project_id'] ?? '');
+$stagingProjectId = (string) ($config['staging_firebase_project_id'] ?? '');
+// array_unique/array_filter so a copy-paste error that sets both config keys to the
+// same project id can never make $isStagingUpload true for a production token below.
+$candidateProjectIds = array_values(array_filter(array_unique([$productionProjectId, $stagingProjectId])));
 $authorizedProjectId = $idToken !== '' ? findAuthorizedProjectId($idToken, $candidateProjectIds) : null;
 if ($authorizedProjectId === null) {
     http_response_code(403);
@@ -102,8 +103,15 @@ if ($authorizedProjectId === null) {
 
 // Test uploads from the staging Firebase project must never land among the
 // real production photos -- route them to a separate directory/URL instead.
-$isStagingUpload = isset($config['staging_firebase_project_id'])
-    && $authorizedProjectId === $config['staging_firebase_project_id'];
+$isStagingUpload = $stagingProjectId !== '' && $authorizedProjectId === $stagingProjectId;
+$publicBaseUrlKey = $isStagingUpload ? 'staging_upload_public_base_url' : 'upload_public_base_url';
+if (!is_string($config[$publicBaseUrlKey] ?? null) || $config[$publicBaseUrlKey] === '') {
+    // Fail before any file work happens -- catching this after move_uploaded_file() would
+    // leave an orphaned file on disk and crash on the strict_types rtrim() call below.
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Upload endpoint misconfigured']);
+    exit;
+}
 
 if (!isset($_FILES['foto']) || $_FILES['foto']['error'] !== UPLOAD_ERR_OK) {
     http_response_code(400);
@@ -145,6 +153,5 @@ if (!move_uploaded_file($foto['tmp_name'], $destination)) {
     exit;
 }
 
-$publicBaseUrlKey = $isStagingUpload ? 'staging_upload_public_base_url' : 'upload_public_base_url';
 $url = rtrim($config[$publicBaseUrlKey], '/') . '/' . $filename;
 echo json_encode(['success' => true, 'url' => $url]);

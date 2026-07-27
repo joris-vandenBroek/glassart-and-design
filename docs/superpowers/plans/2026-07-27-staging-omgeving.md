@@ -400,7 +400,28 @@ for data isolation), Apache `.htaccess`/`.htpasswd` (Basic Auth), Vitest + Testi
   `https://glassartanddesign.com` and `https://joris-vandenbroek.github.io` entries — without
   this, order-confirmation/upload requests from staging will be rejected by CORS.
 
-- [ ] **Step 6: verify the secrets/variables are stored**
+- [ ] **Step 6 (manual, you): deploy the updated upload-server code and enable staging uploads**
+
+  `upload-server/` is **not** part of the `out/` folder that Task 5's workflow FTPS-uploads —
+  it's plain PHP that lives directly on the live mijn.host server, uploaded separately (same
+  as it always has been). Two things are required before a kunstwerk-foto upload from staging
+  will work — skip either one and staging uploads fail with `403 Forbidden`, indistinguishable
+  from before this fix existed:
+
+  1. Re-upload the updated `upload-server/upload-kunstwerk-foto.php` to the live server
+     (overwrite the existing file at the same path) — it now accepts tokens from either
+     Firebase project instead of only production's.
+  2. Add two new keys to the live, git-ignored `upload-server/config.php` (see
+     `upload-server/config.example.php` for the exact shape):
+     ```php
+     'staging_firebase_project_id' => 'glassart-and-design-staging',
+     'staging_upload_public_base_url' => 'https://<jouw-echte-domein>/upload-server/uploads/kunstwerken-test',
+     ```
+     Both keys must be set together — if either is missing/empty, staging uploads either
+     never get recognized as staging (falls back to needing a production token) or fail with
+     a clear "Upload endpoint misconfigured" `500` rather than silently doing the wrong thing.
+
+- [ ] **Step 7: verify the secrets/variables are stored**
 
   ```bash
   gh secret list
@@ -438,6 +459,13 @@ for data isolation), Apache `.htaccess`/`.htpasswd` (Basic Auth), Vitest + Testi
   on:
     workflow_dispatch:
 
+  permissions:
+    contents: read
+
+  concurrency:
+    group: "staging"
+    cancel-in-progress: false
+
   jobs:
     deploy:
       runs-on: ubuntu-latest
@@ -471,11 +499,15 @@ for data isolation), Apache `.htaccess`/`.htpasswd` (Basic Auth), Vitest + Testi
           run: sudo apt-get update && sudo apt-get install -y apache2-utils
 
         - name: Generate .htpasswd
-          run: htpasswd -bc out/.htpasswd glassart "${{ secrets.STAGING_BASIC_AUTH_PASSWORD }}"
+          env:
+            BASIC_AUTH_PASSWORD: ${{ secrets.STAGING_BASIC_AUTH_PASSWORD }}
+          run: htpasswd -bc out/.htpasswd glassart "$BASIC_AUTH_PASSWORD"
 
         - name: Add Basic Auth .htaccess
+          env:
+            SYSTEM_USERNAME: ${{ vars.STAGING_SYSTEM_USERNAME }}
           run: |
-            sed "s#USERNAME#${{ vars.STAGING_SYSTEM_USERNAME }}#" deploy/staging.htaccess > out/.htaccess
+            sed "s#USERNAME#$SYSTEM_USERNAME#" deploy/staging.htaccess > out/.htaccess
 
         - name: Upload to staging.glassartanddesign.com via FTPS
           uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -489,14 +521,35 @@ for data isolation), Apache `.htaccess`/`.htpasswd` (Basic Auth), Vitest + Testi
             dangerous-clean-slate: true
 
         - name: Smoke check
+          env:
+            BASIC_AUTH_PASSWORD: ${{ secrets.STAGING_BASIC_AUTH_PASSWORD }}
           run: |
             sleep 5
-            status=$(curl -s -o /dev/null -w "%{http_code}" -u "glassart:${{ secrets.STAGING_BASIC_AUTH_PASSWORD }}" "https://staging.glassartanddesign.com/nl/")
+            attempt=1
+            max_attempts=3
+            status=""
+            while [ "$attempt" -le "$max_attempts" ]; do
+              status=$(curl -s -o /dev/null -w "%{http_code}" -u "glassart:$BASIC_AUTH_PASSWORD" "https://staging.glassartanddesign.com/nl/")
+              if [ "$status" = "200" ]; then
+                break
+              fi
+              echo "Attempt $attempt/$max_attempts: staging did not respond with 200 (got $status)"
+              attempt=$((attempt + 1))
+              if [ "$attempt" -le "$max_attempts" ]; then
+                sleep 5
+              fi
+            done
             if [ "$status" != "200" ]; then
-              echo "Staging did not respond with 200 (got $status)"
+              echo "Staging did not respond with 200 after $max_attempts attempts (last status: $status)"
               exit 1
             fi
   ```
+
+  Secrets/variables are passed through step-level `env:` and referenced as shell variables
+  (`$BASIC_AUTH_PASSWORD`, `$SYSTEM_USERNAME`) rather than interpolated directly into the
+  `run:` string — `${{ }}` expansion happens before the shell parses the line, so interpolating
+  a secret straight into a shell string risks the value being (mis)parsed as shell syntax if it
+  ever contains a quote, `$`, or backtick.
 
   `dangerous-clean-slate: true` mirrors the old `rsync --delete` behavior (removes files on
   the server that no longer exist in `out/`) — safe here because the FTP account from Task 4
