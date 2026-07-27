@@ -19,12 +19,17 @@ body {
   }
 }
 
-/* Unlayered on purpose: Tailwind's own utility classes (grid-cols-1, h-56,
-   border-b, ...) live in the native `utilities` cascade layer and would
-   otherwise win over anything placed in `@layer components` at equal
-   specificity. Rules outside any @layer always beat layered rules, so this
-   is the only reliable way for .pm-preview-panel/.pm-preview-image to
-   override the base utility classes ProductModal.tsx also applies. */
+/* This project's Tailwind config uses the classic @tailwind directives with
+   no native CSS @layer output (verified: compiling this file through the
+   project's Tailwind CLI produces zero @layer at-rules), so there's no
+   cascade-layer mechanism to rely on here. These rules override the utility
+   classes ProductModal.tsx also applies (grid-cols-1, h-56, border-b, ...)
+   purely because they're appended after `@tailwind utilities;` in this
+   file's source order, which wins the equal-specificity tie-break. Do NOT
+   move this block into `@layer components` — Tailwind hoists @layer
+   components content to the `@tailwind components;` insertion point
+   (before `@tailwind utilities;`), which would put it back before the
+   utilities and silently break the override again. */
 .pm-preview-frame {
   container-type: inline-size;
 }
