@@ -100,6 +100,7 @@
     "collectionsLabel": "Collection",
     "stijlLabel": "Style",
     "onderwerpLabel": "Subject",
+    "previewOrderDisabled": "Ordering is not possible in this preview",
     "customSizeOption": "Enter custom size",
     "customWidthLabel": "Width (cm)",
     "customHeightLabel": "Height (cm)",

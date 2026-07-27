@@ -100,6 +100,7 @@
     "collectionsLabel": "Collectie",
     "stijlLabel": "Stijl",
     "onderwerpLabel": "Onderwerp",
+    "previewOrderDisabled": "Bestellen niet mogelijk in dit voorbeeld",
     "customSizeOption": "Eigen maat opgeven",
     "customWidthLabel": "Breedte (cm)",
     "customHeightLabel": "Hoogte (cm)",

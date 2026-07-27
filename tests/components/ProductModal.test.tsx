@@ -144,13 +144,15 @@ function renderModal(
   kunstenaars: Kunstenaar[] | null = KUNSTENAARS,
   segmenten: Segment[] | null = SEGMENTEN,
   stijlen: Stijl[] | null = STIJLEN,
-  onderwerpen: Onderwerp[] | null = ONDERWERPEN
+  onderwerpen: Onderwerp[] | null = ONDERWERPEN,
+  variant: 'dialog' | 'preview' = 'dialog'
 ) {
   return render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <CustomerAuthProvider>
         <CartProvider>
           <ProductModal
+            variant={variant}
             kunstwerk={kunstwerk}
             materialen={MATERIALEN}
             maten={MATEN}
@@ -927,5 +929,52 @@ describe('ProductModal', () => {
     expect(screen.queryByTestId('product-modal-artiest')).not.toBeInTheDocument();
     expect(screen.queryByTestId('product-modal-stijl')).not.toBeInTheDocument();
     expect(screen.queryByTestId('product-modal-onderwerp')).not.toBeInTheDocument();
+  });
+
+  it('preview variant: renders inline without a backdrop, close button or dialog role', () => {
+    renderModal(() => {}, KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, ONDERWERPEN, 'preview');
+    expect(screen.queryByTestId('product-modal-backdrop')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('product-modal-close')).not.toBeInTheDocument();
+    expect(screen.getByTestId('product-modal')).not.toHaveAttribute('role', 'dialog');
+  });
+
+  it('preview variant: disables the confirm button and never adds to the cart', () => {
+    function Probe() {
+      const { items } = useCart();
+      return <div data-testid="probe">{JSON.stringify(items)}</div>;
+    }
+    render(
+      <NextIntlClientProvider locale="nl" messages={messages}>
+        <CustomerAuthProvider>
+          <CartProvider>
+            <ProductModal
+              variant="preview"
+              kunstwerk={KUNSTWERK}
+              materialen={MATERIALEN}
+              maten={MATEN}
+              materiaalsoorten={MATERIAALSOORTEN}
+              kunstenaars={KUNSTENAARS}
+              segmenten={SEGMENTEN}
+              stijlen={STIJLEN}
+              onderwerpen={ONDERWERPEN}
+              onClose={() => {}}
+            />
+            <Probe />
+          </CartProvider>
+        </CustomerAuthProvider>
+      </NextIntlClientProvider>
+    );
+    const confirmButton = screen.getByTestId('product-modal-confirm');
+    expect(confirmButton).toBeDisabled();
+    expect(confirmButton).toHaveTextContent('Bestellen niet mogelijk in dit voorbeeld');
+    fireEvent.click(confirmButton);
+    expect(screen.getByTestId('probe')).toHaveTextContent('[]');
+    expect(logActiviteitMock).not.toHaveBeenCalled();
+  });
+
+  it('preview variant: keeps the materiaal/maat selects interactive', () => {
+    renderModal(() => {}, KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, ONDERWERPEN, 'preview');
+    fireEvent.change(screen.getByTestId('product-modal-materiaal'), { target: { value: 'mat-2' } });
+    expect(screen.getByTestId('product-modal-materiaal')).toHaveValue('mat-2');
   });
 });
