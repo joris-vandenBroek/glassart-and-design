@@ -102,7 +102,35 @@ for data isolation), Apache `.htaccess`/`.htpasswd` (Basic Auth), Vitest + Testi
   Verify with: `gh variable list` — all five `STAGING_NEXT_PUBLIC_FIREBASE_*` names should
   appear.
 
-- [ ] **Step 7: commit**
+- [ ] **Step 7 (manual, you): bootstrap the first staging admin account**
+
+  A fresh Firebase project has zero Auth users and zero `medewerkers` Firestore documents.
+  `firestore.rules` (`match /medewerkers/{uid} { allow write: if false; }`) intentionally
+  blocks self-registration as admin from the client, so this account has to be created
+  directly in the Firebase Console, which has admin-level access and bypasses that rule:
+
+  1. Firebase Console → `glassart-and-design-staging` project → **Authentication** → **Users**
+     → **Add user** → enter an email/password of your choosing (this doesn't need to match
+     any of the 4 production medewerker accounts — staging has its own, separate Auth users).
+     Note the generated **User UID** shown after creation.
+  2. Same project → **Firestore Database** → `medewerkers` collection (create it if it
+     doesn't exist yet) → **Add document** → set the **document ID** to that exact Auth User
+     UID from Step 1. Fill in the fields production `medewerkers` documents use (see
+     `src/lib/useAdminAuth.tsx`, whose `isAdmin` check only tests whether this document
+     *exists* — and the shape documented in
+     `docs/superpowers/specs/2026-07-20-beheer-authenticatie-design.md`'s "Accounts &
+     autorisatie" section, `{ naam: string, email: string }`):
+     - `naam` (string) — e.g. `"Staging Admin"`.
+     - `email` (string) — the same email used in Step 1.
+  3. This is only possible because it's done directly in the Firebase Console (admin-level
+     access, not subject to Firestore Security Rules) — the same action attempted through the
+     app itself would be rejected by the `allow write: if false;` rule on `medewerkers`, as
+     intended.
+
+  Expected result: logging into `/beheer` on staging with this email/password now works and
+  lands on the authenticated shell (Task 6, Step 5 depends on this).
+
+- [ ] **Step 8: commit**
 
   ```bash
   git add .firebaserc
