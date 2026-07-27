@@ -5,12 +5,10 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { useFirestoreCollection } from '@/lib/useFirestoreCollection';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
-import { resolveKunstwerkMateriaalLabel } from '@/lib/kunstwerkMateriaal';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
 import { WatermarkedImage } from './WatermarkedImage';
 import { ProductModal } from './ProductModal';
-import { KunstwerkSpecCard } from './KunstwerkSpecCard';
 import { Combobox } from './Combobox';
 import { Breadcrumb } from './Breadcrumb';
 import { FilterSection } from './FilterSection';
@@ -102,8 +100,6 @@ export function ProductsGrid() {
   const geselecteerdeKunstenaar = kunstenaarFilter
     ? (kunstenaars.items ?? []).find((kunstenaar) => kunstenaar.id === kunstenaarFilter) ?? null
     : null;
-
-  const kunstenaarNaamById = new Map((kunstenaars.items ?? []).map((kunstenaar) => [kunstenaar.id, kunstenaar.naam]));
 
   function filterButtonClass(isActive: boolean) {
     return isActive
@@ -386,12 +382,9 @@ export function ProductsGrid() {
             </div>
           )}
 
-          <div data-testid="products-grid" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <div data-testid="products-grid" className="grid grid-cols-3 gap-3">
             {visibleKunstwerken.map((kunstwerk) => {
               const omschrijving = resolveKunstwerkOmschrijving(kunstwerk, locale);
-              const collectieLabels = kunstwerk.segmentIds.map(
-                (segmentId) => segmenten.items?.find((segment) => segment.id === segmentId)?.omschrijving ?? segmentId
-              );
               return (
                 <div
                   key={kunstwerk.id}
@@ -408,22 +401,15 @@ export function ProductsGrid() {
                       handleSelect(kunstwerk);
                     }
                   }}
-                  className="group relative cursor-pointer overflow-hidden rounded border border-white/10 transition hover:-translate-y-1"
+                  className="group relative aspect-square cursor-pointer overflow-hidden rounded border border-gold/50 bg-white transition duration-300 hover:-translate-y-1 hover:border-gold hover:shadow-[0_8px_24px_rgba(212,175,55,0.25)] focus-visible:-translate-y-1 focus-visible:border-gold focus-visible:outline-none"
                 >
+                  <WatermarkedImage src={kunstwerk.foto} alt={omschrijving} className="h-full w-full" fit="contain" />
                   <div
                     aria-hidden="true"
-                    className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-br from-gold/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                  />
-                  <KunstwerkSpecCard
-                    fotoSlot={
-                      <WatermarkedImage src={kunstwerk.foto} alt={omschrijving} className="h-full w-full" fit="contain" />
-                    }
-                    code={kunstwerk.naam}
-                    titel={omschrijving}
-                    artiest={kunstwerk.kunstenaarId ? kunstenaarNaamById.get(kunstwerk.kunstenaarId) ?? '' : ''}
-                    collectieLabels={collectieLabels}
-                    materiaalLabel={resolveKunstwerkMateriaalLabel(kunstwerk, materialen.items ?? [], materiaalsoorten.items ?? [])}
-                  />
+                    className="pointer-events-none absolute inset-0 flex items-end bg-gradient-to-t from-black/80 via-black/10 to-transparent p-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100"
+                  >
+                    <p className="font-head text-xs italic leading-snug text-white line-clamp-3">{omschrijving}</p>
+                  </div>
                 </div>
               );
             })}
@@ -437,6 +423,9 @@ export function ProductsGrid() {
         maten={maten.items}
         materiaalsoorten={materiaalsoorten.items}
         kunstenaars={kunstenaars.items}
+        segmenten={segmenten.items}
+        stijlen={stijlen.items}
+        onderwerpen={onderwerpen.items}
         onClose={() => setSelectedKunstwerk(null)}
       />
     </>

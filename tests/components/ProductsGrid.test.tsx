@@ -245,6 +245,16 @@ describe('ProductsGrid', () => {
     expect(screen.getByTestId('product-modal')).toBeInTheDocument();
   });
 
+  it('shows the artiest/collectie/stijl/onderwerp info block once the dialog is opened', async () => {
+    renderProductsGrid();
+    const cards = await screen.findAllByTestId('product-card');
+    fireEvent.click(cards[0]); // kw-1: kunstenaarId 'ka-1', segmentIds ['seg-hotel'], stijlIds ['stijl-abstract'], onderwerpIds ['onderwerp-bloemen']
+    expect(screen.getByTestId('product-modal-artiest')).toHaveTextContent('Sabrina Glasser');
+    expect(screen.getByTestId('product-modal-collecties')).toHaveTextContent('Hotel');
+    expect(screen.getByTestId('product-modal-stijl')).toHaveTextContent('Abstract');
+    expect(screen.getByTestId('product-modal-onderwerp')).toHaveTextContent('Bloemen');
+  });
+
   it('closes the product modal when its backdrop is clicked', async () => {
     renderProductsGrid();
     const cards = await screen.findAllByTestId('product-card');
@@ -301,10 +311,12 @@ describe('ProductsGrid', () => {
     expect(logActiviteitMock).not.toHaveBeenCalled();
   });
 
-  it('shows the resolved materiaal label on each kunstwerk card', async () => {
+  it('shows the omschrijving as the card\'s accessible label and hover caption, without any other text', async () => {
     renderProductsGrid();
     const cards = await screen.findAllByTestId('product-card');
-    expect(cards[0]).toHaveTextContent('4mm Veiligheidsglas');
+    expect(cards[0]).toHaveAttribute('aria-label', 'Hotel paneel');
+    expect(cards[0]).toHaveTextContent('Hotel paneel');
+    expect(cards[0]).not.toHaveTextContent('4mm Veiligheidsglas');
   });
 
   it('shows a breadcrumb that ends on "Collecties" when no segment is selected, and on the segment name once one is', async () => {
