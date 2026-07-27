@@ -102,7 +102,7 @@ service cloud.firestore {
            'bestelling_verstuurd_naar_drukker','bestelinstellingen_gewijzigd','klant_minimale_afname_gewijzigd',
            'stijl_toegevoegd','stijl_gewijzigd','stijl_verwijderd',
            'onderwerp_toegevoegd','onderwerp_gewijzigd','onderwerp_verwijderd']
-        && request.resource.data.keys().hasOnly(['type','actorId','actorEmail','actorNaam','timestamp'])
+        && request.resource.data.keys().hasOnly(['type','actorId','actorEmail','actorNaam','timestamp','omschrijving'])
         && request.resource.data.actorEmail is string
         && request.resource.data.actorNaam is string;
       allow read: if request.auth != null &&
