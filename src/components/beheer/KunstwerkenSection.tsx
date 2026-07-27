@@ -530,7 +530,7 @@ export function KunstwerkenSection({
       <Modal isOpen={modalState !== null} onClose={closeModal} closeLabel={t('modalClose')} wide>
         <div
           data-testid="kunstwerk-modal"
-          className="grid grid-cols-1 gap-6 text-sm text-white/80 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_560px]"
+          className="grid grid-cols-1 gap-6 text-sm text-white/80 lg:grid-cols-[minmax(0,1fr)_320px] min-[1432px]:grid-cols-[minmax(0,1fr)_560px]"
         >
           <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">

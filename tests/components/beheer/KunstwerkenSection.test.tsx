@@ -752,12 +752,12 @@ describe('KunstwerkenSection', () => {
       expect(screen.getByTestId('product-modal')).toBeInTheDocument();
     });
 
-    it('widens the preview column at the xl breakpoint, in addition to the existing lg column', () => {
+    it('widens the preview column at the min-[1432px] breakpoint, in addition to the existing lg column', () => {
       renderSection();
       fireEvent.click(screen.getByTestId('kunstwerken-add'));
       const grid = screen.getByTestId('kunstwerk-modal');
       expect(grid.className).toContain('lg:grid-cols-[minmax(0,1fr)_320px]');
-      expect(grid.className).toContain('xl:grid-cols-[minmax(0,1fr)_560px]');
+      expect(grid.className).toContain('min-[1432px]:grid-cols-[minmax(0,1fr)_560px]');
     });
 
     it('updates the preview omschrijving as the admin types it', () => {

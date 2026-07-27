@@ -34,6 +34,9 @@ body {
   container-type: inline-size;
 }
 
+/* 480px must stay below KunstwerkenSection.tsx's wide preview-column track width
+   (currently 560px, gated at `min-[1432px]:`) — if that track ever narrows to 480px
+   or below, this container query stops producing a two-column layout. */
 @container (min-width: 480px) {
   .pm-preview-panel {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -43,6 +46,5 @@ body {
     height: 100%;
     border-bottom-width: 0;
     border-right-width: 1px;
-    border-right-color: rgba(212, 175, 55, 0.5);
   }
 }
