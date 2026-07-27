@@ -287,7 +287,9 @@ export function ProductModal({
         alt={omschrijving}
         fit="contain"
         fitBackground="ink"
-        className="h-56 w-full border-b border-gold/50 bg-ink sm:h-full sm:border-b-0 sm:border-r"
+        className={`h-56 w-full border-b border-gold/50 bg-ink ${
+          variant === 'dialog' ? 'sm:h-full sm:border-b-0 sm:border-r' : ''
+        }`}
       />
       <div className="flex flex-col gap-4 p-6">
         <p data-testid="product-modal-omschrijving" className="text-sm leading-relaxed text-white/80">
@@ -496,8 +498,13 @@ export function ProductModal({
     </>
   );
 
-  const panelClassName =
-    'relative z-10 grid w-full max-w-2xl grid-cols-1 overflow-hidden rounded-lg border border-white/10 bg-charcoal sm:grid-cols-2';
+  // The preview variant is embedded in a fixed-width beheer sidebar (see
+  // KunstwerkenSection's 320px column) rather than centered in the full
+  // viewport, so the sm: breakpoint below doesn't reflect its actual
+  // available width — it must always stay single-column.
+  const panelClassName = `relative z-10 grid w-full max-w-2xl grid-cols-1 overflow-hidden rounded-lg border border-white/10 bg-charcoal ${
+    variant === 'dialog' ? 'sm:grid-cols-2' : ''
+  }`;
 
   if (variant === 'preview') {
     return (

@@ -974,6 +974,17 @@ describe('ProductModal', () => {
     expect(screen.getByTestId('product-modal')).not.toHaveAttribute('role', 'dialog');
   });
 
+  it('preview variant: never switches to the two-column layout, since it is embedded in a fixed-width sidebar rather than the full viewport', () => {
+    renderModal(() => {}, KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, ONDERWERPEN, 'preview');
+    expect(screen.getByTestId('product-modal').className).not.toMatch(/(^|\s)sm:grid-cols-2(\s|$)/);
+  });
+
+  it('dialog variant: keeps the two-column layout at the sm breakpoint, since it is centered in the full viewport', () => {
+    renderModal();
+    const panel = screen.getByTestId('product-modal-backdrop').nextElementSibling;
+    expect(panel?.className).toMatch(/(^|\s)sm:grid-cols-2(\s|$)/);
+  });
+
   it('preview variant: disables the confirm button and never adds to the cart', () => {
     function Probe() {
       const { items } = useCart();
