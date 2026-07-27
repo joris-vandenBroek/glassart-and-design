@@ -2,7 +2,7 @@ import type { Bedrijfsgegevens } from '@/components/beheer/bedrijfsgegevensTypes
 
 export const BEDRIJFSGEGEVENS_SEED: Bedrijfsgegevens = {
   bezoekadres: 'Den Heuvel 21, 5688 EM Oirschot',
-  email: 'info@glassartdesign.nl',
+  email: 'info@glassartanddesign.com',
   whatsappNummer: '31600000000',
   iban: 'NL00 BANK 0123 4567 89',
   kvkNummer: '12345678',

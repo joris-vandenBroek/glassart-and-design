@@ -2,9 +2,14 @@
 
 import { useTranslations } from 'next-intl';
 import { GlassPanel } from './GlassPanel';
+import { useFirestoreDocument } from '@/lib/useFirestoreDocument';
+import { BEDRIJFSGEGEVENS_SEED } from '@/data/bedrijfsgegevensSeed';
+import type { Bedrijfsgegevens } from './beheer/bedrijfsgegevensTypes';
 
 export function Contact() {
   const t = useTranslations('contact');
+  const { data } = useFirestoreDocument<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens');
+  const bedrijfsgegevens = data ?? BEDRIJFSGEGEVENS_SEED;
 
   return (
     <GlassPanel id="contact" className="!max-w-5xl text-center">
@@ -13,13 +18,22 @@ export function Contact() {
       </p>
       <p className="mt-4 text-sm text-white/80">
         <a
-          href={`mailto:${t('email')}`}
+          href={`mailto:${bedrijfsgegevens.email}`}
           className="underline decoration-white/30"
         >
-          {t('email')}
+          {bedrijfsgegevens.email}
         </a>
-        <span className="mx-2 text-white/30">·</span>
-        {t('phone')}
+      </p>
+      <p className="mt-2 text-sm text-white/80">
+        {bedrijfsgegevens.contactpersonen.map((persoon, index) => (
+          <span key={persoon.id}>
+            {index > 0 && <span className="mx-2 text-white/30">·</span>}
+            <span>{persoon.naam}</span>{' '}
+            <a href={`tel:${persoon.telefoon}`} className="underline decoration-white/30">
+              {persoon.telefoon}
+            </a>
+          </span>
+        ))}
       </p>
     </GlassPanel>
   );
