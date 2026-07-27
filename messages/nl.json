@@ -40,7 +40,8 @@
     "formaatStaand": "Staand",
     "formaatLiggend": "Liggend",
     "formaatVierkant": "Vierkant",
-    "stijlFacetTitle": "Stijl"
+    "stijlFacetTitle": "Stijl",
+    "onderwerpFacetTitle": "Onderwerp"
   },
   "kunstwerkSpecCard": {
     "collectie": "Collectie",

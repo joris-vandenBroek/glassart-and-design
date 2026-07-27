@@ -326,4 +326,15 @@ describe('ProductsGrid', () => {
     fireEvent.click(screen.getByTestId('facet-stijl-option-stijl-minimalistisch'));
     expect(screen.getAllByTestId('product-card')).toHaveLength(3); // OR: any of the 2 stijlen matches all 3
   });
+
+  it('filters by onderwerp (OR within the facet) combined with segment via AND', async () => {
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+
+    expect(screen.getByTestId('facet-onderwerp-option-onderwerp-bloemen')).toHaveTextContent('1'); // kw-1
+    expect(screen.getByTestId('facet-onderwerp-option-onderwerp-dieren')).toHaveTextContent('1'); // kw-2
+
+    fireEvent.click(screen.getByTestId('facet-onderwerp-option-onderwerp-bloemen'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(1); // only kw-1 (kw-3 has no onderwerpen)
+  });
 });

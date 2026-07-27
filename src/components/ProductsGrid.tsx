@@ -13,7 +13,7 @@ import { Combobox } from './Combobox';
 import { Breadcrumb } from './Breadcrumb';
 import { FilterSection } from './FilterSection';
 import { resolveKunstenaarOmschrijving } from '@/lib/resolveKunstenaarOmschrijving';
-import type { Segment, Kunstwerk, Materiaal, Maat, Materiaalsoort, KunstwerkFormaat, Stijl } from './beheer/materiaalTypes';
+import type { Segment, Kunstwerk, Materiaal, Maat, Materiaalsoort, KunstwerkFormaat, Stijl, Onderwerp } from './beheer/materiaalTypes';
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
 
 const ALL_FILTER = 'all';
@@ -25,6 +25,7 @@ export function ProductsGrid() {
   const [kunstenaarFilter, setKunstenaarFilter] = useState<string | null>(null);
   const [formaatFilters, setFormaatFilters] = useState<Set<KunstwerkFormaat>>(new Set());
   const [stijlFilters, setStijlFilters] = useState<Set<string>>(new Set());
+  const [onderwerpFilters, setOnderwerpFilters] = useState<Set<string>>(new Set());
   const [selectedKunstwerk, setSelectedKunstwerk] = useState<Kunstwerk | null>(null);
   const { user } = useCustomerAuth();
 
@@ -35,6 +36,7 @@ export function ProductsGrid() {
   const materiaalsoorten = useFirestoreCollection<Materiaalsoort>('materiaalsoorten');
   const kunstenaars = useFirestoreCollection<Kunstenaar>('kunstenaars');
   const stijlen = useFirestoreCollection<Stijl>('stijlen');
+  const onderwerpen = useFirestoreCollection<Onderwerp>('onderwerpen');
 
   if (segmenten.items === null || kunstwerken.items === null) {
     return null;
@@ -51,8 +53,12 @@ export function ProductsGrid() {
     stijlFilters.size === 0
       ? byFormaat
       : byFormaat.filter((kunstwerk) => (kunstwerk.stijlIds ?? []).some((id) => stijlFilters.has(id)));
+  const byOnderwerp =
+    onderwerpFilters.size === 0
+      ? byStijl
+      : byStijl.filter((kunstwerk) => (kunstwerk.onderwerpIds ?? []).some((id) => onderwerpFilters.has(id)));
   const visibleKunstwerken =
-    kunstenaarFilter === null ? byStijl : byStijl.filter((kunstwerk) => kunstwerk.kunstenaarId === kunstenaarFilter);
+    kunstenaarFilter === null ? byOnderwerp : byOnderwerp.filter((kunstwerk) => kunstwerk.kunstenaarId === kunstenaarFilter);
   const geselecteerdeKunstenaar = kunstenaarFilter
     ? (kunstenaars.items ?? []).find((kunstenaar) => kunstenaar.id === kunstenaarFilter) ?? null
     : null;
@@ -94,6 +100,18 @@ export function ProductsGrid() {
         next.delete(stijlId);
       } else {
         next.add(stijlId);
+      }
+      return next;
+    });
+  }
+
+  function toggleOnderwerp(onderwerpId: string) {
+    setOnderwerpFilters((current) => {
+      const next = new Set(current);
+      if (next.has(onderwerpId)) {
+        next.delete(onderwerpId);
+      } else {
+        next.add(onderwerpId);
       }
       return next;
     });
@@ -202,6 +220,29 @@ export function ProductsGrid() {
                     className="h-3.5 w-3.5 accent-gold"
                   />
                   <span className={isChecked ? 'text-white' : ''}>{stijl.omschrijving}</span>
+                  <span className="ml-auto text-[11px] text-white/40">{count}</span>
+                </label>
+              );
+            })}
+          </FilterSection>
+
+          <FilterSection title={tCollections('onderwerpFacetTitle')} testId="onderwerp">
+            {(onderwerpen.items ?? []).map((onderwerp) => {
+              const isChecked = onderwerpFilters.has(onderwerp.id);
+              const count = byStijl.filter((kunstwerk) => (kunstwerk.onderwerpIds ?? []).includes(onderwerp.id)).length;
+              return (
+                <label
+                  key={onderwerp.id}
+                  data-testid={`facet-onderwerp-option-${onderwerp.id}`}
+                  className="flex cursor-pointer items-center gap-2 text-xs text-white/70"
+                >
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => toggleOnderwerp(onderwerp.id)}
+                    className="h-3.5 w-3.5 accent-gold"
+                  />
+                  <span className={isChecked ? 'text-white' : ''}>{onderwerp.omschrijving}</span>
                   <span className="ml-auto text-[11px] text-white/40">{count}</span>
                 </label>
               );

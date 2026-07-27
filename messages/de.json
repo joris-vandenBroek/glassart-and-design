@@ -40,7 +40,8 @@
     "formaatStaand": "Hochformat",
     "formaatLiggend": "Querformat",
     "formaatVierkant": "Quadratisch",
-    "stijlFacetTitle": "Stil"
+    "stijlFacetTitle": "Stil",
+    "onderwerpFacetTitle": "Motiv"
   },
   "kunstwerkSpecCard": {
     "collectie": "Kollektion",

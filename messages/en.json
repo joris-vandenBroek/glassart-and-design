@@ -40,7 +40,8 @@
     "formaatStaand": "Portrait",
     "formaatLiggend": "Landscape",
     "formaatVierkant": "Square",
-    "stijlFacetTitle": "Style"
+    "stijlFacetTitle": "Style",
+    "onderwerpFacetTitle": "Subject"
   },
   "kunstwerkSpecCard": {
     "collectie": "Collection",
