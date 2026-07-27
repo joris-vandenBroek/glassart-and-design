@@ -1,5 +1,13 @@
 # Test/productie-database-schakelaar — ontwerp
 
+> **VERVANGEN (2026-07-27):** dit ontwerp is niet uitgevoerd. Tijdens dezelfde
+> brainstormsessie bleek een losse staging-omgeving (vaste eigen deployment, permanent
+> verbonden met de test-database — voortbouwend op het bestaande
+> `nodetest.glassartanddesign.com`) hetzelfde doel simpeler en veiliger te bereiken: geen
+> runtime-schakelaar, geen `app_instellingen`-tabel, geen per-sessie identiteitscheck. Zie
+> het staging-omgevingsontwerp voor de vervolgaanpak. Dit document blijft staan als
+> onderbouwing van waarom die aanpak is losgelaten.
+
 ## Context
 
 Dit ontwerp bouwt voort op de nog niet uitgevoerde migratie in
