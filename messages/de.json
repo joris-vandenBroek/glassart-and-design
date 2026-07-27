@@ -42,7 +42,9 @@
     "formaatVierkant": "Quadratisch",
     "stijlFacetTitle": "Stil",
     "onderwerpFacetTitle": "Motiv",
-    "aiGegenereerdFacetLabel": "Nur KI-generiert"
+    "aiGegenereerdFacetLabel": "Nur KI-generiert",
+    "clearAllFilters": "Filter zurücksetzen",
+    "removeFilterAria": "Filter {label} entfernen"
   },
   "kunstwerkSpecCard": {
     "collectie": "Kollektion",

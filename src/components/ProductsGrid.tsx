@@ -137,6 +137,43 @@ export function ProductsGrid() {
     ...(geselecteerdSegment ? [{ label: geselecteerdSegment.omschrijving }] : []),
   ];
 
+  const stijlNaamById = new Map((stijlen.items ?? []).map((stijl) => [stijl.id, stijl.omschrijving]));
+  const onderwerpNaamById = new Map((onderwerpen.items ?? []).map((onderwerp) => [onderwerp.id, onderwerp.omschrijving]));
+
+  const activeChips: { key: string; label: string; onRemove: () => void }[] = [
+    ...(geselecteerdSegment ? [{ key: 'segment', label: geselecteerdSegment.omschrijving, onRemove: () => setActiveFilter(ALL_FILTER) }] : []),
+    ...(geselecteerdeKunstenaar
+      ? [{ key: 'kunstenaar', label: geselecteerdeKunstenaar.naam, onRemove: () => setKunstenaarFilter(null) }]
+      : []),
+    ...Array.from(formaatFilters).map((formaat) => ({
+      key: `formaat-${formaat}`,
+      label: formaatLabels[formaat],
+      onRemove: () => toggleFormaat(formaat),
+    })),
+    ...Array.from(stijlFilters).map((stijlId) => ({
+      key: `stijl-${stijlId}`,
+      label: stijlNaamById.get(stijlId) ?? stijlId,
+      onRemove: () => toggleStijl(stijlId),
+    })),
+    ...Array.from(onderwerpFilters).map((onderwerpId) => ({
+      key: `onderwerp-${onderwerpId}`,
+      label: onderwerpNaamById.get(onderwerpId) ?? onderwerpId,
+      onRemove: () => toggleOnderwerp(onderwerpId),
+    })),
+    ...(aiGegenereerdFilter
+      ? [{ key: 'ai-gegenereerd', label: tCollections('aiGegenereerdFacetLabel'), onRemove: () => setAiGegenereerdFilter(false) }]
+      : []),
+  ];
+
+  function clearAllFilters() {
+    setActiveFilter(ALL_FILTER);
+    setKunstenaarFilter(null);
+    setFormaatFilters(new Set());
+    setStijlFilters(new Set());
+    setOnderwerpFilters(new Set());
+    setAiGegenereerdFilter(false);
+  }
+
   return (
     <>
       <Breadcrumb items={breadcrumbItems} />
@@ -264,6 +301,37 @@ export function ProductsGrid() {
         </aside>
 
         <div>
+          {activeChips.length > 0 && (
+            <div data-testid="active-filter-chips" className="mb-4 flex flex-wrap items-center gap-2">
+              {activeChips.map((chip) => (
+                <span
+                  key={chip.key}
+                  data-testid={`active-filter-chip-${chip.key}`}
+                  className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs text-white"
+                >
+                  {chip.label}
+                  <button
+                    type="button"
+                    onClick={chip.onRemove}
+                    data-testid={`active-filter-chip-${chip.key}-remove`}
+                    aria-label={tCollections('removeFilterAria', { label: chip.label })}
+                    className="text-white/50 hover:text-gold"
+                  >
+                    &#10005;
+                  </button>
+                </span>
+              ))}
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                data-testid="clear-all-filters"
+                className="text-xs text-gold hover:text-gold-bright"
+              >
+                {tCollections('clearAllFilters')}
+              </button>
+            </div>
+          )}
+
           {geselecteerdeKunstenaar && (
             <div
               data-testid="kunstenaar-banner"

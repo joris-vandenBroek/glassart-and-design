@@ -42,7 +42,9 @@
     "formaatVierkant": "Vierkant",
     "stijlFacetTitle": "Stijl",
     "onderwerpFacetTitle": "Onderwerp",
-    "aiGegenereerdFacetLabel": "Alleen AI-gegenereerd"
+    "aiGegenereerdFacetLabel": "Alleen AI-gegenereerd",
+    "clearAllFilters": "Filters wissen",
+    "removeFilterAria": "Verwijder filter {label}"
   },
   "kunstwerkSpecCard": {
     "collectie": "Collectie",

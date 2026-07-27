@@ -42,7 +42,9 @@
     "formaatVierkant": "Carré",
     "stijlFacetTitle": "Style",
     "onderwerpFacetTitle": "Sujet",
-    "aiGegenereerdFacetLabel": "Généré par IA uniquement"
+    "aiGegenereerdFacetLabel": "Généré par IA uniquement",
+    "clearAllFilters": "Effacer les filtres",
+    "removeFilterAria": "Supprimer le filtre {label}"
   },
   "kunstwerkSpecCard": {
     "collectie": "Collection",

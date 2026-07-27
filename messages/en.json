@@ -42,7 +42,9 @@
     "formaatVierkant": "Square",
     "stijlFacetTitle": "Style",
     "onderwerpFacetTitle": "Subject",
-    "aiGegenereerdFacetLabel": "AI-generated only"
+    "aiGegenereerdFacetLabel": "AI-generated only",
+    "clearAllFilters": "Clear filters",
+    "removeFilterAria": "Remove filter {label}"
   },
   "kunstwerkSpecCard": {
     "collectie": "Collection",

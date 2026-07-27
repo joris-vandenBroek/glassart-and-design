@@ -350,4 +350,32 @@ describe('ProductsGrid', () => {
     fireEvent.click(screen.getByTestId('facet-ai-gegenereerd'));
     expect(screen.getAllByTestId('product-card')).toHaveLength(3);
   });
+
+  it('shows a removable chip per active filter across every facet, and clears everything via "wis filters"', async () => {
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+    expect(screen.queryByTestId('active-filter-chips')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('filter-seg-hotel'));
+    fireEvent.click(screen.getByTestId('facet-formaat-option-staand'));
+    fireEvent.click(screen.getByTestId('facet-stijl-option-stijl-abstract'));
+    fireEvent.click(screen.getByTestId('facet-onderwerp-option-onderwerp-bloemen'));
+    fireEvent.click(screen.getByTestId('facet-ai-gegenereerd'));
+
+    expect(screen.getByTestId('active-filter-chip-segment')).toHaveTextContent('Hotel');
+    expect(screen.getByTestId('active-filter-chip-formaat-staand')).toHaveTextContent('Staand');
+    expect(screen.getByTestId('active-filter-chip-stijl-stijl-abstract')).toHaveTextContent('Abstract');
+    expect(screen.getByTestId('active-filter-chip-onderwerp-onderwerp-bloemen')).toHaveTextContent('Bloemen');
+    expect(screen.getByTestId('active-filter-chip-ai-gegenereerd')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('active-filter-chip-formaat-staand-remove'));
+    expect(screen.queryByTestId('active-filter-chip-formaat-staand')).not.toBeInTheDocument();
+    expect(screen.getByTestId('active-filter-chip-segment')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('clear-all-filters'));
+    expect(screen.queryByTestId('active-filter-chips')).not.toBeInTheDocument();
+    expect(screen.getByTestId('filter-all')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('facet-ai-gegenereerd')).not.toBeChecked();
+    expect(screen.getAllByTestId('product-card')).toHaveLength(3);
+  });
 });
