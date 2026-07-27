@@ -285,6 +285,9 @@ describe('ProductModal', () => {
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN}
               kunstenaars={KUNSTENAARS}
+              segmenten={SEGMENTEN}
+              stijlen={STIJLEN}
+              onderwerpen={ONDERWERPEN}
               onClose={() => {}}
             />
           </CartProvider>
@@ -374,6 +377,9 @@ describe('ProductModal', () => {
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN}
               kunstenaars={KUNSTENAARS}
+              segmenten={SEGMENTEN}
+              stijlen={STIJLEN}
+              onderwerpen={ONDERWERPEN}
               onClose={onClose}
             />
             <Probe />
@@ -419,6 +425,9 @@ describe('ProductModal', () => {
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN}
               kunstenaars={KUNSTENAARS}
+              segmenten={SEGMENTEN}
+              stijlen={STIJLEN}
+              onderwerpen={ONDERWERPEN}
               onClose={onClose}
             />
           </CartProvider>
@@ -441,6 +450,9 @@ describe('ProductModal', () => {
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN}
               kunstenaars={KUNSTENAARS}
+              segmenten={SEGMENTEN}
+              stijlen={STIJLEN}
+              onderwerpen={ONDERWERPEN}
               onClose={onClose}
             />
           </CartProvider>
@@ -457,6 +469,9 @@ describe('ProductModal', () => {
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN}
               kunstenaars={KUNSTENAARS}
+              segmenten={SEGMENTEN}
+              stijlen={STIJLEN}
+              onderwerpen={ONDERWERPEN}
               onClose={onClose}
             />
           </CartProvider>
@@ -565,6 +580,9 @@ describe('ProductModal', () => {
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN_MET_EIGEN_MAAT}
               kunstenaars={KUNSTENAARS}
+              segmenten={SEGMENTEN}
+              stijlen={STIJLEN}
+              onderwerpen={ONDERWERPEN}
               onClose={() => {}}
             />
           </CartProvider>
@@ -590,6 +608,9 @@ describe('ProductModal', () => {
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN_MET_EIGEN_MAAT}
               kunstenaars={KUNSTENAARS}
+              segmenten={SEGMENTEN}
+              stijlen={STIJLEN}
+              onderwerpen={ONDERWERPEN}
               onClose={() => {}}
             />
           </CartProvider>
@@ -617,6 +638,9 @@ describe('ProductModal', () => {
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN_MET_EIGEN_MAAT}
               kunstenaars={KUNSTENAARS}
+              segmenten={SEGMENTEN}
+              stijlen={STIJLEN}
+              onderwerpen={ONDERWERPEN}
               onClose={() => {}}
             />
           </CartProvider>
@@ -649,6 +673,9 @@ describe('ProductModal', () => {
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN_MET_EIGEN_MAAT}
               kunstenaars={KUNSTENAARS}
+              segmenten={SEGMENTEN}
+              stijlen={STIJLEN}
+              onderwerpen={ONDERWERPEN}
               onClose={() => {}}
             />
             <Probe />
@@ -698,6 +725,9 @@ describe('ProductModal', () => {
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN_MIXED}
               kunstenaars={KUNSTENAARS}
+              segmenten={SEGMENTEN}
+              stijlen={STIJLEN}
+              onderwerpen={ONDERWERPEN}
               onClose={() => {}}
             />
           </CartProvider>
@@ -744,6 +774,9 @@ describe('ProductModal', () => {
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN}
               kunstenaars={KUNSTENAARS}
+              segmenten={SEGMENTEN}
+              stijlen={STIJLEN}
+              onderwerpen={ONDERWERPEN}
               onClose={() => {}}
             />
             <Probe />
@@ -812,6 +845,9 @@ describe('ProductModal', () => {
               maten={MATEN}
               materiaalsoorten={MATERIAALSOORTEN}
               kunstenaars={KUNSTENAARS}
+              segmenten={SEGMENTEN}
+              stijlen={STIJLEN}
+              onderwerpen={ONDERWERPEN}
               onClose={() => {}}
             />
           </CartProvider>

@@ -101,7 +101,7 @@ export function ProductModal({
     setQuantityInput(String(effectiveMinimum));
     setIsConfirmed(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kunstwerk, materialen, materiaalsoorten]);
+  }, [kunstwerk?.id, materialen, materiaalsoorten]);
 
   // Ensure a pending "close after confirm" timer never fires for a stale
   // kunstwerk: clear it whenever `kunstwerk` changes, and on unmount.

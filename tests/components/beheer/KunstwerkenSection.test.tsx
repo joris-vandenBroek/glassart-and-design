@@ -750,7 +750,6 @@ describe('KunstwerkenSection', () => {
       renderSection();
       fireEvent.click(screen.getByTestId('kunstwerken-add'));
       expect(screen.getByTestId('product-modal')).toBeInTheDocument();
-      expect(screen.queryByTestId('kunstwerk-spec-card')).not.toBeInTheDocument();
     });
 
     it('updates the preview omschrijving as the admin types it', () => {

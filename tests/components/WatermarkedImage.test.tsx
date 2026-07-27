@@ -32,6 +32,7 @@ describe('WatermarkedImage', () => {
 
     function mockCanvasAndImage() {
       const fakeCtx = {
+        fillStyle: '' as string,
         setTransform: vi.fn(),
         fillRect: vi.fn(),
         drawImage: vi.fn(),

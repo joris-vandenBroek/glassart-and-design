@@ -188,9 +188,12 @@ export function KunstwerkenSection({
     return map;
   }, [kunstenaars]);
 
+  const isMateriaalloos = materiaalIds.length === 0;
+  const prijsCombinaties = materiaalIds.flatMap((materiaalId) =>
+    maatIds.map((maatId) => ({ materiaalId, maatId }))
+  );
+
   function buildKunstwerkData(): Omit<Kunstwerk, 'id'> {
-    const materiaalloos = materiaalIds.length === 0;
-    const combinaties = materiaalIds.flatMap((materiaalId) => maatIds.map((maatId) => ({ materiaalId, maatId })));
     const basis = {
       foto,
       naam,
@@ -198,13 +201,13 @@ export function KunstwerkenSection({
       formaat,
       segmentIds,
       materiaalIds,
-      maatIds: materiaalloos ? [] : maatIds,
+      maatIds: isMateriaalloos ? [] : maatIds,
       stijlIds,
       onderwerpIds,
       aiGegenereerd,
-      prijzen: materiaalloos
+      prijzen: isMateriaalloos
         ? []
-        : combinaties.map(({ materiaalId, maatId }) => ({
+        : prijsCombinaties.map(({ materiaalId, maatId }) => ({
             materiaalId,
             maatId,
             prijs: Number(prijzen[prijsKey(materiaalId, maatId)]),
@@ -214,7 +217,7 @@ export function KunstwerkenSection({
       omschrijvingDe,
       omschrijvingEn,
     };
-    return materiaalloos ? { ...basis, prijsPerM2: Number(prijsPerM2) } : basis;
+    return isMateriaalloos ? { ...basis, prijsPerM2: Number(prijsPerM2) } : basis;
   }
 
   const previewKunstwerk: Kunstwerk = useMemo(
@@ -392,10 +395,6 @@ export function KunstwerkenSection({
     await handleFotoFile(file);
   }
 
-  const isMateriaalloos = materiaalIds.length === 0;
-  const prijsCombinaties = materiaalIds.flatMap((materiaalId) =>
-    maatIds.map((maatId) => ({ materiaalId, maatId }))
-  );
   const allePrijzenIngevuld = prijsCombinaties.every(
     ({ materiaalId, maatId }) => (prijzen[prijsKey(materiaalId, maatId)] ?? '') !== ''
   );
