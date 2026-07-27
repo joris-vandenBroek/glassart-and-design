@@ -56,36 +56,54 @@ function medewerkerUidFromIdToken(string $idToken): ?string
 // idToken is allowed to read medewerkers/{uid}. Firestore verifies the
 // token's signature/expiry/audience server-side -- we never need to (and
 // must not try to) verify the JWT ourselves. A forged or expired token
-// simply fails this call.
-function isAuthorizedMedewerker(string $idToken, string $projectId): bool
+// simply fails this call. A token is only ever valid against the Firebase
+// project it was issued for, so we try each configured project in turn and
+// report which one (if any) accepted it -- that tells the caller whether
+// this is a production or a staging upload.
+function findAuthorizedProjectId(string $idToken, array $projectIds): ?string
 {
     $uid = medewerkerUidFromIdToken($idToken);
     if ($uid === null) {
-        return false;
+        return null;
     }
-    $url = sprintf(
-        'https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents/medewerkers/%s',
-        rawurlencode($projectId),
-        rawurlencode($uid)
-    );
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $idToken],
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 10,
-    ]);
-    curl_exec($ch);
-    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    return $status === 200;
+    foreach ($projectIds as $projectId) {
+        $url = sprintf(
+            'https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents/medewerkers/%s',
+            rawurlencode($projectId),
+            rawurlencode($uid)
+        );
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $idToken],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 10,
+        ]);
+        curl_exec($ch);
+        $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($status === 200) {
+            return $projectId;
+        }
+    }
+    return null;
 }
 
 $idToken = (string) ($_POST['idToken'] ?? '');
-if ($idToken === '' || !isAuthorizedMedewerker($idToken, $config['firebase_project_id'])) {
+$candidateProjectIds = array_values(array_filter([
+    $config['firebase_project_id'] ?? null,
+    $config['staging_firebase_project_id'] ?? null,
+]));
+$authorizedProjectId = $idToken !== '' ? findAuthorizedProjectId($idToken, $candidateProjectIds) : null;
+if ($authorizedProjectId === null) {
     http_response_code(403);
     echo json_encode(['success' => false, 'error' => 'Forbidden']);
     exit;
 }
+
+// Test uploads from the staging Firebase project must never land among the
+// real production photos -- route them to a separate directory/URL instead.
+$isStagingUpload = isset($config['staging_firebase_project_id'])
+    && $authorizedProjectId === $config['staging_firebase_project_id'];
 
 if (!isset($_FILES['foto']) || $_FILES['foto']['error'] !== UPLOAD_ERR_OK) {
     http_response_code(400);
@@ -111,7 +129,8 @@ if ($mime === null || !isset(ALLOWED_MIME_EXTENSIONS[$mime])) {
 
 $extension = ALLOWED_MIME_EXTENSIONS[$mime];
 $filename = bin2hex(random_bytes(16)) . '.' . $extension;
-$uploadDir = __DIR__ . '/uploads/kunstwerken';
+$uploadDirName = $isStagingUpload ? 'kunstwerken-test' : 'kunstwerken';
+$uploadDir = __DIR__ . '/uploads/' . $uploadDirName;
 
 if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
     http_response_code(500);
@@ -126,5 +145,6 @@ if (!move_uploaded_file($foto['tmp_name'], $destination)) {
     exit;
 }
 
-$url = rtrim($config['upload_public_base_url'], '/') . '/' . $filename;
+$publicBaseUrlKey = $isStagingUpload ? 'staging_upload_public_base_url' : 'upload_public_base_url';
+$url = rtrim($config[$publicBaseUrlKey], '/') . '/' . $filename;
 echo json_encode(['success' => true, 'url' => $url]);
