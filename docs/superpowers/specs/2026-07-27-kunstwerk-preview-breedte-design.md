@@ -1,7 +1,7 @@
 # Kunstwerk-preview: breedte en echte 2-koloms opmaak
 
 **Datum:** 2026-07-27
-**Status:** Goedgekeurd, klaar voor implementatieplan
+**Status:** Geïmplementeerd
 
 ## Aanleiding
 
