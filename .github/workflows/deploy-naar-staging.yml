@@ -3,6 +3,13 @@ name: Deploy naar Staging
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: "staging"
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -36,16 +43,20 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y apache2-utils
 
       - name: Generate .htpasswd
-        run: htpasswd -bc out/.htpasswd glassart "${{ secrets.STAGING_BASIC_AUTH_PASSWORD }}"
+        env:
+          BASIC_AUTH_PASSWORD: ${{ secrets.STAGING_BASIC_AUTH_PASSWORD }}
+        run: htpasswd -bc out/.htpasswd glassart "$BASIC_AUTH_PASSWORD"
 
       - name: Add Basic Auth .htaccess
+        env:
+          SYSTEM_USERNAME: ${{ vars.STAGING_SYSTEM_USERNAME }}
         run: |
-          sed "s#USERNAME#${{ vars.STAGING_SYSTEM_USERNAME }}#" deploy/staging.htaccess > out/.htaccess
+          sed "s#USERNAME#$SYSTEM_USERNAME#" deploy/staging.htaccess > out/.htaccess
 
       - name: Upload to staging.glassartanddesign.com via FTPS
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.STAGING_FTP_HOST }}
+          server: ${{ vars.STAGING_FTP_HOST }}
           username: ${{ secrets.STAGING_FTP_USERNAME }}
           password: ${{ secrets.STAGING_FTP_PASSWORD }}
           protocol: ftps
@@ -54,10 +65,25 @@ jobs:
           dangerous-clean-slate: true
 
       - name: Smoke check
+        env:
+          BASIC_AUTH_PASSWORD: ${{ secrets.STAGING_BASIC_AUTH_PASSWORD }}
         run: |
           sleep 5
-          status=$(curl -s -o /dev/null -w "%{http_code}" -u "glassart:${{ secrets.STAGING_BASIC_AUTH_PASSWORD }}" "https://staging.glassartanddesign.com/nl/")
+          attempt=1
+          max_attempts=3
+          status=""
+          while [ "$attempt" -le "$max_attempts" ]; do
+            status=$(curl -s -o /dev/null -w "%{http_code}" -u "glassart:$BASIC_AUTH_PASSWORD" "https://staging.glassartanddesign.com/nl/")
+            if [ "$status" = "200" ]; then
+              break
+            fi
+            echo "Attempt $attempt/$max_attempts: staging did not respond with 200 (got $status)"
+            attempt=$((attempt + 1))
+            if [ "$attempt" -le "$max_attempts" ]; then
+              sleep 5
+            fi
+          done
           if [ "$status" != "200" ]; then
-            echo "Staging did not respond with 200 (got $status)"
+            echo "Staging did not respond with 200 after $max_attempts attempts (last status: $status)"
             exit 1
           fi
