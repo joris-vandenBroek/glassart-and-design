@@ -300,9 +300,11 @@ for data isolation), Apache `.htaccess`/`.htpasswd` (Basic Auth), Vitest + Testi
 **Files:** none in the repo (server-side/account configuration)
 
 **Interfaces:**
-- Produces: `STAGING_FTP_HOST`, `STAGING_FTP_USERNAME`, `STAGING_FTP_PASSWORD`,
-  `STAGING_BASIC_AUTH_PASSWORD` GitHub secrets, and a `STAGING_SYSTEM_USERNAME` GitHub repo
-  variable, all consumed by Task 5's workflow.
+- Produces: `STAGING_FTP_USERNAME`, `STAGING_FTP_PASSWORD`, `STAGING_BASIC_AUTH_PASSWORD`
+  GitHub secrets, and `STAGING_FTP_HOST` + `STAGING_SYSTEM_USERNAME` GitHub repo variables,
+  all consumed by Task 5's workflow. (`STAGING_FTP_HOST` is a `vars` entry, not a secret — a
+  hostname isn't sensitive, and masking it as `***` only makes connection-error log lines
+  harder to read.)
 
 - [ ] **Step 1 (manual, you): create the subdomain**
 
@@ -330,13 +332,14 @@ for data isolation), Apache `.htaccess`/`.htpasswd` (Basic Auth), Vitest + Testi
 - [ ] **Step 3: store the FTP secrets and the system username in GitHub**
 
   ```bash
-  gh secret set STAGING_FTP_HOST --body "<your mijn.host FTP hostname, e.g. h64.mijn.host>"
+  gh variable set STAGING_FTP_HOST --body "<your mijn.host FTP hostname, e.g. h64.mijn.host>"
   gh secret set STAGING_FTP_USERNAME --body "<the FTP username from Step 2>"
   gh secret set STAGING_FTP_PASSWORD --body "<the FTP password from Step 2>"
   gh variable set STAGING_SYSTEM_USERNAME --body "<your DirectAdmin account username>"
   ```
-  (`STAGING_SYSTEM_USERNAME` is not sensitive — it's only used to build the absolute
-  `AuthUserFile` path in Task 3's `.htaccess`, so it's a `vars` entry, not a secret.)
+  (`STAGING_FTP_HOST` and `STAGING_SYSTEM_USERNAME` are not sensitive — a hostname isn't a
+  secret, and the system username is only used to build the absolute `AuthUserFile` path in
+  Task 3's `.htaccess` — so both are `vars` entries, not secrets.)
 
 - [ ] **Step 4: pick and store the Basic Auth password**
 
@@ -354,16 +357,16 @@ for data isolation), Apache `.htaccess`/`.htpasswd` (Basic Auth), Vitest + Testi
   `https://glassartanddesign.com` and `https://joris-vandenbroek.github.io` entries — without
   this, order-confirmation/upload requests from staging will be rejected by CORS.
 
-- [ ] **Step 6: verify the secrets/variable are stored**
+- [ ] **Step 6: verify the secrets/variables are stored**
 
   ```bash
   gh secret list
   gh variable list
   ```
-  Expected: `STAGING_FTP_HOST`, `STAGING_FTP_USERNAME`, `STAGING_FTP_PASSWORD`,
-  `STAGING_BASIC_AUTH_PASSWORD` in the secrets list; `STAGING_SYSTEM_USERNAME` in the
-  variables list. (Real FTP connectivity can only be confirmed by Task 6's first real
-  workflow run.)
+  Expected: `STAGING_FTP_USERNAME`, `STAGING_FTP_PASSWORD`,
+  `STAGING_BASIC_AUTH_PASSWORD` in the secrets list; `STAGING_FTP_HOST` and
+  `STAGING_SYSTEM_USERNAME` in the variables list. (Real FTP connectivity can only be
+  confirmed by Task 6's first real workflow run.)
 
 ---
 
@@ -378,8 +381,8 @@ for data isolation), Apache `.htaccess`/`.htpasswd` (Basic Auth), Vitest + Testi
 
 **Interfaces:**
 - Consumes: `STAGING_NEXT_PUBLIC_FIREBASE_*` vars (Task 1), `deploy/staging.htaccess`
-  (Task 3), `STAGING_FTP_*` + `STAGING_BASIC_AUTH_PASSWORD` secrets and
-  `STAGING_SYSTEM_USERNAME` var (Task 4).
+  (Task 3), `STAGING_FTP_USERNAME`/`STAGING_FTP_PASSWORD` + `STAGING_BASIC_AUTH_PASSWORD`
+  secrets and `STAGING_FTP_HOST`/`STAGING_SYSTEM_USERNAME` vars (Task 4).
 - Produces: a manually-triggerable workflow named "Deploy naar Staging" that builds and
   deploys the site to `staging.glassartanddesign.com`.
 
@@ -434,7 +437,7 @@ for data isolation), Apache `.htaccess`/`.htpasswd` (Basic Auth), Vitest + Testi
         - name: Upload to staging.glassartanddesign.com via FTPS
           uses: SamKirkland/FTP-Deploy-Action@v4.3.5
           with:
-            server: ${{ secrets.STAGING_FTP_HOST }}
+            server: ${{ vars.STAGING_FTP_HOST }}
             username: ${{ secrets.STAGING_FTP_USERNAME }}
             password: ${{ secrets.STAGING_FTP_PASSWORD }}
             protocol: ftps
