@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "glassart-and-design"
+    "default": "glassart-and-design",
+    "staging": "glassart-and-design-staging"
   }
 }
