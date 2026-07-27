@@ -51,11 +51,6 @@
     "clearAllFilters": "Filter zurücksetzen",
     "removeFilterAria": "Filter {label} entfernen"
   },
-  "kunstwerkSpecCard": {
-    "collectie": "Kollektion",
-    "materiaal": "Material",
-    "tagline": "Gallery quality printing"
-  },
   "segments": {
     "hotel": {
       "title": "Hotel"
