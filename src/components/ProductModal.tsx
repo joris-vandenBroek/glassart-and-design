@@ -12,7 +12,7 @@ import { formatCurrency } from '@/lib/formatCurrency';
 import { findVeiligheidsglasMateriaalId, MATERIAALLOOS_LABEL } from '@/lib/kunstwerkMateriaal';
 import { useFirestoreDocument } from '@/lib/useFirestoreDocument';
 import { WatermarkedImage } from './WatermarkedImage';
-import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from './beheer/materiaalTypes';
+import type { Kunstwerk, Materiaal, Maat, Materiaalsoort, Segment, Stijl, Onderwerp } from './beheer/materiaalTypes';
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
 import type { Bestelinstellingen } from './beheer/bestelinstellingenTypes';
 
@@ -42,10 +42,23 @@ interface ProductModalProps {
   maten: Maat[] | null;
   materiaalsoorten: Materiaalsoort[] | null;
   kunstenaars: Kunstenaar[] | null;
+  segmenten: Segment[] | null;
+  stijlen: Stijl[] | null;
+  onderwerpen: Onderwerp[] | null;
   onClose: () => void;
 }
 
-export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, kunstenaars, onClose }: ProductModalProps) {
+export function ProductModal({
+  kunstwerk,
+  materialen,
+  maten,
+  materiaalsoorten,
+  kunstenaars,
+  segmenten,
+  stijlen,
+  onderwerpen,
+  onClose,
+}: ProductModalProps) {
   const t = useTranslations('cart');
   const locale = useLocale();
   const [materiaalId, setMateriaalId] = useState('');
@@ -134,6 +147,21 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, k
     ? kunstwerk.prijzen.find((regel) => regel.materiaalId === materiaalId && regel.maatId === maatId)
     : undefined;
   const omschrijving = resolveKunstwerkOmschrijving(kunstwerk, locale);
+
+  const artiestNaam = kunstwerk.kunstenaarId
+    ? (kunstenaars ?? []).find((kunstenaar) => kunstenaar.id === kunstwerk.kunstenaarId)?.naam ?? ''
+    : '';
+  const collectieLabels = kunstwerk.segmentIds.map(
+    (segmentId) => (segmenten ?? []).find((segment) => segment.id === segmentId)?.omschrijving ?? segmentId
+  );
+  const stijlLabels = (kunstwerk.stijlIds ?? []).map(
+    (stijlId) => (stijlen ?? []).find((stijl) => stijl.id === stijlId)?.omschrijving ?? stijlId
+  );
+  const onderwerpLabels = (kunstwerk.onderwerpIds ?? []).map(
+    (onderwerpId) => (onderwerpen ?? []).find((onderwerp) => onderwerp.id === onderwerpId)?.omschrijving ?? onderwerpId
+  );
+  const heeftMetaInfo =
+    Boolean(artiestNaam) || collectieLabels.length > 0 || stijlLabels.length > 0 || onderwerpLabels.length > 0;
 
   const customBreedteNum = Number(customBreedte);
   const customHoogteNum = Number(customHoogte);
@@ -271,6 +299,45 @@ export function ProductModal({ kunstwerk, materialen, maten, materiaalsoorten, k
           <p data-testid="product-modal-omschrijving" className="text-sm leading-relaxed text-white/80">
             {omschrijving}
           </p>
+          {heeftMetaInfo && (
+            <dl
+              data-testid="product-modal-meta"
+              className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 border-y border-gold/30 py-3 text-xs"
+            >
+              {artiestNaam && (
+                <>
+                  <dt className="font-head text-[10px] uppercase tracking-wide text-gold/90">{t('artistLabel')}</dt>
+                  <dd data-testid="product-modal-artiest" className="text-white/75">
+                    {artiestNaam}
+                  </dd>
+                </>
+              )}
+              {collectieLabels.length > 0 && (
+                <>
+                  <dt className="font-head text-[10px] uppercase tracking-wide text-gold/90">{t('collectionsLabel')}</dt>
+                  <dd data-testid="product-modal-collecties" className="text-white/75">
+                    {collectieLabels.join(', ')}
+                  </dd>
+                </>
+              )}
+              {stijlLabels.length > 0 && (
+                <>
+                  <dt className="font-head text-[10px] uppercase tracking-wide text-gold/90">{t('stijlLabel')}</dt>
+                  <dd data-testid="product-modal-stijl" className="text-white/75">
+                    {stijlLabels.join(', ')}
+                  </dd>
+                </>
+              )}
+              {onderwerpLabels.length > 0 && (
+                <>
+                  <dt className="font-head text-[10px] uppercase tracking-wide text-gold/90">{t('onderwerpLabel')}</dt>
+                  <dd data-testid="product-modal-onderwerp" className="text-white/75">
+                    {onderwerpLabels.join(', ')}
+                  </dd>
+                </>
+              )}
+            </dl>
+          )}
           {!isMateriaalloos && (
             <label className="flex flex-col gap-1 text-[0.65rem] uppercase tracking-wide text-white/60">
               {t('material')}

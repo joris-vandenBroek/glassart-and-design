@@ -5,6 +5,7 @@ import { ProductModal } from '@/components/ProductModal';
 import { CartProvider, useCart } from '@/lib/useCart';
 import { CustomerAuthProvider } from '@/lib/useCustomerAuth';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from '@/components/beheer/materiaalTypes';
+import type { Segment, Stijl, Onderwerp } from '@/components/beheer/materiaalTypes';
 import type { Kunstenaar } from '@/components/beheer/kunstenaarTypes';
 import messages from '../../messages/nl.json';
 
@@ -68,6 +69,9 @@ const MATERIAALSOORTEN: Materiaalsoort[] = [
   { id: 'soort-1', omschrijving: 'Veiligheidsglas' },
   { id: 'soort-2', omschrijving: 'Acryl' },
 ];
+const SEGMENTEN: Segment[] = [{ id: 'seg-1', omschrijving: 'Hotel' }];
+const STIJLEN: Stijl[] = [{ id: 'stijl-1', omschrijving: 'Abstract' }];
+const ONDERWERPEN: Onderwerp[] = [{ id: 'onderwerp-1', omschrijving: 'Bloemen' }];
 const MATERIAALLOOS_KUNSTWERK: Kunstwerk = {
   id: 'kw-akoestisch',
   foto: 'https://example.com/akoestisch.jpg',
@@ -137,7 +141,10 @@ const KUNSTENAARS: Kunstenaar[] = [
 function renderModal(
   onClose: () => void = () => {},
   kunstwerk: Kunstwerk | null = KUNSTWERK,
-  kunstenaars: Kunstenaar[] | null = KUNSTENAARS
+  kunstenaars: Kunstenaar[] | null = KUNSTENAARS,
+  segmenten: Segment[] | null = SEGMENTEN,
+  stijlen: Stijl[] | null = STIJLEN,
+  onderwerpen: Onderwerp[] | null = ONDERWERPEN
 ) {
   return render(
     <NextIntlClientProvider locale="nl" messages={messages}>
@@ -149,6 +156,9 @@ function renderModal(
             maten={MATEN}
             materiaalsoorten={MATERIAALSOORTEN}
             kunstenaars={kunstenaars}
+            segmenten={segmenten}
+            stijlen={stijlen}
+            onderwerpen={onderwerpen}
             onClose={onClose}
           />
         </CartProvider>
@@ -890,5 +900,32 @@ describe('ProductModal', () => {
     fireEvent.click(screen.getByTestId('product-modal-quantity-minus'));
     fireEvent.click(screen.getByTestId('product-modal-quantity-minus'));
     expect(screen.getByTestId('product-modal-quantity-value')).toHaveValue(3);
+  });
+
+  it('shows artiest, collectie, stijl and onderwerp when the kunstwerk has them', () => {
+    renderModal(() => {}, {
+      ...KUNSTWERK,
+      kunstenaarId: 'ka-open',
+      segmentIds: ['seg-1'],
+      stijlIds: ['stijl-1'],
+      onderwerpIds: ['onderwerp-1'],
+    });
+    expect(screen.getByTestId('product-modal-artiest')).toHaveTextContent('Open Artiest');
+    expect(screen.getByTestId('product-modal-collecties')).toHaveTextContent('Hotel');
+    expect(screen.getByTestId('product-modal-stijl')).toHaveTextContent('Abstract');
+    expect(screen.getByTestId('product-modal-onderwerp')).toHaveTextContent('Bloemen');
+  });
+
+  it('omits the whole info block when the kunstwerk has no artiest, collectie, stijl or onderwerp', () => {
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: null, segmentIds: [], stijlIds: [], onderwerpIds: [] });
+    expect(screen.queryByTestId('product-modal-meta')).not.toBeInTheDocument();
+  });
+
+  it('only shows the fields that have data, omitting the rest', () => {
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: null, segmentIds: ['seg-1'], stijlIds: [], onderwerpIds: [] });
+    expect(screen.getByTestId('product-modal-collecties')).toHaveTextContent('Hotel');
+    expect(screen.queryByTestId('product-modal-artiest')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('product-modal-stijl')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('product-modal-onderwerp')).not.toBeInTheDocument();
   });
 });
