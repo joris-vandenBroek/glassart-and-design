@@ -4735,18 +4735,30 @@ In the Node.js app's "Environment variables" section in DirectAdmin, set `DB_HOS
 > new confirm-page works for both account types, so adding that trigger later is a small,
 > self-contained addition whenever it's needed — not blocking this deploy.
 
-- [ ] **Step 6: Build locally, then upload the built app**
+- [x] **Step 6: Build locally, then upload the built app**
 
-Since there is no SSH to run `npm run build` on the server, and DirectAdmin's Node.js app page has no equivalent "run build" button (only "Run NPM Install", which runs `npm install` on the server itself — safe to use since this project has no native-binary dependencies per the approved design, so a Linux-built `node_modules` from that button is no different from what a cross-platform build would produce):
+Real scope note: no `nodetest-app/README.md` file actually existed in the repo (referenced by the draft above but never committed) — reconstructed the PowerShell zip approach from scratch and hit the exact problem that file was presumably warning about: **`Compress-Archive` stores backslash path separators**, which DirectAdmin's Linux-side unzip doesn't interpret as directories — it silently produced flat files literally named `.next\app-build-manifest.json` etc. instead of a real `.next/` folder, on the first attempt. Fixed by building the zip via .NET's `System.IO.Compression.ZipArchive` directly with every entry path explicitly normalized to forward slashes (now in [[feedback_windows_zip_backslash_paths]]) — confirmed by reading the entries back before re-sending.
 
-1. Locally, run `npm run build` (produces a `.next` folder).
-2. Upload the whole repository **including the `.next` folder**, but excluding `node_modules` and `.git`, to the app's Application root via File Manager or FTP (the same zip-then-extract-with-forward-slashes approach used for the `nodetest-app` test works here too — see `nodetest-app/README.md` for the exact PowerShell zip commands).
-3. Click DirectAdmin's **"Run NPM Install"** button on the Node.js app page to install `node_modules` on the server (this only needs production dependencies to run the pre-built `.next` output — `next start` does not need dev dependencies).
+Also: direct FTP file transfer was attempted first (reusing the existing `deploy-naar-production.yml` FTP account, password reset via DirectAdmin since the original was only ever stored as a write-only GitHub secret) but never worked from this environment — login succeeded but every data-connection operation (list, upload) failed with `425 Unable to build data connection`, a local network/firewall restriction, not a credentials or server-side problem. Fell back to build-locally-zip-then-upload-via-File-Manager instead, same mechanism as the `nodetest-app` proof-of-concept.
 
-- [ ] **Step 7: Restart and verify**
+Confirmed the Node.js app's "Application root" is a fully separate, isolated folder DirectAdmin created for it (its own `public`/`tmp`/`app.js`/`stderr.log`, no `domains/` prefix in its path) — no overlap with the live site's `public_html` or the `mail-server`/`upload-server` PHP folders, so this upload could never have touched those regardless.
 
-Click "RESTART" in DirectAdmin's Node.js app page, then visit `https://glassartanddesign.com/` and confirm the homepage loads, and `https://glassartanddesign.com/api/segmenten` returns `[]` or real data if already seeded.
+Zip contents: `.next/` (built with `MIJNHOST_BUILD=true`, `.next/cache` excluded — not needed at runtime), `public/`, `src/`, `messages/`, `app.js`, `package.json`, `package-lock.json`, `next.config.mjs`. Uploaded via DirectAdmin File Manager, extracted in place (overwriting the placeholder `app.js` DirectAdmin scaffolds), then "Run NPM Install" clicked on the Node.js app page.
+
+- [x] **Step 7: Restart and verify**
+
+Restarted via DirectAdmin's Node.js app page. Verified from this session directly:
+- `https://glassartanddesign.com/` and `/nl` → 200
+- `/nl/collecties`, `/nl/inloggen`, `/nl/contact` → correctly show the Under Construction gate (confirms `MIJNHOST_BUILD=true` was baked in at build time — these are SSG-prerendered pages, so the DirectAdmin runtime env var alone would not have been enough)
+- `/nl/beheer` → 200, correctly *not* gated
+- `/api/segmenten`, `/api/materiaalsoorten` → real migrated data (Office/Artist Collections/Abstract/Restaurant/Hotel/Wellness; Veiligheidsglas/Dibond/Acryl)
+- `/api/instellingen/bedrijfsgegevens` → real bedrijfsgegevens (Paul, Hem, IBAN, KVK, openingstijden)
+- `/api/klanten` → `[]` (empty, correct — no real registrations yet — and confirms the Task 23 static-caching fix holds in production too)
+
+Production is live on the new Node.js/MySQL architecture.
 
 - [ ] **Step 8: Retire GitHub Pages**
 
 Remove the GitHub Pages deployment workflow (if one exists under `.github/workflows/`) and the `GITHUB_PAGES` env-var branch that used to exist in `next.config.mjs` (already removed in Task 23). Update the DNS/GitHub repository settings to stop publishing to Pages. GitHub itself remains the team's version-control/development workflow, per the earlier discussion in this conversation — only the Pages *hosting* output is retired.
+
+**Not yet done, flagged separately:** `deploy-naar-production.yml` and `deploy-naar-staging.yml` are both still stale (static-export FTP deploys, Firebase env vars) — rewriting them to build server-mode and deploy this same way (or better) is real follow-up work, not started.
