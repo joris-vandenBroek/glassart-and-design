@@ -2756,6 +2756,26 @@ describe('klanten admin routes', () => {
     const [rows] = await getPool().query('SELECT id FROM klanten WHERE id = ?', [klant.id]);
     expect((rows as unknown[]).length).toBe(0);
   });
+
+  it('round-trips exclusieveKunstenaarIds as a real JSON array (not "[object Object]")', async () => {
+    const klant = await insertRow<{ id: string }>('klanten', {
+      email: 'd@example.com',
+      wachtwoordHash: await hashPassword('x'),
+      status: 'Goedgekeurd',
+    } as never);
+    await patchKlant(
+      new Request('http://localhost/api', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ exclusieveKunstenaarIds: ['kunstenaar-1', 'kunstenaar-2'] }),
+      }),
+      { params: { id: klant.id } }
+    );
+    const response = await listKlanten();
+    const body = await response.json();
+    const updated = body.find((row: { id: string }) => row.id === klant.id);
+    expect(updated.exclusieveKunstenaarIds).toEqual(['kunstenaar-1', 'kunstenaar-2']);
+  });
 });
 ```
 
@@ -2771,8 +2791,10 @@ Expected: FAIL — cannot find `@/app/api/klanten/route`
 import { NextResponse } from 'next/server';
 import { listRows } from '@/lib/server/crud';
 
+const KLANTEN_JSON_COLUMNS = ['exclusieveKunstenaarIds'];
+
 export async function GET() {
-  const klanten = await listRows('klanten');
+  const klanten = await listRows('klanten', KLANTEN_JSON_COLUMNS);
   return NextResponse.json(klanten);
 }
 ```
@@ -2782,10 +2804,12 @@ export async function GET() {
 import { NextResponse } from 'next/server';
 import { updateRow, deleteRow } from '@/lib/server/crud';
 
+const KLANTEN_JSON_COLUMNS = ['exclusieveKunstenaarIds'];
+
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
     const data = await request.json();
-    await updateRow('klanten', params.id, data);
+    await updateRow('klanten', params.id, data, KLANTEN_JSON_COLUMNS);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: 'server-error' }, { status: 500 });
@@ -2801,7 +2825,7 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/app/api/klanten.test.ts`
-Expected: PASS (3 tests)
+Expected: PASS (4 tests)
 
 - [ ] **Step 5: Commit**
 
