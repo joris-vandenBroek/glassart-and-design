@@ -4636,31 +4636,63 @@ git commit -m "chore: remove Firebase entirely"
 
 **Note on SSH:** a separate session confirmed this DirectAdmin panel has **no working SSH access** (no "SSH Keys" page, only "Login Keys" which are DirectAdmin panel passwords, not SSH; key-based auth attempts failed with `Permission denied`). Every step below is written to avoid SSH entirely — using DirectAdmin's own UI, Remote MySQL access, and local-build-then-upload instead.
 
-- [ ] **Step 1: Create the production MySQL database via DirectAdmin, with Remote MySQL access**
+- [x] **Step 1: Create the production MySQL database via DirectAdmin, with Remote MySQL access**
 
-In DirectAdmin ("Databases"), create a new database (e.g. `glassart_prod`) and a dedicated database user with a strong password. Note the exact database name, username, and password — DirectAdmin typically prefixes both with your account username (e.g. `dv137864_glassart`).
+Done by the user directly in DirectAdmin (not by Claude — this step is pure panel UI, no
+CLI/code path available). Database `dv137864_productie`, same-named user, `h64.mijn.host`
+external hostname / `localhost` internal, port 3306. Allowed Hosts already included the
+user's current public IP plus `localhost`. Credentials relayed into this conversation from
+a separate concurrent session ("Zie Database migratie") via cross-session messaging, then
+independently confirmed against a screenshot of DirectAdmin's "Database created"
+confirmation card before use — see [[feedback_concurrent_sessions_shared_directory]] for
+why that independent confirmation mattered here.
 
-Then open that database's **Access Hosts** (a.k.a. Remote MySQL) setting and add your current public IP address (not the `%` wildcard — mijn.host's own docs discourage that). This is required for Steps 2 and 3 below, since there is no SSH to run these commands on the server itself.
+- [x] **Step 2: Import the schema from your local machine**
 
-- [ ] **Step 2: Import the schema from your local machine**
+Ran directly via a short inline Node script (`mysql2.createPool` + `pool.query(fs.readFileSync('db/schema.sql', 'utf8'))`
+with `multipleStatements: true`) rather than the `mysql` CLI, since no local MySQL client
+was installed. Verified via `SHOW TABLES`: all 21 tables created.
 
-Using a local MySQL client (e.g. the `mysql` CLI, or a GUI like DBeaver/TablePlus) pointed at the production host/port/credentials from Step 1:
+- [x] **Step 3: Run the data migration script against production, from your local machine**
+
+Ran with production `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME` passed as
+**inline shell env vars** on the command itself, deliberately *not* edited into
+`.env.local` — dotenv's `config()` never overrides a variable already present in
+`process.env`, so this is a safe way to point a single one-off command at production
+without ever putting production credentials in the file that every test run and `npm run
+dev` reads by default (staging stays the connection every other command uses):
 ```bash
-mysql -h<mijn.host-mysql-hostname> -P3306 -u<db-user> -p<db-password> <db-name> < db/schema.sql
+GOOGLE_APPLICATION_CREDENTIALS="<path-to-service-account-json>" \
+DB_HOST="h64.mijn.host" DB_PORT="3306" DB_USER="dv137864_productie" \
+DB_PASSWORD="<production-password>" DB_NAME="dv137864_productie" \
+npm run migrate:firebase-data
 ```
-(The MySQL hostname is shown next to the database in DirectAdmin's Databases overview — usually the server's own hostname, e.g. `h64.mijn.host`.)
+Actual output: `Migrated instellingen/bedrijfsgegevens.` and `Migrated 4 medewerkers
+(passwords not carried over — each must use the wachtwoord-vergeten flow).` Verified via
+an ad-hoc query: 1 `instellingen` row, 4 real `medewerkers` rows.
 
-- [ ] **Step 3: Run the data migration script against production, from your local machine**
+- [x] **Step 4: Set up the production Node.js app in DirectAdmin**
 
-Temporarily point your local `.env.local`'s `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME` at the production values from Step 1 (keep a backup of your real `.env.local` values to restore afterward), then run the same command as in Task 22, Step 3:
-```bash
-GOOGLE_APPLICATION_CREDENTIALS=./firebase-service-account.json npm run migrate:firebase-data
-```
-Restore your local `.env.local` to its original (staging database) values immediately after this succeeds.
+The exact working custom-server pattern from the `nodetest-app` proof-of-concept
+(`nodetest-app-deploy.zip`, still in the repo root) was extracted and reused as-is:
+`app.js` at the repo root (`createServer` + `next({dev: process.env.NODE_ENV !==
+'production'})`, listening on `process.env.PORT ?? 3000`), and `package.json`'s `start`
+script changed from `next start` to `node app.js` — DirectAdmin's Node.js Selector runs
+the configured "Application startup file" directly, not `npm start`/`next start`.
 
-- [ ] **Step 4: Set up the production Node.js app in DirectAdmin**
+Verified locally before asking the user to configure anything on the server: ran
+`NODE_ENV=production npm run start` against a fresh `npm run build` output, confirmed
+`dev=false` in the startup log (a first attempt without `NODE_ENV=production` set
+produced `dev=true` — Next silently falls back to compiling live instead of serving the
+prebuilt `.next` output, which then requires deleting and rebuilding `.next` since dev
+mode partially overwrites it), then curled the homepage (200) and two API routes (`[]`,
+matching the empty production tables).
 
-Using the same "Setup Node.js App" flow verified earlier in this conversation for `nodetest.glassartanddesign.com`, create an app for the real domain `glassartanddesign.com`, Node version 20+ or 24 (whichever is available), Application mode **Production**, startup file matching Next.js's production entry (Next.js's own `npm start` via a small `server.js` wrapper, following the same custom-server pattern already proven in the `nodetest-app` test).
+DirectAdmin action (done by the user, following these settings): create a Node.js app
+for `glassartanddesign.com`, Node 20+ (24 if available, matching `nodetest-app`'s
+confirmed 24.17.0), **Application mode: Production** (this is what makes DirectAdmin set
+`NODE_ENV=production` for the managed process — confirmed necessary by the local dev/prod
+mismatch above), Application startup file: `app.js`.
 
 - [ ] **Step 5: Set production environment variables**
 
