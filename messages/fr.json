@@ -182,6 +182,19 @@
     "rejectedMessage": "Malheureusement, votre demande a été refusée.",
     "accountIncompleteMessage": "Un problème est survenu avec votre demande précédente. Veuillez nous contacter."
   },
+  "resetPasswordPage": {
+    "title": "Réinitialiser le mot de passe",
+    "labelNewPassword": "Nouveau mot de passe",
+    "labelConfirmPassword": "Confirmez le nouveau mot de passe",
+    "submit": "Définir le mot de passe",
+    "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères.",
+    "passwordMismatch": "Les mots de passe ne correspondent pas.",
+    "invalidToken": "Ce lien est invalide ou expiré. Demandez-en un nouveau.",
+    "genericError": "Une erreur s'est produite. Veuillez réessayer.",
+    "missingToken": "Ce lien est invalide. Demandez-en un nouveau depuis la page de connexion.",
+    "successMessage": "Votre mot de passe a été mis à jour. Vous pouvez maintenant vous connecter.",
+    "loginLink": "Aller à la connexion"
+  },
   "whyUs": {
     "title": "Pourquoi Glassart & Design",
     "usp": {

@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       'INSERT INTO passwordResetTokens (token, userType, userId, expiresAt) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 1 DAY))',
       [token, userType, user.id]
     );
-    await sendResetEmail(email, token);
+    await sendResetEmail(email, token, new URL(request.url).origin);
   }
 
   return NextResponse.json({ ok: true });

@@ -182,6 +182,19 @@
     "rejectedMessage": "Unfortunately, your application has been rejected.",
     "accountIncompleteMessage": "Something went wrong with your previous application. Please contact us."
   },
+  "resetPasswordPage": {
+    "title": "Reset password",
+    "labelNewPassword": "New password",
+    "labelConfirmPassword": "Confirm new password",
+    "submit": "Set password",
+    "passwordTooShort": "The password must be at least 8 characters long.",
+    "passwordMismatch": "The passwords do not match.",
+    "invalidToken": "This link is invalid or expired. Request a new one.",
+    "genericError": "Something went wrong. Please try again.",
+    "missingToken": "This link is invalid. Request a new one from the login page.",
+    "successMessage": "Your password has been updated. You can now log in.",
+    "loginLink": "Go to login"
+  },
   "whyUs": {
     "title": "Why Glassart & Design",
     "usp": {

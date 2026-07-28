@@ -4698,6 +4698,43 @@ mismatch above), Application startup file: `app.js`.
 
 In the Node.js app's "Environment variables" section in DirectAdmin, set `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (the production values from Step 1 — note these can stay as `127.0.0.1`/localhost-style values here, since the app itself runs ON the same server, unlike the temporary remote override in Step 3), and `MAIL_SERVER_RESET_ENDPOINT_URL` (pointing at the existing PHP mail-server's reset-email endpoint).
 
+> **Real gap found while setting Step 5's env vars, fixed before continuing:** compiling
+> the exact list of runtime env vars this app reads (`grep -rn "process\.env\." src/` for
+> non-`NEXT_PUBLIC_` names) surfaced `MAIL_SERVER_RESET_ENDPOINT_URL`, read by
+> `src/lib/server/sendResetEmail.ts` — but no PHP endpoint for it existed anywhere, and
+> the code silently no-ops when unset (`if (!endpoint) return;`), so nothing would have
+> failed loudly; the "wachtwoord vergeten" flow would just never actually send an email.
+> This affects both `medewerker` and `klant` accounts (`reset-password/request/route.ts`
+> handles both identically) — and mattered immediately, since all 4 medewerkers migrated
+> in this task have placeholder `MIGRATED_NEEDS_RESET` password hashes and can only set a
+> real password through this exact flow. Digging further also found the *second* half of
+> the flow was missing too: `reset-password/confirm`'s API worked, but no page anywhere
+> read a `?token=` from a URL and called it — an email linking nowhere would have been
+> useless. Built both, with the user's explicit go-ahead for the scope expansion:
+> - `mail-server/send-reset-email.php` — mirrors `send-mail.php`'s shape (same
+>   `shared_secret` check via `hash_equals()`, same PHPMailer/SMTP config), takes
+>   `{secret, to, resetLink}` and sends a plain-text email with the link.
+> - `src/lib/server/sendResetEmail.ts` — now builds the full `resetLink` itself
+>   (`${origin}/nl/wachtwoord-resetten?token=...`, using the request's own origin so it
+>   works on staging and production without a hardcoded domain) and sends it alongside
+>   the shared secret (reusing `NEXT_PUBLIC_MAIL_SECRET` server-side rather than adding a
+>   redundant new secret, since this is a server-to-server call that never touches the
+>   browser).
+> - `src/app/[locale]/wachtwoord-resetten/page.tsx` + `src/components/ResetPasswordForm.tsx`
+>   — a new page (not gated by `pageAvailability`, same "always live" reasoning as
+>   `beheer`) with a new-password/confirm-password form calling
+>   `/api/auth/reset-password/confirm`. Needed a `<Suspense>` boundary around the form in
+>   the page (its `useSearchParams()` call otherwise fails static prerendering with
+>   "should be wrapped in a suspense boundary" — caught by `npm run build`, not by tests).
+> - i18n keys added to all 4 locale files (`resetPasswordPage` namespace).
+>
+> **Still a gap, deliberately not built now:** there is still no UI trigger for a
+> *customer* (klant) to request a password reset — only `AdminLoginForm.tsx` (medewerker/
+> beheer login) has a "wachtwoord vergeten" link calling the `request` endpoint.
+> `CustomerLoginForm.tsx` has none. The API already supports `userType: 'klant'` and the
+> new confirm-page works for both account types, so adding that trigger later is a small,
+> self-contained addition whenever it's needed — not blocking this deploy.
+
 - [ ] **Step 6: Build locally, then upload the built app**
 
 Since there is no SSH to run `npm run build` on the server, and DirectAdmin's Node.js app page has no equivalent "run build" button (only "Run NPM Install", which runs `npm install` on the server itself — safe to use since this project has no native-binary dependencies per the approved design, so a Linux-built `node_modules` from that button is no different from what a cross-platform build would produce):

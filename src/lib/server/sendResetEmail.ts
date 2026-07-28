@@ -1,9 +1,11 @@
-export async function sendResetEmail(email: string, token: string): Promise<void> {
+export async function sendResetEmail(email: string, token: string, origin: string): Promise<void> {
   const endpoint = process.env.MAIL_SERVER_RESET_ENDPOINT_URL;
-  if (!endpoint) return;
+  const secret = process.env.NEXT_PUBLIC_MAIL_SECRET;
+  if (!endpoint || !secret) return;
+  const resetLink = `${origin}/nl/wachtwoord-resetten?token=${encodeURIComponent(token)}`;
   await fetch(endpoint, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ to: email, resetToken: token }),
+    body: JSON.stringify({ secret, to: email, resetLink }),
   });
 }

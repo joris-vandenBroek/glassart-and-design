@@ -182,6 +182,19 @@
     "rejectedMessage": "Uw aanvraag is helaas afgewezen.",
     "accountIncompleteMessage": "Er ging iets mis bij uw eerdere aanvraag. Neem contact met ons op."
   },
+  "resetPasswordPage": {
+    "title": "Wachtwoord opnieuw instellen",
+    "labelNewPassword": "Nieuw wachtwoord",
+    "labelConfirmPassword": "Bevestig nieuw wachtwoord",
+    "submit": "Wachtwoord instellen",
+    "passwordTooShort": "Het wachtwoord moet minimaal 8 tekens lang zijn.",
+    "passwordMismatch": "De wachtwoorden komen niet overeen.",
+    "invalidToken": "Deze link is ongeldig of verlopen. Vraag een nieuwe aan.",
+    "genericError": "Er is iets misgegaan. Probeer het opnieuw.",
+    "missingToken": "Deze link is ongeldig. Vraag een nieuwe aan via de inlogpagina.",
+    "successMessage": "Uw wachtwoord is bijgewerkt. U kunt nu inloggen.",
+    "loginLink": "Naar inloggen"
+  },
   "whyUs": {
     "title": "Waarom Glassart & Design",
     "usp": {
