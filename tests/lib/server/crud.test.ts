@@ -80,4 +80,28 @@ describe('generic CRUD helpers (against segmenten table)', () => {
     );
     expect(found?.segmentIds).toEqual(['a', 'b']);
   });
+
+  it('defaults a NULL JSON column to an empty array instead of returning null', async () => {
+    const created = await insertRow<{ id: string; naam: string }>(
+      'kunstwerken',
+      { naam: 'Zonder materialen' } as never,
+      ['segmentIds', 'materiaalIds', 'maatIds', 'prijzen']
+    );
+    createdKunstwerkIds.push(created.id);
+
+    const found = await getRow<{ id: string; materiaalIds: string[] }>(
+      'kunstwerken',
+      created.id,
+      ['segmentIds', 'materiaalIds', 'maatIds', 'prijzen']
+    );
+    expect(found?.materiaalIds).toEqual([]);
+
+    const rows = await listRows<{ id: string; materiaalIds: string[] }>('kunstwerken', [
+      'segmentIds',
+      'materiaalIds',
+      'maatIds',
+      'prijzen',
+    ]);
+    expect(rows.find((row) => row.id === created.id)?.materiaalIds).toEqual([]);
+  });
 });

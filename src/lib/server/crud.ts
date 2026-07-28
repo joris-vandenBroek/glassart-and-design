@@ -12,8 +12,10 @@ function serializeRow(data: Record<string, unknown>, jsonColumns: string[]): Rec
 function deserializeRow<T>(row: Record<string, unknown>, jsonColumns: string[]): T {
   const result: Record<string, unknown> = { ...row };
   for (const column of jsonColumns) {
-    if (result[column] != null && typeof result[column] === 'string') {
+    if (typeof result[column] === 'string') {
       result[column] = JSON.parse(result[column] as string);
+    } else if (result[column] == null) {
+      result[column] = [];
     }
   }
   return result as T;
