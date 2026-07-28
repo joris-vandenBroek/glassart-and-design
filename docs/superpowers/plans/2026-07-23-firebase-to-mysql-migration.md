@@ -3493,7 +3493,7 @@ git commit -m "feat: add activiteitenlog API route with single-source-of-truth t
 - Test: `tests/lib/logActiviteit.test.ts`
 
 **Interfaces:**
-- Produces: `logActiviteit(type, actor): Promise<void>` — identical signature, now POSTs to `/api/activiteitenlog` instead of writing to Firestore.
+- Produces: `logActiviteit(type, actor, omschrijving?): Promise<void>` — identical signature (the real current file already has the optional third `omschrijving` param), now POSTs to `/api/activiteitenlog` instead of writing to Firestore.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -3527,6 +3527,27 @@ describe('logActiviteit', () => {
     );
   });
 
+  it('includes omschrijving in the body when provided', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true });
+    await logActiviteit(
+      'bestelling_geplaatst',
+      { id: 'k1', email: 'k@x.com', naam: 'Acme' },
+      'Bestelling GD-00001'
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/activiteitenlog',
+      expect.objectContaining({
+        body: JSON.stringify({
+          type: 'bestelling_geplaatst',
+          actorId: 'k1',
+          actorEmail: 'k@x.com',
+          actorNaam: 'Acme',
+          omschrijving: 'Bestelling GD-00001',
+        }),
+      })
+    );
+  });
+
   it('never throws when the request fails', async () => {
     fetchMock.mockRejectedValueOnce(new Error('network error'));
     await expect(
@@ -3541,11 +3562,15 @@ describe('logActiviteit', () => {
 Run: `npx vitest run tests/lib/logActiviteit.test.ts`
 Expected: FAIL — current implementation calls Firestore's `addDoc`, not `fetch`
 
-- [ ] **Step 3: Rewrite the `logActiviteit` function** (keep everything else in the file — types, `ONBEKENDE_ACTOR`, `actorFromCustomer`, `actorFromMedewerker` — unchanged)
+- [ ] **Step 3: Rewrite the `logActiviteit` function** (keep everything else in the file — types, `ACTIVITEIT_TYPES`, `ONBEKENDE_ACTOR`, `actorFromCustomer`, `actorFromMedewerker` — unchanged)
 
 ```typescript
 // src/lib/logActiviteit.ts (replace only the imports and the logActiviteit function)
-export async function logActiviteit(type: ActiviteitType, actor: ActiviteitActor): Promise<void> {
+export async function logActiviteit(
+  type: ActiviteitType,
+  actor: ActiviteitActor,
+  omschrijving?: string
+): Promise<void> {
   try {
     await fetch('/api/activiteitenlog', {
       method: 'POST',
@@ -3555,6 +3580,7 @@ export async function logActiviteit(type: ActiviteitType, actor: ActiviteitActor
         actorId: actor.id,
         actorEmail: actor.email,
         actorNaam: actor.naam,
+        ...(omschrijving ? { omschrijving } : {}),
       }),
     });
   } catch {
@@ -3569,19 +3595,15 @@ export async function logActiviteit(type: ActiviteitType, actor: ActiviteitActor
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/lib/logActiviteit.test.ts`
-Expected: PASS (2 tests)
+Expected: PASS (9 tests — 3 for `logActiviteit`, 6 unchanged for `actorFromCustomer`/`actorFromMedewerker`)
 
-- [ ] **Step 5: Delete `generateBestelnr.ts`**
+**Note:** `src/lib/generateBestelnr.ts` is deliberately **not** deleted here — its only caller, `CartPanel.tsx`, still imports it and hasn't been migrated yet (that's Task 17). Deleting it now would break the build. Task 17 deletes both `generateBestelnr.ts` and its test file once `CartPanel.tsx` no longer calls it.
 
-Run: `rm src/lib/generateBestelnr.ts`
-
-(Its only caller, `CartPanel.tsx`, is updated in Task 17 to call `/api/bestelheaders` directly, which now generates the `bestelnr` server-side.)
-
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add -u src/lib/logActiviteit.ts tests/lib/logActiviteit.test.ts
-git commit -m "feat: rewrite logActiviteit to use API route, remove generateBestelnr"
+git commit -m "feat: rewrite logActiviteit to use API route"
 ```
 
 ---

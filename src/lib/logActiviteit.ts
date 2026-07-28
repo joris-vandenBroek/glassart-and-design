@@ -1,6 +1,3 @@
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-
 export const ACTIVITEIT_TYPES = [
   'kunstwerk_bekeken',
   'mandje_toegevoegd',
@@ -70,13 +67,16 @@ export async function logActiviteit(
   omschrijving?: string
 ): Promise<void> {
   try {
-    await addDoc(collection(db, 'activiteitenlog'), {
-      type,
-      actorId: actor.id,
-      actorEmail: actor.email,
-      actorNaam: actor.naam,
-      timestamp: serverTimestamp(),
-      ...(omschrijving ? { omschrijving } : {}),
+    await fetch('/api/activiteitenlog', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        type,
+        actorId: actor.id,
+        actorEmail: actor.email,
+        actorNaam: actor.naam,
+        ...(omschrijving ? { omschrijving } : {}),
+      }),
     });
   } catch {
     // Fire-and-forget: a failed log write must never block or surface an

@@ -6,65 +6,55 @@ import {
   ONBEKENDE_ACTOR,
 } from '@/lib/logActiviteit';
 
-const addDocMock = vi.fn();
-
-vi.mock('@/lib/firebase', () => ({
-  db: {},
-}));
-
-vi.mock('firebase/firestore', () => ({
-  collection: vi.fn((_db, name) => ({ name })),
-  addDoc: (...args: unknown[]) => addDocMock(...args),
-  serverTimestamp: () => 'SERVER_TIMESTAMP',
-}));
+const fetchMock = vi.fn();
 
 beforeEach(() => {
-  addDocMock.mockReset();
+  fetchMock.mockReset();
+  vi.stubGlobal('fetch', fetchMock);
 });
 
 describe('logActiviteit', () => {
-  it('writes a document with type, actor fields and a server timestamp', async () => {
-    addDocMock.mockResolvedValue({ id: 'log-1' });
-    await logActiviteit('kunstwerk_bekeken', {
-      id: 'uid-1',
-      email: 'klant@example.com',
-      naam: 'Testbedrijf BV',
-    });
-    expect(addDocMock).toHaveBeenCalledWith(
-      { name: 'activiteitenlog' },
-      {
-        type: 'kunstwerk_bekeken',
-        actorId: 'uid-1',
-        actorEmail: 'klant@example.com',
-        actorNaam: 'Testbedrijf BV',
-        timestamp: 'SERVER_TIMESTAMP',
-      }
+  it('POSTs the activity to /api/activiteitenlog', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true });
+    await logActiviteit('bestelling_geplaatst', { id: 'k1', email: 'k@x.com', naam: 'Acme' });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/activiteitenlog',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'bestelling_geplaatst',
+          actorId: 'k1',
+          actorEmail: 'k@x.com',
+          actorNaam: 'Acme',
+        }),
+      })
     );
   });
 
-  it('never throws when the write fails', async () => {
-    addDocMock.mockRejectedValue(new Error('permission-denied'));
-    await expect(logActiviteit('mandje_toegevoegd', ONBEKENDE_ACTOR)).resolves.toBeUndefined();
-  });
-
-  it('includes the omschrijving field when provided', async () => {
-    addDocMock.mockResolvedValue({ id: 'log-2' });
+  it('includes omschrijving in the body when provided', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true });
     await logActiviteit(
-      'materiaalsoort_verwijderd',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
-      'Helder glas'
+      'bestelling_geplaatst',
+      { id: 'k1', email: 'k@x.com', naam: 'Acme' },
+      'Bestelling GD-00001'
     );
-    expect(addDocMock).toHaveBeenCalledWith(
-      { name: 'activiteitenlog' },
-      {
-        type: 'materiaalsoort_verwijderd',
-        actorId: 'staff-1',
-        actorEmail: 'paul@glassartanddesign.com',
-        actorNaam: 'paul@glassartanddesign.com',
-        timestamp: 'SERVER_TIMESTAMP',
-        omschrijving: 'Helder glas',
-      }
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/activiteitenlog',
+      expect.objectContaining({
+        body: JSON.stringify({
+          type: 'bestelling_geplaatst',
+          actorId: 'k1',
+          actorEmail: 'k@x.com',
+          actorNaam: 'Acme',
+          omschrijving: 'Bestelling GD-00001',
+        }),
+      })
     );
+  });
+
+  it('never throws when the request fails', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('network error'));
+    await expect(logActiviteit('mandje_toegevoegd', ONBEKENDE_ACTOR)).resolves.toBeUndefined();
   });
 });
 
