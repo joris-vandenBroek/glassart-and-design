@@ -4016,6 +4016,45 @@ git commit -m "feat: migrate useAllOrders and BestellingModal to bestelheaders A
 
 ## Task 20: Migrate `BeheerShell.tsx` and `KlantModal.tsx`
 
+> **Real scope (2026-07-28), superseding the draft below:** both files grew substantially
+> between the original plan draft and implementation — `BeheerShell.tsx` now also wires up
+> `stijlen`, `onderwerpen`, `kunstenaars`, `drukkers`, and `bestelinstellingen` (none of
+> which existed when this task was first drafted), and `KlantModal.tsx`'s single
+> approve/reject PATCH grew into four separate write paths (`handleOpslaan` for field
+> edits/prijsgroep/exclusiviteit/minimaleAfname, plus `handleGoedkeuren`/`handleAfwijzen`).
+> The code below (Steps 1-3) is kept only as illustrative history of the original,
+> narrower scope; treat the bullets under **Actual implementation** as authoritative.
+>
+> **Actual implementation:**
+> - All ten remaining `useFirestoreCollection`/`useFirestoreDocument` call sites in
+>   `BeheerShell.tsx` (materiaalsoorten, materialen, maten, segmenten, stijlen,
+>   onderwerpen, kunstwerken, prijsgroepen, kunstenaars, drukkers, bedrijfsgegevens,
+>   bestelinstellingen) were mechanically renamed to `useApiCollection`/`useApiRecord` —
+>   same arguments, no behavior change.
+> - `updateKunstenaarVeilig` — originally a legacy-migration dance (`getDoc`/`setDoc`/
+>   `deleteField` shuffling a `prijsafspraken` string between the `kunstenaars` and
+>   `kunstenaarAfspraken` Firestore documents before every write, because Firestore rules
+>   enforced the field-level split by stripping on write) — collapsed to a one-line
+>   pass-through: `return kunstenaars.update(id, data);`. The MySQL schema achieves the
+>   same field-level split structurally (two separate tables, `kunstenaars` vs.
+>   `kunstenaarAfspraken`; no column to strip ever exists), so the migration logic has no
+>   MySQL equivalent and was deleted rather than ported.
+> - `KlantModal.tsx`'s `updateDoc(doc(db, 'klanten', klant.id), updates)` call (shared by
+>   `handleOpslaan`, `handleGoedkeuren`, `handleAfwijzen`) became a single
+>   `fetch('/api/klanten/${klant.id}', { method: 'PATCH', ... })` — the `updates` payload
+>   shape is unchanged, so this is a like-for-like swap of the write mechanism only.
+> - Test files updated: `tests/components/beheer/BeheerShell.test.tsx` and
+>   `tests/components/beheer/KlantModal.test.tsx` were rewritten from Firestore mocks
+>   (`vi.mock('firebase/firestore', ...)`) to a `vi.stubGlobal('fetch', fetchMock)`
+>   URL-routed mock. The three legacy-migration sub-tests in `BeheerShell.test.tsx`
+>   (`migrates a legacy prijsafspraken value...`, `does not write an afspraken document...`,
+>   `leaves an existing afspraken document untouched...`) were replaced with a single test
+>   asserting the simplified pass-through PATCHes `/api/kunstenaars/{id}` directly.
+>   `tests/components/beheer/KlantenSection.test.tsx` and
+>   `tests/components/beheer/AdminDashboard.test.tsx` (both render `KlantModal`/
+>   `BeheerShell` as children) also needed their Firestore mocks swapped for `fetch` mocks
+>   as a consequence, even though neither file was in this task's original file list.
+
 **Files:**
 - Modify: `src/components/beheer/BeheerShell.tsx`
 - Modify: `src/components/beheer/KlantModal.tsx`
@@ -4023,7 +4062,7 @@ git commit -m "feat: migrate useAllOrders and BestellingModal to bestelheaders A
 **Interfaces:**
 - Consumes: `GET /api/klanten`, `PATCH /api/klanten/:id` (Task 13), `GET /api/bestelheaders` (Task 14), `GET /api/activiteitenlog` (Task 15), `useApiCollection`/`useApiRecord` (Task 9).
 
-- [ ] **Step 1: Replace `BeheerShell.tsx`'s three `useEffect` Firestore loaders**
+- [x] **Step 1 (draft scope, see note above): Replace `BeheerShell.tsx`'s three `useEffect` Firestore loaders**
 
 ```typescript
 // src/components/beheer/BeheerShell.tsx — remove:
@@ -4131,7 +4170,7 @@ git commit -m "feat: migrate useAllOrders and BestellingModal to bestelheaders A
   }, [t]);
 ```
 
-- [ ] **Step 2: Swap the generic hook calls (bottom of the component)**
+- [x] **Step 2: Swap the generic hook calls (bottom of the component)**
 
 ```typescript
   const materiaalsoorten = useApiCollection<Materiaalsoort>('materiaalsoorten', {
@@ -4161,7 +4200,7 @@ git commit -m "feat: migrate useAllOrders and BestellingModal to bestelheaders A
 
 Note: `useApiCollection` already re-seeds an empty collection via these `SEED` constants (built into `fetchItems` in Task 9), matching `useFirestoreCollection`'s old behavior — no further changes needed here.
 
-- [ ] **Step 3: Rewrite `KlantModal.tsx`'s handlers**
+- [x] **Step 3: Rewrite `KlantModal.tsx`'s handlers**
 
 ```typescript
 // src/components/beheer/KlantModal.tsx — remove:
@@ -4203,15 +4242,21 @@ Note: `useApiCollection` already re-seeds an empty collection via these `SEED` c
   }
 ```
 
-- [ ] **Step 4: Run the full test suite**
+- [x] **Step 4: Run the full test suite**
 
 Run: `npm run test`
-Expected: PASS — update any Firebase mocks in `BeheerShell`/`KlantModal` related tests to `fetch` mocks
+Result: PASS for all Task 20-touched files (`BeheerShell.test.tsx`, `KlantModal.test.tsx`,
+`KlantenSection.test.tsx`, `AdminDashboard.test.tsx`). Remaining full-suite failures
+(`ProductModal`, `ProductsGrid`, `OrdersSection`, `AccountNav`, `AccountDashboard`,
+`BestellingenSection`) are pre-existing Task 21 scope, untouched by this task.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
-git add src/components/beheer/BeheerShell.tsx src/components/beheer/KlantModal.tsx src/lib/useApiCollection.ts tests/lib/useApiCollection.test.tsx
+git add src/components/beheer/BeheerShell.tsx src/components/beheer/KlantModal.tsx \
+  tests/components/beheer/BeheerShell.test.tsx tests/components/beheer/KlantModal.test.tsx \
+  tests/components/beheer/KlantenSection.test.tsx tests/components/beheer/AdminDashboard.test.tsx \
+  docs/superpowers/plans/2026-07-23-firebase-to-mysql-migration.md
 git commit -m "feat: migrate BeheerShell and KlantModal to API hooks/routes"
 ```
 

@@ -4,31 +4,8 @@ import { NextIntlClientProvider } from 'next-intl';
 import { BeheerShell } from '@/components/beheer/BeheerShell';
 import messages from '../../../messages/nl.json';
 
-const getDocsMock = vi.fn();
-const addDocMock = vi.fn();
-const getDocMock = vi.fn();
-const setDocMock = vi.fn();
-const updateDocMock = vi.fn();
-
-vi.mock('@/lib/firebase', () => ({
-  db: {},
-  storage: {},
-}));
-
-vi.mock('firebase/firestore', () => ({
-  collection: vi.fn((_db, ...segments: string[]) => ({ name: segments.join('/') })),
-  doc: vi.fn((_db, collectionName, id) => ({ collectionName, id })),
-  getDocs: (...args: unknown[]) => getDocsMock(...args),
-  addDoc: (...args: unknown[]) => addDocMock(...args),
-  updateDoc: (...args: unknown[]) => updateDocMock(...args),
-  deleteDoc: vi.fn(),
-  deleteField: vi.fn(() => ({ __sentinel: 'deleteField' })),
-  getDoc: (...args: unknown[]) => getDocMock(...args),
-  setDoc: (...args: unknown[]) => setDocMock(...args),
-  query: vi.fn((collectionRef) => collectionRef),
-  orderBy: vi.fn(),
-  limit: vi.fn(),
-}));
+const fetchMock = vi.fn();
+vi.stubGlobal('fetch', fetchMock);
 
 vi.mock('@/lib/useAdminAuth', () => ({
   useAdminAuth: () => ({ user: { uid: 'staff-1', email: 'paul@glassartanddesign.com' } }),
@@ -41,13 +18,6 @@ vi.mock('@/lib/logActiviteit', () => ({
       ? { id: user.uid, email: user.email ?? 'Onbekend', naam: user.email ?? 'Onbekend' }
       : { id: null, email: 'Onbekend', naam: 'Onbekend' },
 }));
-
-function makeSnapshot(docsData: Array<{ id: string; data: Record<string, unknown> }>) {
-  return {
-    empty: docsData.length === 0,
-    docs: docsData.map(({ id, data }) => ({ id, data: () => data })),
-  };
-}
 
 const KLANT_DATA = {
   companyName: 'Testbedrijf BV',
@@ -67,35 +37,37 @@ const KLANT_DATA = {
   invoiceCity: '',
   status: 'Beoordelen',
   prijsgroepId: null,
+  exclusieveKunstenaarIds: [],
+  minimaleAfname: null,
 };
 
 // Non-empty by default so the auto-seed path never triggers in these
 // wiring tests — seeding itself is covered by the collection-specific
-// data tests and useFirestoreCollection.test.tsx.
-const DEFAULT_COLLECTIONS: Record<string, Array<{ id: string; data: Record<string, unknown> }>> = {
+// data tests and useApiCollection.test.tsx.
+const DEFAULT_COLLECTIONS: Record<string, unknown[]> = {
   klanten: [],
   bestelheaders: [],
   activiteitenlog: [],
-  materiaalsoorten: [{ id: 'soort-1', data: { omschrijving: 'Veiligheidsglas' } }],
-  materialen: [{ id: 'mat-1', data: { materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Test' } }],
-  maten: [{ id: 'maat-1', data: { breedte: 40, hoogte: 60 } }],
-  segmenten: [{ id: 'seg-1', data: { omschrijving: 'Hotel' } }],
+  materiaalsoorten: [{ id: 'soort-1', omschrijving: 'Veiligheidsglas' }],
+  materialen: [{ id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Test' }],
+  maten: [{ id: 'maat-1', breedte: 40, hoogte: 60 }],
+  segmenten: [{ id: 'seg-1', omschrijving: 'Hotel' }],
+  stijlen: [],
+  onderwerpen: [],
   prijsgroepen: [],
   drukkers: [],
   kunstwerken: [
     {
       id: 'kw-1',
-      data: {
-        foto: 'https://storage.example.com/kw-1.jpg',
-        segmentIds: ['seg-1'],
-        materiaalIds: ['mat-1'],
-        maatIds: ['maat-1'],
-        prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 150 }],
-        omschrijvingNl: 'Hotel paneel 1',
-        omschrijvingFr: '',
-        omschrijvingDe: '',
-        omschrijvingEn: '',
-      },
+      foto: 'https://storage.example.com/kw-1.jpg',
+      segmentIds: ['seg-1'],
+      materiaalIds: ['mat-1'],
+      maatIds: ['maat-1'],
+      prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 150 }],
+      omschrijvingNl: 'Hotel paneel 1',
+      omschrijvingFr: '',
+      omschrijvingDe: '',
+      omschrijvingEn: '',
     },
   ],
   kunstenaars: [],
@@ -114,13 +86,54 @@ const BEDRIJFSGEGEVENS_FIXTURE = {
   ],
 };
 
-function mockCollections(overrides: Partial<typeof DEFAULT_COLLECTIONS> = {}) {
-  const data = { ...DEFAULT_COLLECTIONS, ...overrides };
-  getDocsMock.mockImplementation((collectionRef: { name: string }) =>
-    Promise.resolve(makeSnapshot(data[collectionRef.name] ?? []))
-  );
-  getDocMock.mockResolvedValue({ exists: () => true, data: () => BEDRIJFSGEGEVENS_FIXTURE });
+const BESTELINSTELLINGEN_FIXTURE = { minimaleAfname: 1 };
+
+let collections: Record<string, unknown[]> = {};
+let klantenLoadFails = false;
+let kunstwerkenLoadFails = false;
+
+function mockCollections(overrides: Record<string, unknown[]> = {}) {
+  collections = { ...DEFAULT_COLLECTIONS, ...overrides };
+  klantenLoadFails = false;
+  kunstwerkenLoadFails = false;
 }
+
+function resourceFromUrl(url: string): { resource: string; id?: string } {
+  const path = url.replace(/^\/api\//, '');
+  const segments = path.split('/');
+  return { resource: segments[0], id: segments[1] };
+}
+
+beforeEach(() => {
+  fetchMock.mockReset();
+  mockCollections();
+  fetchMock.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
+    const { resource, id } = resourceFromUrl(url);
+    const method = init?.method ?? 'GET';
+
+    if (resource === 'klanten' && !id && method === 'GET') {
+      if (klantenLoadFails) return { ok: false };
+      return { ok: true, json: async () => collections.klanten };
+    }
+    if (resource === 'kunstwerken' && !id && method === 'GET') {
+      if (kunstwerkenLoadFails) return { ok: false };
+      return { ok: true, json: async () => collections.kunstwerken };
+    }
+    if (resource === 'instellingen' && id === 'bedrijfsgegevens') {
+      return { ok: true, json: async () => BEDRIJFSGEGEVENS_FIXTURE };
+    }
+    if (resource === 'instellingen' && id === 'bestelinstellingen') {
+      return { ok: true, json: async () => BESTELINSTELLINGEN_FIXTURE };
+    }
+    if (method === 'GET' && !id) {
+      return { ok: true, json: async () => collections[resource] ?? [] };
+    }
+    if (method === 'PATCH' || method === 'POST' || method === 'DELETE') {
+      return { ok: true, json: async () => ({ ok: true }) };
+    }
+    return { ok: true, json: async () => [] };
+  });
+});
 
 function renderShell() {
   const onLogout = vi.fn();
@@ -132,28 +145,17 @@ function renderShell() {
   return { onLogout };
 }
 
-beforeEach(() => {
-  getDocsMock.mockReset();
-  addDocMock.mockReset();
-  getDocMock.mockReset();
-  setDocMock.mockReset();
-  updateDocMock.mockReset();
-  updateDocMock.mockResolvedValue(undefined);
-  setDocMock.mockResolvedValue(undefined);
-});
-
 describe('BeheerShell', () => {
   it('shows the logged-in email and defaults to the Klanten section', async () => {
-    mockCollections({ klanten: [{ id: 'uid-1', data: KLANT_DATA }] });
+    mockCollections({ klanten: [{ id: 'uid-1', ...KLANT_DATA }] });
     renderShell();
     expect(screen.getByTestId('beheer-logged-in-as')).toHaveTextContent('paul@glassartanddesign.com');
     expect(await screen.findByTestId('klanten-section')).toBeInTheDocument();
   });
 
   it('calls onLogout when the nav logout button is clicked', async () => {
-    mockCollections();
     const { onLogout } = renderShell();
-    await waitFor(() => expect(getDocsMock).toHaveBeenCalled());
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     screen.getByTestId('beheer-nav-logout').click();
     expect(onLogout).toHaveBeenCalled();
   });
@@ -161,21 +163,17 @@ describe('BeheerShell', () => {
   it('shows the count of "Beoordelen" klanten on the Klanten nav item', async () => {
     mockCollections({
       klanten: [
-        { id: 'uid-1', data: KLANT_DATA },
-        { id: 'uid-2', data: { ...KLANT_DATA, status: 'Goedgekeurd' } },
+        { id: 'uid-1', ...KLANT_DATA },
+        { id: 'uid-2', ...KLANT_DATA, status: 'Goedgekeurd' },
       ],
     });
     renderShell();
     await waitFor(() => expect(screen.getByTestId('beheer-nav-klanten')).toHaveTextContent('1'));
   });
 
-  it('shows a load error on the Klanten section when getDocs fails for klanten', async () => {
-    getDocsMock.mockImplementation((collectionRef: { name: string }) => {
-      if (collectionRef.name === 'klanten') {
-        return Promise.reject(new Error('offline'));
-      }
-      return Promise.resolve(makeSnapshot(DEFAULT_COLLECTIONS[collectionRef.name] ?? []));
-    });
+  it('shows a load error on the Klanten section when the klanten fetch fails', async () => {
+    mockCollections();
+    klantenLoadFails = true;
     renderShell();
     expect(await screen.findByTestId('klanten-error')).toHaveTextContent(
       'Kon de klanten niet laden. Probeer de pagina te verversen.'
@@ -185,8 +183,8 @@ describe('BeheerShell', () => {
   it('shows the materiaalsoorten count and switches to the Materiaalsoorten section', async () => {
     mockCollections({
       materiaalsoorten: [
-        { id: 'soort-1', data: { omschrijving: 'Veiligheidsglas' } },
-        { id: 'soort-2', data: { omschrijving: 'Dibond' } },
+        { id: 'soort-1', omschrijving: 'Veiligheidsglas' },
+        { id: 'soort-2', omschrijving: 'Dibond' },
       ],
     });
     renderShell();
@@ -197,7 +195,6 @@ describe('BeheerShell', () => {
   });
 
   it('shows the materiaalsoort name in Materialen and the materialen count in the nav', async () => {
-    mockCollections();
     renderShell();
     await waitFor(() => expect(screen.getByTestId('beheer-nav-materialen')).toHaveTextContent('1'));
     screen.getByTestId('beheer-nav-materialen').click();
@@ -206,7 +203,6 @@ describe('BeheerShell', () => {
   });
 
   it('shows the maten count and switches to the Maten section', async () => {
-    mockCollections();
     renderShell();
     await waitFor(() => expect(screen.getByTestId('beheer-nav-maten')).toHaveTextContent('1'));
     screen.getByTestId('beheer-nav-maten').click();
@@ -216,19 +212,16 @@ describe('BeheerShell', () => {
 
   it('shows the bestellingen count and switches to the Bestellingen section', async () => {
     mockCollections({
-      klanten: [{ id: 'uid-1', data: KLANT_DATA }],
+      klanten: [{ id: 'uid-1', ...KLANT_DATA }],
       bestelheaders: [
         {
           id: 'header-1',
-          data: {
-            klantId: 'uid-1',
-            besteldatum: { toDate: () => new Date('2026-07-01') },
-            status: 'Te beoordelen',
-          },
+          klantId: 'uid-1',
+          bestelnr: 'GD-00001',
+          besteldatum: '2026-07-01T00:00:00',
+          status: 'Te beoordelen',
+          lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 3 }],
         },
-      ],
-      'bestelheaders/header-1/bestellines': [
-        { id: 'line-1', data: { kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 3 } },
       ],
     });
     renderShell();
@@ -243,8 +236,8 @@ describe('BeheerShell', () => {
   it('shows the segmenten count and switches to the Segmenten section', async () => {
     mockCollections({
       segmenten: [
-        { id: 'seg-1', data: { omschrijving: 'Hotel' } },
-        { id: 'seg-2', data: { omschrijving: 'Restaurant' } },
+        { id: 'seg-1', omschrijving: 'Hotel' },
+        { id: 'seg-2', omschrijving: 'Restaurant' },
       ],
     });
     renderShell();
@@ -255,7 +248,6 @@ describe('BeheerShell', () => {
   });
 
   it('shows the kunstwerken count and switches to the Kunstwerken section with segment names resolved', async () => {
-    mockCollections();
     renderShell();
     await waitFor(() => expect(screen.getByTestId('beheer-nav-kunstwerken')).toHaveTextContent('1'));
     screen.getByTestId('beheer-nav-kunstwerken').click();
@@ -263,13 +255,9 @@ describe('BeheerShell', () => {
     expect(screen.getByTestId('data-table-row-kw-1')).toHaveTextContent('Hotel');
   });
 
-  it('shows a load error on the Kunstwerken section when getDocs fails for kunstwerken', async () => {
-    getDocsMock.mockImplementation((collectionRef: { name: string }) => {
-      if (collectionRef.name === 'kunstwerken') {
-        return Promise.reject(new Error('offline'));
-      }
-      return Promise.resolve(makeSnapshot(DEFAULT_COLLECTIONS[collectionRef.name] ?? []));
-    });
+  it('shows a load error on the Kunstwerken section when the kunstwerken fetch fails', async () => {
+    mockCollections();
+    kunstwerkenLoadFails = true;
     renderShell();
     screen.getByTestId('beheer-nav-kunstwerken').click();
     expect(await screen.findByTestId('kunstwerken-error')).toHaveTextContent(
@@ -282,13 +270,11 @@ describe('BeheerShell', () => {
       activiteitenlog: [
         {
           id: 'log-1',
-          data: {
-            type: 'kunstwerk_bekeken',
-            actorEmail: 'klant@example.com',
-            actorNaam: 'Testbedrijf BV',
-            omschrijving: 'Hotel paneel',
-            timestamp: { toDate: () => new Date('2026-07-22T10:00:00') },
-          },
+          type: 'kunstwerk_bekeken',
+          actorEmail: 'klant@example.com',
+          actorNaam: 'Testbedrijf BV',
+          omschrijving: 'Hotel paneel',
+          timestamp: '2026-07-22T10:00:00',
         },
       ],
     });
@@ -303,8 +289,8 @@ describe('BeheerShell', () => {
   it('shows the prijsgroepen count and switches to the Prijsgroepen section', async () => {
     mockCollections({
       prijsgroepen: [
-        { id: 'pg-1', data: { naam: 'Standaard', kortingspercentage: 0 } },
-        { id: 'pg-2', data: { naam: 'Wholesale', kortingspercentage: 15 } },
+        { id: 'pg-1', naam: 'Standaard', kortingspercentage: 0 },
+        { id: 'pg-2', naam: 'Wholesale', kortingspercentage: 15 },
       ],
     });
     renderShell();
@@ -317,7 +303,7 @@ describe('BeheerShell', () => {
   it('shows the count and switches to the Kunstenaars section', async () => {
     mockCollections({
       kunstenaars: [
-        { id: 'ka-1', data: { naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', verkooprecht: 'open', klantId: null, exclusiefVoorKlantId: null } },
+        { id: 'ka-1', naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', verkooprecht: 'open', klantId: null, exclusiefVoorKlantId: null },
       ],
     });
     renderShell();
@@ -327,124 +313,37 @@ describe('BeheerShell', () => {
     expect(screen.getByTestId('data-table-row-ka-1')).toHaveTextContent('Sabrina Glasser');
   });
 
-  // updateKunstenaarVeilig is the single write path to kunstenaars/{id}. Every update must
-  // strip the legacy prijsafspraken field (firestore.rules rejects the merged post-write
-  // document otherwise), but stripping without migrating first would silently destroy the
-  // internal commission notes of an artist that was never opened in the Kunstenaars section.
-  describe('updateKunstenaarVeilig (via the Klanten exclusiviteit flow)', () => {
-    const KUNSTENAAR_PUBLIEK = {
-      naam: 'Sabrina Glasser',
-      foto: null,
-      omschrijvingNl: 'Werkt met glas.',
-      omschrijvingFr: '',
-      omschrijvingDe: '',
-      omschrijvingEn: '',
-      verkooprecht: 'open',
-      klantId: null,
-      exclusiefVoorKlantId: null,
-    };
-
-    // Only the bedrijfsgegevens document exists; kunstenaarAfspraken/ka-1 does not.
-    function mockAfsprakenOntbreekt() {
-      getDocMock.mockImplementation((ref: { collectionName: string }) =>
-        Promise.resolve(
-          ref.collectionName === 'kunstenaarAfspraken'
-            ? { exists: () => false, data: () => undefined }
-            : { exists: () => true, data: () => BEDRIJFSGEGEVENS_FIXTURE }
-        )
-      );
-    }
-
-    async function toggleExclusiviteit() {
-      renderShell();
-      fireEvent.click(await screen.findByTestId('data-table-row-uid-1'));
-      fireEvent.click(await screen.findByTestId('klant-modal-exclusief-ka-1'));
-      fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
-    }
-
-    function kunstenaarUpdateCall() {
-      return updateDocMock.mock.calls.find(
-        (call) => (call[0] as { collectionName: string }).collectionName === 'kunstenaars'
-      );
-    }
-
-    it('migrates a legacy prijsafspraken value into kunstenaarAfspraken before stripping it', async () => {
-      mockCollections({
-        klanten: [{ id: 'uid-1', data: KLANT_DATA }],
-        kunstenaars: [{ id: 'ka-1', data: { ...KUNSTENAAR_PUBLIEK, prijsafspraken: '20% commissie' } }],
-      });
-      mockAfsprakenOntbreekt();
-      await toggleExclusiviteit();
-
-      await waitFor(() =>
-        expect(setDocMock).toHaveBeenCalledWith(
-          { collectionName: 'kunstenaarAfspraken', id: 'ka-1' },
-          { prijsafspraken: '20% commissie' }
-        )
-      );
-      await waitFor(() => expect(kunstenaarUpdateCall()).toBeDefined());
-
-      // The migration must happen BEFORE the strip, otherwise the value is lost.
-      const migratie = setDocMock.mock.calls.findIndex(
-        (call) => (call[0] as { collectionName: string }).collectionName === 'kunstenaarAfspraken'
-      );
-      expect(setDocMock.mock.invocationCallOrder[migratie]).toBeLessThan(
-        updateDocMock.mock.invocationCallOrder[updateDocMock.mock.calls.indexOf(kunstenaarUpdateCall()!)]
-      );
-
-      expect(kunstenaarUpdateCall()![1]).toEqual({
-        exclusiefVoorKlantId: 'uid-1',
-        prijsafspraken: { __sentinel: 'deleteField' },
-      });
+  // updateKunstenaarVeilig is the single write path to kunstenaars/{id} passed to both
+  // KunstenaarsSection and KlantModal. Now that the field-level split (public data vs.
+  // internal prijsafspraken) is structural — two separate MySQL tables, never one row
+  // with a field to strip — this is a thin pass-through to the useApiCollection update.
+  it('updateKunstenaarVeilig PATCHes /api/kunstenaars/{id} via the Klanten exclusiviteit flow', async () => {
+    mockCollections({
+      klanten: [{ id: 'uid-1', ...KLANT_DATA }],
+      kunstenaars: [
+        { id: 'ka-1', naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', verkooprecht: 'open', klantId: null, exclusiefVoorKlantId: null },
+      ],
     });
+    renderShell();
+    fireEvent.click(await screen.findByTestId('data-table-row-uid-1'));
+    fireEvent.click(await screen.findByTestId('klant-modal-exclusief-ka-1'));
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
 
-    it('does not write an afspraken document when there is no legacy value to migrate', async () => {
-      mockCollections({
-        klanten: [{ id: 'uid-1', data: KLANT_DATA }],
-        kunstenaars: [{ id: 'ka-1', data: KUNSTENAAR_PUBLIEK }],
-      });
-      mockAfsprakenOntbreekt();
-      await toggleExclusiviteit();
-
-      await waitFor(() => expect(kunstenaarUpdateCall()).toBeDefined());
-      expect(kunstenaarUpdateCall()![1]).toEqual({
-        exclusiefVoorKlantId: 'uid-1',
-        prijsafspraken: { __sentinel: 'deleteField' },
-      });
-      expect(
-        setDocMock.mock.calls.filter(
-          (call) => (call[0] as { collectionName: string }).collectionName === 'kunstenaarAfspraken'
-        )
-      ).toHaveLength(0);
-    });
-
-    it('leaves an existing afspraken document untouched instead of overwriting it with the legacy value', async () => {
-      mockCollections({
-        klanten: [{ id: 'uid-1', data: KLANT_DATA }],
-        kunstenaars: [{ id: 'ka-1', data: { ...KUNSTENAAR_PUBLIEK, prijsafspraken: 'verouderd' } }],
-      });
-      getDocMock.mockImplementation((ref: { collectionName: string }) =>
-        Promise.resolve(
-          ref.collectionName === 'kunstenaarAfspraken'
-            ? { exists: () => true, data: () => ({ prijsafspraken: 'actueel' }) }
-            : { exists: () => true, data: () => BEDRIJFSGEGEVENS_FIXTURE }
-        )
-      );
-      await toggleExclusiviteit();
-
-      await waitFor(() => expect(kunstenaarUpdateCall()).toBeDefined());
-      expect(
-        setDocMock.mock.calls.filter(
-          (call) => (call[0] as { collectionName: string }).collectionName === 'kunstenaarAfspraken'
-        )
-      ).toHaveLength(0);
-    });
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/kunstenaars/ka-1',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ exclusiefVoorKlantId: 'uid-1' }),
+        })
+      )
+    );
   });
 
   it('shows the drukkers count and switches to the Drukkers section', async () => {
     mockCollections({
       drukkers: [
-        { id: 'drukker-1', data: { naam: 'Drukkerij Janssen', adres: 'Perslaan 1', postcode: '1000 AA', plaats: 'Utrecht', email: 'info@janssen.nl', prijsafspraken: '' } },
+        { id: 'drukker-1', naam: 'Drukkerij Janssen', adres: 'Perslaan 1', postcode: '1000 AA', plaats: 'Utrecht', email: 'info@janssen.nl' },
       ],
     });
     renderShell();
@@ -455,16 +354,13 @@ describe('BeheerShell', () => {
   });
 
   it('shows the Glassart & Design section with the loaded bedrijfsgegevens when the nav item is clicked', async () => {
-    mockCollections();
     renderShell();
     screen.getByTestId('beheer-nav-glassartDesign').click();
     expect(await screen.findByTestId('glassart-design-section')).toBeInTheDocument();
     expect(screen.getByTestId('glassart-design-bezoekadres')).toHaveValue('Den Heuvel 21, 5688 EM Oirschot');
   });
 
-  it('saves bedrijfsgegevens through setDoc and logs bedrijfsgegevens_gewijzigd', async () => {
-    mockCollections();
-    setDocMock.mockResolvedValue(undefined);
+  it('saves bedrijfsgegevens through the API and logs bedrijfsgegevens_gewijzigd', async () => {
     renderShell();
     screen.getByTestId('beheer-nav-glassartDesign').click();
     await screen.findByTestId('glassart-design-section');
@@ -473,15 +369,17 @@ describe('BeheerShell', () => {
     });
     fireEvent.click(screen.getByTestId('glassart-design-opslaan'));
     await waitFor(() =>
-      expect(setDocMock).toHaveBeenCalledWith(
-        { collectionName: 'instellingen', id: 'bedrijfsgegevens' },
-        expect.objectContaining({ email: 'nieuw@glassartdesign.nl' })
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/instellingen/bedrijfsgegevens',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: expect.stringContaining('nieuw@glassartdesign.nl'),
+        })
       )
     );
   });
 
   it('shows the Instellingen section when selected', async () => {
-    mockCollections();
     renderShell();
     fireEvent.click(screen.getByTestId('beheer-nav-instellingen'));
     expect(await screen.findByTestId('instellingen-section')).toBeInTheDocument();

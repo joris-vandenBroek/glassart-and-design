@@ -2,8 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { collection, deleteField, doc, getDoc, getDocs, limit, orderBy, query, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { GlassPanel } from '@/components/GlassPanel';
 import { BeheerNav, type BeheerSection } from './BeheerNav';
 import { KlantenSection, type Klant } from './KlantenSection';
@@ -22,12 +20,12 @@ import { ActiviteitSection, type Activiteit } from './ActiviteitSection';
 import { GlassartDesignSection } from './GlassartDesignSection';
 import { InstellingenSection } from './InstellingenSection';
 import type { Materiaalsoort, Materiaal, Maat, Segment, Stijl, Onderwerp, Kunstwerk, Prijsgroep, Drukker } from './materiaalTypes';
-import type { Kunstenaar, KunstenaarUpdate } from './kunstenaarTypes';
+import type { Kunstenaar } from './kunstenaarTypes';
 import type { Bedrijfsgegevens } from './bedrijfsgegevensTypes';
 import type { Bestelinstellingen } from './bestelinstellingenTypes';
 import type { ActiviteitType } from '@/lib/logActiviteit';
-import { useFirestoreCollection } from '@/lib/useFirestoreCollection';
-import { useFirestoreDocument } from '@/lib/useFirestoreDocument';
+import { useApiCollection } from '@/lib/useApiCollection';
+import { useApiRecord } from '@/lib/useApiRecord';
 import { MATERIAALSOORTEN_SEED, buildMaterialenSeed } from '@/data/materiaalsoortenSeed';
 import { SEGMENTEN_SEED, MATEN_SEED, buildKunstwerkenSeed } from '@/data/kunstwerkenSeed';
 import { BEDRIJFSGEGEVENS_SEED } from '@/data/bedrijfsgegevensSeed';
@@ -54,36 +52,13 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
     let cancelled = false;
     async function loadKlanten() {
       try {
-        const snapshot = await getDocs(collection(db, 'klanten'));
-        if (cancelled) return;
-        setKlanten(
-          snapshot.docs.map((docSnapshot) => {
-            const data = docSnapshot.data();
-            return {
-              id: docSnapshot.id,
-              companyName: data.companyName,
-              kvk: data.kvk,
-              contactPerson: data.contactPerson,
-              email: data.email,
-              phone: data.phone,
-              contactPreference: data.contactPreference,
-              address: data.address,
-              postcode: data.postcode,
-              city: data.city,
-              deliveryAddress: data.deliveryAddress ?? '',
-              deliveryPostcode: data.deliveryPostcode ?? '',
-              deliveryCity: data.deliveryCity ?? '',
-              invoiceAddress: data.invoiceAddress ?? '',
-              invoicePostcode: data.invoicePostcode ?? '',
-              invoiceCity: data.invoiceCity ?? '',
-              status: data.status,
-              prijsgroepId: data.prijsgroepId,
-              exclusieveKunstenaarIds: data.exclusieveKunstenaarIds ?? [],
-              minimaleAfname: data.minimaleAfname ?? null,
-            } as Klant;
-          })
-        );
-        setLoadError(null);
+        const response = await fetch('/api/klanten');
+        if (!response.ok) throw new Error('load failed');
+        const rows = (await response.json()) as Klant[];
+        if (!cancelled) {
+          setKlanten(rows);
+          setLoadError(null);
+        }
       } catch {
         if (!cancelled) {
           setLoadError(t('klantenLoadError'));
@@ -100,40 +75,29 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
     let cancelled = false;
     async function loadBestellingen() {
       try {
-        const headersSnapshot = await getDocs(collection(db, 'bestelheaders'));
-        const rows = await Promise.all(
-          headersSnapshot.docs.map(async (headerDoc) => {
-            const linesSnapshot = await getDocs(
-              collection(db, 'bestelheaders', headerDoc.id, 'bestellines')
-            );
-            const lines: BestellingLine[] = linesSnapshot.docs.map((lineDoc) => {
-              const lineData = lineDoc.data();
-              return {
-                id: lineDoc.id,
-                kunstwerkId: lineData.kunstwerkId,
-                maatId: lineData.maatId,
-                materiaalId: lineData.materiaalId,
-                breedte: lineData.breedte,
-                hoogte: lineData.hoogte,
-                prijs: lineData.prijs ?? null,
-                quantity: lineData.quantity,
-              };
-            });
-            const data = headerDoc.data();
-            return {
-              id: headerDoc.id,
-              klantId: data.klantId,
-              bestelnr: data.bestelnr ?? headerDoc.id,
-              besteldatum: data.besteldatum?.toDate().toLocaleDateString('nl-NL') ?? '',
-              status: data.status,
-              lineCount: lines.length,
-              totalQuantity: lines.reduce((sum, line) => sum + (line.quantity ?? 0), 0),
-              lines,
-            } as RawBestelling;
-          })
-        );
+        const response = await fetch('/api/bestelheaders');
+        if (!response.ok) throw new Error('load failed');
+        const headers = (await response.json()) as Array<{
+          id: string;
+          klantId: string;
+          bestelnr: string;
+          besteldatum: string;
+          status: string;
+          lines: BestellingLine[];
+        }>;
         if (!cancelled) {
-          setRawBestellingen(rows);
+          setRawBestellingen(
+            headers.map((header) => ({
+              id: header.id,
+              klantId: header.klantId,
+              bestelnr: header.bestelnr ?? header.id,
+              besteldatum: new Date(header.besteldatum).toLocaleDateString('nl-NL'),
+              status: header.status,
+              lineCount: header.lines.length,
+              totalQuantity: header.lines.reduce((sum, line) => sum + (line.quantity ?? 0), 0),
+              lines: header.lines,
+            })) as RawBestelling[]
+          );
           setBestellingenLoadError(null);
         }
       } catch {
@@ -152,24 +116,29 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
     let cancelled = false;
     async function loadActiviteiten() {
       try {
-        const snapshot = await getDocs(
-          query(collection(db, 'activiteitenlog'), orderBy('timestamp', 'desc'), limit(500))
-        );
-        if (cancelled) return;
-        setActiviteiten(
-          snapshot.docs.map((docSnapshot) => {
-            const data = docSnapshot.data();
-            return {
-              id: docSnapshot.id,
-              type: data.type as ActiviteitType,
-              actorEmail: data.actorEmail,
-              actorNaam: data.actorNaam,
-              omschrijving: data.omschrijving,
-              timestamp: data.timestamp?.toDate() ?? null,
-            } as Activiteit;
-          })
-        );
-        setActiviteitenLoadError(null);
+        const response = await fetch('/api/activiteitenlog');
+        if (!response.ok) throw new Error('load failed');
+        const rows = (await response.json()) as Array<{
+          id: string;
+          type: ActiviteitType;
+          actorEmail: string;
+          actorNaam: string;
+          omschrijving?: string;
+          timestamp: string;
+        }>;
+        if (!cancelled) {
+          setActiviteiten(
+            rows.map((row) => ({
+              id: row.id,
+              type: row.type,
+              actorEmail: row.actorEmail,
+              actorNaam: row.actorNaam,
+              omschrijving: row.omschrijving,
+              timestamp: row.timestamp ? new Date(row.timestamp) : null,
+            }))
+          );
+          setActiviteitenLoadError(null);
+        }
       } catch {
         if (!cancelled) {
           setActiviteitenLoadError(t('activiteitLoadError'));
@@ -220,68 +189,46 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
     }));
   }, [rawBestellingen, klanten]);
 
-  const materiaalsoorten = useFirestoreCollection<Materiaalsoort>('materiaalsoorten', {
+  const materiaalsoorten = useApiCollection<Materiaalsoort>('materiaalsoorten', {
     seed: MATERIAALSOORTEN_SEED,
   });
   const materialenSeed = materiaalsoorten.items ? buildMaterialenSeed(materiaalsoorten.items) : undefined;
-  const materialen = useFirestoreCollection<Materiaal>('materialen', {
+  const materialen = useApiCollection<Materiaal>('materialen', {
     seed: materialenSeed,
     skip: materiaalsoorten.items === null,
   });
-  const maten = useFirestoreCollection<Maat>('maten', { seed: MATEN_SEED });
-  const segmenten = useFirestoreCollection<Segment>('segmenten', { seed: SEGMENTEN_SEED });
-  const stijlen = useFirestoreCollection<Stijl>('stijlen');
-  const onderwerpen = useFirestoreCollection<Onderwerp>('onderwerpen');
+  const maten = useApiCollection<Maat>('maten', { seed: MATEN_SEED });
+  const segmenten = useApiCollection<Segment>('segmenten', { seed: SEGMENTEN_SEED });
+  const stijlen = useApiCollection<Stijl>('stijlen');
+  const onderwerpen = useApiCollection<Onderwerp>('onderwerpen');
 
   const kunstwerkenReady = segmenten.items !== null && materialen.items !== null && maten.items !== null;
   const kunstwerkenSeed = kunstwerkenReady
     ? buildKunstwerkenSeed(segmenten.items!, materialen.items!, maten.items!)
     : undefined;
-  // Seeding writes all 36 kunstwerken documents one at a time; if a write fails partway
-  // through, the collection is left partially seeded and useFirestoreCollection will not
+  // Seeding writes all 36 kunstwerken rows one at a time; if a write fails partway
+  // through, the collection is left partially seeded and useApiCollection will not
   // retry the seed (its guard only fires when the collection comes back empty). Recovery
-  // in that case requires an admin manually deleting the partial documents so the
+  // in that case requires an admin manually deleting the partial rows so the
   // collection is empty again before a reload can re-trigger the seed.
-  const kunstwerken = useFirestoreCollection<Kunstwerk>('kunstwerken', {
+  const kunstwerken = useApiCollection<Kunstwerk>('kunstwerken', {
     seed: kunstwerkenSeed,
     skip: !kunstwerkenReady,
   });
-  const prijsgroepen = useFirestoreCollection<Prijsgroep>('prijsgroepen');
-  const kunstenaars = useFirestoreCollection<Kunstenaar>('kunstenaars');
+  const prijsgroepen = useApiCollection<Prijsgroep>('prijsgroepen');
+  const kunstenaars = useApiCollection<Kunstenaar>('kunstenaars');
 
-  /**
-   * Het ENIGE schrijfpad naar `kunstenaars/{id}`.
-   *
-   * Elke update moet het legacy `prijsafspraken`-veld strippen (zie KunstenaarUpdate),
-   * maar strippen zonder migreren zou de interne afspraken van een nog niet gemigreerde
-   * kunstenaar stilzwijgend wissen. Daarom staat "eerst migreren, dan strippen" hier op
-   * één plek in plaats van in elke aanroepende component: KunstenaarsSection (opslaan) en
-   * KlantModal (exclusiviteit) krijgen dit als gewone update-functie doorgegeven en hoeven
-   * van de splitsing niets te weten.
-   */
   async function updateKunstenaarVeilig(
     id: string,
     data: Partial<Omit<Kunstenaar, 'id'>>
   ): Promise<boolean> {
-    const kunstenaar = (kunstenaars.items ?? []).find((item) => item.id === id) as
-      | (Kunstenaar & { prijsafspraken?: string })
-      | undefined;
-    const legacyPrijsafspraken = kunstenaar?.prijsafspraken;
-    if (legacyPrijsafspraken) {
-      const afsprakenSnap = await getDoc(doc(db, 'kunstenaarAfspraken', id));
-      // Bestaat het afsprakendocument al, dan is dat de actuele waarde (of de zojuist
-      // opgeslagen invoer van de gebruiker) en mag de legacy-waarde die niet overschrijven.
-      if (!afsprakenSnap.exists()) {
-        await setDoc(doc(db, 'kunstenaarAfspraken', id), { prijsafspraken: legacyPrijsafspraken });
-      }
-    }
-    return kunstenaars.update(id, { ...data, prijsafspraken: deleteField() } as KunstenaarUpdate);
+    return kunstenaars.update(id, data);
   }
-  const drukkers = useFirestoreCollection<Drukker>('drukkers');
-  const bedrijfsgegevens = useFirestoreDocument<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens', {
+  const drukkers = useApiCollection<Drukker>('drukkers');
+  const bedrijfsgegevens = useApiRecord<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens', {
     seed: BEDRIJFSGEGEVENS_SEED,
   });
-  const bestelinstellingen = useFirestoreDocument<Bestelinstellingen>('instellingen', 'bestelinstellingen', {
+  const bestelinstellingen = useApiRecord<Bestelinstellingen>('instellingen', 'bestelinstellingen', {
     seed: BESTELINSTELLINGEN_SEED,
   });
 

@@ -5,16 +5,8 @@ import { KlantenSection, type Klant } from '@/components/beheer/KlantenSection';
 import type { Prijsgroep } from '@/components/beheer/materiaalTypes';
 import messages from '../../../messages/nl.json';
 
-const updateDocMock = vi.fn();
-
-vi.mock('@/lib/firebase', () => ({
-  db: {},
-}));
-
-vi.mock('firebase/firestore', () => ({
-  doc: vi.fn((_db, collectionName, id) => ({ collectionName, id })),
-  updateDoc: (...args: unknown[]) => updateDocMock(...args),
-}));
+const fetchMock = vi.fn();
+vi.stubGlobal('fetch', fetchMock);
 
 vi.mock('@/lib/useAdminAuth', () => ({
   useAdminAuth: () => ({ user: { uid: 'staff-1', email: 'paul@glassartanddesign.com' } }),
@@ -98,7 +90,8 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof KlantenSec
 }
 
 beforeEach(() => {
-  updateDocMock.mockReset();
+  fetchMock.mockReset();
+  fetchMock.mockResolvedValue({ ok: true });
 });
 
 describe('KlantenSection', () => {
@@ -133,7 +126,6 @@ describe('KlantenSection', () => {
   });
 
   it('closes the modal and reports the updated klant via onKlantUpdated after approving', async () => {
-    updateDocMock.mockResolvedValue(undefined);
     const { onKlantUpdated } = renderSection();
     fireEvent.click(screen.getByTestId('data-table-row-uid-1'));
     fireEvent.change(screen.getByTestId('klant-modal-prijsgroep'), { target: { value: 'pg-2' } });

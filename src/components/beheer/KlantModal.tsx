@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Modal } from '@/components/Modal';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
@@ -173,7 +171,12 @@ export function KlantModal({
       if (exclusiviteitGewijzigd) updates.exclusieveKunstenaarIds = exclusieveKunstenaarIds;
       if (minimaleAfnameGewijzigd) updates.minimaleAfname = parsedMinimaleAfname;
 
-      await updateDoc(doc(db, 'klanten', klant.id), updates);
+      const response = await fetch(`/api/klanten/${klant.id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      if (!response.ok) throw new Error('update failed');
 
       if (veldenGewijzigd) void logActiviteit('klant_gewijzigd', actorFromMedewerker(user), klant.companyName);
       if (prijsgroepGewijzigd) void logActiviteit('klant_prijsgroep_gewijzigd', actorFromMedewerker(user), klant.companyName);
@@ -193,7 +196,12 @@ export function KlantModal({
   async function handleGoedkeuren() {
     if (!klant) return;
     try {
-      await updateDoc(doc(db, 'klanten', klant.id), { status: 'Goedgekeurd', prijsgroepId });
+      const response = await fetch(`/api/klanten/${klant.id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status: 'Goedgekeurd', prijsgroepId }),
+      });
+      if (!response.ok) throw new Error('update failed');
       void logActiviteit('klant_goedgekeurd', actorFromMedewerker(user), klant.companyName);
       onUpdated({ ...klant, status: 'Goedgekeurd', prijsgroepId });
     } catch {
@@ -204,7 +212,12 @@ export function KlantModal({
   async function handleAfwijzen() {
     if (!klant) return;
     try {
-      await updateDoc(doc(db, 'klanten', klant.id), { status: 'Afgewezen' });
+      const response = await fetch(`/api/klanten/${klant.id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status: 'Afgewezen' }),
+      });
+      if (!response.ok) throw new Error('update failed');
       void logActiviteit('klant_afgewezen', actorFromMedewerker(user), klant.companyName);
       onUpdated({ ...klant, status: 'Afgewezen' });
     } catch {
