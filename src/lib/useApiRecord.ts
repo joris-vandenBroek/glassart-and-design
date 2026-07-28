@@ -2,25 +2,25 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-export interface UseApiDocumentOptions<T> {
+export interface UseApiRecordOptions<T> {
   seed?: T;
 }
 
-export interface UseApiDocumentResult<T> {
+export interface UseApiRecordResult<T> {
   data: T | null;
   error: 'load' | 'action' | null;
   save: (data: T) => Promise<boolean>;
 }
 
-export function useApiDocument<T>(
+export function useApiRecord<T>(
   resource: string,
   id: string,
-  options?: UseApiDocumentOptions<T>
-): UseApiDocumentResult<T> {
+  options?: UseApiRecordOptions<T>
+): UseApiRecordResult<T> {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<'load' | 'action' | null>(null);
 
-  const fetchDoc = useCallback(async () => {
+  const fetchRecord = useCallback(async () => {
     try {
       const response = await fetch(`/api/${resource}/${id}`);
       if (!response.ok) throw new Error('load failed');
@@ -34,8 +34,8 @@ export function useApiDocument<T>(
   }, [resource, id]);
 
   useEffect(() => {
-    fetchDoc();
-  }, [fetchDoc]);
+    fetchRecord();
+  }, [fetchRecord]);
 
   const save = useCallback(
     async (newData: T) => {

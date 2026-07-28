@@ -4,7 +4,7 @@
 
 **Goal:** Replace Firebase (Firestore + Auth) entirely with a MySQL database and a self-built Node.js/Next.js API + session-auth layer, hosted on mijn.host, per `docs/superpowers/specs/2026-07-23-firebase-to-mysql-migration-design.md`.
 
-**Architecture:** Next.js moves from static export to server mode. New API route handlers under `src/app/api/**` talk to MySQL via raw `mysql2` queries (no ORM). Client-side, `useFirestoreCollection`/`useFirestoreDocument`/`useCustomerAuth`/`useAdminAuth` are replaced by same-interface hooks (`useApiCollection`/`useApiDocument`/new auth hooks) backed by `fetch()`, so most consuming components need no changes at all.
+**Architecture:** Next.js moves from static export to server mode. New API route handlers under `src/app/api/**` talk to MySQL via raw `mysql2` queries (no ORM). Client-side, `useFirestoreCollection`/`useFirestoreDocument`/`useCustomerAuth`/`useAdminAuth` are replaced by same-interface hooks (`useApiCollection`/`useApiRecord`/new auth hooks) backed by `fetch()`, so most consuming components need no changes at all.
 
 **Tech Stack:** Next.js 14.2 (App Router), TypeScript, `mysql2` (new dependency), Node's built-in `crypto` (scrypt for password hashing, randomUUID for IDs), Vitest + Testing Library (existing).
 
@@ -1216,20 +1216,20 @@ git commit -m "feat: add password-reset request/confirm API routes"
 
 ---
 
-## Task 9: Generic client hooks `useApiCollection` / `useApiDocument`
+## Task 9: Generic client hooks `useApiCollection` / `useApiRecord`
 
 **Files:**
 - Create: `src/lib/useApiCollection.ts`
-- Create: `src/lib/useApiDocument.ts`
+- Create: `src/lib/useApiRecord.ts`
 - Create: `src/app/api/[resource]/route.ts` (generic collection endpoint used by both)
 - Create: `src/app/api/[resource]/[id]/route.ts`
 - Test: `tests/lib/useApiCollection.test.tsx`
-- Test: `tests/lib/useApiDocument.test.tsx`
+- Test: `tests/lib/useApiRecord.test.tsx`
 
 **Interfaces:**
 - Produces (matching the existing `useFirestoreCollection`/`useFirestoreDocument` interfaces exactly):
   - `useApiCollection<T extends { id: string }>(resource: string, options?: { seed?: Omit<T, 'id'>[]; skip?: boolean }): { items: T[] | null; error: 'load' | 'action' | null; add; update; remove; refetch }`
-  - `useApiDocument<T>(resource: string, id: string, options?: { seed?: T }): { data: T | null; error: 'load' | 'action' | null; save }`
+  - `useApiRecord<T>(resource: string, id: string, options?: { seed?: T }): { data: T | null; error: 'load' | 'action' | null; save }`
 - Note: `[resource]` is restricted server-side to a fixed allow-list of simple lookup tables (see Task 11) — `bestelheaders`, `klanten`, `medewerkers`, and `activiteitenlog` have custom routes with extra logic and are **not** served through this generic endpoint (see Tasks 12–15).
 
 - [ ] **Step 1: Write the failing test for `useApiCollection`**
@@ -1439,13 +1439,13 @@ export function useApiCollection<T extends { id: string }>(
 Run: `npx vitest run tests/lib/useApiCollection.test.tsx`
 Expected: PASS (4 tests)
 
-- [ ] **Step 5: Write the failing test for `useApiDocument`**
+- [ ] **Step 5: Write the failing test for `useApiRecord`**
 
 ```typescx
-// tests/lib/useApiDocument.test.tsx
+// tests/lib/useApiRecord.test.tsx
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { useApiDocument } from '@/lib/useApiDocument';
+import { useApiRecord } from '@/lib/useApiRecord';
 
 const fetchMock = vi.fn();
 
@@ -1454,11 +1454,11 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
 });
 
-describe('useApiDocument', () => {
+describe('useApiRecord', () => {
   it('loads a document from GET /api/<resource>/<id>', async () => {
     fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ bezoekadres: 'Den Heuvel 21' }) });
     const { result } = renderHook(() =>
-      useApiDocument<{ bezoekadres: string }>('instellingen', 'bedrijfsgegevens')
+      useApiRecord<{ bezoekadres: string }>('instellingen', 'bedrijfsgegevens')
     );
     await waitFor(() => expect(result.current.data).not.toBeNull());
     expect(result.current.data).toEqual({ bezoekadres: 'Den Heuvel 21' });
@@ -1470,7 +1470,7 @@ describe('useApiDocument', () => {
       .mockResolvedValueOnce({ ok: true, json: async () => ({ bezoekadres: 'Oud adres' }) })
       .mockResolvedValueOnce({ ok: true });
     const { result } = renderHook(() =>
-      useApiDocument<{ bezoekadres: string }>('instellingen', 'bedrijfsgegevens')
+      useApiRecord<{ bezoekadres: string }>('instellingen', 'bedrijfsgegevens')
     );
     await waitFor(() => expect(result.current.data).not.toBeNull());
 
@@ -1486,36 +1486,36 @@ describe('useApiDocument', () => {
 
 - [ ] **Step 6: Run test to verify it fails**
 
-Run: `npx vitest run tests/lib/useApiDocument.test.tsx`
-Expected: FAIL — `Cannot find module '@/lib/useApiDocument'`
+Run: `npx vitest run tests/lib/useApiRecord.test.tsx`
+Expected: FAIL — `Cannot find module '@/lib/useApiRecord'`
 
-- [ ] **Step 7: Implement `useApiDocument`**
+- [ ] **Step 7: Implement `useApiRecord`**
 
 ```typescript
-// src/lib/useApiDocument.ts
+// src/lib/useApiRecord.ts
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
 
-export interface UseApiDocumentOptions<T> {
+export interface UseApiRecordOptions<T> {
   seed?: T;
 }
 
-export interface UseApiDocumentResult<T> {
+export interface UseApiRecordResult<T> {
   data: T | null;
   error: 'load' | 'action' | null;
   save: (data: T) => Promise<boolean>;
 }
 
-export function useApiDocument<T>(
+export function useApiRecord<T>(
   resource: string,
   id: string,
-  options?: UseApiDocumentOptions<T>
-): UseApiDocumentResult<T> {
+  options?: UseApiRecordOptions<T>
+): UseApiRecordResult<T> {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<'load' | 'action' | null>(null);
 
-  const fetchDoc = useCallback(async () => {
+  const fetchRecord = useCallback(async () => {
     try {
       const response = await fetch(`/api/${resource}/${id}`);
       if (!response.ok) throw new Error('load failed');
@@ -1529,8 +1529,8 @@ export function useApiDocument<T>(
   }, [resource, id]);
 
   useEffect(() => {
-    fetchDoc();
-  }, [fetchDoc]);
+    fetchRecord();
+  }, [fetchRecord]);
 
   const save = useCallback(
     async (newData: T) => {
@@ -1556,16 +1556,16 @@ export function useApiDocument<T>(
 }
 ```
 
-- [ ] **Step 8: Run the `useApiDocument` test to verify it passes**
+- [ ] **Step 8: Run the `useApiRecord` test to verify it passes**
 
-Run: `npx vitest run tests/lib/useApiDocument.test.tsx`
+Run: `npx vitest run tests/lib/useApiRecord.test.tsx`
 Expected: PASS (2 tests)
 
 - [ ] **Step 9: Commit**
 
 ```bash
-git add src/lib/useApiCollection.ts src/lib/useApiDocument.ts tests/lib/useApiCollection.test.tsx tests/lib/useApiDocument.test.tsx
-git commit -m "feat: add useApiCollection/useApiDocument hooks matching Firestore hook interfaces"
+git add src/lib/useApiCollection.ts src/lib/useApiRecord.ts tests/lib/useApiCollection.test.tsx tests/lib/useApiRecord.test.tsx
+git commit -m "feat: add useApiCollection/useApiRecord hooks matching Firestore hook interfaces"
 ```
 
 ---
@@ -2110,7 +2110,7 @@ git commit -m "feat: add generic CRUD API route for simple lookup resources"
 
 **Interfaces:**
 - Consumes: `getPool` (Task 1). Not routed through the generic `[resource]` handler since it's a single JSON-blob row, not a list.
-- Produces: `GET/PATCH /api/instellingen/bedrijfsgegevens`, consumed by `useApiDocument('instellingen', 'bedrijfsgegevens')`.
+- Produces: `GET/PATCH /api/instellingen/bedrijfsgegevens`, consumed by `useApiRecord('instellingen', 'bedrijfsgegevens')`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -3181,7 +3181,7 @@ git commit -m "feat: migrate useAllOrders and BestellingModal to bestelheaders A
 - Modify: `src/components/beheer/KlantModal.tsx`
 
 **Interfaces:**
-- Consumes: `GET /api/klanten`, `PATCH /api/klanten/:id` (Task 13), `GET /api/bestelheaders` (Task 14), `GET /api/activiteitenlog` (Task 15), `useApiCollection`/`useApiDocument` (Task 9).
+- Consumes: `GET /api/klanten`, `PATCH /api/klanten/:id` (Task 13), `GET /api/bestelheaders` (Task 14), `GET /api/activiteitenlog` (Task 15), `useApiCollection`/`useApiRecord` (Task 9).
 
 - [ ] **Step 1: Replace `BeheerShell.tsx`'s three `useEffect` Firestore loaders**
 
@@ -3193,7 +3193,7 @@ git commit -m "feat: migrate useAllOrders and BestellingModal to bestelheaders A
 // import { useFirestoreDocument } from '@/lib/useFirestoreDocument';
 // add:
 // import { useApiCollection } from '@/lib/useApiCollection';
-// import { useApiDocument } from '@/lib/useApiDocument';
+// import { useApiRecord } from '@/lib/useApiRecord';
 ```
 
 ```typescript
@@ -3314,7 +3314,7 @@ git commit -m "feat: migrate useAllOrders and BestellingModal to bestelheaders A
     skip: !kunstwerkenReady,
   });
   const prijsgroepen = useApiCollection<Prijsgroep>('prijsgroepen');
-  const bedrijfsgegevens = useApiDocument<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens', {
+  const bedrijfsgegevens = useApiRecord<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens', {
     seed: BEDRIJFSGEGEVENS_SEED,
   });
 ```
@@ -3386,7 +3386,7 @@ git commit -m "feat: migrate BeheerShell and KlantModal to API hooks/routes"
 - Modify: `src/components/ContactInfo.tsx`
 
 **Interfaces:**
-- Consumes: `useApiCollection`, `useApiDocument` (Task 9), with the seeding addition from Task 20.
+- Consumes: `useApiCollection`, `useApiRecord` (Task 9), with the seeding addition from Task 20.
 
 - [ ] **Step 1: Swap imports and hook calls in each file**
 
@@ -3406,9 +3406,9 @@ import { useFirestoreDocument } from '@/lib/useFirestoreDocument';
 ```
 with:
 ```typescript
-import { useApiDocument } from '@/lib/useApiDocument';
+import { useApiRecord } from '@/lib/useApiRecord';
 ```
-and its `useFirestoreDocument<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens')` call becomes `useApiDocument<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens')`.
+and its `useFirestoreDocument<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens')` call becomes `useApiRecord<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens')`.
 
 - [ ] **Step 2: Run the full test suite**
 

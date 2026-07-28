@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { useApiDocument } from '@/lib/useApiDocument';
+import { useApiRecord } from '@/lib/useApiRecord';
 
 const fetchMock = vi.fn();
 
@@ -9,11 +9,11 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
 });
 
-describe('useApiDocument', () => {
-  it('loads a document from GET /api/<resource>/<id>', async () => {
+describe('useApiRecord', () => {
+  it('loads a record from GET /api/<resource>/<id>', async () => {
     fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ bezoekadres: 'Den Heuvel 21' }) });
     const { result } = renderHook(() =>
-      useApiDocument<{ bezoekadres: string }>('instellingen', 'bedrijfsgegevens')
+      useApiRecord<{ bezoekadres: string }>('instellingen', 'bedrijfsgegevens')
     );
     await waitFor(() => expect(result.current.data).not.toBeNull());
     expect(result.current.data).toEqual({ bezoekadres: 'Den Heuvel 21' });
@@ -25,7 +25,7 @@ describe('useApiDocument', () => {
       .mockResolvedValueOnce({ ok: true, json: async () => ({ bezoekadres: 'Oud adres' }) })
       .mockResolvedValueOnce({ ok: true });
     const { result } = renderHook(() =>
-      useApiDocument<{ bezoekadres: string }>('instellingen', 'bedrijfsgegevens')
+      useApiRecord<{ bezoekadres: string }>('instellingen', 'bedrijfsgegevens')
     );
     await waitFor(() => expect(result.current.data).not.toBeNull());
 
