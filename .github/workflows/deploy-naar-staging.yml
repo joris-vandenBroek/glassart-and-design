@@ -1,0 +1,89 @@
+name: Deploy naar Staging
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "staging"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build static export
+        run: npm run build
+        env:
+          NEXT_PUBLIC_ENVIRONMENT_LABEL: 'staging'
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.STAGING_NEXT_PUBLIC_FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.STAGING_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.STAGING_NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.STAGING_NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ vars.STAGING_NEXT_PUBLIC_FIREBASE_APP_ID }}
+          NEXT_PUBLIC_MAIL_ENDPOINT_URL: ${{ vars.NEXT_PUBLIC_MAIL_ENDPOINT_URL }}
+          NEXT_PUBLIC_MAIL_SECRET: ${{ secrets.NEXT_PUBLIC_MAIL_SECRET }}
+          NEXT_PUBLIC_UPLOAD_ENDPOINT_URL: ${{ vars.NEXT_PUBLIC_UPLOAD_ENDPOINT_URL }}
+
+      - name: Install apache2-utils (for htpasswd)
+        run: sudo apt-get update && sudo apt-get install -y apache2-utils
+
+      - name: Generate .htpasswd
+        env:
+          BASIC_AUTH_PASSWORD: ${{ secrets.STAGING_BASIC_AUTH_PASSWORD }}
+        run: htpasswd -bc out/.htpasswd glassart "$BASIC_AUTH_PASSWORD"
+
+      - name: Add Basic Auth .htaccess
+        env:
+          SYSTEM_USERNAME: ${{ vars.STAGING_SYSTEM_USERNAME }}
+        run: |
+          sed "s#USERNAME#$SYSTEM_USERNAME#" deploy/staging.htaccess > out/.htaccess
+
+      - name: Upload to staging.glassartanddesign.com via FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ vars.STAGING_FTP_HOST }}
+          username: ${{ secrets.STAGING_FTP_USERNAME }}
+          password: ${{ secrets.STAGING_FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./out/
+          server-dir: ./public_html/
+          dangerous-clean-slate: true
+
+      - name: Smoke check
+        env:
+          BASIC_AUTH_PASSWORD: ${{ secrets.STAGING_BASIC_AUTH_PASSWORD }}
+        run: |
+          sleep 5
+          attempt=1
+          max_attempts=3
+          status=""
+          while [ "$attempt" -le "$max_attempts" ]; do
+            status=$(curl -s -o /dev/null -w "%{http_code}" -u "glassart:$BASIC_AUTH_PASSWORD" "https://staging.glassartanddesign.com/nl/")
+            if [ "$status" = "200" ]; then
+              break
+            fi
+            echo "Attempt $attempt/$max_attempts: staging did not respond with 200 (got $status)"
+            attempt=$((attempt + 1))
+            if [ "$attempt" -le "$max_attempts" ]; then
+              sleep 5
+            fi
+          done
+          if [ "$status" != "200" ]; then
+            echo "Staging did not respond with 200 after $max_attempts attempts (last status: $status)"
+            exit 1
+          fi

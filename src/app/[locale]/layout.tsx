@@ -3,6 +3,7 @@ import { getMessages, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import { NavBar } from '@/components/NavBar';
+import { StagingBanner } from '@/components/StagingBanner';
 import { CustomerAuthProvider } from '@/lib/useCustomerAuth';
 import { AdminAuthProvider } from '@/lib/useAdminAuth';
 import { CartProvider } from '@/lib/useCart';
@@ -28,6 +29,7 @@ export default async function LocaleLayout({
 
   return (
     <NextIntlClientProvider messages={messages}>
+      <StagingBanner />
       <AdminAuthProvider>
         <CustomerAuthProvider>
           <CartProvider>
