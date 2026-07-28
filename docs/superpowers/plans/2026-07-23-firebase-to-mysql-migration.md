@@ -4467,13 +4467,31 @@ git commit -m "feat: add one-off Firebase-to-MySQL data migration script"
 
 ## Task 23: Switch Next.js to server mode
 
-**Files:**
-- Modify: `next.config.mjs`
+> **Real scope (2026-07-28), superseding the draft below:** the pre-migration config also
+> carried GitHub Pages-specific concerns (`basePath`/`assetPrefix`/`NEXT_PUBLIC_BASE_PATH`
+> keyed off `GITHUB_PAGES=true`, plus `trailingSlash: true` and `images: { unoptimized:
+> true }` for static export). All of that is dropped in the same step, per the plan's own
+> forward reference in Task 25 Step 8 ("the `GITHUB_PAGES` env-var branch... already
+> removed in Task 23") — `next/image` is unused anywhere in `src/`, and nothing in `src/`
+> or `tests/` depends on `trailingSlash`. `src/lib/basePath.ts` and its two consumers
+> (`Logo.tsx`, `app/page.tsx`) are left alone: they already degrade to `''` once
+> `NEXT_PUBLIC_BASE_PATH` is unset, and full cleanup is Task 25's job alongside deleting
+> `.github/workflows/deploy-pages.yml`.
+>
+> **Real bug caught by Step 2's build output, not anticipated by the draft:** Next.js
+> statically caches a GET-only Route Handler with no other exported HTTP method and no
+> request-dependent logic (no `cookies()`/`headers()`/`request.headers`/searchParams
+> access) — it has no signal to opt into per-request dynamic rendering. Of the 20 route
+> files under `src/app/api/`, exactly one matched that shape: `src/app/api/klanten/route.ts`
+> (`GET`-only, no dynamic segment, body-less handler). Left as-is, it would have been
+> frozen to its build-time snapshot in production forever — the beheer klanten list would
+> never reflect new registrations. Every other GET-only route either has a dynamic path
+> segment (`[id]`, `[resource]`) or reads `request.headers`/searchParams (e.g. `/api/auth/
+> me`), both of which already force dynamic rendering. Fixed by adding
+> `export const dynamic = 'force-dynamic';` to that one file — confirmed by rebuilding and
+> seeing it flip from `○ Static` to `ƒ Dynamic` in the build output.
 
-**Interfaces:**
-- None (config-only change) — required before deployment, since API routes cannot run under `output: 'export'`.
-
-- [ ] **Step 1: Simplify `next.config.mjs`**
+- [x] **Step 1 (draft scope, see note above): Simplify `next.config.mjs`**
 
 ```javascript
 // next.config.mjs
@@ -4486,25 +4504,28 @@ const nextConfig = {};
 export default withNextIntl(nextConfig);
 ```
 
-- [ ] **Step 2: Verify a local production build works**
+- [x] **Step 2: Verify a local production build works**
 
 Run: `npm run build`
-Expected: build succeeds, output shows `ƒ` (server-rendered) route types for pages and API routes, no `output: export` warnings.
+Result: build succeeded. Surfaced the `/api/klanten` static-caching bug documented above,
+fixed, and confirmed fixed by rebuilding (route flipped `○` → `ƒ`).
 
-- [ ] **Step 3: Verify the built app runs and serves an API route**
+- [x] **Step 3: Verify the built app runs and serves an API route**
 
-Run: `npm run start` (in one terminal), then in another:
+Ran `npm run start` in the background, then:
 ```bash
 curl http://localhost:3000/api/segmenten
+curl http://localhost:3000/api/klanten
 ```
-Expected: `[]` (empty array, since the staging database's `segmenten` table starts empty)
+Actual: both returned `[]` (empty array, matching the staging database's actual empty
+tables) — confirms live per-request DB queries, not a cached snapshot. Server stopped
+afterward.
 
-Stop the `npm run start` process once verified (Ctrl+C).
-
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
-git add next.config.mjs
+git add next.config.mjs src/app/api/klanten/route.ts \
+  docs/superpowers/plans/2026-07-23-firebase-to-mysql-migration.md
 git commit -m "feat: switch Next.js from static export to server mode"
 ```
 
