@@ -2,8 +2,6 @@
 
 import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { formatOrderDateTime } from '@/lib/formatOrderDateTime';
 import { useCustomerAuth } from './useCustomerAuth';
 
@@ -55,38 +53,30 @@ export function useAllOrders(): UseAllOrdersResult {
     async function loadRealOrders() {
       setLoadError(false);
       try {
-        const headersSnapshot = await getDocs(
-          query(collection(db, 'bestelheaders'), where('klantId', '==', user!.uid))
-        );
-        const orders = await Promise.all(
-          headersSnapshot.docs.map(async (headerDoc) => {
-            const linesSnapshot = await getDocs(
-              collection(db, 'bestelheaders', headerDoc.id, 'bestellines')
-            );
-            const lines: DisplayOrderLine[] = linesSnapshot.docs.map((lineDoc) => {
-              const lineData = lineDoc.data();
-              return {
-                id: lineDoc.id,
-                kunstwerkId: lineData.kunstwerkId ?? null,
-                maatId: lineData.maatId ?? null,
-                materiaalId: lineData.materiaalId ?? null,
-                breedte: lineData.breedte,
-                hoogte: lineData.hoogte,
-                prijs: lineData.prijs ?? null,
-                quantity: lineData.quantity ?? 0,
-              };
-            });
-            const totalQuantity = lines.reduce((sum, line) => sum + line.quantity, 0);
-            const data = headerDoc.data();
-            return {
-              id: data.bestelnr ?? headerDoc.id,
-              date: data.besteldatum?.toDate() ?? null,
-              lineCount: lines.length,
-              totalQuantity,
-              lines,
-            };
-          })
-        );
+        const response = await fetch(`/api/bestelheaders?klantId=${user!.uid}`);
+        if (!response.ok) throw new Error('load failed');
+        const headers = (await response.json()) as Array<{
+          id: string;
+          bestelnr: string;
+          besteldatum: string;
+          lines: Array<{
+            id: string;
+            kunstwerkId: string | null;
+            maatId: string | null;
+            materiaalId: string | null;
+            breedte?: number;
+            hoogte?: number;
+            prijs: number | null;
+            quantity: number;
+          }>;
+        }>;
+        const orders = headers.map((header) => ({
+          id: header.bestelnr ?? header.id,
+          date: header.besteldatum ? new Date(header.besteldatum) : null,
+          lineCount: header.lines.length,
+          totalQuantity: header.lines.reduce((sum, line) => sum + (line.quantity ?? 0), 0),
+          lines: header.lines,
+        }));
         if (!cancelled) {
           setRealOrders(orders);
         }

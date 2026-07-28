@@ -7,20 +7,9 @@ import type { Bestelling } from '@/components/beheer/BestellingenSection';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from '@/components/beheer/materiaalTypes';
 import messages from '../../../messages/nl.json';
 
-const updateDocMock = vi.fn();
+const fetchMock = vi.fn();
 const logActiviteitMock = vi.fn();
-
-vi.mock('@/lib/firebase', () => ({
-  db: {},
-}));
-
-vi.mock('firebase/firestore', () => ({
-  doc: vi.fn((_db, ...segments: string[]) => ({
-    collectionName: segments.slice(0, -1).join('/'),
-    id: segments[segments.length - 1],
-  })),
-  updateDoc: (...args: unknown[]) => updateDocMock(...args),
-}));
+vi.stubGlobal('fetch', fetchMock);
 
 vi.mock('@/lib/useAdminAuth', () => ({
   useAdminAuth: () => ({ user: { uid: 'staff-1', email: 'paul@glassartanddesign.com' } }),
@@ -95,7 +84,7 @@ function renderModal(bestelling: Bestelling | null) {
 }
 
 beforeEach(() => {
-  updateDocMock.mockReset();
+  fetchMock.mockReset();
   logActiviteitMock.mockReset();
 });
 
@@ -125,14 +114,17 @@ describe('BestellingModal', () => {
   });
 
   it('approves the bestelling and calls onUpdated with status Te versturen naar drukker', async () => {
-    updateDocMock.mockResolvedValue(undefined);
+    fetchMock.mockResolvedValue({ ok: true });
     const { onUpdated } = renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-goedkeuren'));
 
     await waitFor(() =>
-      expect(updateDocMock).toHaveBeenCalledWith(
-        { collectionName: 'bestelheaders', id: 'header-1' },
-        { status: 'Te versturen naar drukker' }
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-1',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ status: 'Te versturen naar drukker' }),
+        })
       )
     );
     await waitFor(() =>
@@ -141,21 +133,21 @@ describe('BestellingModal', () => {
   });
 
   it('rejects the bestelling and calls onUpdated with status Afgewezen', async () => {
-    updateDocMock.mockResolvedValue(undefined);
+    fetchMock.mockResolvedValue({ ok: true });
     const { onUpdated } = renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen'));
 
     await waitFor(() =>
-      expect(updateDocMock).toHaveBeenCalledWith(
-        { collectionName: 'bestelheaders', id: 'header-1' },
-        { status: 'Afgewezen' }
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-1',
+        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'Afgewezen' }) })
       )
     );
     await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...BESTELLING, status: 'Afgewezen' }));
   });
 
-  it('shows an error and does not call onUpdated when updateDoc fails', async () => {
-    updateDocMock.mockRejectedValue(new Error('offline'));
+  it('shows an error and does not call onUpdated when the update request fails', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
     const { onUpdated } = renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen'));
 
@@ -164,7 +156,7 @@ describe('BestellingModal', () => {
   });
 
   it('logs bestelling_goedgekeurd with the logged-in medewerker on approval', async () => {
-    updateDocMock.mockResolvedValue(undefined);
+    fetchMock.mockResolvedValue({ ok: true });
     renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-goedkeuren'));
     await waitFor(() =>
@@ -177,7 +169,7 @@ describe('BestellingModal', () => {
   });
 
   it('logs bestelling_afgewezen with the logged-in medewerker on rejection', async () => {
-    updateDocMock.mockResolvedValue(undefined);
+    fetchMock.mockResolvedValue({ ok: true });
     renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen'));
     await waitFor(() =>
@@ -189,8 +181,8 @@ describe('BestellingModal', () => {
     );
   });
 
-  it('does not log when updateDoc fails', async () => {
-    updateDocMock.mockRejectedValue(new Error('offline'));
+  it('does not log when the update request fails', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
     renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen'));
     await screen.findByTestId('bestelling-modal-error');
@@ -224,16 +216,16 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
     );
   });
 
-  it('sets a price on an unpriced line via "Prijs vaststellen", updates Firestore, logs the event, and re-enables Goedkeuren', async () => {
-    updateDocMock.mockResolvedValue(undefined);
+  it('sets a price on an unpriced line via "Prijs vaststellen", updates the order, logs the event, and re-enables Goedkeuren', async () => {
+    fetchMock.mockResolvedValue({ ok: true });
     const { onLinePrijsVastgesteld } = renderModal(BESTELLING_MET_EIGEN_MAAT);
     fireEvent.change(screen.getByTestId('bestelling-modal-prijs-input-line-3'), { target: { value: '275' } });
     fireEvent.click(screen.getByTestId('bestelling-modal-prijs-vaststellen-line-3'));
 
     await waitFor(() =>
-      expect(updateDocMock).toHaveBeenCalledWith(
-        { collectionName: 'bestelheaders/header-2/bestellines', id: 'line-3' },
-        { prijs: 275 }
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-2/bestellines/line-3',
+        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ prijs: 275 }) })
       )
     );
     await waitFor(() => expect(onLinePrijsVastgesteld).toHaveBeenCalledWith('header-2', 'line-3', 275));
@@ -260,7 +252,7 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
   });
 
   it('keeps the draft price of a still-unpriced line after submitting another line\'s price in the same order', async () => {
-    updateDocMock.mockResolvedValue(undefined);
+    fetchMock.mockResolvedValue({ ok: true });
 
     const BESTELLING_MET_TWEE_ONGEPRIJSDE_REGELS: Bestelling = {
       id: 'header-3',
@@ -312,9 +304,9 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
     fireEvent.click(screen.getByTestId('bestelling-modal-prijs-vaststellen-line-4'));
 
     await waitFor(() =>
-      expect(updateDocMock).toHaveBeenCalledWith(
-        { collectionName: 'bestelheaders/header-3/bestellines', id: 'line-4' },
-        { prijs: 100 }
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-3/bestellines/line-4',
+        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ prijs: 100 }) })
       )
     );
 
@@ -333,7 +325,7 @@ describe('BestellingModal — regel bewerken', () => {
   });
 
   it('edits a standard-maat line and saves materiaal/maat/prijs/aantal', async () => {
-    updateDocMock.mockResolvedValue(undefined);
+    fetchMock.mockResolvedValue({ ok: true });
     const { onLineUpdated } = renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-1'));
     fireEvent.change(screen.getByTestId('bestelling-modal-regel-prijs-line-1'), { target: { value: '180' } });
@@ -341,9 +333,12 @@ describe('BestellingModal — regel bewerken', () => {
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-opslaan-line-1'));
 
     await waitFor(() =>
-      expect(updateDocMock).toHaveBeenCalledWith(
-        { collectionName: 'bestelheaders/header-1/bestellines', id: 'line-1' },
-        { materiaalId: 'mat-1', prijs: 180, quantity: 5, maatId: 'maat-1' }
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-1/bestellines/line-1',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ materiaalId: 'mat-1', prijs: 180, quantity: 5, maatId: 'maat-1' }),
+        })
       )
     );
     await waitFor(() =>
@@ -369,11 +364,11 @@ describe('BestellingModal — regel bewerken', () => {
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-annuleren-line-1'));
     expect(screen.queryByTestId('bestelling-modal-regel-materiaal-line-1')).not.toBeInTheDocument();
     expect(screen.getByTestId('bestelling-modal-line-line-1')).toHaveTextContent('×3');
-    expect(updateDocMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('shows breedte/hoogte inputs instead of a maat select for a custom-size line', async () => {
-    updateDocMock.mockResolvedValue(undefined);
+    fetchMock.mockResolvedValue({ ok: true });
     const { onLineUpdated } = renderModal(BESTELLING_MET_EIGEN_MAAT);
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-3'));
     expect(screen.queryByTestId('bestelling-modal-regel-maat-line-3')).not.toBeInTheDocument();
@@ -383,9 +378,12 @@ describe('BestellingModal — regel bewerken', () => {
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-opslaan-line-3'));
 
     await waitFor(() =>
-      expect(updateDocMock).toHaveBeenCalledWith(
-        { collectionName: 'bestelheaders/header-2/bestellines', id: 'line-3' },
-        { materiaalId: 'mat-1', prijs: 300, quantity: 1, maatId: '', breedte: 95, hoogte: 145 }
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-2/bestellines/line-3',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ materiaalId: 'mat-1', prijs: 300, quantity: 1, maatId: '', breedte: 95, hoogte: 145 }),
+        })
       )
     );
     await waitFor(() =>

@@ -5,67 +5,18 @@ import { CustomerAuthProvider } from '@/lib/useCustomerAuth';
 import { useAllOrders } from '@/lib/useAllOrders';
 import messages from '../../messages/nl.json';
 
-const onAuthStateChangedMock = vi.fn();
-const getDocMock = vi.fn();
-const getDocsMock = vi.fn();
+const fetchMock = vi.fn();
+vi.stubGlobal('fetch', fetchMock);
 
-vi.mock('@/lib/firebase', () => ({
-  auth: {},
-  db: {},
-}));
-
-vi.mock('firebase/auth', () => ({
-  onAuthStateChanged: (...args: unknown[]) => onAuthStateChangedMock(...args),
-}));
-
-vi.mock('firebase/firestore', () => ({
-  doc: vi.fn((_db, collectionName, id) => ({ collectionName, id })),
-  getDoc: (...args: unknown[]) => getDocMock(...args),
-  collection: vi.fn((_db, ...segments: string[]) => ({ name: segments.join('/') })),
-  query: vi.fn((collectionRef, ...constraints) => ({ collectionRef, constraints })),
-  where: vi.fn((field, op, value) => ({ field, op, value })),
-  getDocs: (...args: unknown[]) => getDocsMock(...args),
-}));
+let authUser: Record<string, unknown> | null = null;
+let ordersResponse: { ok: boolean; body?: unknown } = { ok: true, body: [] };
 
 function signedOut() {
-  onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-    callback(null);
-    return () => {};
-  });
-  getDocsMock.mockResolvedValue({ docs: [] });
+  authUser = null;
 }
 
-function signedInWithOrder(overrides: Record<string, unknown> = {}) {
-  getDocMock.mockResolvedValue({ exists: () => true, data: () => ({ status: 'Goedgekeurd' }) });
-  onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-    callback({ uid: 'uid-1', email: 'klant@example.com' });
-    return () => {};
-  });
-  getDocsMock.mockImplementation((ref: { name?: string; collectionRef?: { name: string } }) => {
-    const name = ref.name ?? ref.collectionRef?.name;
-    if (name === 'bestelheaders') {
-      return Promise.resolve({
-        docs: [
-          {
-            id: 'header-1',
-            data: () => ({
-              klantId: 'uid-1',
-              bestelnr: 'GD-00001',
-              besteldatum: { toDate: () => new Date('2026-07-01T14:30:00') },
-              status: 'Te beoordelen',
-              ...overrides,
-            }),
-          },
-        ],
-      });
-    }
-    if (name === 'bestelheaders/header-1/bestellines') {
-      return Promise.resolve({
-        docs: [{ id: 'line-1', data: () => ({ quantity: 3 }) }],
-      });
-    }
-    return Promise.resolve({ docs: [] });
-  });
+function signedIn() {
+  authUser = { id: 'uid-1', email: 'klant@example.com', status: 'Goedgekeurd' };
 }
 
 function wrapper({ children }: { children: React.ReactNode }) {
@@ -78,21 +29,39 @@ function wrapper({ children }: { children: React.ReactNode }) {
 
 beforeEach(() => {
   window.localStorage.clear();
-  onAuthStateChangedMock.mockReset();
-  getDocMock.mockReset();
-  getDocsMock.mockReset();
-  signedOut();
+  authUser = null;
+  ordersResponse = { ok: true, body: [] };
+  fetchMock.mockReset();
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url === '/api/auth/me?type=klant') {
+      return { ok: true, json: async () => ({ user: authUser }) };
+    }
+    return { ok: ordersResponse.ok, json: async () => ordersResponse.body };
+  });
 });
 
 describe('useAllOrders', () => {
   it('returns no orders when signed out', () => {
+    signedOut();
     const { result } = renderHook(() => useAllOrders(), { wrapper });
     expect(result.current.orders).toHaveLength(0);
     expect(result.current.loadError).toBe(false);
   });
 
   it("shows the customer's own real bestellingen", async () => {
-    signedInWithOrder();
+    signedIn();
+    ordersResponse = {
+      ok: true,
+      body: [
+        {
+          id: 'header-1',
+          bestelnr: 'GD-00001',
+          besteldatum: '2026-07-01T14:30:00',
+          status: 'Te beoordelen',
+          lines: [{ id: 'line-1', quantity: 3 }],
+        },
+      ],
+    };
 
     const { result } = renderHook(() => useAllOrders(), { wrapper });
     await waitFor(() => expect(result.current.orders).toHaveLength(1));
@@ -101,8 +70,20 @@ describe('useAllOrders', () => {
     expect(result.current.loadError).toBe(false);
   });
 
-  it('falls back to the Firestore document id when no bestelnr is stored', async () => {
-    signedInWithOrder({ bestelnr: undefined });
+  it('falls back to the header id when no bestelnr is stored', async () => {
+    signedIn();
+    ordersResponse = {
+      ok: true,
+      body: [
+        {
+          id: 'header-1',
+          bestelnr: undefined,
+          besteldatum: '2026-07-01T14:30:00',
+          status: 'Te beoordelen',
+          lines: [{ id: 'line-1', quantity: 3 }],
+        },
+      ],
+    };
 
     const { result } = renderHook(() => useAllOrders(), { wrapper });
     await waitFor(() => expect(result.current.orders).toHaveLength(1));
@@ -110,12 +91,8 @@ describe('useAllOrders', () => {
   });
 
   it('reports a load error when fetching orders fails, without throwing', async () => {
-    getDocMock.mockResolvedValue({ exists: () => true, data: () => ({ status: 'Goedgekeurd' }) });
-    onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-      callback({ uid: 'uid-1', email: 'klant@example.com' });
-      return () => {};
-    });
-    getDocsMock.mockRejectedValue(new Error('permission-denied'));
+    signedIn();
+    ordersResponse = { ok: false };
 
     const { result } = renderHook(() => useAllOrders(), { wrapper });
     await waitFor(() => expect(result.current.loadError).toBe(true));
@@ -123,35 +100,19 @@ describe('useAllOrders', () => {
   });
 
   it('maps a missing prijs to null and passes through breedte/hoogte for a custom-size line', async () => {
-    getDocMock.mockResolvedValue({ exists: () => true, data: () => ({ status: 'Goedgekeurd' }) });
-    onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-      callback({ uid: 'uid-1', email: 'klant@example.com' });
-      return () => {};
-    });
-    getDocsMock.mockImplementation((ref: { name?: string; collectionRef?: { name: string } }) => {
-      const name = ref.name ?? ref.collectionRef?.name;
-      if (name === 'bestelheaders') {
-        return Promise.resolve({
-          docs: [
-            {
-              id: 'header-1',
-              data: () => ({
-                klantId: 'uid-1',
-                bestelnr: 'GD-00001',
-                besteldatum: { toDate: () => new Date('2026-07-01T14:30:00') },
-                status: 'Te beoordelen',
-              }),
-            },
-          ],
-        });
-      }
-      if (name === 'bestelheaders/header-1/bestellines') {
-        return Promise.resolve({
-          docs: [{ id: 'line-1', data: () => ({ maatId: '', breedte: 90, hoogte: 140, quantity: 1 }) }],
-        });
-      }
-      return Promise.resolve({ docs: [] });
-    });
+    signedIn();
+    ordersResponse = {
+      ok: true,
+      body: [
+        {
+          id: 'header-1',
+          bestelnr: 'GD-00001',
+          besteldatum: '2026-07-01T14:30:00',
+          status: 'Te beoordelen',
+          lines: [{ id: 'line-1', maatId: '', breedte: 90, hoogte: 140, quantity: 1, prijs: null }],
+        },
+      ],
+    };
 
     const { result } = renderHook(() => useAllOrders(), { wrapper });
     await waitFor(() => expect(result.current.orders).toHaveLength(1));

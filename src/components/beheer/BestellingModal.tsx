@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Modal } from '@/components/Modal';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
@@ -79,7 +77,12 @@ export function BestellingModal({
   async function handleGoedkeuren() {
     if (!bestelling) return;
     try {
-      await updateDoc(doc(db, 'bestelheaders', bestelling.id), { status: 'Te versturen naar drukker' });
+      const response = await fetch(`/api/bestelheaders/${bestelling.id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status: 'Te versturen naar drukker' }),
+      });
+      if (!response.ok) throw new Error('update failed');
       void logActiviteit('bestelling_goedgekeurd', actorFromMedewerker(user), bestelling.bestelnr);
       onUpdated({ ...bestelling, status: 'Te versturen naar drukker' });
     } catch {
@@ -90,7 +93,12 @@ export function BestellingModal({
   async function handleAfwijzen() {
     if (!bestelling) return;
     try {
-      await updateDoc(doc(db, 'bestelheaders', bestelling.id), { status: 'Afgewezen' });
+      const response = await fetch(`/api/bestelheaders/${bestelling.id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status: 'Afgewezen' }),
+      });
+      if (!response.ok) throw new Error('update failed');
       void logActiviteit('bestelling_afgewezen', actorFromMedewerker(user), bestelling.bestelnr);
       onUpdated({ ...bestelling, status: 'Afgewezen' });
     } catch {
@@ -103,7 +111,15 @@ export function BestellingModal({
     const prijs = Number(prijsDrafts[line.id]);
     if (!prijs || prijs <= 0) return;
     try {
-      await updateDoc(doc(db, 'bestelheaders', bestelling.id, 'bestellines', line.id), { prijs });
+      const response = await fetch(
+        `/api/bestelheaders/${bestelling.id}/bestellines/${line.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ prijs }),
+        }
+      );
+      if (!response.ok) throw new Error('update failed');
       void logActiviteit('bestelling_prijs_vastgesteld', actorFromMedewerker(user), bestelling.bestelnr);
       onLinePrijsVastgesteld(bestelling.id, line.id, prijs);
     } catch {
@@ -155,7 +171,15 @@ export function BestellingModal({
     }
 
     try {
-      await updateDoc(doc(db, 'bestelheaders', bestelling.id, 'bestellines', line.id), payload);
+      const response = await fetch(
+        `/api/bestelheaders/${bestelling.id}/bestellines/${line.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+        }
+      );
+      if (!response.ok) throw new Error('update failed');
       void logActiviteit('bestelling_regel_gewijzigd', actorFromMedewerker(user), bestelling.bestelnr);
       onLineUpdated(bestelling.id, line.id, updates);
       cancelEditRegel();
