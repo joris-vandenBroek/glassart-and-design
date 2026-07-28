@@ -8,23 +8,8 @@ import { CustomerAuthProvider } from '@/lib/useCustomerAuth';
 import { CartProvider } from '@/lib/useCart';
 import messages from '../../../messages/nl.json';
 
-const onAuthStateChangedMock = vi.fn();
-const getDocMock = vi.fn();
-
-vi.mock('@/lib/firebase', () => ({
-  auth: {},
-  db: {},
-}));
-
-vi.mock('firebase/auth', () => ({
-  onAuthStateChanged: (...args: unknown[]) => onAuthStateChangedMock(...args),
-}));
-
-vi.mock('firebase/firestore', () => ({
-  doc: vi.fn((_db, collection, id) => ({ collection, id })),
-  getDoc: (...args: unknown[]) => getDocMock(...args),
-  setDoc: vi.fn(),
-}));
+const fetchMock = vi.fn();
+vi.stubGlobal('fetch', fetchMock);
 
 const uploadMock = vi.fn();
 let mockUploading = false;
@@ -151,13 +136,8 @@ beforeEach(() => {
   detectFormaatFromFileMock.mockResolvedValue(null);
   detectFormaatFromImageUrlMock.mockReset();
   detectFormaatFromImageUrlMock.mockResolvedValue(null);
-  onAuthStateChangedMock.mockReset();
-  getDocMock.mockReset();
-  onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-    callback(null);
-    return () => {};
-  });
-  getDocMock.mockResolvedValue({ exists: () => false });
+  fetchMock.mockReset();
+  fetchMock.mockResolvedValue({ ok: true, json: async () => ({ user: null }) });
   window.localStorage.clear();
 });
 

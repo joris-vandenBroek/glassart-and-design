@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
-import { db } from './firebase';
 
 export interface DrukkerZending {
   id: string;
@@ -30,24 +28,30 @@ export function useDrukkerZendingen(drukkerId: string | null): { zendingen: Druk
     setError(false);
     async function load() {
       try {
-        const snapshot = await getDocs(
-          query(collection(db, 'drukkers', drukkerId as string, 'zendingen'), orderBy('verzondenOp', 'desc'))
-        );
+        const response = await fetch(`/api/drukkers/${drukkerId}/zendingen`);
+        if (!response.ok) throw new Error('load failed');
+        const rows = (await response.json()) as Array<{
+          id: string;
+          verzondenOp: string | null;
+          onderwerp: string;
+          body: string;
+          bestellingIds: string[];
+          aantalKlanten: number;
+          aantalRegels: number;
+          verzondDoor: string;
+        }>;
         if (cancelled) return;
         setZendingen(
-          snapshot.docs.map((docSnapshot) => {
-            const data = docSnapshot.data();
-            return {
-              id: docSnapshot.id,
-              verzondenOp: data.verzondenOp?.toDate() ?? null,
-              onderwerp: data.onderwerp,
-              body: data.body,
-              bestellingIds: data.bestellingIds ?? [],
-              aantalKlanten: data.aantalKlanten,
-              aantalRegels: data.aantalRegels,
-              verzondDoor: data.verzondDoor,
-            };
-          })
+          rows.map((row) => ({
+            id: row.id,
+            verzondenOp: row.verzondenOp ? new Date(row.verzondenOp) : null,
+            onderwerp: row.onderwerp,
+            body: row.body,
+            bestellingIds: row.bestellingIds ?? [],
+            aantalKlanten: row.aantalKlanten,
+            aantalRegels: row.aantalRegels,
+            verzondDoor: row.verzondDoor,
+          }))
         );
       } catch {
         if (!cancelled) {

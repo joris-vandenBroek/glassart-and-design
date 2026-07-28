@@ -5,16 +5,8 @@ import { DrukkerModal } from '@/components/beheer/DrukkerModal';
 import type { Drukker } from '@/components/beheer/materiaalTypes';
 import messages from '../../../messages/nl.json';
 
-const getDocsMock = vi.fn();
-
-vi.mock('@/lib/firebase', () => ({ db: {} }));
-
-vi.mock('firebase/firestore', () => ({
-  collection: vi.fn((_db, ...segments: string[]) => ({ name: segments.join('/') })),
-  query: vi.fn((collectionRef) => collectionRef),
-  orderBy: vi.fn(),
-  getDocs: (...args: unknown[]) => getDocsMock(...args),
-}));
+const fetchMock = vi.fn();
+vi.stubGlobal('fetch', fetchMock);
 
 vi.mock('@/lib/useAdminAuth', () => ({
   useAdminAuth: () => ({ user: { uid: 'staff-1', email: 'paul@glassartanddesign.com' } }),
@@ -49,12 +41,12 @@ function renderModal(state: { mode: 'edit'; drukker: Drukker } | { mode: 'add' }
 }
 
 beforeEach(() => {
-  getDocsMock.mockReset();
+  fetchMock.mockReset();
 });
 
 describe('DrukkerModal zendingen', () => {
   it('shows "nog geen mails verzonden" once loaded empty', async () => {
-    getDocsMock.mockResolvedValue({ docs: [] });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     renderModal({ mode: 'edit', drukker: DRUKKER });
     expect(await screen.findByTestId('drukker-modal-zendingen-leeg')).toHaveTextContent(
       'Nog geen mails verzonden.'
@@ -62,19 +54,18 @@ describe('DrukkerModal zendingen', () => {
   });
 
   it('lists zendingen and expands one to show the full mail body', async () => {
-    getDocsMock.mockResolvedValue({
-      docs: [
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => [
         {
           id: 'zending-1',
-          data: () => ({
-            verzondenOp: { toDate: () => new Date('2026-07-24T10:00:00Z') },
-            onderwerp: 'Nieuwe order(s) voor de drukker – 24-7-2026',
-            body: '== Testbedrijf BV ==\nAfleveradres: Teststraat 1, 1234 AB Teststad\n- Hotel paneel',
-            bestellingIds: ['header-1'],
-            aantalKlanten: 1,
-            aantalRegels: 1,
-            verzondDoor: 'paul@glassartanddesign.com',
-          }),
+          verzondenOp: '2026-07-24T10:00:00Z',
+          onderwerp: 'Nieuwe order(s) voor de drukker – 24-7-2026',
+          body: '== Testbedrijf BV ==\nAfleveradres: Teststraat 1, 1234 AB Teststad\n- Hotel paneel',
+          bestellingIds: ['header-1'],
+          aantalKlanten: 1,
+          aantalRegels: 1,
+          verzondDoor: 'paul@glassartanddesign.com',
         },
       ],
     });
@@ -87,26 +78,25 @@ describe('DrukkerModal zendingen', () => {
   });
 
   it('disables Verwijderen while zendingen are still loading', () => {
-    getDocsMock.mockReturnValue(new Promise(() => {}));
+    fetchMock.mockReturnValue(new Promise(() => {}));
     renderModal({ mode: 'edit', drukker: DRUKKER });
     expect(screen.getByTestId('drukker-modal-verwijderen')).toBeDisabled();
   });
 
   it('blocks deleting a drukker that has zendingen', async () => {
     const onRemove = vi.fn();
-    getDocsMock.mockResolvedValue({
-      docs: [
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => [
         {
           id: 'zending-1',
-          data: () => ({
-            verzondenOp: null,
-            onderwerp: 'x',
-            body: 'x',
-            bestellingIds: [],
-            aantalKlanten: 1,
-            aantalRegels: 1,
-            verzondDoor: 'x',
-          }),
+          verzondenOp: null,
+          onderwerp: 'x',
+          body: 'x',
+          bestellingIds: [],
+          aantalKlanten: 1,
+          aantalRegels: 1,
+          verzondDoor: 'x',
         },
       ],
     });

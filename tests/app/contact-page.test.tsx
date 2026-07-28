@@ -11,11 +11,6 @@ vi.mock('@/i18n/navigation', () => ({
   ),
 }));
 
-vi.mock('@/lib/firebase', () => ({
-  auth: {},
-  db: {},
-}));
-
 vi.mock('next-intl/server', () => ({
   getTranslations: async (namespace: string) => {
     const namespaceMessages = (messages as unknown as Record<string, Record<string, string>>)[

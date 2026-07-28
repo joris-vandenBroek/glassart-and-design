@@ -6,23 +6,9 @@ import type { Kunstwerk, Materiaal, Maat, Materiaalsoort, Drukker } from '@/comp
 import type { Klant } from '@/components/beheer/KlantenSection';
 import messages from '../../../messages/nl.json';
 
-const updateDocMock = vi.fn();
-const addDocMock = vi.fn();
 const fetchMock = vi.fn();
 
 vi.stubGlobal('fetch', fetchMock);
-
-vi.mock('@/lib/firebase', () => ({
-  db: {},
-}));
-
-vi.mock('firebase/firestore', () => ({
-  doc: vi.fn((_db, ...segments: string[]) => ({ collectionName: segments.slice(0, -1).join('/'), id: segments[segments.length - 1] })),
-  collection: vi.fn((_db, ...segments: string[]) => ({ name: segments.join('/') })),
-  updateDoc: (...args: unknown[]) => updateDocMock(...args),
-  addDoc: (...args: unknown[]) => addDocMock(...args),
-  serverTimestamp: () => 'server-timestamp',
-}));
 
 vi.mock('@/lib/useAdminAuth', () => ({
   useAdminAuth: () => ({ user: { uid: 'staff-1', email: 'paul@glassartanddesign.com' } }),
@@ -145,9 +131,8 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Bestelling
 }
 
 beforeEach(() => {
-  updateDocMock.mockReset();
-  addDocMock.mockReset();
   fetchMock.mockReset();
+  fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) });
   vi.stubEnv('NEXT_PUBLIC_MAIL_ENDPOINT_URL', 'https://example.com/mail.php');
   vi.stubEnv('NEXT_PUBLIC_MAIL_SECRET', 'test-secret');
 });
@@ -189,7 +174,6 @@ describe('BestellingenSection', () => {
   });
 
   it('closes the modal and reports the updated bestelling via onBestellingUpdated after approving', async () => {
-    updateDocMock.mockResolvedValue(undefined);
     const { onBestellingUpdated } = renderSection();
     fireEvent.click(screen.getByTestId('data-table-row-header-1'));
     fireEvent.click(screen.getByTestId('bestelling-modal-goedkeuren'));
@@ -201,7 +185,6 @@ describe('BestellingenSection', () => {
   });
 
   it('keeps the modal open and reflects the new price after "Prijs vaststellen", without closing it', async () => {
-    updateDocMock.mockResolvedValue(undefined);
     const bestellingenMetEigenMaat = [
       {
         ...BESTELLINGEN[0],
@@ -277,9 +260,6 @@ describe('BestellingenSection', () => {
     });
 
     it('reports each verstuurde bestelling, clears the selection, and closes the dialog on a successful send', async () => {
-      fetchMock.mockResolvedValue({ ok: true });
-      updateDocMock.mockResolvedValue(undefined);
-      addDocMock.mockResolvedValue(undefined);
       const bestellingen = [{ ...BESTELLINGEN[0], status: 'Te versturen naar drukker' as const }];
       const { onBestellingUpdated } = renderSection({ bestellingen });
       fireEvent.click(screen.getByTestId('data-table-row-select-header-1'));

@@ -7,22 +7,10 @@ import type { Klant } from '@/components/beheer/KlantenSection';
 import type { Drukker, Kunstwerk, Materiaal, Maat, Materiaalsoort } from '@/components/beheer/materiaalTypes';
 import messages from '../../../messages/nl.json';
 
-const updateDocMock = vi.fn();
-const addDocMock = vi.fn();
 const logActiviteitMock = vi.fn();
 const fetchMock = vi.fn();
 
 vi.stubGlobal('fetch', fetchMock);
-
-vi.mock('@/lib/firebase', () => ({ db: {} }));
-
-vi.mock('firebase/firestore', () => ({
-  doc: vi.fn((_db, ...segments: string[]) => ({ collectionName: segments.slice(0, -1).join('/'), id: segments[segments.length - 1] })),
-  collection: vi.fn((_db, ...segments: string[]) => ({ name: segments.join('/') })),
-  updateDoc: (...args: unknown[]) => updateDocMock(...args),
-  addDoc: (...args: unknown[]) => addDocMock(...args),
-  serverTimestamp: () => 'server-timestamp',
-}));
 
 vi.mock('@/lib/useAdminAuth', () => ({
   useAdminAuth: () => ({ user: { uid: 'staff-1', email: 'paul@glassartanddesign.com' } }),
@@ -116,11 +104,22 @@ function renderDialog(overrides: Partial<React.ComponentProps<typeof VersturenNa
   return { onClose, onVerstuurd };
 }
 
+function zendingCall() {
+  return fetchMock.mock.calls.find((call) => (call[0] as string) === '/api/drukkers/drukker-1/zendingen');
+}
+
+function statusCallFor(headerId: string) {
+  return fetchMock.mock.calls.find((call) => (call[0] as string) === `/api/bestelheaders/${headerId}`);
+}
+
 beforeEach(() => {
-  updateDocMock.mockReset();
-  addDocMock.mockReset();
   logActiviteitMock.mockReset();
   fetchMock.mockReset();
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url === 'https://example.com/mail.php') return { ok: true };
+    if (url === '/api/drukkers/drukker-1/zendingen') return { ok: true, json: async () => ({ ok: true }) };
+    return { ok: true, json: async () => ({ ok: true }) };
+  });
   vi.stubEnv('NEXT_PUBLIC_MAIL_ENDPOINT_URL', 'https://example.com/mail.php');
   vi.stubEnv('NEXT_PUBLIC_MAIL_SECRET', 'test-secret');
 });
@@ -134,9 +133,6 @@ describe('VersturenNaarDrukkerDialog', () => {
   });
 
   it('sends the mail, updates statuses, saves a zending, logs the activiteit, and closes', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
-    updateDocMock.mockResolvedValue(undefined);
-    addDocMock.mockResolvedValue(undefined);
     const { onVerstuurd, onClose } = renderDialog();
 
     fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
@@ -151,22 +147,18 @@ describe('VersturenNaarDrukkerDialog', () => {
       )
     );
     await waitFor(() =>
-      expect(updateDocMock).toHaveBeenCalledWith(
-        { collectionName: 'bestelheaders', id: 'header-1' },
-        { status: 'Verstuurd naar drukker' }
-      )
+      expect(statusCallFor('header-1')).toEqual([
+        '/api/bestelheaders/header-1',
+        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'Verstuurd naar drukker' }) }),
+      ])
     );
-    await waitFor(() =>
-      expect(addDocMock).toHaveBeenCalledWith(
-        { name: 'drukkers/drukker-1/zendingen' },
-        expect.objectContaining({
-          bestellingIds: ['header-1'],
-          aantalKlanten: 1,
-          aantalRegels: 1,
-          verzondDoor: 'paul@glassartanddesign.com',
-        })
-      )
-    );
+    await waitFor(() => expect(zendingCall()).toBeDefined());
+    expect(JSON.parse((zendingCall()![1] as { body: string }).body)).toMatchObject({
+      bestellingIds: ['header-1'],
+      aantalKlanten: 1,
+      aantalRegels: 1,
+      verzondDoor: 'paul@glassartanddesign.com',
+    });
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'bestelling_verstuurd_naar_drukker',
       { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
@@ -177,9 +169,6 @@ describe('VersturenNaarDrukkerDialog', () => {
   });
 
   it('joins bestelnummers with a comma when sending a batch of multiple bestellingen', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
-    updateDocMock.mockResolvedValue(undefined);
-    addDocMock.mockResolvedValue(undefined);
     renderDialog({ bestellingen: [BESTELLING, BESTELLING_2] });
 
     fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
@@ -194,19 +183,25 @@ describe('VersturenNaarDrukkerDialog', () => {
   });
 
   it('shows an error and does not update anything when the mail request fails', async () => {
-    fetchMock.mockResolvedValue({ ok: false });
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === 'https://example.com/mail.php') return { ok: false };
+      return { ok: true, json: async () => ({ ok: true }) };
+    });
     const { onVerstuurd } = renderDialog();
     fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
     expect(await screen.findByTestId('drukker-versturen-error')).toHaveTextContent(
       'Het versturen van de e-mail is mislukt. Probeer het opnieuw.'
     );
-    expect(updateDocMock).not.toHaveBeenCalled();
+    expect(statusCallFor('header-1')).toBeUndefined();
     expect(onVerstuurd).not.toHaveBeenCalled();
   });
 
   it('shows a distinct error when the mail sends but the status update fails', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
-    updateDocMock.mockRejectedValue(new Error('offline'));
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === 'https://example.com/mail.php') return { ok: true };
+      if (url === '/api/drukkers/drukker-1/zendingen') return { ok: true, json: async () => ({ ok: true }) };
+      return { ok: false };
+    });
     renderDialog();
     fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
     expect(await screen.findByTestId('drukker-versturen-error')).toHaveTextContent(
@@ -215,61 +210,64 @@ describe('VersturenNaarDrukkerDialog', () => {
   });
 
   it('saves the zending archive record before updating the bestelling statuses', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
     const callOrder: string[] = [];
-    addDocMock.mockImplementation(async () => {
-      callOrder.push('addDoc');
-    });
-    updateDocMock.mockImplementation(async () => {
-      callOrder.push('updateDoc');
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === 'https://example.com/mail.php') return { ok: true };
+      if (url === '/api/drukkers/drukker-1/zendingen') {
+        callOrder.push('zending');
+        return { ok: true, json: async () => ({ ok: true }) };
+      }
+      callOrder.push('status');
+      return { ok: true, json: async () => ({ ok: true }) };
     });
     renderDialog();
     fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
 
-    await waitFor(() => expect(updateDocMock).toHaveBeenCalled());
-    expect(callOrder).toEqual(['addDoc', 'updateDoc']);
+    await waitFor(() => expect(callOrder).toContain('status'));
+    expect(callOrder).toEqual(['zending', 'status']);
   });
 
   it('archives the zending even when the subsequent status update fails', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
-    addDocMock.mockResolvedValue(undefined);
-    updateDocMock.mockRejectedValue(new Error('offline'));
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === 'https://example.com/mail.php') return { ok: true };
+      if (url === '/api/drukkers/drukker-1/zendingen') return { ok: true, json: async () => ({ ok: true }) };
+      return { ok: false };
+    });
     renderDialog();
     fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
 
     await screen.findByTestId('drukker-versturen-error');
-    expect(addDocMock).toHaveBeenCalled();
+    expect(zendingCall()).toBeDefined();
   });
 
   it('disables Versturen once a mail has been sent, even if the dialog stays open, preventing a duplicate send', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
-    updateDocMock.mockResolvedValue(undefined);
-    addDocMock.mockResolvedValue(undefined);
     renderDialog();
     const versturenButton = screen.getByTestId('drukker-versturen-versturen');
     fireEvent.click(versturenButton);
 
-    await waitFor(() => expect(updateDocMock).toHaveBeenCalled());
+    await waitFor(() => expect(statusCallFor('header-1')).toBeDefined());
     await waitFor(() => expect(versturenButton).toBeDisabled());
 
     fireEvent.click(versturenButton);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
-  it('disables Versturen as soon as the mail POST succeeds, before the Firestore writes settle', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
-    let resolveAddDoc: () => void = () => {};
-    addDocMock.mockImplementation(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveAddDoc = resolve;
-        })
-    );
+  it('disables Versturen as soon as the mail POST succeeds, before the zending/status writes settle', async () => {
+    let resolveZending: () => void = () => {};
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === 'https://example.com/mail.php') return { ok: true };
+      if (url === '/api/drukkers/drukker-1/zendingen') {
+        return new Promise((resolve) => {
+          resolveZending = () => resolve({ ok: true, json: async () => ({ ok: true }) });
+        });
+      }
+      return { ok: true, json: async () => ({ ok: true }) };
+    });
     renderDialog();
     fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
 
     await waitFor(() => expect(screen.getByTestId('drukker-versturen-versturen')).toBeDisabled());
-    resolveAddDoc();
+    resolveZending();
   });
 
   it('disables Versturen and shows a message when a selected bestelling has no matching klant', () => {

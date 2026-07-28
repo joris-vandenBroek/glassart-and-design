@@ -3,16 +3,6 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 
-const getIdTokenMock = vi.fn();
-
-vi.mock('@/lib/firebase', () => ({
-  auth: {
-    get currentUser() {
-      return { getIdToken: getIdTokenMock };
-    },
-  },
-}));
-
 function TestConsumer() {
   const { uploading, error, upload } = useKunstwerkFotoUpload();
   const [url, setUrl] = useState<string | null>(null);
@@ -40,9 +30,8 @@ function makeFile(name = 'foto.jpg') {
 }
 
 beforeEach(() => {
-  getIdTokenMock.mockReset();
-  getIdTokenMock.mockResolvedValue('id-token-123');
   vi.stubEnv('NEXT_PUBLIC_UPLOAD_ENDPOINT_URL', 'https://mail-server.example.com/upload-kunstwerk-foto.php');
+  vi.stubEnv('NEXT_PUBLIC_UPLOAD_SECRET', 'test-upload-secret');
   vi.stubGlobal('fetch', vi.fn());
 });
 
@@ -58,7 +47,7 @@ describe('useKunstwerkFotoUpload', () => {
     expect(screen.getByTestId('error')).toHaveTextContent('none');
   });
 
-  it('sends the Firebase idToken and the file as form data to the configured endpoint', async () => {
+  it('sends the shared secret and the file as form data to the configured endpoint', async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       json: async () => ({ success: true, url: 'https://storage.example.com/foto.jpg' }),
@@ -70,7 +59,7 @@ describe('useKunstwerkFotoUpload', () => {
     expect(endpoint).toBe('https://mail-server.example.com/upload-kunstwerk-foto.php');
     expect(options.method).toBe('POST');
     const body = options.body as FormData;
-    expect(body.get('idToken')).toBe('id-token-123');
+    expect(body.get('secret')).toBe('test-upload-secret');
     expect((body.get('foto') as File).name).toBe('mijn-kunstwerk.png');
   });
 
@@ -110,6 +99,14 @@ describe('useKunstwerkFotoUpload', () => {
 
   it('sets an error and does not call fetch when the endpoint env var is not configured', async () => {
     vi.stubEnv('NEXT_PUBLIC_UPLOAD_ENDPOINT_URL', '');
+    render(<TestConsumer />);
+    fireEvent.change(screen.getByTestId('file-input'), { target: { files: [makeFile()] } });
+    await waitFor(() => expect(screen.getByTestId('error')).toHaveTextContent('upload'));
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('sets an error and does not call fetch when the secret env var is not configured', async () => {
+    vi.stubEnv('NEXT_PUBLIC_UPLOAD_SECRET', '');
     render(<TestConsumer />);
     fireEvent.change(screen.getByTestId('file-input'), { target: { files: [makeFile()] } });
     await waitFor(() => expect(screen.getByTestId('error')).toHaveTextContent('upload'));

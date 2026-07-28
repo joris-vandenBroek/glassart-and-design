@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { auth } from '@/lib/firebase';
 
 export interface UseKunstwerkFotoUploadResult {
   uploading: boolean;
@@ -18,13 +17,13 @@ export function useKunstwerkFotoUpload(): UseKunstwerkFotoUploadResult {
     setError(null);
     try {
       const endpoint = process.env.NEXT_PUBLIC_UPLOAD_ENDPOINT_URL;
-      const idToken = await auth.currentUser?.getIdToken();
-      if (!endpoint || !idToken) {
+      const secret = process.env.NEXT_PUBLIC_UPLOAD_SECRET;
+      if (!endpoint || !secret) {
         setError('upload');
         return null;
       }
       const formData = new FormData();
-      formData.append('idToken', idToken);
+      formData.append('secret', secret);
       formData.append('foto', file);
       const response = await fetch(endpoint, { method: 'POST', body: formData });
       const data = await response.json();

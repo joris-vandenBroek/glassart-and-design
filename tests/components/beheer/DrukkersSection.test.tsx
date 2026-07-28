@@ -6,16 +6,8 @@ import type { Drukker } from '@/components/beheer/materiaalTypes';
 import messages from '../../../messages/nl.json';
 
 const logActiviteitMock = vi.fn();
-const getDocsMock = vi.fn();
-
-vi.mock('@/lib/firebase', () => ({ db: {} }));
-
-vi.mock('firebase/firestore', () => ({
-  collection: vi.fn((_db, ...segments: string[]) => ({ name: segments.join('/') })),
-  query: vi.fn((collectionRef) => collectionRef),
-  orderBy: vi.fn(),
-  getDocs: (...args: unknown[]) => getDocsMock(...args),
-}));
+const fetchMock = vi.fn();
+vi.stubGlobal('fetch', fetchMock);
 
 vi.mock('@/lib/useAdminAuth', () => ({
   useAdminAuth: () => ({ user: { uid: 'staff-1', email: 'paul@glassartanddesign.com' } }),
@@ -62,8 +54,8 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof DrukkersSe
 
 beforeEach(() => {
   logActiviteitMock.mockReset();
-  getDocsMock.mockReset();
-  getDocsMock.mockResolvedValue({ docs: [] });
+  fetchMock.mockReset();
+  fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
 });
 
 describe('DrukkersSection', () => {

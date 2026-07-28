@@ -4533,43 +4533,94 @@ git commit -m "feat: switch Next.js from static export to server mode"
 
 ## Task 24: Remove Firebase
 
+> **Real scope (2026-07-28), superseding the draft below:** Step 1's grep surfaced six
+> files, not zero — two were dead-code cleanup, four were real remaining Firestore
+> dependencies the earlier tasks' file lists never covered:
+>
+> - `src/components/beheer/kunstenaarTypes.ts` — the `KunstenaarUpdate` type (a
+>   Firestore-`FieldValue`-typed payload for the old strip-on-write `updateKunstenaarVeilig`
+>   dance) had zero remaining call sites after Task 20 simplified that function. Deleted
+>   the type entirely rather than porting it.
+> - `src/lib/useDrukkerZendingen.ts` — read `drukkers/{id}/zendingen` directly via
+>   `getDocs`/`collection`/`query`/`orderBy`. Rewritten to `fetch('/api/drukkers/{id}/
+>   zendingen')` (the route already existed from the Kunstenaars/Drukkers scope expansion).
+> - `src/components/beheer/VersturenNaarDrukkerDialog.tsx` — wrote the zending archive
+>   record via `addDoc` and updated each bestelling's status via `updateDoc`. Both became
+>   `fetch` calls (POST to the same zendingen route, PATCH to `/api/bestelheaders/:id`).
+> - `src/lib/useKunstwerkFotoUpload.ts` — a genuine architectural gap, not a mechanical
+>   swap: it sent a Firebase Auth ID token to `upload-server/upload-kunstwerk-foto.php`,
+>   which verified it by calling the Firestore REST API. Once `useAdminAuth` moved to
+>   session-cookie auth (long before this task), no ID token was ever produced again —
+>   uploads were silently broken. Asked the user how to re-authenticate this endpoint;
+>   they chose a static shared secret (mirroring `mail-server/send-mail.php`'s
+>   `shared_secret` pattern) over forwarding the session cookie. Implemented as
+>   `NEXT_PUBLIC_UPLOAD_SECRET` checked with `hash_equals()` server-side, with a
+>   staging/production secret pair replacing the old staging/production Firebase-project
+>   pair for routing test uploads to a separate directory. **Follow-up required**: the
+>   real secret value now in `.env.local` (locally generated) must also be set as
+>   `upload_secret` in the deployed `upload-server/config.php` on mijn.host before uploads
+>   work in any real environment — not done as part of this task, since it requires
+>   FTP/DirectAdmin access to a live deployment target.
+>
+> Dead-code cleanup: five test files (`tests/app/{account,collecties,contact,inloggen,
+> word-klant}-page.test.tsx`) carried a `vi.mock('@/lib/firebase', ...)` left over from
+> before their rendered components were migrated in Task 21 — harmless (nothing imported
+> it) but removed for clarity. `tests/components/beheer/{DrukkerModal,DrukkersSection,
+> KunstwerkenSection}.test.tsx` had the same kind of dead mock, replaced with `fetch`
+> mocks matching their actual (already-migrated) dependencies.
+>
+> **Bonus fix, unrelated to Firebase removal itself:** while touching
+> `tests/components/beheer/BestellingenSection.test.tsx`'s dead `updateDocMock`, found
+> that 2 of its tests were pre-existing failures (from before this session) — they called
+> `updateDocMock.mockResolvedValue(...)` but `BestellingModal.tsx` had already been
+> migrated to `fetch` in an earlier task, so the real network call had no mock and
+> silently failed. Fixed by removing the dead `updateDocMock` calls; the tests now pass
+> against the already-correct `fetchMock` default set up in this file's `beforeEach`.
+
 **Files:**
 - Delete: `src/lib/firebase.ts`
 - Delete: `src/lib/useFirestoreCollection.ts`
 - Delete: `src/lib/useFirestoreDocument.ts`
 - Delete: `firestore.rules`
-- Delete: `storage.rules`
 - Delete: `firebase.json`
 - Modify: `package.json` (remove the `firebase` dependency)
-- Modify: `tests/setup.ts` (remove any Firebase-related global mocks, if present)
 
 **Interfaces:**
 - None — this is pure removal, verified by the full test suite and a clean build.
 
-- [ ] **Step 1: Confirm nothing still imports Firebase**
+- [x] **Step 1: Confirm nothing still imports Firebase**
 
-Run: `grep -rln "from 'firebase" src/ tests/`
-Expected: no output (empty). If anything appears, it was missed in an earlier task — go back and finish that task first.
+Ran: `grep -rln "from 'firebase" src/ tests/` — real scope note above covers what
+surfaced and how each was resolved.
 
-- [ ] **Step 2: Delete the files**
+- [x] **Step 2: Delete the files**
 
 ```bash
-rm src/lib/firebase.ts src/lib/useFirestoreCollection.ts src/lib/useFirestoreDocument.ts firestore.rules storage.rules firebase.json
+rm src/lib/firebase.ts src/lib/useFirestoreCollection.ts src/lib/useFirestoreDocument.ts \
+  firestore.rules firebase.json \
+  tests/lib/useFirestoreCollection.test.tsx tests/lib/useFirestoreDocument.test.tsx
 ```
+(No `storage.rules` existed — photo uploads never went through Firebase Storage, only
+the PHP `upload-server`, per `firebase.json`'s config referencing only `firestore.rules`.)
 
-- [ ] **Step 3: Remove the dependency**
+- [x] **Step 3: Remove the dependency**
 
-Run: `npm uninstall firebase`
+Ran: `npm uninstall firebase` — `firebase-admin` (Task 22's dev-only migration-script
+dependency) stays, per the original design.
 
-- [ ] **Step 4: Run the full test suite and a production build**
+- [x] **Step 4: Run the full test suite and a production build**
 
-Run: `npm run test && npm run build`
-Expected: both PASS with no Firebase-related errors.
+Ran: `npm run test && npm run build`. Result: **723/723 tests pass** (first fully-clean
+run of the whole session), build succeeds, `/api/klanten` still correctly dynamic. The
+`beheer` route's bundle size dropped from 198 kB to 25.5 kB with the Firebase SDK gone.
+`npx tsc --noEmit` shows only the same 3 pre-existing, unrelated test-type errors present
+since before this session started.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
-git add -u package.json package-lock.json
+git add -u
+git add scripts/migrate-firebase-data.ts docs/superpowers/plans/2026-07-23-firebase-to-mysql-migration.md
 git commit -m "chore: remove Firebase entirely"
 ```
 

@@ -31,79 +31,27 @@ const ALLOWED_MIME_EXTENSIONS = [
     'image/webp' => 'webp',
 ];
 
-function base64UrlDecode(string $data): string
-{
-    $padded = strtr($data, '-_', '+/');
-    $padding = strlen($padded) % 4;
-    if ($padding > 0) {
-        $padded .= str_repeat('=', 4 - $padding);
-    }
-    return (string) base64_decode($padded);
-}
+// A static shared secret per environment (same pattern as mail-server/send-mail.php),
+// checked with hash_equals() to avoid timing attacks. Test uploads from the staging
+// secret must never land among the real production photos -- route them to a
+// separate directory/URL instead, same as the production secret does for its own.
+$secret = (string) ($_POST['secret'] ?? '');
+$productionSecret = (string) ($config['upload_secret'] ?? '');
+$stagingSecret = (string) ($config['staging_upload_secret'] ?? '');
 
-function medewerkerUidFromIdToken(string $idToken): ?string
-{
-    $parts = explode('.', $idToken);
-    if (count($parts) !== 3) {
-        return null;
-    }
-    $payload = json_decode(base64UrlDecode($parts[1]), true);
-    $uid = $payload['user_id'] ?? $payload['sub'] ?? null;
-    return is_string($uid) && $uid !== '' ? $uid : null;
+$isStagingUpload = false;
+$authorized = false;
+if ($secret !== '' && $productionSecret !== '' && hash_equals($productionSecret, $secret)) {
+    $authorized = true;
+} elseif ($secret !== '' && $stagingSecret !== '' && hash_equals($stagingSecret, $secret)) {
+    $authorized = true;
+    $isStagingUpload = true;
 }
-
-// The real authorization check: ask Firestore itself whether this exact
-// idToken is allowed to read medewerkers/{uid}. Firestore verifies the
-// token's signature/expiry/audience server-side -- we never need to (and
-// must not try to) verify the JWT ourselves. A forged or expired token
-// simply fails this call. A token is only ever valid against the Firebase
-// project it was issued for, so we try each configured project in turn and
-// report which one (if any) accepted it -- that tells the caller whether
-// this is a production or a staging upload.
-function findAuthorizedProjectId(string $idToken, array $projectIds): ?string
-{
-    $uid = medewerkerUidFromIdToken($idToken);
-    if ($uid === null) {
-        return null;
-    }
-    foreach ($projectIds as $projectId) {
-        $url = sprintf(
-            'https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents/medewerkers/%s',
-            rawurlencode($projectId),
-            rawurlencode($uid)
-        );
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $idToken],
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 10,
-        ]);
-        curl_exec($ch);
-        $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        if ($status === 200) {
-            return $projectId;
-        }
-    }
-    return null;
-}
-
-$idToken = (string) ($_POST['idToken'] ?? '');
-$productionProjectId = (string) ($config['firebase_project_id'] ?? '');
-$stagingProjectId = (string) ($config['staging_firebase_project_id'] ?? '');
-// array_unique/array_filter so a copy-paste error that sets both config keys to the
-// same project id can never make $isStagingUpload true for a production token below.
-$candidateProjectIds = array_values(array_filter(array_unique([$productionProjectId, $stagingProjectId])));
-$authorizedProjectId = $idToken !== '' ? findAuthorizedProjectId($idToken, $candidateProjectIds) : null;
-if ($authorizedProjectId === null) {
+if (!$authorized) {
     http_response_code(403);
     echo json_encode(['success' => false, 'error' => 'Forbidden']);
     exit;
 }
-
-// Test uploads from the staging Firebase project must never land among the
-// real production photos -- route them to a separate directory/URL instead.
-$isStagingUpload = $stagingProjectId !== '' && $authorizedProjectId === $stagingProjectId;
 $publicBaseUrlKey = $isStagingUpload ? 'staging_upload_public_base_url' : 'upload_public_base_url';
 if (!is_string($config[$publicBaseUrlKey] ?? null) || $config[$publicBaseUrlKey] === '') {
     // Fail before any file work happens -- catching this after move_uploaded_file() would

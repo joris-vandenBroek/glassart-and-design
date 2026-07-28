@@ -2,43 +2,33 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useDrukkerZendingen } from '@/lib/useDrukkerZendingen';
 
-const getDocsMock = vi.fn();
-
-vi.mock('@/lib/firebase', () => ({ db: {} }));
-
-vi.mock('firebase/firestore', () => ({
-  collection: vi.fn((_db, ...segments: string[]) => ({ name: segments.join('/') })),
-  query: vi.fn((collectionRef) => collectionRef),
-  orderBy: vi.fn(),
-  getDocs: (...args: unknown[]) => getDocsMock(...args),
-}));
+const fetchMock = vi.fn();
+vi.stubGlobal('fetch', fetchMock);
 
 beforeEach(() => {
-  getDocsMock.mockReset();
+  fetchMock.mockReset();
 });
 
 describe('useDrukkerZendingen', () => {
   it('returns null zendingen and does not fetch while drukkerId is null', () => {
     const { result } = renderHook(() => useDrukkerZendingen(null));
     expect(result.current.zendingen).toBeNull();
-    expect(getDocsMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('fetches and maps zendingen for the given drukkerId', async () => {
-    const timestamp = { toDate: () => new Date('2026-07-24T10:00:00Z') };
-    getDocsMock.mockResolvedValue({
-      docs: [
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => [
         {
           id: 'zending-1',
-          data: () => ({
-            verzondenOp: timestamp,
-            onderwerp: 'Nieuwe order(s) voor de drukker – 24-7-2026',
-            body: '== Testbedrijf BV ==\n...',
-            bestellingIds: ['header-1'],
-            aantalKlanten: 1,
-            aantalRegels: 2,
-            verzondDoor: 'paul@glassartanddesign.com',
-          }),
+          verzondenOp: '2026-07-24T10:00:00Z',
+          onderwerp: 'Nieuwe order(s) voor de drukker – 24-7-2026',
+          body: '== Testbedrijf BV ==\n...',
+          bestellingIds: ['header-1'],
+          aantalKlanten: 1,
+          aantalRegels: 2,
+          verzondDoor: 'paul@glassartanddesign.com',
         },
       ],
     });
@@ -57,20 +47,28 @@ describe('useDrukkerZendingen', () => {
       },
     ]);
     expect(result.current.error).toBe(false);
+    expect(fetchMock).toHaveBeenCalledWith('/api/drukkers/drukker-1/zendingen');
   });
 
-  it('sets error true when getDocs fails', async () => {
-    getDocsMock.mockRejectedValue(new Error('offline'));
+  it('sets error true when the fetch fails', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
+    const { result } = renderHook(() => useDrukkerZendingen('drukker-1'));
+    await waitFor(() => expect(result.current.error).toBe(true));
+    expect(result.current.zendingen).toBeNull();
+  });
+
+  it('sets error true when the response is not ok', async () => {
+    fetchMock.mockResolvedValue({ ok: false });
     const { result } = renderHook(() => useDrukkerZendingen('drukker-1'));
     await waitFor(() => expect(result.current.error).toBe(true));
     expect(result.current.zendingen).toBeNull();
   });
 
   it('refetches when drukkerId changes', async () => {
-    getDocsMock.mockResolvedValue({ docs: [] });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     const { rerender } = renderHook(({ id }) => useDrukkerZendingen(id), { initialProps: { id: 'drukker-1' } });
-    await waitFor(() => expect(getDocsMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     rerender({ id: 'drukker-2' });
-    await waitFor(() => expect(getDocsMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   });
 });

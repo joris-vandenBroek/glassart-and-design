@@ -2,8 +2,6 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { addDoc, collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Modal } from '@/components/Modal';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
@@ -109,20 +107,29 @@ export function VersturenNaarDrukkerDialog({
     setMailSent(true);
 
     try {
-      await addDoc(collection(db, 'drukkers', drukkerId, 'zendingen'), {
-        verzondenOp: serverTimestamp(),
-        onderwerp: mail.subject,
-        body: mail.body,
-        bestellingIds: bestellingen.map((b) => b.id),
-        aantalKlanten: new Set(bestellingen.map((b) => b.klantId)).size,
-        aantalRegels: bestellingen.reduce((sum, b) => sum + b.lineCount, 0),
-        verzondDoor: user?.email ?? 'Onbekend',
+      const zendingResponse = await fetch(`/api/drukkers/${drukkerId}/zendingen`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          onderwerp: mail.subject,
+          body: mail.body,
+          bestellingIds: bestellingen.map((b) => b.id),
+          aantalKlanten: new Set(bestellingen.map((b) => b.klantId)).size,
+          aantalRegels: bestellingen.reduce((sum, b) => sum + b.lineCount, 0),
+          verzondDoor: user?.email ?? 'Onbekend',
+        }),
       });
-      await Promise.all(
+      if (!zendingResponse.ok) throw new Error('zending create failed');
+      const results = await Promise.all(
         bestellingen.map((bestelling) =>
-          updateDoc(doc(db, 'bestelheaders', bestelling.id), { status: 'Verstuurd naar drukker' })
+          fetch(`/api/bestelheaders/${bestelling.id}`, {
+            method: 'PATCH',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ status: 'Verstuurd naar drukker' }),
+          })
         )
       );
+      if (results.some((response) => !response.ok)) throw new Error('status update failed');
       void logActiviteit(
         'bestelling_verstuurd_naar_drukker',
         actorFromMedewerker(user),
