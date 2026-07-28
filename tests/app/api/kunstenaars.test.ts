@@ -15,6 +15,10 @@ import {
 
 beforeEach(async () => {
   await getPool().query('DELETE FROM kunstenaarAfspraken');
+  // kunstwerken.kunstenaarId is a foreign key into kunstenaars — must be cleared
+  // first, or a row left over from another test file (e.g. bestelheaders.test.ts,
+  // which creates kunstwerken referencing kunstenaars) blocks this delete.
+  await getPool().query('DELETE FROM kunstwerken');
   await getPool().query('DELETE FROM kunstenaars');
 });
 
