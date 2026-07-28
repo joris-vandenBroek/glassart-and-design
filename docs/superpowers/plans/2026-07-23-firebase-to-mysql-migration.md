@@ -376,7 +376,7 @@ describe('generic CRUD helpers (against segmenten table)', () => {
     await getPool().query('DELETE FROM kunstwerken');
     const created = await insertRow<{ id: string; naam: string; segmentIds: string[] }>(
       'kunstwerken',
-      { naam: 'Test', artiest: '', segmentIds: ['a', 'b'] } as never,
+      { naam: 'Test', segmentIds: ['a', 'b'] } as never,
       ['segmentIds', 'materiaalIds', 'maatIds', 'prijzen']
     );
     expect(created.segmentIds).toEqual(['a', 'b']);

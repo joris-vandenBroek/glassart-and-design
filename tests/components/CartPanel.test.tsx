@@ -357,6 +357,8 @@ describe('CartPanel', () => {
   });
 
   it('does not call fetch when the mail endpoint/secret env vars are not set', async () => {
+    vi.stubEnv('NEXT_PUBLIC_MAIL_ENDPOINT_URL', '');
+    vi.stubEnv('NEXT_PUBLIC_MAIL_SECRET', '');
     addDocMock.mockResolvedValueOnce({ id: 'header-1' }).mockResolvedValue({ id: 'line-1' });
     renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));

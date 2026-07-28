@@ -19,6 +19,8 @@ CREATE TABLE klanten (
   invoiceCity VARCHAR(255),
   status VARCHAR(50) NOT NULL DEFAULT 'Beoordelen',
   prijsgroepId CHAR(36),
+  exclusieveKunstenaarIds JSON,
+  minimaleAfname INT,
   createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -47,6 +49,16 @@ CREATE TABLE passwordResetTokens (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE segmenten (
+  id CHAR(36) PRIMARY KEY,
+  omschrijving VARCHAR(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE stijlen (
+  id CHAR(36) PRIMARY KEY,
+  omschrijving VARCHAR(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE onderwerpen (
   id CHAR(36) PRIMARY KEY,
   omschrijving VARCHAR(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -80,11 +92,54 @@ CREATE TABLE prijsgroepen (
   kortingspercentage DECIMAL(5,2) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE kunstenaars (
+  id CHAR(36) PRIMARY KEY,
+  naam VARCHAR(255) NOT NULL,
+  foto VARCHAR(500),
+  omschrijvingNl TEXT,
+  omschrijvingFr TEXT,
+  omschrijvingDe TEXT,
+  omschrijvingEn TEXT,
+  verkooprecht VARCHAR(20) NOT NULL DEFAULT 'open',
+  klantId CHAR(36),
+  exclusiefVoorKlantId CHAR(36)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE kunstenaarAfspraken (
+  id CHAR(36) PRIMARY KEY,
+  prijsafspraken TEXT,
+  FOREIGN KEY (id) REFERENCES kunstenaars(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE drukkers (
+  id CHAR(36) PRIMARY KEY,
+  naam VARCHAR(255) NOT NULL,
+  adres VARCHAR(255),
+  postcode VARCHAR(20),
+  plaats VARCHAR(255),
+  email VARCHAR(255),
+  prijsafspraken TEXT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE drukkerZendingen (
+  id CHAR(36) PRIMARY KEY,
+  drukkerId CHAR(36) NOT NULL,
+  verzondenOp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  onderwerp VARCHAR(255),
+  body TEXT,
+  bestellingIds JSON,
+  aantalKlanten INT NOT NULL DEFAULT 0,
+  aantalRegels INT NOT NULL DEFAULT 0,
+  verzondDoor VARCHAR(255),
+  FOREIGN KEY (drukkerId) REFERENCES drukkers(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE kunstwerken (
   id CHAR(36) PRIMARY KEY,
   foto VARCHAR(500),
   naam VARCHAR(255) NOT NULL DEFAULT '',
-  artiest VARCHAR(255) NOT NULL DEFAULT '',
+  kunstenaarId CHAR(36),
+  formaat VARCHAR(20),
   omschrijvingNl TEXT,
   omschrijvingFr TEXT,
   omschrijvingDe TEXT,
@@ -92,7 +147,12 @@ CREATE TABLE kunstwerken (
   segmentIds JSON,
   materiaalIds JSON,
   maatIds JSON,
-  prijzen JSON
+  stijlIds JSON,
+  onderwerpIds JSON,
+  aiGegenereerd BOOLEAN DEFAULT FALSE,
+  prijzen JSON,
+  prijsPerM2 DECIMAL(10,2),
+  FOREIGN KEY (kunstenaarId) REFERENCES kunstenaars(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE instellingen (
@@ -134,5 +194,6 @@ CREATE TABLE activiteitenlog (
   actorId CHAR(36),
   actorEmail VARCHAR(255),
   actorNaam VARCHAR(255),
+  omschrijving VARCHAR(500),
   timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
