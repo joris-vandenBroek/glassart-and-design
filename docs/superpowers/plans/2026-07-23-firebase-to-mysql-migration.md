@@ -2877,7 +2877,7 @@ git commit -m "feat: add klanten admin API routes"
   - `POST /api/bestelheaders` `{ klantId, lines: [...] }` → creates header + lines atomically, generates `bestelnr`, returns the created header with its `id` and `bestelnr` (replaces `CartPanel.tsx` + `generateBestelnr.ts`'s direct Firestore transaction).
   - `GET /api/bestelheaders` (admin: all headers + their lines) and `GET /api/bestelheaders?klantId=...` (customer: own orders) — replaces `BeheerShell`'s and `useAllOrders`'s direct Firestore reads.
   - `PATCH /api/bestelheaders/:id` `{ status }` — approve/reject/send-to-printer.
-  - `PATCH /api/bestelheaders/:id/bestellines/:lineId` `{ prijs }` — set a line's price.
+  - `PATCH /api/bestelheaders/:id/bestellines/:lineId` — updates any of materiaalId/maatId/prijs/quantity/breedte/hoogte (whichever keys are present in the body), used both for setting a line's price and for the beheer "regel bewerken" edit flow (Task 19).
 - **Security note (per the design addendum):** this route is where two things that used to be enforced *only* by `firestore.rules` must become real server-side checks, since there is no rules layer anymore:
   1. **Verkooprecht/exclusiviteit** — before creating any line, look up its `kunstwerk.kunstenaarId` and, if set, the matching `kunstenaars` row's `verkooprecht`/`klantId`/`exclusiefVoorKlantId`. If the ordering klant isn't allowed to order that artwork (mirrors `resolveOrderRight.ts`'s client-side logic, which becomes a UI hint only), reject the whole order with 403 rather than silently creating it.
   2. **Line validation** — `quantity` must be a positive integer and `prijs` must be `null` or a positive number; reject the whole order with 400 otherwise.
