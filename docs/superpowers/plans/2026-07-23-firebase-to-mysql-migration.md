@@ -2849,8 +2849,11 @@ git commit -m "feat: add klanten admin API routes"
 - Produces:
   - `POST /api/bestelheaders` `{ klantId, lines: [...] }` → creates header + lines atomically, generates `bestelnr`, returns the created header with its `id` and `bestelnr` (replaces `CartPanel.tsx` + `generateBestelnr.ts`'s direct Firestore transaction).
   - `GET /api/bestelheaders` (admin: all headers + their lines) and `GET /api/bestelheaders?klantId=...` (customer: own orders) — replaces `BeheerShell`'s and `useAllOrders`'s direct Firestore reads.
-  - `PATCH /api/bestelheaders/:id` `{ status }` — approve/reject.
+  - `PATCH /api/bestelheaders/:id` `{ status }` — approve/reject/send-to-printer.
   - `PATCH /api/bestelheaders/:id/bestellines/:lineId` `{ prijs }` — set a line's price.
+- **Security note (per the design addendum):** this route is where two things that used to be enforced *only* by `firestore.rules` must become real server-side checks, since there is no rules layer anymore:
+  1. **Verkooprecht/exclusiviteit** — before creating any line, look up its `kunstwerk.kunstenaarId` and, if set, the matching `kunstenaars` row's `verkooprecht`/`klantId`/`exclusiefVoorKlantId`. If the ordering klant isn't allowed to order that artwork (mirrors `resolveOrderRight.ts`'s client-side logic, which becomes a UI hint only), reject the whole order with 403 rather than silently creating it.
+  2. **Line validation** — `quantity` must be a positive integer and `prijs` must be `null` or a positive number; reject the whole order with 400 otherwise.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -2868,6 +2871,8 @@ beforeEach(async () => {
   await getPool().query('DELETE FROM bestellines');
   await getPool().query('DELETE FROM bestelheaders');
   await getPool().query('DELETE FROM klanten');
+  await getPool().query('DELETE FROM kunstwerken');
+  await getPool().query('DELETE FROM kunstenaars');
   await getPool().query("UPDATE counters SET value = 0 WHERE id = 'bestelnummer'");
 });
 
@@ -2961,7 +2966,7 @@ describe('bestelheaders routes', () => {
       new Request('http://localhost/api', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ status: 'Goedgekeurd' }),
+        body: JSON.stringify({ status: 'Te versturen naar drukker' }),
       }),
       { params: { id: header.id } }
     );
@@ -2977,11 +2982,125 @@ describe('bestelheaders routes', () => {
     const [headerRows] = await getPool().query('SELECT status FROM bestelheaders WHERE id = ?', [
       header.id,
     ]);
-    expect((headerRows as Array<{ status: string }>)[0].status).toBe('Goedgekeurd');
+    expect((headerRows as Array<{ status: string }>)[0].status).toBe('Te versturen naar drukker');
     const [updatedLineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE id = ?', [
       lineId,
     ]);
     expect(Number((updatedLineRows as Array<{ prijs: string }>)[0].prijs)).toBe(199);
+  });
+
+  it('rejects a line with a non-positive quantity', async () => {
+    const klant = await insertRow<{ id: string }>('klanten', {
+      email: 'e@example.com',
+      wachtwoordHash: await hashPassword('x'),
+      status: 'Goedgekeurd',
+    } as never);
+    const response = await createHeader(
+      new Request('http://localhost/api', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          klantId: klant.id,
+          lines: [{ kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 100, quantity: 0 }],
+        }),
+      })
+    );
+    expect(response.status).toBe(400);
+    const [rows] = await getPool().query('SELECT id FROM bestelheaders WHERE klantId = ?', [klant.id]);
+    expect((rows as unknown[]).length).toBe(0);
+  });
+
+  it('rejects a line with a non-positive prijs', async () => {
+    const klant = await insertRow<{ id: string }>('klanten', {
+      email: 'f@example.com',
+      wachtwoordHash: await hashPassword('x'),
+      status: 'Goedgekeurd',
+    } as never);
+    const response = await createHeader(
+      new Request('http://localhost/api', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          klantId: klant.id,
+          lines: [{ kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: -5, quantity: 1 }],
+        }),
+      })
+    );
+    expect(response.status).toBe(400);
+  });
+
+  it('rejects ordering an artwork exclusively reserved for a different klant', async () => {
+    const klantA = await insertRow<{ id: string }>('klanten', {
+      email: 'g@example.com',
+      wachtwoordHash: await hashPassword('x'),
+      status: 'Goedgekeurd',
+    } as never);
+    const klantB = await insertRow<{ id: string }>('klanten', {
+      email: 'h@example.com',
+      wachtwoordHash: await hashPassword('x'),
+      status: 'Goedgekeurd',
+    } as never);
+    const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+      naam: 'Exclusieve Artiest',
+      verkooprecht: 'open',
+      exclusiefVoorKlantId: klantB.id,
+    } as never);
+    const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+      naam: 'Werk',
+      kunstenaarId: kunstenaar.id,
+    } as never);
+
+    const response = await createHeader(
+      new Request('http://localhost/api', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          klantId: klantA.id,
+          lines: [{ kunstwerkId: kunstwerk.id, maatId: 'maat-1', materiaalId: 'mat-1', prijs: 100, quantity: 1 }],
+        }),
+      })
+    );
+    expect(response.status).toBe(403);
+
+    const allowedForB = await createHeader(
+      new Request('http://localhost/api', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          klantId: klantB.id,
+          lines: [{ kunstwerkId: kunstwerk.id, maatId: 'maat-1', materiaalId: 'mat-1', prijs: 100, quantity: 1 }],
+        }),
+      })
+    );
+    expect(allowedForB.status).toBe(201);
+  });
+
+  it('rejects ordering an artist-only artwork from a klant who is not that artist', async () => {
+    const klant = await insertRow<{ id: string }>('klanten', {
+      email: 'i@example.com',
+      wachtwoordHash: await hashPassword('x'),
+      status: 'Goedgekeurd',
+    } as never);
+    const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+      naam: 'Alleen-zelf Artiest',
+      verkooprecht: 'alleen-kunstenaar',
+    } as never);
+    const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+      naam: 'Werk 2',
+      kunstenaarId: kunstenaar.id,
+    } as never);
+
+    const response = await createHeader(
+      new Request('http://localhost/api', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          klantId: klant.id,
+          lines: [{ kunstwerkId: kunstwerk.id, maatId: 'maat-1', materiaalId: 'mat-1', prijs: 100, quantity: 1 }],
+        }),
+      })
+    );
+    expect(response.status).toBe(403);
   });
 });
 ```
@@ -2998,6 +3117,7 @@ Expected: FAIL — cannot find the route modules
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { getPool } from '@/lib/server/db';
+import type { PoolConnection } from 'mysql2/promise';
 
 const BESTELNR_PADDING = 5;
 
@@ -3011,12 +3131,70 @@ interface LineInput {
   hoogte?: number;
 }
 
+function validateLine(line: LineInput): string | null {
+  if (!Number.isInteger(line.quantity) || line.quantity <= 0) {
+    return 'invalid-quantity';
+  }
+  if (line.prijs !== null && (typeof line.prijs !== 'number' || line.prijs <= 0)) {
+    return 'invalid-prijs';
+  }
+  return null;
+}
+
+// Mirrors src/lib/resolveOrderRight.ts, which is now a client-side UI hint only —
+// this is the real enforcement, since there is no Firestore-rules layer anymore.
+async function checkOrderRight(
+  connection: PoolConnection,
+  kunstwerkId: string,
+  klantId: string
+): Promise<boolean> {
+  const [kunstwerkRows] = await connection.query(
+    'SELECT kunstenaarId FROM kunstwerken WHERE id = ?',
+    [kunstwerkId]
+  );
+  const kunstenaarId = (kunstwerkRows as Array<{ kunstenaarId: string | null }>)[0]?.kunstenaarId;
+  if (!kunstenaarId) return true;
+
+  const [kunstenaarRows] = await connection.query(
+    'SELECT verkooprecht, klantId, exclusiefVoorKlantId FROM kunstenaars WHERE id = ?',
+    [kunstenaarId]
+  );
+  const kunstenaar = (
+    kunstenaarRows as Array<{ verkooprecht: string; klantId: string | null; exclusiefVoorKlantId: string | null }>
+  )[0];
+  if (!kunstenaar) return false;
+
+  const isOwnArtwork = kunstenaar.klantId != null && kunstenaar.klantId === klantId;
+  if (isOwnArtwork) return true;
+  const isExclusiveToOther =
+    kunstenaar.exclusiefVoorKlantId != null && kunstenaar.exclusiefVoorKlantId !== klantId;
+  if (isExclusiveToOther) return false;
+  const isArtistOnlyForOthers = kunstenaar.verkooprecht !== 'open';
+  return !isArtistOnlyForOthers;
+}
+
 export async function POST(request: Request) {
   const { klantId, lines } = (await request.json()) as { klantId: string; lines: LineInput[] };
+
+  for (const line of lines) {
+    const validationError = validateLine(line);
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
+    }
+  }
+
   const pool = getPool();
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
+
+    for (const line of lines) {
+      if (!(await checkOrderRight(connection, line.kunstwerkId, klantId))) {
+        await connection.rollback();
+        return NextResponse.json({ error: 'order-not-allowed' }, { status: 403 });
+      }
+    }
+
     const [counterRows] = await connection.query(
       'UPDATE counters SET value = value + 1 WHERE id = ?',
       ['bestelnummer']
@@ -3124,13 +3302,13 @@ export async function PATCH(
 - [ ] **Step 6: Run test to verify it passes**
 
 Run: `npx vitest run tests/app/api/bestelheaders.test.ts`
-Expected: PASS (3 tests)
+Expected: PASS (7 tests)
 
 - [ ] **Step 7: Commit**
 
 ```bash
 git add src/app/api/bestelheaders tests/app/api/bestelheaders.test.ts
-git commit -m "feat: add bestelheaders/bestellines API routes with atomic bestelnr generation"
+git commit -m "feat: add bestelheaders/bestellines API routes with order-right and line validation"
 ```
 
 ---
