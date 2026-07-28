@@ -1,26 +1,35 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, afterEach } from 'vitest';
 import { getPool } from '@/lib/server/db';
 import { insertRow } from '@/lib/server/crud';
 import { hashPassword } from '@/lib/server/password';
 import { GET as listKlanten } from '@/app/api/klanten/route';
 import { PATCH as patchKlant, DELETE as deleteKlant } from '@/app/api/klanten/[id]/route';
 
-beforeEach(async () => {
-  await getPool().query('DELETE FROM klanten');
+// Tracks the exact ids each test creates and removes only those afterward -- never
+// a table-wide DELETE -- so this suite is safe to run against a klanten table that
+// already holds real customer registrations.
+const createdKlantIds: string[] = [];
+
+afterEach(async () => {
+  if (createdKlantIds.length > 0) {
+    await getPool().query('DELETE FROM klanten WHERE id IN (?)', [createdKlantIds]);
+    createdKlantIds.length = 0;
+  }
 });
 
 describe('klanten admin routes', () => {
   it('lists klanten', async () => {
-    await insertRow('klanten', {
+    const klant = await insertRow<{ id: string }>('klanten', {
       email: 'a@example.com',
       wachtwoordHash: await hashPassword('x'),
       companyName: 'Acme',
       status: 'Beoordelen',
     } as never);
+    createdKlantIds.push(klant.id);
     const response = await listKlanten();
     const body = await response.json();
-    expect(body).toHaveLength(1);
-    expect(body[0].companyName).toBe('Acme');
+    const found = body.find((row: { id: string }) => row.id === klant.id);
+    expect(found.companyName).toBe('Acme');
   });
 
   it('approves a klant with a prijsgroep', async () => {
@@ -29,6 +38,7 @@ describe('klanten admin routes', () => {
       wachtwoordHash: await hashPassword('x'),
       status: 'Beoordelen',
     } as never);
+    createdKlantIds.push(klant.id);
     const response = await patchKlant(
       new Request('http://localhost/api', {
         method: 'PATCH',
@@ -64,6 +74,7 @@ describe('klanten admin routes', () => {
       wachtwoordHash: await hashPassword('x'),
       status: 'Goedgekeurd',
     } as never);
+    createdKlantIds.push(klant.id);
     await patchKlant(
       new Request('http://localhost/api', {
         method: 'PATCH',

@@ -1,0 +1,68 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Commands
+
+```bash
+npm run dev              # start Next.js dev server
+npm run build            # production build (see MIJNHOST_BUILD note below)
+npm start                # start production server via app.js (Passenger-compatible)
+npm run lint             # next lint
+npm test                 # vitest run (all tests, single run — not watch mode)
+npx vitest run tests/app/api/klanten.test.ts   # run a single test file
+npx vitest run -t "some test name"             # run tests matching a name
+npm run migrate:firebase-data                  # one-off Firebase -> MySQL data migration script (scripts/migrate-firebase-data.ts)
+```
+
+**Production builds for mijn.host must set `MIJNHOST_BUILD=true`** (PowerShell: `$env:MIJNHOST_BUILD='true'; npm run build`). `src/config/pageAvailability.ts` reads this flag to gate `collecties`/`word-klant`/`inloggen`/`account`/`contact` behind the Under Construction page; `beheer` is always live. A plain `npm run build` leaves those routes fully public.
+
+### Tests run against a real shared database
+
+Vitest is **not** mocking the database — `tests/setup.ts` loads `.env.local` and API-route tests connect to the real MySQL staging database (`getPool()` in `src/lib/server/db.ts`) configured there. `vitest.config.ts` sets `fileParallelism: false` deliberately: several API test files still do scoped `DELETE FROM <table> WHERE ...` cleanup in `beforeEach`/`afterEach`, and running files in parallel can cause one file's cleanup to race another's in-flight rows. Don't re-enable parallelism without addressing that.
+
+**Hard rule: test cleanup must never delete data added through the application, even a table that happens to be empty right now.** Staging holds real migrated/admin-entered data (catalog lookup tables, medewerker accounts, instellingen) — a blanket `DELETE FROM <table>` / `TRUNCATE` with no `WHERE` will silently destroy it on the next full-suite run, and did exactly that at least twice before this rule was written down. Every test that touches the real database must scope its own cleanup to exactly the row(s) it created (by captured id in `afterEach`, or by an obviously-fake marker like an `@example.com` email or a `test-`-prefixed literal id when the id can't be captured directly) — never assume the table is or should be empty, never resolve "the row I just made" via list-ordering (`list()[0]`), and never reset a real generated-sequence counter (e.g. an order-number counter) for determinism — compute the expected value relative to the counter's current state instead.
+
+## Architecture
+
+**Stack**: Next.js 14 (App Router, server mode — not static export), TypeScript, Tailwind, `next-intl` for i18n, raw `mysql2` against MySQL (no ORM), session-cookie auth (no JWT, no Firebase — Firebase was fully removed).
+
+**Server entry**: `app.js` is a custom Node/Passenger-compatible server (required for mijn.host/DirectAdmin hosting) that wraps Next's request handler — `npm start` runs this, not `next start`.
+
+### Data layer
+
+- `db/schema.sql` is the source of truth for the MySQL schema (21 tables: `klanten`, `medewerkers`, `sessions`, `passwordResetTokens`, catalog lookup tables `segmenten`/`stijlen`/`onderwerpen`/`materiaalsoorten`/`materialen`/`maten`/`prijsgroepen`, `kunstenaars`/`kunstenaarAfspraken`, `drukkers`/`drukkerZendingen`, `kunstwerken`, `instellingen`, `counters`, `bestelheaders`/`bestellines`, `activiteitenlog`).
+- `src/lib/server/db.ts` exposes a single lazily-created `getPool()` connection pool, driven by `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME` env vars (see `.env.local.example`).
+- `src/lib/server/crud.ts` provides generic `listRows`/`getRow`/`insertRow`/`updateRow`/`deleteRow` helpers (with JSON-column encode/decode support) used by most API routes.
+- `src/lib/server/session.ts` / `password.ts` implement cookie-based sessions and `crypto.scrypt` password hashing — no external auth library.
+
+### API routes (`src/app/api`)
+
+- `src/app/api/[resource]/route.ts` is a **generic catch-all CRUD route** for simple lookup tables. `src/lib/server/lookupResources.ts` is the allow-list (`LOOKUP_RESOURCES`) of which resource names it serves, which JSON columns each has, and whether writes require `authRequired: 'medewerker'`. Any resource not in that map 404s.
+- Resources with extra logic (`klanten`, `bestelheaders`/`bestellines`, `activiteitenlog`, `instellingen`, `kunstenaars`/`kunstenaarAfspraken`, `drukkers`-related shipments, `auth`) have their own dedicated route files instead of going through `[resource]` — check `src/lib/server/lookupResources.ts` before assuming a resource is generic.
+- `src/lib/server/requireAuth.ts` (`requireMedewerker`) reads the session cookie and gates staff-only reads/writes — there is no Firestore-rules-style layer anymore, so this check is the only thing enforcing it.
+
+### Client data hooks (`src/lib`)
+
+- `useApiCollection` / `useApiRecord` (`src/lib/useApiCollection.ts`, `useApiRecord.ts`) are the generic client-side hooks for consuming the lookup-resource API, including empty-collection auto-seeding (mirrors the old Firestore auto-reseed behavior).
+- `useCustomerAuth` / `useAdminAuth` (`src/lib/useCustomerAuth.tsx`, `useAdminAuth.tsx`) wrap the session-based `/api/auth/*` endpoints; customer login/registration call `/api/auth/login` and `/api/auth/register` directly rather than going through the auth hook.
+
+### i18n / routing
+
+- Locale-prefixed routes live under `src/app/[locale]/...` (`nl`/`en`/`de`/`fr`, default `nl`, defined in `src/i18n/routing.ts`). There is no `middleware.ts` — the bare `src/app/page.tsx` is a client component that detects the browser locale (`src/lib/detectLocale.ts`) and redirects to `/{locale}/`.
+- `src/config/pageAvailability.ts` is the single on/off switch for which locale-prefixed routes are publicly reachable in a given build (see `MIJNHOST_BUILD` above).
+
+### Non-Next.js server components
+
+- `mail-server/` and `upload-server/` are standalone PHP endpoints (PHPMailer-based mail sending, artwork photo upload) deployed alongside the Next app, not part of it. Each has a git-ignored `config.php` (see the `.example.php` templates) holding an `allowed_origins` CORS allowlist — keep both the dev and production origins in that list when editing.
+
+## GitHub / CI
+
+- `master` is the only branch production deploys from (enforced in the workflow itself, not just by convention).
+- There is no local database: local dev (`npm run dev`) and the test suite both connect to the same shared MySQL **staging** database on mijn.host via `.env.local` (`DB_HOST`/`DB_USER`/etc., see `.env.local.example`) — there's no throwaway/local MySQL instance to set up.
+- Three `workflow_dispatch` GitHub Actions live in `.github/workflows/`:
+  - `deploy-naar-staging.yml` — builds and FTP-deploys to `staging.glassartanddesign.com` (Basic Auth via `.htaccess`, `dangerous-clean-slate: true`).
+  - `deploy-naar-production.yml` — only runs when dispatched against `refs/heads/master`; FTP-deploys to `glassartanddesign.com`, excluding `mail-server/`/`upload-server/` from the sync so those PHP endpoints aren't wiped.
+  - `deploy-pages.yml` — deploys to GitHub Pages on every push to `master` (dev/staging environment kept alongside mijn.host per an earlier explicit client decision).
+
+**⚠️ Known-stale: none of these three workflows have been updated for the Next.js server-mode + MySQL migration.** All three still run a plain `npm run build` expecting a static `out/` export and pass `NEXT_PUBLIC_FIREBASE_*` env vars that no longer exist in the app (Firebase was fully removed). They predate — and are not accounted for in — the migration plan's Task 25 (steps 5-8 of `docs/superpowers/plans/2026-07-23-firebase-to-mysql-migration.md` are still unchecked: setting production env vars, building+uploading the Node app, restarting/verifying, and retiring GitHub Pages). Don't assume a green run of these workflows reflects the current server-mode architecture — they need to be rewritten (Node/Passenger deploy instead of static FTP upload, MySQL env vars instead of Firebase ones) before they're trustworthy again.

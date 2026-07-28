@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, afterEach } from 'vitest';
 import { getPool } from '@/lib/server/db';
 import { insertRow } from '@/lib/server/crud';
 import { hashPassword, verifyPassword } from '@/lib/server/password';
@@ -8,9 +8,14 @@ vi.mock('@/lib/server/sendResetEmail', () => ({ sendResetEmail: vi.fn().mockReso
 import { POST as requestReset } from '@/app/api/auth/reset-password/request/route';
 import { POST as confirmReset } from '@/app/api/auth/reset-password/confirm/route';
 
-beforeEach(async () => {
-  await getPool().query('DELETE FROM klanten');
-  await getPool().query('DELETE FROM passwordResetTokens');
+// Every test uses a @example.com address -- a domain no real customer would
+// plausibly use -- so cleanup is scoped to exactly that pattern instead of a
+// table-wide DELETE, never touching a real customer or their reset tokens.
+afterEach(async () => {
+  await getPool().query(
+    "DELETE FROM passwordResetTokens WHERE userId IN (SELECT id FROM klanten WHERE email LIKE '%@example.com')"
+  );
+  await getPool().query("DELETE FROM klanten WHERE email LIKE '%@example.com'");
 });
 
 describe('password reset routes', () => {

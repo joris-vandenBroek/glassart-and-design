@@ -1,11 +1,6 @@
-import { describe, expect, it, beforeEach } from 'vitest';
-import { getPool } from '@/lib/server/db';
+import { describe, expect, it } from 'vitest';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { requireMedewerker } from '@/lib/server/requireAuth';
-
-beforeEach(async () => {
-  await getPool().query('DELETE FROM sessions');
-});
 
 function requestWithCookie(sessionId?: string) {
   return new Request('http://localhost/api', {

@@ -1,13 +1,14 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { getPool } from '@/lib/server/db';
 import { POST, GET } from '@/app/api/activiteitenlog/route';
 
-beforeEach(async () => {
-  await getPool().query('DELETE FROM activiteitenlog');
-});
-
+// This route's GET has no per-test filter (it lists the whole table, newest 500),
+// and POST doesn't echo back the inserted row's id -- so instead of a table-wide
+// DELETE, each test uses a distinctive omschrijving/actorEmail to find its own entry
+// within whatever else (real activity or other tests) is present.
 describe('activiteitenlog route', () => {
-  it('inserts an entry (with omschrijving) and lists it back, newest first', async () => {
+  it('inserts an entry (with omschrijving) and lists it back', async () => {
+    const marker = `test-marker-${Date.now()}-${Math.random()}`;
     await POST(
       new Request('http://localhost/api', {
         method: 'POST',
@@ -17,15 +18,17 @@ describe('activiteitenlog route', () => {
           actorId: 'k1',
           actorEmail: 'k@x.com',
           actorNaam: 'Acme',
-          omschrijving: 'Bestelling GD-00001',
+          omschrijving: marker,
         }),
       })
     );
     const response = await GET();
     const body = await response.json();
-    expect(body).toHaveLength(1);
-    expect(body[0].type).toBe('bestelling_geplaatst');
-    expect(body[0].omschrijving).toBe('Bestelling GD-00001');
+    const found = body.find((row: { omschrijving: string }) => row.omschrijving === marker);
+    expect(found).toBeDefined();
+    expect(found.type).toBe('bestelling_geplaatst');
+
+    await getPool().query('DELETE FROM activiteitenlog WHERE omschrijving = ?', [marker]);
   });
 
   it('rejects an unknown activiteit type', async () => {

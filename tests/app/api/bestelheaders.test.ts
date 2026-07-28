@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, afterEach } from 'vitest';
 import { getPool } from '@/lib/server/db';
 import { insertRow } from '@/lib/server/crud';
 import { hashPassword } from '@/lib/server/password';
@@ -6,14 +6,41 @@ import { POST as createHeader, GET as listHeaders } from '@/app/api/bestelheader
 import { PATCH as patchHeader } from '@/app/api/bestelheaders/[id]/route';
 import { PATCH as patchLine } from '@/app/api/bestelheaders/[id]/bestellines/[lineId]/route';
 
-beforeEach(async () => {
-  await getPool().query('DELETE FROM bestellines');
-  await getPool().query('DELETE FROM bestelheaders');
-  await getPool().query('DELETE FROM klanten');
-  await getPool().query('DELETE FROM kunstwerken');
-  await getPool().query('DELETE FROM kunstenaars');
-  await getPool().query("UPDATE counters SET value = 0 WHERE id = 'bestelnummer'");
+const BESTELNR_PADDING = 5;
+
+// Tracks the exact ids/emails each test creates and removes only those afterward --
+// never a table-wide DELETE, and never resets the real counters.bestelnummer sequence
+// (a real customer's next order continues from wherever it was, uninterrupted by a
+// test run -- resetting it to 0 would risk a real order colliding with a bestelnr
+// already issued before the tests ran). "Incrementing bestelnr" tests instead read
+// the counter's current value first and assert relative to that.
+const createdKlantEmails: string[] = [];
+const createdKunstwerkIds: string[] = [];
+const createdKunstenaarIds: string[] = [];
+
+afterEach(async () => {
+  if (createdKlantEmails.length > 0) {
+    await getPool().query('DELETE FROM bestelheaders WHERE klantId IN (SELECT id FROM klanten WHERE email IN (?))', [
+      createdKlantEmails,
+    ]);
+    await getPool().query('DELETE FROM klanten WHERE email IN (?)', [createdKlantEmails]);
+    createdKlantEmails.length = 0;
+  }
+  if (createdKunstwerkIds.length > 0) {
+    await getPool().query('DELETE FROM kunstwerken WHERE id IN (?)', [createdKunstwerkIds]);
+    createdKunstwerkIds.length = 0;
+  }
+  if (createdKunstenaarIds.length > 0) {
+    await getPool().query('DELETE FROM kunstenaars WHERE id IN (?)', [createdKunstenaarIds]);
+    createdKunstenaarIds.length = 0;
+  }
 });
+
+async function nextExpectedBestelnr(): Promise<string> {
+  const [rows] = await getPool().query("SELECT value FROM counters WHERE id = 'bestelnummer'", []);
+  const current = ((rows as Array<{ value: number }>)[0]?.value ?? 0) + 1;
+  return `GD-${String(current).padStart(BESTELNR_PADDING, '0')}`;
+}
 
 describe('bestelheaders routes', () => {
   it('creates a header with lines and an incrementing bestelnr', async () => {
@@ -22,6 +49,8 @@ describe('bestelheaders routes', () => {
       wachtwoordHash: await hashPassword('x'),
       status: 'Goedgekeurd',
     } as never);
+    createdKlantEmails.push('k@example.com');
+    const expectedBestelnr = await nextExpectedBestelnr();
 
     const response = await createHeader(
       new Request('http://localhost/api', {
@@ -35,7 +64,7 @@ describe('bestelheaders routes', () => {
     );
     expect(response.status).toBe(201);
     const body = await response.json();
-    expect(body.bestelnr).toBe('GD-00001');
+    expect(body.bestelnr).toBe(expectedBestelnr);
 
     const [lineRows] = await getPool().query(
       'SELECT * FROM bestellines WHERE bestelheaderId = ?',
@@ -55,28 +84,35 @@ describe('bestelheaders routes', () => {
       wachtwoordHash: await hashPassword('x'),
       status: 'Goedgekeurd',
     } as never);
-    await createHeader(
-      new Request('http://localhost/api', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ klantId: klantA.id, lines: [] }),
-      })
-    );
-    await createHeader(
-      new Request('http://localhost/api', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ klantId: klantB.id, lines: [] }),
-      })
-    );
+    createdKlantEmails.push('a@example.com', 'b@example.com');
+    const headerA = await (
+      await createHeader(
+        new Request('http://localhost/api', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ klantId: klantA.id, lines: [] }),
+        })
+      )
+    ).json();
+    const headerB = await (
+      await createHeader(
+        new Request('http://localhost/api', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ klantId: klantB.id, lines: [] }),
+        })
+      )
+    ).json();
 
     const all = await listHeaders(new Request('http://localhost/api/bestelheaders'));
-    expect((await all.json())).toHaveLength(2);
+    const allIds = (await all.json()).map((row: { id: string }) => row.id);
+    expect(allIds).toEqual(expect.arrayContaining([headerA.id, headerB.id]));
 
     const onlyA = await listHeaders(
       new Request(`http://localhost/api/bestelheaders?klantId=${klantA.id}`)
     );
-    expect((await onlyA.json())).toHaveLength(1);
+    const onlyAIds = (await onlyA.json()).map((row: { id: string }) => row.id);
+    expect(onlyAIds).toEqual([headerA.id]);
   });
 
   it('updates header status and a line price', async () => {
@@ -85,6 +121,7 @@ describe('bestelheaders routes', () => {
       wachtwoordHash: await hashPassword('x'),
       status: 'Goedgekeurd',
     } as never);
+    createdKlantEmails.push('c@example.com');
     const created = await createHeader(
       new Request('http://localhost/api', {
         method: 'POST',
@@ -134,6 +171,7 @@ describe('bestelheaders routes', () => {
       wachtwoordHash: await hashPassword('x'),
       status: 'Goedgekeurd',
     } as never);
+    createdKlantEmails.push('e@example.com');
     const response = await createHeader(
       new Request('http://localhost/api', {
         method: 'POST',
@@ -155,6 +193,7 @@ describe('bestelheaders routes', () => {
       wachtwoordHash: await hashPassword('x'),
       status: 'Goedgekeurd',
     } as never);
+    createdKlantEmails.push('f@example.com');
     const response = await createHeader(
       new Request('http://localhost/api', {
         method: 'POST',
@@ -179,15 +218,18 @@ describe('bestelheaders routes', () => {
       wachtwoordHash: await hashPassword('x'),
       status: 'Goedgekeurd',
     } as never);
+    createdKlantEmails.push('g@example.com', 'h@example.com');
     const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
       naam: 'Exclusieve Artiest',
       verkooprecht: 'open',
       exclusiefVoorKlantId: klantB.id,
     } as never);
+    createdKunstenaarIds.push(kunstenaar.id);
     const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
       naam: 'Werk',
       kunstenaarId: kunstenaar.id,
     } as never);
+    createdKunstwerkIds.push(kunstwerk.id);
 
     const response = await createHeader(
       new Request('http://localhost/api', {
@@ -220,14 +262,17 @@ describe('bestelheaders routes', () => {
       wachtwoordHash: await hashPassword('x'),
       status: 'Goedgekeurd',
     } as never);
+    createdKlantEmails.push('i@example.com');
     const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
       naam: 'Alleen-zelf Artiest',
       verkooprecht: 'alleen-kunstenaar',
     } as never);
+    createdKunstenaarIds.push(kunstenaar.id);
     const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
       naam: 'Werk 2',
       kunstenaarId: kunstenaar.id,
     } as never);
+    createdKunstwerkIds.push(kunstwerk.id);
 
     const response = await createHeader(
       new Request('http://localhost/api', {

@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, afterEach } from 'vitest';
 import { getPool } from '@/lib/server/db';
 import { POST as register } from '@/app/api/auth/register/route';
 import { POST as login } from '@/app/api/auth/login/route';
@@ -13,9 +13,14 @@ function jsonRequest(body: unknown, cookie?: string) {
   });
 }
 
-beforeEach(async () => {
-  await getPool().query('DELETE FROM klanten');
-  await getPool().query('DELETE FROM sessions');
+// Every test registers a real klant via a @example.com address -- a domain no real
+// customer would plausibly use -- so cleanup is scoped to exactly that pattern
+// instead of a table-wide DELETE, never touching a real customer registration.
+afterEach(async () => {
+  await getPool().query(
+    "DELETE FROM sessions WHERE userType = 'klant' AND userId IN (SELECT id FROM klanten WHERE email LIKE '%@example.com')"
+  );
+  await getPool().query("DELETE FROM klanten WHERE email LIKE '%@example.com'");
 });
 
 describe('customer auth routes', () => {

@@ -1,14 +1,12 @@
-import { describe, expect, it, beforeEach } from 'vitest';
-import { getPool } from '@/lib/server/db';
+import { describe, expect, it } from 'vitest';
 import { insertRow } from '@/lib/server/crud';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { GET as listZendingen, POST as createZending } from '@/app/api/drukkers/[id]/zendingen/route';
 
-beforeEach(async () => {
-  await getPool().query('DELETE FROM drukkerZendingen');
-  await getPool().query('DELETE FROM drukkers');
-});
-
+// No table-wide cleanup here: every test creates its own fresh drukker (a random
+// UUID), and listZendingen is scoped to that one drukkerId -- other drukkers/
+// zendingen (real or from other test runs) never affect these assertions, so there
+// is nothing to protect against and no need to ever touch rows this test didn't create.
 describe('drukkerZendingen route', () => {
   it('rejects listing without a medewerker session', async () => {
     const drukker = await insertRow<{ id: string }>('drukkers', { naam: 'PrintCo' } as never);

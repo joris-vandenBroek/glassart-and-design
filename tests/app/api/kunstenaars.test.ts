@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, afterEach } from 'vitest';
 import { getPool } from '@/lib/server/db';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { insertRow } from '@/lib/server/crud';
@@ -13,13 +13,22 @@ import {
   PUT as putAfspraken,
 } from '@/app/api/kunstenaarAfspraken/[id]/route';
 
-beforeEach(async () => {
-  await getPool().query('DELETE FROM kunstenaarAfspraken');
-  // kunstwerken.kunstenaarId is a foreign key into kunstenaars — must be cleared
-  // first, or a row left over from another test file (e.g. bestelheaders.test.ts,
-  // which creates kunstwerken referencing kunstenaars) blocks this delete.
-  await getPool().query('DELETE FROM kunstwerken');
-  await getPool().query('DELETE FROM kunstenaars');
+// Tracks the exact ids each test creates and removes only those afterward -- never
+// a table-wide DELETE -- so this suite is safe to run against tables that already
+// hold real kunstenaars/kunstwerken. kunstenaarAfspraken cleans up automatically via
+// its ON DELETE CASCADE foreign key to kunstenaars.id.
+const createdKunstenaarIds: string[] = [];
+const createdKunstwerkIds: string[] = [];
+
+afterEach(async () => {
+  if (createdKunstwerkIds.length > 0) {
+    await getPool().query('DELETE FROM kunstwerken WHERE id IN (?)', [createdKunstwerkIds]);
+    createdKunstwerkIds.length = 0;
+  }
+  if (createdKunstenaarIds.length > 0) {
+    await getPool().query('DELETE FROM kunstenaars WHERE id IN (?)', [createdKunstenaarIds]);
+    createdKunstenaarIds.length = 0;
+  }
 });
 
 function req(method: string, body?: unknown, cookie?: string) {
@@ -32,12 +41,16 @@ function req(method: string, body?: unknown, cookie?: string) {
 
 describe('kunstenaars + kunstenaarAfspraken routes', () => {
   it('lists kunstenaars publicly, without ever exposing prijsafspraken', async () => {
-    await insertRow('kunstenaars', { naam: 'Anna', verkooprecht: 'open' } as never);
+    const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+      naam: 'Anna',
+      verkooprecht: 'open',
+    } as never);
+    createdKunstenaarIds.push(kunstenaar.id);
     const response = await listKunstenaars(req('GET'));
     const body = await response.json();
-    expect(body).toHaveLength(1);
-    expect(body[0].naam).toBe('Anna');
-    expect(body[0].prijsafspraken).toBeUndefined();
+    const found = body.find((row: { id: string }) => row.id === kunstenaar.id);
+    expect(found.naam).toBe('Anna');
+    expect(found.prijsafspraken).toBeUndefined();
   });
 
   it('rejects creating a kunstenaar without a medewerker session', async () => {
@@ -71,6 +84,7 @@ describe('kunstenaars + kunstenaarAfspraken routes', () => {
       naam: 'Dana',
       verkooprecht: 'open',
     } as never);
+    createdKunstenaarIds.push(kunstenaar.id);
     const sessionId = await createSession('medewerker', 'staff-1');
     const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
 

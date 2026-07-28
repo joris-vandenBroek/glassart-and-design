@@ -1,10 +1,6 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { getPool } from '@/lib/server/db';
 import { createSession, validateSession, destroySession } from '@/lib/server/session';
-
-beforeEach(async () => {
-  await getPool().query('DELETE FROM sessions');
-});
 
 describe('sessions', () => {
   it('creates a session and validates it', async () => {

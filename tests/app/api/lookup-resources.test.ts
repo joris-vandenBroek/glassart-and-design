@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, afterEach } from 'vitest';
 import { getPool } from '@/lib/server/db';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { GET as listResource, POST as createResource } from '@/app/api/[resource]/route';
@@ -8,8 +8,19 @@ import {
   DELETE as deleteResource,
 } from '@/app/api/[resource]/[id]/route';
 
-beforeEach(async () => {
-  await getPool().query('DELETE FROM segmenten');
+// Tracks the exact ids each test creates and removes only those afterward -- never
+// a table-wide DELETE. Previously "gets, updates and deletes a single segment" blindly
+// took listResponse.json()[0] as "the row just created", which is only safe on an
+// empty table -- against a segmenten table with real data, that would have PATCHed/
+// DELETEd an arbitrary real segment instead. Always resolve the id from the POST
+// response instead of list ordering.
+const createdSegmentIds: string[] = [];
+
+afterEach(async () => {
+  if (createdSegmentIds.length > 0) {
+    await getPool().query('DELETE FROM segmenten WHERE id IN (?)', [createdSegmentIds]);
+    createdSegmentIds.length = 0;
+  }
 });
 
 function jsonRequest(method: string, body?: unknown) {
@@ -22,13 +33,16 @@ function jsonRequest(method: string, body?: unknown) {
 
 describe('generic lookup-resource routes', () => {
   it('creates then lists a segment', async () => {
-    await createResource(jsonRequest('POST', { omschrijving: 'Hotel' }), {
+    const createResponse = await createResource(jsonRequest('POST', { omschrijving: 'Hotel' }), {
       params: { resource: 'segmenten' },
     });
+    const created = await createResponse.json();
+    createdSegmentIds.push(created.id);
+
     const response = await listResource(jsonRequest('GET'), { params: { resource: 'segmenten' } });
     const body = await response.json();
-    expect(body).toHaveLength(1);
-    expect(body[0].omschrijving).toBe('Hotel');
+    const found = body.find((row: { id: string }) => row.id === created.id);
+    expect(found.omschrijving).toBe('Hotel');
   });
 
   it('rejects an unknown resource with 404', async () => {
@@ -46,7 +60,6 @@ describe('generic lookup-resource routes', () => {
 
   it('allows reading drukkers with a valid medewerker session', async () => {
     const sessionId = await createSession('medewerker', 'staff-1');
-    await getPool().query('DELETE FROM drukkers');
     const response = await listResource(
       new Request('http://localhost/api/drukkers', {
         method: 'GET',
@@ -58,11 +71,10 @@ describe('generic lookup-resource routes', () => {
   });
 
   it('gets, updates and deletes a single segment', async () => {
-    await createResource(jsonRequest('POST', { omschrijving: 'Restaurant' }), {
+    const createResponse = await createResource(jsonRequest('POST', { omschrijving: 'Restaurant' }), {
       params: { resource: 'segmenten' },
     });
-    const listResponse = await listResource(jsonRequest('GET'), { params: { resource: 'segmenten' } });
-    const [created] = await listResponse.json();
+    const created = await createResponse.json();
 
     const getResponse = await getResource(jsonRequest('GET'), {
       params: { resource: 'segmenten', id: created.id },
