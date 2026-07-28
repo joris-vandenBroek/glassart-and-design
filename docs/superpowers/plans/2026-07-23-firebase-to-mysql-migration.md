@@ -3316,14 +3316,80 @@ git commit -m "feat: add bestelheaders/bestellines API routes with order-right a
 ## Task 15: `activiteitenlog` API route
 
 **Files:**
+- Modify: `src/lib/logActiviteit.ts` (add a runtime `ACTIVITEIT_TYPES` array that `ActiviteitType` is derived from — everything else in the file is untouched here, the Firestore rewrite happens in Task 16)
 - Create: `src/app/api/activiteitenlog/route.ts`
 - Test: `tests/app/api/activiteitenlog.test.ts`
 
 **Interfaces:**
 - Consumes: `getPool` (Task 1).
-- Produces: `POST /api/activiteitenlog` (insert), `GET /api/activiteitenlog` (list, newest 500 first) — replaces `logActiviteit.ts` and `BeheerShell`'s direct Firestore query.
+- Produces: `POST /api/activiteitenlog` (insert, validates `type` against `ACTIVITEIT_TYPES`), `GET /api/activiteitenlog` (list, newest 500 first) — replaces `logActiviteit.ts` and `BeheerShell`'s direct Firestore query.
+- **Security note (per the design addendum):** `firestore.rules` used to allow-list valid `type` values as a *second, independently-maintained* copy of the `ActiviteitType` union. That drift risk is eliminated here by making `ACTIVITEIT_TYPES` the one runtime source of truth — both `logActiviteit.ts`'s exported type and this route's validation derive from the same array.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Add the runtime `ACTIVITEIT_TYPES` array**
+
+In `src/lib/logActiviteit.ts`, replace the `export type ActiviteitType = ...` union with:
+
+```typescript
+// src/lib/logActiviteit.ts — replace the top-level ActiviteitType declaration with:
+export const ACTIVITEIT_TYPES = [
+  'kunstwerk_bekeken',
+  'mandje_toegevoegd',
+  'bestelling_geplaatst',
+  'account_bezocht',
+  'word_klant_bezocht',
+  'word_klant_aanvraag',
+  'klant_goedgekeurd',
+  'klant_afgewezen',
+  'klant_gewijzigd',
+  'klant_prijsgroep_gewijzigd',
+  'bestelling_goedgekeurd',
+  'bestelling_afgewezen',
+  'materiaalsoort_toegevoegd',
+  'materiaalsoort_gewijzigd',
+  'materiaalsoort_verwijderd',
+  'materiaal_toegevoegd',
+  'materiaal_gewijzigd',
+  'materiaal_verwijderd',
+  'maat_toegevoegd',
+  'maat_gewijzigd',
+  'maat_verwijderd',
+  'segment_toegevoegd',
+  'segment_gewijzigd',
+  'segment_verwijderd',
+  'kunstwerk_toegevoegd',
+  'kunstwerk_gewijzigd',
+  'kunstwerk_verwijderd',
+  'prijsgroep_toegevoegd',
+  'prijsgroep_gewijzigd',
+  'prijsgroep_verwijderd',
+  'bedrijfsgegevens_gewijzigd',
+  'mandje_eigen_maat_toegevoegd',
+  'bestelling_prijs_vastgesteld',
+  'bestelling_regel_gewijzigd',
+  'kunstenaar_toegevoegd',
+  'kunstenaar_gewijzigd',
+  'kunstenaar_verwijderd',
+  'klant_exclusiviteit_gewijzigd',
+  'drukker_toegevoegd',
+  'drukker_gewijzigd',
+  'drukker_verwijderd',
+  'bestelling_verstuurd_naar_drukker',
+  'bestelinstellingen_gewijzigd',
+  'klant_minimale_afname_gewijzigd',
+  'stijl_toegevoegd',
+  'stijl_gewijzigd',
+  'stijl_verwijderd',
+  'onderwerp_toegevoegd',
+  'onderwerp_gewijzigd',
+  'onderwerp_verwijderd',
+] as const;
+
+export type ActiviteitType = (typeof ACTIVITEIT_TYPES)[number];
+```
+
+(Leave every other export in the file — `ActiviteitActor`, `ONBEKENDE_ACTOR`, the `logActiviteit` function body, `actorFromCustomer`, `actorFromMedewerker` — exactly as they are; Task 16 rewrites `logActiviteit`'s body separately.)
+
+- [ ] **Step 2: Write the failing test**
 
 ```typescript
 // tests/app/api/activiteitenlog.test.ts
@@ -3336,38 +3402,60 @@ beforeEach(async () => {
 });
 
 describe('activiteitenlog route', () => {
-  it('inserts an entry and lists it back, newest first', async () => {
+  it('inserts an entry (with omschrijving) and lists it back, newest first', async () => {
     await POST(
       new Request('http://localhost/api', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ type: 'bestelling_geplaatst', actorId: 'k1', actorEmail: 'k@x.com', actorNaam: 'Acme' }),
+        body: JSON.stringify({
+          type: 'bestelling_geplaatst',
+          actorId: 'k1',
+          actorEmail: 'k@x.com',
+          actorNaam: 'Acme',
+          omschrijving: 'Bestelling GD-00001',
+        }),
       })
     );
     const response = await GET();
     const body = await response.json();
     expect(body).toHaveLength(1);
     expect(body[0].type).toBe('bestelling_geplaatst');
+    expect(body[0].omschrijving).toBe('Bestelling GD-00001');
+  });
+
+  it('rejects an unknown activiteit type', async () => {
+    const response = await POST(
+      new Request('http://localhost/api', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ type: 'niet_bestaand_type', actorId: null, actorEmail: 'x', actorNaam: 'x' }),
+      })
+    );
+    expect(response.status).toBe(400);
   });
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 3: Run test to verify it fails**
 
 Run: `npx vitest run tests/app/api/activiteitenlog.test.ts`
 Expected: FAIL — cannot find `@/app/api/activiteitenlog/route`
 
-- [ ] **Step 3: Implement the route**
+- [ ] **Step 4: Implement the route**
 
 ```typescript
 // src/app/api/activiteitenlog/route.ts
 import { NextResponse } from 'next/server';
 import { insertRow } from '@/lib/server/crud';
 import { getPool } from '@/lib/server/db';
+import { ACTIVITEIT_TYPES } from '@/lib/logActiviteit';
 
 export async function POST(request: Request) {
+  const data = await request.json();
+  if (!ACTIVITEIT_TYPES.includes(data.type)) {
+    return NextResponse.json({ error: 'invalid-type' }, { status: 400 });
+  }
   try {
-    const data = await request.json();
     await insertRow('activiteitenlog', data);
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch {
@@ -3383,16 +3471,16 @@ export async function GET() {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 5: Run test to verify it passes**
 
 Run: `npx vitest run tests/app/api/activiteitenlog.test.ts`
-Expected: PASS (1 test)
+Expected: PASS (2 tests)
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add src/app/api/activiteitenlog tests/app/api/activiteitenlog.test.ts
-git commit -m "feat: add activiteitenlog API route"
+git add src/lib/logActiviteit.ts src/app/api/activiteitenlog tests/app/api/activiteitenlog.test.ts
+git commit -m "feat: add activiteitenlog API route with single-source-of-truth type validation"
 ```
 
 ---
