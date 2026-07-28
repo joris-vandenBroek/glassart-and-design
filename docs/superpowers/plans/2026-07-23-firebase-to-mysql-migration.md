@@ -4363,11 +4363,17 @@ git commit -m "feat: migrate remaining catalog/display components to API hooks"
 **Interfaces:**
 - Consumes: `firebase-admin` (temporary dev dependency, only for this one-off script — not part of the deployed app), `getPool` (Task 1), `hashPassword` is **not** used here (per the design, medewerker passwords are not migrated).
 
-- [ ] **Step 1: Install `firebase-admin` as a dev dependency**
+- [x] **Step 1: Install `firebase-admin` as a dev dependency**
 
 Run: `npm install --save-dev firebase-admin`
 
-- [ ] **Step 2: Write the migration script**
+- [x] **Step 2: Write the migration script**
+
+Real implementation adds an `import 'dotenv'; dotenv.config({ path: '.env.local' })` before
+the `getPool()` import (matching `tests/setup.ts`'s pattern) — `tsx` running this script
+standalone does not auto-load `.env.local` the way Next.js/Vitest do, so without it
+`getPool()` fell back to a bare `mysql.createPool()` pointed at `127.0.0.1:3306` and failed
+with `ECONNREFUSED`. Otherwise unchanged from the draft below.
 
 ```typescript
 // scripts/migrate-firebase-data.ts
@@ -4419,7 +4425,7 @@ main().catch((error) => {
 });
 ```
 
-- [ ] **Step 2: Add a package.json script entry**
+- [x] **Step 2: Add a package.json script entry**
 
 ```json
 // package.json — add under "scripts"
@@ -4428,25 +4434,32 @@ main().catch((error) => {
 
 Run: `npm install --save-dev tsx`
 
-- [ ] **Step 3: Run it against the real Firebase project and the mijn.host staging database**
+- [x] **Step 3: Run it against the real Firebase project and the mijn.host staging database**
 
-Run (with `GOOGLE_APPLICATION_CREDENTIALS` pointing at your downloaded service-account key — `.env.local` already points `getPool()` at the staging database from Task 1):
+Ran with `GOOGLE_APPLICATION_CREDENTIALS` pointing at the user-downloaded service-account
+key **outside the repo** (their `Downloads/` folder, never copied into the project tree —
+`.env.local` already points `getPool()` at the staging database from Task 1):
 ```bash
-GOOGLE_APPLICATION_CREDENTIALS=./firebase-service-account.json npm run migrate:firebase-data
+GOOGLE_APPLICATION_CREDENTIALS="/path/to/glassart-and-design-firebase-adminsdk-....json" npm run migrate:firebase-data
 ```
-Expected output: `Migrated instellingen/bedrijfsgegevens.` and `Migrated N medewerkers (...)`.
+Actual output: `Migrated instellingen/bedrijfsgegevens.` and
+`Migrated 4 medewerkers (passwords not carried over — each must use the wachtwoord-vergeten flow).`
 
-**Do not commit `firebase-service-account.json`** — add it to `.gitignore` immediately if it isn't already covered.
+Added `firebase-service-account*.json` to `.gitignore` as a defensive backstop, even though
+the key was never placed inside the repo in the first place.
 
-- [ ] **Step 4: Verify in MySQL**
+- [x] **Step 4: Verify in MySQL**
 
-Run: `mysql -hh64.mijn.host -P3306 -udv137864_staging -p dv137864_staging -e "SELECT * FROM instellingen; SELECT email, naam FROM medewerkers;"`
-Expected: one `instellingen` row and one `medewerkers` row per real staff account.
+Verified via an ad-hoc `mysql2` query (no local `mysql` CLI available) against the same
+`.env.local`-configured staging connection. Result: one `instellingen` row
+(`id: 'bedrijfsgegevens'`) and 4 real `medewerkers` rows (hem@, joris.vandenbroek@gmail.com,
+julie@, paul@glassartanddesign.com).
 
-- [ ] **Step 5: Commit the script (not the credentials file or any data)**
+- [x] **Step 5: Commit the script (not the credentials file or any data)**
 
 ```bash
-git add scripts/migrate-firebase-data.ts package.json package-lock.json
+git add scripts/migrate-firebase-data.ts package.json package-lock.json .gitignore \
+  docs/superpowers/plans/2026-07-23-firebase-to-mysql-migration.md
 git commit -m "feat: add one-off Firebase-to-MySQL data migration script"
 ```
 
