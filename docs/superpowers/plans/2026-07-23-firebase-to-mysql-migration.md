@@ -3622,21 +3622,29 @@ git commit -m "chore: remove Firebase entirely"
 **Interfaces:**
 - None.
 
-- [ ] **Step 1: Create the production MySQL database via DirectAdmin**
+**Note on SSH:** a separate session confirmed this DirectAdmin panel has **no working SSH access** (no "SSH Keys" page, only "Login Keys" which are DirectAdmin panel passwords, not SSH; key-based auth attempts failed with `Permission denied`). Every step below is written to avoid SSH entirely — using DirectAdmin's own UI, Remote MySQL access, and local-build-then-upload instead.
+
+- [ ] **Step 1: Create the production MySQL database via DirectAdmin, with Remote MySQL access**
 
 In DirectAdmin ("Databases"), create a new database (e.g. `glassart_prod`) and a dedicated database user with a strong password. Note the exact database name, username, and password — DirectAdmin typically prefixes both with your account username (e.g. `dv137864_glassart`).
 
-- [ ] **Step 2: Import the schema**
+Then open that database's **Access Hosts** (a.k.a. Remote MySQL) setting and add your current public IP address (not the `%` wildcard — mijn.host's own docs discourage that). This is required for Steps 2 and 3 below, since there is no SSH to run these commands on the server itself.
 
-Via SSH (using the connection details established in this conversation's earlier `nodetest.glassartanddesign.com` testing):
+- [ ] **Step 2: Import the schema from your local machine**
+
+Using a local MySQL client (e.g. the `mysql` CLI, or a GUI like DBeaver/TablePlus) pointed at the production host/port/credentials from Step 1:
 ```bash
-mysql -u<db-user> -p<db-password> <db-name> < db/schema.sql
+mysql -h<mijn.host-mysql-hostname> -P3306 -u<db-user> -p<db-password> <db-name> < db/schema.sql
 ```
-(Upload `db/schema.sql` to the server first via File Manager or `scp`.)
+(The MySQL hostname is shown next to the database in DirectAdmin's Databases overview — usually the server's own hostname, e.g. `h64.mijn.host`.)
 
-- [ ] **Step 3: Run the data migration script against production**
+- [ ] **Step 3: Run the data migration script against production, from your local machine**
 
-From your local machine, temporarily point `DB_HOST`/`DB_PORT`/etc. at the production database (DirectAdmin's MySQL is usually reachable remotely on request, or run the script via SSH on the server itself with Node installed there), then run the same `npm run migrate:firebase-data` command as in Task 22, Step 3.
+Temporarily point your local `.env.local`'s `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME` at the production values from Step 1 (keep a backup of your real `.env.local` values to restore afterward), then run the same command as in Task 22, Step 3:
+```bash
+GOOGLE_APPLICATION_CREDENTIALS=./firebase-service-account.json npm run migrate:firebase-data
+```
+Restore your local `.env.local` to its original (dev database) values immediately after this succeeds.
 
 - [ ] **Step 4: Set up the production Node.js app in DirectAdmin**
 
@@ -3644,15 +3652,15 @@ Using the same "Setup Node.js App" flow verified earlier in this conversation fo
 
 - [ ] **Step 5: Set production environment variables**
 
-In the Node.js app's "Environment variables" section in DirectAdmin, set `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (the production values from Step 1), and `MAIL_SERVER_RESET_ENDPOINT_URL` (pointing at the existing PHP mail-server's reset-email endpoint).
+In the Node.js app's "Environment variables" section in DirectAdmin, set `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (the production values from Step 1 — note these can stay as `127.0.0.1`/localhost-style values here, since the app itself runs ON the same server, unlike the temporary remote override in Step 3), and `MAIL_SERVER_RESET_ENDPOINT_URL` (pointing at the existing PHP mail-server's reset-email endpoint).
 
-- [ ] **Step 6: Upload the built app and install/build on the server**
+- [ ] **Step 6: Build locally, then upload the built app**
 
-Upload the repository (excluding `node_modules`, `.next`, `.git`) to the app's Application root, then via SSH (using the venv activation command DirectAdmin shows, as established earlier in this conversation):
-```bash
-npm install
-npm run build
-```
+Since there is no SSH to run `npm run build` on the server, and DirectAdmin's Node.js app page has no equivalent "run build" button (only "Run NPM Install", which runs `npm install` on the server itself — safe to use since this project has no native-binary dependencies per the approved design, so a Linux-built `node_modules` from that button is no different from what a cross-platform build would produce):
+
+1. Locally, run `npm run build` (produces a `.next` folder).
+2. Upload the whole repository **including the `.next` folder**, but excluding `node_modules` and `.git`, to the app's Application root via File Manager or FTP (the same zip-then-extract-with-forward-slashes approach used for the `nodetest-app` test works here too — see `nodetest-app/README.md` for the exact PowerShell zip commands).
+3. Click DirectAdmin's **"Run NPM Install"** button on the Node.js app page to install `node_modules` on the server (this only needs production dependencies to run the pre-built `.next` output — `next start` does not need dev dependencies).
 
 - [ ] **Step 7: Restart and verify**
 
