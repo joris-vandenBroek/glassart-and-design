@@ -51,7 +51,11 @@ jobs:
           password: ${{ secrets.PRODUCTION_FTP_PASSWORD }}
           protocol: ftps
           local-dir: ./out/
-          server-dir: ./
+          server-dir: ./public_html/
+          # FTP account root lands at domains/glassartanddesign.com, one level above
+          # public_html/ -- DirectAdmin's Custom-directory picker didn't descend into
+          # public_html itself (same quirk hit when setting up staging's FTP account).
+          #
           # No dangerous-clean-slate here, unlike staging: this FTP account's directory
           # also holds mail-server/ and upload-server/ (PHP, not part of the Next.js build
           # output) -- wiping the remote dir first would delete those. Relying on the
