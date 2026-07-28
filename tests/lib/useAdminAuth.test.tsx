@@ -1,108 +1,55 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { AdminAuthProvider, useAdminAuth } from '@/lib/useAdminAuth';
 
-const onAuthStateChangedMock = vi.fn();
-const signInMock = vi.fn();
-const signOutMock = vi.fn();
-const resetPasswordMock = vi.fn();
-const getDocMock = vi.fn();
-
-vi.mock('@/lib/firebase', () => ({
-  auth: {},
-  db: {},
-}));
-
-vi.mock('firebase/auth', () => ({
-  onAuthStateChanged: (...args: unknown[]) => onAuthStateChangedMock(...args),
-  signInWithEmailAndPassword: (...args: unknown[]) => signInMock(...args),
-  signOut: (...args: unknown[]) => signOutMock(...args),
-  sendPasswordResetEmail: (...args: unknown[]) => resetPasswordMock(...args),
-}));
-
-vi.mock('firebase/firestore', () => ({
-  doc: vi.fn((_db, collection, id) => ({ collection, id })),
-  getDoc: (...args: unknown[]) => getDocMock(...args),
-}));
-
-function TestConsumer() {
-  const { user, isAdmin, isHydrated } = useAdminAuth();
-  if (!isHydrated) return <div data-testid="loading" />;
-  return (
-    <div>
-      <div data-testid="user">{user ? user.email : 'none'}</div>
-      <div data-testid="is-admin">{String(isAdmin)}</div>
-    </div>
-  );
-}
-
-function renderProvider() {
-  return render(
-    <AdminAuthProvider>
-      <TestConsumer />
-    </AdminAuthProvider>
-  );
-}
+const fetchMock = vi.fn();
 
 beforeEach(() => {
-  onAuthStateChangedMock.mockReset();
-  signInMock.mockReset();
-  signOutMock.mockReset();
-  resetPasswordMock.mockReset();
-  getDocMock.mockReset();
+  fetchMock.mockReset();
+  vi.stubGlobal('fetch', fetchMock);
 });
 
 describe('useAdminAuth', () => {
-  it('reports isHydrated with no user when signed out', async () => {
-    onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-      callback(null);
-      return () => {};
+  it('loads the current medewerker from /api/auth/me on mount', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ user: { id: 'm1', email: 'paul@glassartanddesign.com' } }),
     });
-    renderProvider();
-    await waitFor(() => expect(screen.getByTestId('user')).toBeInTheDocument());
-    expect(screen.getByTestId('user')).toHaveTextContent('none');
-    expect(screen.getByTestId('is-admin')).toHaveTextContent('false');
+    const { result } = renderHook(() => useAdminAuth(), { wrapper: AdminAuthProvider });
+    await waitFor(() => expect(result.current.isHydrated).toBe(true));
+    expect(result.current.user).toEqual({ uid: 'm1', email: 'paul@glassartanddesign.com' });
+    expect(result.current.isAdmin).toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith('/api/auth/me?type=medewerker');
   });
 
-  it('reports isAdmin true when a medewerkers document exists for the signed-in user', async () => {
-    getDocMock.mockResolvedValue({ exists: () => true });
-    onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-      callback({ uid: 'uid-1', email: 'paul@glassartanddesign.com' });
-      return () => {};
+  it('logs in via POST /api/auth/medewerker-login', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ user: null }) })
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ user: { id: 'm1', email: 'p@x.com' } }) });
+    const { result } = renderHook(() => useAdminAuth(), { wrapper: AdminAuthProvider });
+    await waitFor(() => expect(result.current.isHydrated).toBe(true));
+    await act(async () => {
+      await result.current.login('p@x.com', 'pw');
     });
-    renderProvider();
-    await waitFor(() => expect(screen.getByTestId('is-admin')).toHaveTextContent('true'));
-    expect(screen.getByTestId('user')).toHaveTextContent('paul@glassartanddesign.com');
-  });
-
-  it('reports isAdmin false when no medewerkers document exists for the signed-in user', async () => {
-    getDocMock.mockResolvedValue({ exists: () => false });
-    onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-      callback({ uid: 'uid-2', email: 'onbekend@glassartanddesign.com' });
-      return () => {};
-    });
-    renderProvider();
-    await waitFor(() => expect(screen.getByTestId('is-admin')).toHaveTextContent('false'));
-  });
-
-  it('calls signInWithEmailAndPassword with the given credentials', async () => {
-    onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-      callback(null);
-      return () => {};
-    });
-    signInMock.mockResolvedValue(undefined);
-    let hookValue: ReturnType<typeof useAdminAuth> | null = null;
-    function Capture() {
-      hookValue = useAdminAuth();
-      return null;
-    }
-    render(
-      <AdminAuthProvider>
-        <Capture />
-      </AdminAuthProvider>
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/auth/medewerker-login',
+      expect.objectContaining({ method: 'POST' })
     );
-    await waitFor(() => expect(hookValue?.isHydrated).toBe(true));
-    await hookValue!.login('paul@glassartanddesign.com', 'geheim123');
-    expect(signInMock).toHaveBeenCalledWith({}, 'paul@glassartanddesign.com', 'geheim123');
+  });
+
+  it('requests a password reset via POST /api/auth/reset-password/request', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ user: null }) })
+      .mockResolvedValueOnce({ ok: true });
+    const { result } = renderHook(() => useAdminAuth(), { wrapper: AdminAuthProvider });
+    await waitFor(() => expect(result.current.isHydrated).toBe(true));
+    await act(async () => {
+      await result.current.resetPassword('p@x.com');
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/auth/reset-password/request',
+      expect.objectContaining({ method: 'POST' })
+    );
   });
 });

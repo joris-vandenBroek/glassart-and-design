@@ -1,22 +1,6 @@
 'use client';
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  sendPasswordResetEmail,
-  type User,
-} from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 interface AdminUser {
   uid: string;
@@ -34,42 +18,57 @@ interface AdminAuthValue {
 
 const AdminAuthContext = createContext<AdminAuthValue | null>(null);
 
+async function loadMe(): Promise<AdminUser | null> {
+  const response = await fetch('/api/auth/me?type=medewerker');
+  const body = await response.json();
+  const medewerker = body.user as { id: string; email: string | null } | null;
+  return medewerker ? { uid: medewerker.id, email: medewerker.email } : null;
+}
+
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AdminUser | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    return onAuthStateChanged(auth, async (firebaseUser: User | null) => {
-      if (!firebaseUser) {
-        setUser(null);
-        setIsAdmin(false);
+    let cancelled = false;
+    loadMe().then((loaded) => {
+      if (!cancelled) {
+        setUser(loaded);
         setIsHydrated(true);
-        return;
       }
-      const medewerkerDoc = await getDoc(doc(db, 'medewerkers', firebaseUser.uid));
-      setUser({ uid: firebaseUser.uid, email: firebaseUser.email });
-      setIsAdmin(medewerkerDoc.exists());
-      setIsHydrated(true);
     });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const value = useMemo<AdminAuthValue>(
     () => ({
       user,
-      isAdmin,
+      isAdmin: user !== null,
       isHydrated,
       login: async (email: string, password: string) => {
-        await signInWithEmailAndPassword(auth, email, password);
+        const response = await fetch('/api/auth/medewerker-login', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        if (!response.ok) throw new Error('login failed');
+        setUser(await loadMe());
       },
       logout: async () => {
-        await firebaseSignOut(auth);
+        await fetch('/api/auth/logout', { method: 'POST' });
+        setUser(null);
       },
       resetPassword: async (email: string) => {
-        await sendPasswordResetEmail(auth, email);
+        await fetch('/api/auth/reset-password/request', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email, userType: 'medewerker' }),
+        });
       },
     }),
-    [user, isAdmin, isHydrated]
+    [user, isHydrated]
   );
 
   return <AdminAuthContext.Provider value={value}>{children}</AdminAuthContext.Provider>;

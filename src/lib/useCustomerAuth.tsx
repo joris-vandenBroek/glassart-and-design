@@ -1,16 +1,6 @@
 'use client';
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
-import { onAuthStateChanged, signOut as firebaseSignOut, type User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 interface CustomerUser {
   uid: string;
@@ -36,34 +26,45 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    return onAuthStateChanged(auth, async (firebaseUser: User | null) => {
-      if (!firebaseUser) {
-        setUser(null);
-        setIsCustomer(false);
-        setIsHydrated(true);
-        return;
+    let cancelled = false;
+    async function load() {
+      try {
+        const response = await fetch('/api/auth/me?type=klant');
+        const body = await response.json();
+        if (cancelled) return;
+        const klant = body.user as
+          | {
+              id: string;
+              email: string | null;
+              companyName?: string;
+              contactPerson?: string;
+              status?: string;
+              exclusieveKunstenaarIds?: string[];
+              minimaleAfname?: number | null;
+            }
+          | null;
+        if (!klant) {
+          setUser(null);
+          setIsCustomer(false);
+        } else {
+          setUser({
+            uid: klant.id,
+            email: klant.email,
+            companyName: klant.companyName ?? null,
+            contactPerson: klant.contactPerson ?? null,
+            exclusieveKunstenaarIds: klant.exclusieveKunstenaarIds ?? [],
+            minimaleAfname: klant.minimaleAfname ?? null,
+          });
+          setIsCustomer(klant.status === 'Goedgekeurd');
+        }
+      } finally {
+        if (!cancelled) setIsHydrated(true);
       }
-      const klantDoc = await getDoc(doc(db, 'klanten', firebaseUser.uid));
-      const klantData = klantDoc.exists()
-        ? (klantDoc.data() as {
-            status?: string;
-            companyName?: string;
-            contactPerson?: string;
-            exclusieveKunstenaarIds?: string[];
-            minimaleAfname?: number | null;
-          })
-        : null;
-      setUser({
-        uid: firebaseUser.uid,
-        email: firebaseUser.email,
-        companyName: klantData?.companyName ?? null,
-        contactPerson: klantData?.contactPerson ?? null,
-        exclusieveKunstenaarIds: klantData?.exclusieveKunstenaarIds ?? [],
-        minimaleAfname: klantData?.minimaleAfname ?? null,
-      });
-      setIsCustomer(klantData?.status === 'Goedgekeurd');
-      setIsHydrated(true);
-    });
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const value = useMemo<CustomerAuthValue>(
@@ -72,7 +73,9 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
       isCustomer,
       isHydrated,
       logout: async () => {
-        await firebaseSignOut(auth);
+        await fetch('/api/auth/logout', { method: 'POST' });
+        setUser(null);
+        setIsCustomer(false);
       },
     }),
     [user, isCustomer, isHydrated]

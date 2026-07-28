@@ -1580,9 +1580,10 @@ git commit -m "feat: add useApiCollection/useApiRecord hooks matching Firestore 
 
 **Interfaces:**
 - Produces (unchanged from current Firebase versions, so consuming components need no changes):
-  - `useCustomerAuth(): { user: { uid, email, companyName, contactPerson } | null; isCustomer: boolean; isHydrated: boolean; logout: () => Promise<void> }`
+  - `useCustomerAuth(): { user: { uid, email, companyName, contactPerson, exclusieveKunstenaarIds, minimaleAfname } | null; isCustomer: boolean; isHydrated: boolean; logout: () => Promise<void> }`
   - `useAdminAuth(): { user: { uid, email } | null; isAdmin: boolean; isHydrated: boolean; login; logout; resetPassword }`
 - Note: `login`/registration for customers happens via the plain `/api/auth/login` and `/api/auth/register` endpoints directly in `CustomerLoginForm`/`RegistrationForm` (Task 18) — `useCustomerAuth` itself has no `login` method, matching today's interface exactly (today's `CustomerLoginForm` calls Firebase's `signInWithEmailAndPassword` directly, not through the context).
+- `exclusieveKunstenaarIds`/`minimaleAfname` are per-klant overrides used by `CartPanel.tsx`'s order-right pre-check (Task 17) — the API's `/api/auth/me?type=klant` response already includes them since it returns the full `klanten` row (Task 6).
 
 - [ ] **Step 1: Write the failing test for `useCustomerAuth`**
 
@@ -1604,7 +1605,15 @@ describe('useCustomerAuth', () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        user: { id: 'k1', email: 'k@example.com', companyName: 'Acme', contactPerson: 'Jan', status: 'Goedgekeurd' },
+        user: {
+          id: 'k1',
+          email: 'k@example.com',
+          companyName: 'Acme',
+          contactPerson: 'Jan',
+          status: 'Goedgekeurd',
+          exclusieveKunstenaarIds: ['ka-1'],
+          minimaleAfname: 5,
+        },
       }),
     });
     const { result } = renderHook(() => useCustomerAuth(), { wrapper: CustomerAuthProvider });
@@ -1614,6 +1623,8 @@ describe('useCustomerAuth', () => {
       email: 'k@example.com',
       companyName: 'Acme',
       contactPerson: 'Jan',
+      exclusieveKunstenaarIds: ['ka-1'],
+      minimaleAfname: 5,
     });
     expect(result.current.isCustomer).toBe(true);
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/me?type=klant');
@@ -1661,6 +1672,8 @@ interface CustomerUser {
   email: string | null;
   companyName: string | null;
   contactPerson: string | null;
+  exclusieveKunstenaarIds: string[];
+  minimaleAfname: number | null;
 }
 
 interface CustomerAuthValue {
@@ -1685,7 +1698,15 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
         const body = await response.json();
         if (cancelled) return;
         const klant = body.user as
-          | { id: string; email: string | null; companyName?: string; contactPerson?: string; status?: string }
+          | {
+              id: string;
+              email: string | null;
+              companyName?: string;
+              contactPerson?: string;
+              status?: string;
+              exclusieveKunstenaarIds?: string[];
+              minimaleAfname?: number | null;
+            }
           | null;
         if (!klant) {
           setUser(null);
@@ -1696,6 +1717,8 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
             email: klant.email,
             companyName: klant.companyName ?? null,
             contactPerson: klant.contactPerson ?? null,
+            exclusieveKunstenaarIds: klant.exclusieveKunstenaarIds ?? [],
+            minimaleAfname: klant.minimaleAfname ?? null,
           });
           setIsCustomer(klant.status === 'Goedgekeurd');
         }
@@ -3616,28 +3639,34 @@ git commit -m "feat: rewrite logActiviteit to use API route"
 
 **Files:**
 - Modify: `src/components/CartPanel.tsx`
-- Test: existing test file for CartPanel if present, otherwise verify manually per Step 4 below (no CartPanel test file exists in `tests/` today, per the current test suite)
+- Delete: `src/lib/generateBestelnr.ts`, `tests/lib/generateBestelnr.test.ts` (deferred from Task 16 — this file was the last caller)
+- Test: `tests/components/CartPanel.test.tsx` (existing file — its Firebase/Firestore mocks are replaced with `fetch` mocks and `useApiCollection` mocks)
 
 **Interfaces:**
-- Consumes: `POST /api/bestelheaders` (Task 14).
+- Consumes: `POST /api/bestelheaders` (Task 14), `useApiCollection` (Task 9).
+- Note: the real current file is larger than originally scoped — it also client-side pre-checks order-right via `resolveOrderRight` (using `kunstwerken`/`kunstenaars` fetched through `useFirestoreCollection`) before ever calling the create endpoint, purely so the customer gets an immediate, specific error message instead of a generic failure. That pre-check stays (swapped to `useApiCollection`) — it's a UX nicety, not the real enforcement, which is Task 14's server-side check. If the client's cached data is stale and the server rejects with 403 anyway, the customer just sees the generic `placeOrderError` message.
 
-- [ ] **Step 1: Replace the Firestore imports and `handlePlaceOrder` body**
+- [ ] **Step 1: Replace the Firestore/generateBestelnr imports and the collection hooks**
 
 ```typescript
 // src/components/CartPanel.tsx — replace the top imports:
 // remove: import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 // remove: import { db } from '@/lib/firebase';
+// remove: import { useFirestoreCollection } from '@/lib/useFirestoreCollection';
 // remove: import { generateBestelnr } from '@/lib/generateBestelnr';
+// add:    import { useApiCollection } from '@/lib/useApiCollection';
 ```
 
 ```typescript
-// src/components/CartPanel.tsx — replace handlePlaceOrder's body
-  async function handlePlaceOrder() {
-    if (!user) {
-      return;
-    }
-    setPlaceOrderError(null);
-    setEmailError(false);
+// src/components/CartPanel.tsx — replace the two collection-hook calls (unchanged arguments, just the hook name)
+  const kunstwerken = useApiCollection<Kunstwerk>('kunstwerken', { skip: !isCustomer });
+  const kunstenaars = useApiCollection<Kunstenaar>('kunstenaars', { skip: !isCustomer });
+```
+
+- [ ] **Step 2: Replace `handlePlaceOrder`'s order-creation body** (the order-right pre-check above it, using `resolveOrderRight`, stays exactly as-is)
+
+```typescript
+// src/components/CartPanel.tsx — replace only the try block inside handlePlaceOrder
     try {
       const response = await fetch('/api/bestelheaders', {
         method: 'POST',
@@ -3656,28 +3685,36 @@ git commit -m "feat: rewrite logActiviteit to use API route"
         }),
       });
       if (!response.ok) throw new Error('order failed');
+      const { bestelnr } = await response.json();
       clear();
       setOrderPlaced(true);
-      void logActiviteit('bestelling_geplaatst', actorFromCustomer(user));
+      void logActiviteit('bestelling_geplaatst', actorFromCustomer(user), bestelnr);
       if (user.email) {
         void sendConfirmationEmail(user.email);
       }
     } catch {
       setPlaceOrderError(t('placeOrderError'));
     }
-  }
 ```
 
-- [ ] **Step 2: Run the full test suite to check nothing else references the removed imports**
+- [ ] **Step 3: Update the existing test file's mocks**
+
+`tests/components/CartPanel.test.tsx` currently mocks `@/lib/firebase`, `firebase/auth`, and Firestore's `addDoc`/`runTransaction` (for the old `generateBestelnr` transaction). Replace those with a `fetch` mock (the file already has one, per Task 1's earlier exploration — `vi.stubGlobal('fetch', fetchMock)`) that resolves `/api/bestelheaders` POSTs with `{ ok: true, json: async () => ({ id: 'header-1', bestelnr: 'GD-00001' }) }`, and mock `@/lib/useApiCollection` the same way the old `@/lib/useFirestoreCollection` mock worked (same shape: `{ items, error, add, update, remove, refetch }`).
+
+- [ ] **Step 4: Delete the now-unused `generateBestelnr`**
+
+Run: `rm src/lib/generateBestelnr.ts tests/lib/generateBestelnr.test.ts`
+
+- [ ] **Step 5: Run the full test suite**
 
 Run: `npm run test`
 Expected: PASS — no test references `generateBestelnr` or Firestore in `CartPanel`
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add src/components/CartPanel.tsx
-git commit -m "feat: migrate CartPanel to /api/bestelheaders"
+git add -u src/components/CartPanel.tsx tests/components/CartPanel.test.tsx
+git commit -m "feat: migrate CartPanel to /api/bestelheaders and useApiCollection, remove generateBestelnr"
 ```
 
 ---
