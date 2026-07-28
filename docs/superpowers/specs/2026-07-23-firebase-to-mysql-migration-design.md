@@ -152,6 +152,61 @@ puur de volgorde waarin gebouwd wordt:
   geen database nodig.
 - Bestaande componenttests die nu Firebase mocken worden aangepast naar de nieuwe hooks.
 
+## Addendum (2026-07-28): bijgewerkte scope na heraudit
+
+Na het schrijven van dit ontwerp is de codebase door andere sessies flink uitgebreid. Een
+volledige heraudit (zie de implementatieplan-taken) bracht het volgende aan het licht dat
+in de originele scope ontbrak.
+
+**Nieuwe tabellen:**
+- `stijlen`, `onderwerpen` — simpele lookup-tabellen, zelfde vorm als `segmenten`.
+- `kunstenaars` — publiek leesbaar, staff-only schrijfbaar, **behalve** het veld
+  `prijsafspraken`.
+- `kunstenaarAfspraken` — staff-only, bevat alleen `prijsafspraken` (bewust gesplitst van
+  `kunstenaars` voor toegangscontrole — nu via Firestore-rules, straks server-side).
+- `drukkers` — **volledig staff-only**, geen publieke lezing (in tegenstelling tot
+  `kunstenaars`).
+- `drukkerZendingen` (was Firestore-subcollectie `drukkers/{id}/zendingen`) — append-only
+  verzendlog, `drukkerId` als foreign key.
+
+**Gewijzigde velden:**
+- `kunstwerken`: `artiest` bestaat niet meer, vervangen door `kunstenaarId` (foreign key
+  naar `kunstenaars`). Nieuw: `formaat` (`'vierkant'|'liggend'|'staand'`, optioneel),
+  `stijlIds`/`onderwerpIds` (JSON-arrays, optioneel), `aiGegenereerd` (boolean, optioneel),
+  `prijsPerM2` (decimaal, optioneel, alternatief prijsmodel naast de bestaande
+  `prijzen`-grid).
+- `klanten`: `exclusieveKunstenaarIds` (JSON-array) en `minimaleAfname` (nullable getal,
+  klant-specifieke override) ontbraken in het oorspronkelijke schema.
+- `bestelheaders.status`: de workflow is uitgebreid met een drukker-stap — huidige waarden
+  zijn `Te beoordelen` → `Te versturen naar drukker` → `Verstuurd naar drukker`, of
+  `Afgewezen`. De oorspronkelijke waarde `Goedgekeurd` bestaat niet meer.
+- `instellingen`: een tweede document `bestelinstellingen` (globale `minimaleAfname`,
+  los van de klant-specifieke override hierboven).
+
+**Beveiliging die van Firestore-rules naar server-side moet verhuizen** (er is straks geen
+rules-laag meer, dus dit wordt de enige handhaving):
+1. **Verkooprecht/exclusiviteit** (`resolveOrderRight`-equivalent) — nu alleen een
+   client-side UI-hint die de Firestore-rules spiegelt; moet **echt afgedwongen** worden
+   bij het aanmaken van een bestelling (server-side check tegen `kunstwerken.kunstenaarId`
+   → `kunstenaars.verkooprecht`/`exclusiefVoorKlantId`).
+2. **`bestellines`-validatie** (prijs > 0, quantity een positief geheel getal, toegestane
+   velden) — dit werd **uitsluitend** door Firestore-rules afgedwongen, nergens
+   client-side. Moet expliciet server-side in de bestelheaders-route.
+3. **`activiteitenlog`-type-allowlist** — nu dubbel onderhouden (een lijst in
+   `firestore.rules`, een aparte TS-union in `logActiviteit.ts`). In de nieuwe architectuur
+   consolideren tot één bron: de API-route valideert simpelweg tegen dezelfde TS-union die
+   de client al importeert, geen aparte lijst meer nodig.
+4. **Staff-only resources** (`drukkers`, `kunstenaarAfspraken`, en de generieke
+   lookup-resource-route in het algemeen) hebben momenteel geen enkele auth-check in het
+   ontwerp. **Besluit (2026-07-28):** de generieke CRUD-routefactory (zie API-laag
+   hierboven) krijgt een optioneel `authRequired: 'medewerker'`-parameter, herbruikbaar
+   voor elke staff-only resource, in plaats van losse handgeschreven routes per resource.
+
+**`kunstenaars`' veldsplitsing:** de publieke route serveert `kunstenaars` zonder de
+`prijsafspraken`-kolom (een expliciete kolom-projectie, geen `SELECT *`); een aparte
+staff-only route (met de nieuwe `authRequired: 'medewerker'`-gate) serveert/bewerkt
+`kunstenaarAfspraken` — dit spiegelt de huidige Firestore-opzet vrijwel 1-op-1.
+
 ## Buiten scope
 
 - Migratie van `mail-server`/`upload-server` (PHP) naar Node — blijft ongewijzigd.
