@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
-import { useFirestoreCollection } from '@/lib/useFirestoreCollection';
+import { useApiCollection } from '@/lib/useApiCollection';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
@@ -36,14 +36,14 @@ export function ProductsGrid() {
     setActiveFilter(segmentParam ?? ALL_FILTER);
   }, [segmentParam]);
 
-  const segmenten = useFirestoreCollection<Segment>('segmenten');
-  const kunstwerken = useFirestoreCollection<Kunstwerk>('kunstwerken');
-  const materialen = useFirestoreCollection<Materiaal>('materialen');
-  const maten = useFirestoreCollection<Maat>('maten');
-  const materiaalsoorten = useFirestoreCollection<Materiaalsoort>('materiaalsoorten');
-  const kunstenaars = useFirestoreCollection<Kunstenaar>('kunstenaars');
-  const stijlen = useFirestoreCollection<Stijl>('stijlen');
-  const onderwerpen = useFirestoreCollection<Onderwerp>('onderwerpen');
+  const segmenten = useApiCollection<Segment>('segmenten');
+  const kunstwerken = useApiCollection<Kunstwerk>('kunstwerken');
+  const materialen = useApiCollection<Materiaal>('materialen');
+  const maten = useApiCollection<Maat>('maten');
+  const materiaalsoorten = useApiCollection<Materiaalsoort>('materiaalsoorten');
+  const kunstenaars = useApiCollection<Kunstenaar>('kunstenaars');
+  const stijlen = useApiCollection<Stijl>('stijlen');
+  const onderwerpen = useApiCollection<Onderwerp>('onderwerpen');
 
   if (segmenten.items === null || kunstwerken.items === null) {
     return null;

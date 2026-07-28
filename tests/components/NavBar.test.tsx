@@ -5,7 +5,8 @@ import { NavBar } from '@/components/NavBar';
 import messages from '../../messages/nl.json';
 
 const usePathnameMock = vi.fn(() => '/');
-const getDocsMock = vi.fn();
+const fetchMock = vi.fn();
+vi.stubGlobal('fetch', fetchMock);
 
 vi.mock('@/i18n/navigation', () => ({
   Link: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
@@ -19,18 +20,6 @@ vi.mock('@/i18n/navigation', () => ({
 
 vi.mock('@/components/CartPanel', () => ({
   CartPanel: () => <div data-testid="cart-panel-stub" />,
-}));
-
-// CollectiesDropdown (rendered inside NavBar) still reads Firestore directly —
-// it hasn't been migrated to useApiCollection yet.
-vi.mock('@/lib/firebase', () => ({
-  auth: {},
-  db: {},
-}));
-
-vi.mock('firebase/firestore', () => ({
-  collection: vi.fn((_db, name) => ({ name })),
-  getDocs: (...args: unknown[]) => getDocsMock(...args),
 }));
 
 let isCustomer = false;
@@ -60,8 +49,8 @@ function signedInAsApprovedCustomer() {
 
 beforeEach(() => {
   usePathnameMock.mockReturnValue('/');
-  getDocsMock.mockReset();
-  getDocsMock.mockResolvedValue({ empty: true, docs: [] });
+  fetchMock.mockReset();
+  fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
 });
 
 describe('NavBar', () => {
@@ -75,10 +64,7 @@ describe('NavBar', () => {
 
   it('renders Collecties as a link, with a dropdown available on hover once segments load', async () => {
     signedOut();
-    getDocsMock.mockResolvedValue({
-      empty: false,
-      docs: [{ id: 'seg-hotel', data: () => ({ omschrijving: 'Hotel' }) }],
-    });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [{ id: 'seg-hotel', omschrijving: 'Hotel' }] });
     renderNavBar();
     await waitFor(() => expect(screen.getByTestId('nav-become-client')).toBeInTheDocument());
     expect(screen.getByTestId('nav-collections')).toHaveAttribute('href', '/collecties');

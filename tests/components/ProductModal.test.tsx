@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { ProductModal } from '@/components/ProductModal';
 import { CartProvider, useCart } from '@/lib/useCart';
@@ -9,24 +9,12 @@ import type { Segment, Stijl, Onderwerp } from '@/components/beheer/materiaalTyp
 import type { Kunstenaar } from '@/components/beheer/kunstenaarTypes';
 import messages from '../../messages/nl.json';
 
-const onAuthStateChangedMock = vi.fn();
-const getDocMock = vi.fn();
+const fetchMock = vi.fn();
+vi.stubGlobal('fetch', fetchMock);
 const logActiviteitMock = vi.fn();
 
-vi.mock('@/lib/firebase', () => ({
-  auth: {},
-  db: {},
-}));
-
-vi.mock('firebase/auth', () => ({
-  onAuthStateChanged: (...args: unknown[]) => onAuthStateChangedMock(...args),
-}));
-
-vi.mock('firebase/firestore', () => ({
-  doc: vi.fn((_db, collection, id) => ({ collection, id })),
-  getDoc: (...args: unknown[]) => getDocMock(...args),
-  setDoc: vi.fn(),
-}));
+let authUser: Record<string, unknown> | null = null;
+let bestelinstellingenData: unknown = null;
 
 vi.mock('@/lib/logActiviteit', () => ({
   logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
@@ -171,12 +159,18 @@ function renderModal(
 
 beforeEach(() => {
   window.localStorage.clear();
-  onAuthStateChangedMock.mockReset();
-  getDocMock.mockReset();
+  authUser = null;
+  bestelinstellingenData = null;
   logActiviteitMock.mockReset();
-  onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-    callback(null);
-    return () => {};
+  fetchMock.mockReset();
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url === '/api/auth/me?type=klant') {
+      return { ok: true, json: async () => ({ user: authUser }) };
+    }
+    if (url === '/api/instellingen/bestelinstellingen') {
+      return { ok: true, json: async () => bestelinstellingenData };
+    }
+    return { ok: true, json: async () => null };
   });
   vi.useFakeTimers();
 });
@@ -220,7 +214,7 @@ describe('ProductModal', () => {
   });
 
   it('keeps a legacy kunstwerk document without a kunstenaarId field orderable', () => {
-    // Zoals useFirestoreCollection het uit Firestore leest: het veld ontbreekt gewoon.
+    // Zoals useApiCollection het via de API leest: het veld ontbreekt gewoon.
     const { kunstenaarId: _weg, ...legacyKunstwerk } = KUNSTWERK;
     renderModal(() => {}, legacyKunstwerk as Kunstwerk);
     expect(screen.queryByTestId('product-modal-order-blocked')).not.toBeInTheDocument();
@@ -245,14 +239,7 @@ describe('ProductModal', () => {
 
   it('still allows the kunstenaar to order their own exclusive, artist-only work', async () => {
     vi.useRealTimers();
-    onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-      callback({ uid: 'kunstenaar-uid', email: 'ka@example.com' });
-      return () => {};
-    });
-    getDocMock.mockResolvedValue({
-      exists: () => true,
-      data: () => ({ status: 'Goedgekeurd', companyName: 'Atelier' }),
-    });
+    authUser = { id: 'kunstenaar-uid', email: 'ka@example.com', status: 'Goedgekeurd', companyName: 'Atelier' };
     renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-eigen' });
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -527,14 +514,7 @@ describe('ProductModal', () => {
 
   it('logs mandje_toegevoegd with the logged-in klant when confirmed', async () => {
     vi.useRealTimers();
-    getDocMock.mockResolvedValue({
-      exists: () => true,
-      data: () => ({ status: 'Goedgekeurd', companyName: 'Testbedrijf BV' }),
-    });
-    onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-      callback({ uid: 'uid-1', email: 'klant@example.com' });
-      return () => {};
-    });
+    authUser = { id: 'uid-1', email: 'klant@example.com', status: 'Goedgekeurd', companyName: 'Testbedrijf BV' };
     renderModal();
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -812,22 +792,12 @@ describe('ProductModal', () => {
     });
   });
 
-  function mockDocsByCollection(byCollection: Record<string, { exists: boolean; data?: object }>) {
-    getDocMock.mockImplementation((ref: { collection: string; id: string }) => {
-      const entry = byCollection[ref.collection];
-      if (!entry) {
-        return Promise.resolve({ exists: () => false });
-      }
-      return Promise.resolve({ exists: () => entry.exists, data: () => entry.data });
-    });
-  }
-
   async function flushMicrotasks() {
     // The suite defaults to fake timers (see the top-level beforeEach) for the
     // CONFIRM_FEEDBACK_MS close-timer tests. The tests below don't touch that
     // timer, but they DO need this setTimeout(0) to actually fire so the
-    // pending getDoc() promise (useFirestoreDocument/useCustomerAuth) can
-    // resolve, so switch to real timers before flushing.
+    // pending fetch()es (useApiRecord/useCustomerAuth) can resolve, so switch
+    // to real timers before flushing.
     vi.useRealTimers();
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -857,15 +827,15 @@ describe('ProductModal', () => {
   }
 
   // These 3 tests mount with kunstwerk=null first and only rerender with the
-  // real kunstwerk after the Firestore data has resolved. This mirrors the
+  // real kunstwerk after the API data has resolved. This mirrors the
   // real-app lifecycle described by the kunstwerk-reset effect's comment in
   // ProductModal.tsx (the popup is closed, i.e. kunstwerk is null, while
-  // useFirestoreDocument/useCustomerAuth resolve; it only becomes non-null
-  // once the customer opens a product). Mounting directly with a non-null
-  // kunstwerk (like renderModal() does) would fire the reset effect before
-  // the async data arrives, which is not what these tests are checking.
+  // useApiRecord/useCustomerAuth resolve; it only becomes non-null once the
+  // customer opens a product). Mounting directly with a non-null kunstwerk
+  // (like renderModal() does) would fire the reset effect before the async
+  // data arrives, which is not what these tests are checking.
   it('prefills quantity with the global minimale afname when there is no logged-in klant', async () => {
-    mockDocsByCollection({ instellingen: { exists: true, data: { minimaleAfname: 5 } } });
+    bestelinstellingenData = { minimaleAfname: 5 };
     const { rerender } = render(renderTree(null));
     await flushMicrotasks();
     rerender(renderTree(KUNSTWERK));
@@ -873,14 +843,8 @@ describe('ProductModal', () => {
   });
 
   it('prefills quantity with the klant override when it differs from the global minimum', async () => {
-    mockDocsByCollection({
-      klanten: { exists: true, data: { status: 'Goedgekeurd', minimaleAfname: 8 } },
-      instellingen: { exists: true, data: { minimaleAfname: 3 } },
-    });
-    onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-      callback({ uid: 'uid-1', email: 'klant@example.com' });
-      return () => {};
-    });
+    authUser = { id: 'uid-1', email: 'klant@example.com', status: 'Goedgekeurd', minimaleAfname: 8 };
+    bestelinstellingenData = { minimaleAfname: 3 };
     const { rerender } = render(renderTree(null));
     await flushMicrotasks();
     rerender(renderTree(KUNSTWERK));
@@ -888,14 +852,8 @@ describe('ProductModal', () => {
   });
 
   it('falls back to the global minimum when the klant has no override', async () => {
-    mockDocsByCollection({
-      klanten: { exists: true, data: { status: 'Goedgekeurd', minimaleAfname: null } },
-      instellingen: { exists: true, data: { minimaleAfname: 4 } },
-    });
-    onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-      callback({ uid: 'uid-1', email: 'klant@example.com' });
-      return () => {};
-    });
+    authUser = { id: 'uid-1', email: 'klant@example.com', status: 'Goedgekeurd', minimaleAfname: null };
+    bestelinstellingenData = { minimaleAfname: 4 };
     const { rerender } = render(renderTree(null));
     await flushMicrotasks();
     rerender(renderTree(KUNSTWERK));
@@ -903,7 +861,7 @@ describe('ProductModal', () => {
   });
 
   it('shows an error and disables confirm when the typed quantity is below the minimum', async () => {
-    mockDocsByCollection({ instellingen: { exists: true, data: { minimaleAfname: 5 } } });
+    bestelinstellingenData = { minimaleAfname: 5 };
     renderModal();
     await flushMicrotasks();
     fireEvent.change(screen.getByTestId('product-modal-quantity-value'), { target: { value: '2' } });
@@ -912,7 +870,7 @@ describe('ProductModal', () => {
   });
 
   it('re-enables confirm once the typed quantity meets the minimum', async () => {
-    mockDocsByCollection({ instellingen: { exists: true, data: { minimaleAfname: 5 } } });
+    bestelinstellingenData = { minimaleAfname: 5 };
     renderModal();
     await flushMicrotasks();
     fireEvent.change(screen.getByTestId('product-modal-quantity-value'), { target: { value: '2' } });
@@ -922,7 +880,7 @@ describe('ProductModal', () => {
   });
 
   it('shows an error when the quantity field is cleared', async () => {
-    mockDocsByCollection({ instellingen: { exists: true, data: { minimaleAfname: 5 } } });
+    bestelinstellingenData = { minimaleAfname: 5 };
     renderModal();
     await flushMicrotasks();
     fireEvent.change(screen.getByTestId('product-modal-quantity-value'), { target: { value: '' } });
@@ -931,7 +889,7 @@ describe('ProductModal', () => {
   });
 
   it('the minus button never goes below the effective minimum', async () => {
-    mockDocsByCollection({ instellingen: { exists: true, data: { minimaleAfname: 3 } } });
+    bestelinstellingenData = { minimaleAfname: 3 };
     renderModal();
     await flushMicrotasks();
     fireEvent.click(screen.getByTestId('product-modal-quantity-minus'));

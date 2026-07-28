@@ -1,21 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { renderWithIntl } from '../test-utils';
 import { ContactInfo } from '@/components/ContactInfo';
 import messages from '../../messages/nl.json';
 
-const getDocMock = vi.fn();
-const setDocMock = vi.fn();
-
-vi.mock('@/lib/firebase', () => ({
-  db: {},
-}));
-
-vi.mock('firebase/firestore', () => ({
-  doc: vi.fn((_db, collectionName, id) => ({ collectionName, id })),
-  getDoc: (...args: unknown[]) => getDocMock(...args),
-  setDoc: (...args: unknown[]) => setDocMock(...args),
-}));
+const fetchMock = vi.fn();
+vi.stubGlobal('fetch', fetchMock);
 
 const BEDRIJFSGEGEVENS = {
   bezoekadres: 'Den Heuvel 21, 5688 EM Oirschot',
@@ -41,21 +31,17 @@ const BEDRIJFSGEGEVENS = {
   ],
 };
 
-function mockDoc(data: typeof BEDRIJFSGEGEVENS | null) {
-  getDocMock.mockResolvedValue({
-    exists: () => data !== null,
-    data: () => data,
-  });
+function mockRecord(data: typeof BEDRIJFSGEGEVENS | null) {
+  fetchMock.mockResolvedValue({ ok: data !== null, json: async () => data });
 }
 
 beforeEach(() => {
-  getDocMock.mockReset();
-  setDocMock.mockReset();
+  fetchMock.mockReset();
 });
 
 describe('ContactInfo', () => {
-  it('renders the visiting address and a directions link from Firestore', async () => {
-    mockDoc(BEDRIJFSGEGEVENS);
+  it('renders the visiting address and a directions link from the API', async () => {
+    mockRecord(BEDRIJFSGEGEVENS);
     renderWithIntl(<ContactInfo />, 'nl', messages);
     expect(await screen.findByTestId('contact-address')).toHaveTextContent(
       'Den Heuvel 21, 5688 EM Oirschot'
@@ -67,7 +53,7 @@ describe('ContactInfo', () => {
   });
 
   it('embeds a Google Maps iframe for the address', async () => {
-    mockDoc(BEDRIJFSGEGEVENS);
+    mockRecord(BEDRIJFSGEGEVENS);
     renderWithIntl(<ContactInfo />, 'nl', messages);
     const iframe = await screen.findByTestId('contact-map');
     expect(iframe.tagName).toBe('IFRAME');
@@ -75,7 +61,7 @@ describe('ContactInfo', () => {
   });
 
   it('renders all contact persons with correct tel links and the NL role text', async () => {
-    mockDoc(BEDRIJFSGEGEVENS);
+    mockRecord(BEDRIJFSGEGEVENS);
     renderWithIntl(<ContactInfo />, 'nl', messages);
     expect(await screen.findByTestId('contact-person-0')).toHaveTextContent('Paul van den Hout');
     expect(screen.getByTestId('contact-person-0')).toHaveTextContent('Voor projecten, hotels etc.');
@@ -85,15 +71,15 @@ describe('ContactInfo', () => {
   });
 
   it('falls back to the NL role text when the active locale has no translation', async () => {
-    mockDoc(BEDRIJFSGEGEVENS);
+    mockRecord(BEDRIJFSGEGEVENS);
     renderWithIntl(<ContactInfo />, 'en', messages);
     expect(await screen.findByTestId('contact-person-0')).toHaveTextContent(
       'Voor projecten, hotels etc.'
     );
   });
 
-  it('renders a mailto link with the Firestore email address', async () => {
-    mockDoc(BEDRIJFSGEGEVENS);
+  it('renders a mailto link with the API email address', async () => {
+    mockRecord(BEDRIJFSGEGEVENS);
     renderWithIntl(<ContactInfo />, 'nl', messages);
     expect(await screen.findByTestId('contact-email')).toHaveAttribute(
       'href',
@@ -102,7 +88,7 @@ describe('ContactInfo', () => {
   });
 
   it('renders a WhatsApp link and visible number for contact person Paul van den Hout', async () => {
-    mockDoc(BEDRIJFSGEGEVENS);
+    mockRecord(BEDRIJFSGEGEVENS);
     renderWithIntl(<ContactInfo />, 'nl', messages);
     expect(await screen.findByTestId('contact-whatsapp')).toHaveAttribute(
       'href',
@@ -112,7 +98,7 @@ describe('ContactInfo', () => {
   });
 
   it('falls back to the generic WhatsApp number when Paul van den Hout is not a contact person', async () => {
-    mockDoc({
+    mockRecord({
       ...BEDRIJFSGEGEVENS,
       contactpersonen: [BEDRIJFSGEGEVENS.contactpersonen[1]],
     });
@@ -125,7 +111,7 @@ describe('ContactInfo', () => {
   });
 
   it('renders opening hours for the active locale and the company registration block', async () => {
-    mockDoc(BEDRIJFSGEGEVENS);
+    mockRecord(BEDRIJFSGEGEVENS);
     renderWithIntl(<ContactInfo />, 'en', messages);
     expect(await screen.findByText('Mon-Fri: 9-17')).toBeInTheDocument();
     expect(screen.getByText(/KvK-nummer/)).toBeInTheDocument();
@@ -133,18 +119,18 @@ describe('ContactInfo', () => {
     expect(screen.getByText(/IBAN/)).toBeInTheDocument();
   });
 
-  it('renders the seed data immediately as a fallback while the real document is still loading', () => {
-    getDocMock.mockReturnValue(new Promise(() => {}));
+  it('renders the seed data immediately as a fallback while the real record is still loading', () => {
+    fetchMock.mockReturnValue(new Promise(() => {}));
     renderWithIntl(<ContactInfo />, 'nl', messages);
     expect(screen.getByTestId('contact-address')).toHaveTextContent(
       BEDRIJFSGEGEVENS.bezoekadres
     );
   });
 
-  it('never attempts to seed the document from the public contact page', async () => {
-    mockDoc(BEDRIJFSGEGEVENS);
+  it('never writes to the record from the public contact page', async () => {
+    mockRecord(BEDRIJFSGEGEVENS);
     renderWithIntl(<ContactInfo />, 'nl', messages);
     await screen.findByTestId('contact-address');
-    expect(setDocMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ method: 'PATCH' }));
   });
 });

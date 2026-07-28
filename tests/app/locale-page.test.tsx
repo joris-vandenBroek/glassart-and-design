@@ -4,18 +4,13 @@ import { NextIntlClientProvider } from 'next-intl';
 import LocalePage from '@/app/[locale]/page';
 import messages from '../../messages/nl.json';
 
-vi.mock('@/lib/firebase', () => ({
-  db: {},
-}));
-
-vi.mock('firebase/firestore', () => ({
-  collection: vi.fn((_db, name) => ({ name })),
-  getDocs: vi.fn().mockResolvedValue({
-    empty: true,
-    docs: [],
-  }),
-  addDoc: vi.fn(),
-}));
+vi.stubGlobal(
+  'fetch',
+  vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () => (url.startsWith('/api/instellingen/') ? null : []),
+  }))
+);
 
 describe('LocalePage', () => {
   it('renders all five sections for the nl locale', async () => {

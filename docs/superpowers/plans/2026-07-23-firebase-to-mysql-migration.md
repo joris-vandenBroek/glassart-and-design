@@ -4264,6 +4264,38 @@ git commit -m "feat: migrate BeheerShell and KlantModal to API hooks/routes"
 
 ## Task 21: Migrate `ProductsGrid`, `FeaturedWorks`, `OrdersSection`, `ContactInfo`
 
+> **Real scope (2026-07-28), superseding the draft below:** a full-suite run surfaced three
+> more components with the exact same mechanical `useFirestoreCollection`/
+> `useFirestoreDocument` → `useApiCollection`/`useApiRecord` swap, not in the original file
+> list: `src/components/account/AccountDashboard.tsx` and `AccountNav.tsx` (no direct
+> Firestore usage themselves, but their tests mounted the real `CustomerAuthProvider` +
+> Firestore mocks that predated Task 10's fetch-based rewrite) and `src/components/
+> ProductModal.tsx` (a `useFirestoreDocument` call for `bestelinstellingen`, embedded
+> inside `ProductsGrid`). A second pass after Task 21's main swap turned up three more,
+> untouched by the original plan: `src/components/Contact.tsx` and
+> `src/components/CollectiesDropdown.tsx` (same mechanical rename), and
+> `src/components/beheer/KunstenaarsSection.tsx` — a real rewrite, not a rename: it held
+> direct Firestore reads/writes for the `kunstenaarAfspraken` companion document (`getDoc`/
+> `setDoc`/`deleteDoc`), which became `fetch` calls to the bespoke
+> `/api/kunstenaarAfspraken/:id` route (Task-16-era), including the legacy-migration
+> fallback removal (same rationale as `updateKunstenaarVeilig` in Task 20) and dropping the
+> explicit companion-document delete entirely — `kunstenaarAfspraken.id` has an
+> `ON DELETE CASCADE` foreign key to `kunstenaars.id` in `db/schema.sql`, so deleting the
+> parent row already cleans it up. The retry-without-duplicating safety net (reusing the
+> same id when a failed "add" is retried) was preserved by tracking the created id in a
+> ref and PATCHing instead of POSTing on retry, instead of the old pre-generated
+> `DocumentReference`.
+>
+> Every file above got the same mechanical hook swap unless noted otherwise. Consuming test
+> files needed the same Firestore-mock → `fetch`-mock conversion as Task 20:
+> `tests/components/account/OrdersSection.test.tsx`, `AccountDashboard.test.tsx`,
+> `AccountNav.test.tsx`, `tests/components/ProductModal.test.tsx`, `ProductsGrid.test.tsx`,
+> `tests/components/Contact.test.tsx`, `CollectiesDropdown.test.tsx`,
+> `tests/components/beheer/KunstenaarsSection.test.tsx`, plus two more files that render a
+> migrated component as a child and needed the same conversion even though they weren't
+> touched by the source change: `tests/app/locale-page.test.tsx` (renders `ContactInfo`/
+> `FeaturedWorks`) and `tests/components/NavBar.test.tsx` (renders `CollectiesDropdown`).
+
 **Files:**
 - Modify: `src/components/ProductsGrid.tsx`
 - Modify: `src/components/FeaturedWorks.tsx`
@@ -4273,7 +4305,7 @@ git commit -m "feat: migrate BeheerShell and KlantModal to API hooks/routes"
 **Interfaces:**
 - Consumes: `useApiCollection`, `useApiRecord` (Task 9), with the seeding addition from Task 20.
 
-- [ ] **Step 1: Swap imports and hook calls in each file**
+- [x] **Step 1 (draft scope, see note above): Swap imports and hook calls in each file**
 
 In each of the four files, replace:
 ```typescript
@@ -4295,15 +4327,29 @@ import { useApiRecord } from '@/lib/useApiRecord';
 ```
 and its `useFirestoreDocument<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens')` call becomes `useApiRecord<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens')`.
 
-- [ ] **Step 2: Run the full test suite**
+- [x] **Step 2: Run the full test suite**
 
 Run: `npm run test`
-Expected: PASS — these four components receive data as props from hooks with an identical interface, so no other logic changes; any test mocking `useFirestoreCollection`/`useFirestoreDocument` for these components needs its `vi.mock('@/lib/useFirestoreCollection', ...)` path updated to `vi.mock('@/lib/useApiCollection', ...)` (search with `grep -rln "useFirestoreCollection\|useFirestoreDocument" tests/`)
+Result: PASS across the whole suite except `tests/components/beheer/BestellingenSection.test.tsx`
+(2 tests), which is pre-existing failing debt unrelated to this task (untouched by any
+change in Task 20 or 21 — confirmed via `git diff HEAD` showing no modification to that
+file or its source).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
-git add src/components/ProductsGrid.tsx src/components/FeaturedWorks.tsx src/components/account/OrdersSection.tsx src/components/ContactInfo.tsx
+git add src/components/ProductsGrid.tsx src/components/FeaturedWorks.tsx \
+  src/components/account/OrdersSection.tsx src/components/ContactInfo.tsx \
+  src/components/ProductModal.tsx src/components/Contact.tsx \
+  src/components/CollectiesDropdown.tsx src/components/beheer/KunstenaarsSection.tsx \
+  src/lib/resolveOrderRight.ts \
+  tests/components/ProductsGrid.test.tsx tests/components/FeaturedWorks.test.tsx \
+  tests/components/account/OrdersSection.test.tsx tests/components/account/AccountDashboard.test.tsx \
+  tests/components/account/AccountNav.test.tsx tests/components/ProductModal.test.tsx \
+  tests/components/Contact.test.tsx tests/components/CollectiesDropdown.test.tsx \
+  tests/components/beheer/KunstenaarsSection.test.tsx tests/app/locale-page.test.tsx \
+  tests/components/NavBar.test.tsx \
+  docs/superpowers/plans/2026-07-23-firebase-to-mysql-migration.md
 git commit -m "feat: migrate remaining catalog/display components to API hooks"
 ```
 

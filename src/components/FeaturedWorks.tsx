@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { useFirestoreCollection } from '@/lib/useFirestoreCollection';
+import { useApiCollection } from '@/lib/useApiCollection';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
 import { WatermarkedImage } from './WatermarkedImage';
 import { GlassPanel } from './GlassPanel';
@@ -18,7 +18,7 @@ function pickRandom<T>(items: T[], count: number): T[] {
 export function FeaturedWorks() {
   const t = useTranslations('works');
   const locale = useLocale();
-  const kunstwerken = useFirestoreCollection<Kunstwerk>('kunstwerken');
+  const kunstwerken = useApiCollection<Kunstwerk>('kunstwerken');
 
   const featured = useMemo(
     () => pickRandom(kunstwerken.items ?? [], FEATURED_COUNT),

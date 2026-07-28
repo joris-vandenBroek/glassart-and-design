@@ -10,21 +10,20 @@ export interface OrderRight {
 /**
  * Bepaalt of `userUid` een kunstwerk van deze kunstenaar mag bestellen.
  *
- * Spiegelt bewust `magKunstwerkBestellen`/`magKunstenaarBestellen` uit firestore.rules —
- * dát is de enige echte handhaving (statische export, geen server). Waar de regels falen
- * (een `get()` op een verdwenen kunstenaar-document is daar een denial), faalt deze helper
- * óók: een nog niet geladen collectie of een dangling `kunstenaarId` levert
- * `blockedReason: 'unavailable'` op in plaats van stilzwijgend "wel bestelbaar".
+ * Spiegelt bewust `checkOrderRight` in `POST /api/bestelheaders` — dát is de enige echte
+ * handhaving, deze client-side versie is puur een UX-hint. Waar de servercheck faalt
+ * (een dangling `kunstenaarId` is daar een afwijzing), faalt deze helper óók: een nog niet
+ * geladen collectie of een dangling `kunstenaarId` levert `blockedReason: 'unavailable'`
+ * op in plaats van stilzwijgend "wel bestelbaar".
  */
 export function resolveOrderRight(
   kunstenaarId: string | null,
   kunstenaars: Kunstenaar[] | null,
   userUid: string | undefined
 ): OrderRight {
-  // Bewust losse `== null`: kunstwerk-documenten van vóór deze feature hebben helemaal geen
-  // `kunstenaarId`-veld, en useFirestoreCollection spreidt de ruwe documentdata, dus die lezen
-  // als `undefined`. firestore.rules doet exact hetzelfde met
-  // `!('kunstenaarId' in kw) || kw.kunstenaarId == null`. Een lege string blijft wél dichtklappen.
+  // Bewust losse `== null`: kunstwerk-rijen van vóór deze feature hebben helemaal geen
+  // `kunstenaarId`-kolom, en useApiCollection geeft de ruwe API-respons door, dus die
+  // lezen als `undefined`. Een lege string blijft wél dichtklappen.
   const dataReady = kunstenaarId == null || kunstenaars !== null;
   const kunstenaar =
     kunstenaarId && kunstenaars ? kunstenaars.find((item) => item.id === kunstenaarId) ?? null : null;

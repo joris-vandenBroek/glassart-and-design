@@ -1,47 +1,27 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
-import { CustomerAuthProvider } from '@/lib/useCustomerAuth';
 import { AccountNav } from '@/components/account/AccountNav';
 import messages from '../../../messages/nl.json';
 
-const onAuthStateChangedMock = vi.fn();
-const signOutMock = vi.fn();
+const logoutMock = vi.fn();
 
-vi.mock('@/lib/firebase', () => ({
-  auth: {},
-  db: {},
-}));
-
-vi.mock('firebase/auth', () => ({
-  onAuthStateChanged: (...args: unknown[]) => onAuthStateChangedMock(...args),
-  signOut: (...args: unknown[]) => signOutMock(...args),
-}));
-
-vi.mock('firebase/firestore', () => ({
-  doc: vi.fn((_db, collection, id) => ({ collection, id })),
-  getDoc: vi.fn().mockResolvedValue({ exists: () => true, data: () => ({ status: 'Goedgekeurd' }) }),
+vi.mock('@/lib/useCustomerAuth', () => ({
+  useCustomerAuth: () => ({ logout: logoutMock }),
 }));
 
 function renderNav(activeSection: 'orders' | 'settings' = 'orders') {
   const onSelect = vi.fn();
   render(
     <NextIntlClientProvider locale="nl" messages={messages}>
-      <CustomerAuthProvider>
-        <AccountNav activeSection={activeSection} onSelect={onSelect} />
-      </CustomerAuthProvider>
+      <AccountNav activeSection={activeSection} onSelect={onSelect} />
     </NextIntlClientProvider>
   );
   return { onSelect };
 }
 
 beforeEach(() => {
-  onAuthStateChangedMock.mockReset();
-  signOutMock.mockReset();
-  onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-    callback({ uid: 'uid-1', email: 'klant@example.com' });
-    return () => {};
-  });
+  logoutMock.mockReset();
 });
 
 describe('AccountNav', () => {
@@ -68,6 +48,6 @@ describe('AccountNav', () => {
   it('calls signOut when the logout button is clicked', () => {
     renderNav();
     fireEvent.click(screen.getByTestId('account-nav-logout'));
-    expect(signOutMock).toHaveBeenCalledWith({});
+    expect(logoutMock).toHaveBeenCalled();
   });
 });

@@ -6,33 +6,13 @@ import { CartProvider } from '@/lib/useCart';
 import { CustomerAuthProvider } from '@/lib/useCustomerAuth';
 import messages from '../../messages/nl.json';
 
-const getDocsMock = vi.fn();
-const getDocMock = vi.fn();
-const onAuthStateChangedMock = vi.fn();
+const fetchMock = vi.fn();
+vi.stubGlobal('fetch', fetchMock);
 const logActiviteitMock = vi.fn();
 
 let currentSearchParams = new URLSearchParams();
 vi.mock('next/navigation', () => ({
   useSearchParams: () => currentSearchParams,
-}));
-
-vi.mock('@/lib/firebase', () => ({
-  db: {},
-  auth: {},
-}));
-
-vi.mock('firebase/auth', () => ({
-  onAuthStateChanged: (...args: unknown[]) => onAuthStateChangedMock(...args),
-}));
-
-vi.mock('firebase/firestore', () => ({
-  collection: vi.fn((_db, name) => ({ name })),
-  doc: vi.fn((_db, collectionName, id) => ({ collectionName, id })),
-  getDocs: (...args: unknown[]) => getDocsMock(...args),
-  getDoc: (...args: unknown[]) => getDocMock(...args),
-  addDoc: vi.fn(),
-  updateDoc: vi.fn(),
-  deleteDoc: vi.fn(),
 }));
 
 vi.mock('@/lib/logActiviteit', () => ({
@@ -45,110 +25,95 @@ vi.mock('@/lib/logActiviteit', () => ({
       : { id: null, email: 'Onbekend', naam: 'Onbekend' },
 }));
 
-function makeSnapshot(docsData: Array<{ id: string; data: Record<string, unknown> }>) {
-  return {
-    empty: docsData.length === 0,
-    docs: docsData.map(({ id, data }) => ({ id, data: () => data })),
-  };
-}
-
 const SEGMENTEN = [
-  { id: 'seg-hotel', data: { omschrijving: 'Hotel' } },
-  { id: 'seg-wellness', data: { omschrijving: 'Wellness' } },
+  { id: 'seg-hotel', omschrijving: 'Hotel' },
+  { id: 'seg-wellness', omschrijving: 'Wellness' },
 ];
 const KUNSTWERKEN = [
   {
     id: 'kw-1',
+    foto: 'https://example.com/kw-1.jpg',
     naam: 'Kunstwerk 1',
-    data: {
-      foto: 'https://example.com/kw-1.jpg',
-      naam: 'Kunstwerk 1',
-      segmentIds: ['seg-hotel'],
-      materiaalIds: ['mat-1'],
-      maatIds: ['maat-1'],
-      formaat: 'staand',
-      prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 150 }],
-      kunstenaarId: 'ka-1',
-      stijlIds: ['stijl-abstract'],
-      onderwerpIds: ['onderwerp-bloemen'],
-      omschrijvingNl: 'Hotel paneel',
-      omschrijvingFr: '',
-      omschrijvingDe: '',
-      omschrijvingEn: '',
-    },
+    segmentIds: ['seg-hotel'],
+    materiaalIds: ['mat-1'],
+    maatIds: ['maat-1'],
+    formaat: 'staand',
+    prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 150 }],
+    kunstenaarId: 'ka-1',
+    stijlIds: ['stijl-abstract'],
+    onderwerpIds: ['onderwerp-bloemen'],
+    omschrijvingNl: 'Hotel paneel',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
   },
   {
     id: 'kw-2',
+    foto: 'https://example.com/kw-2.jpg',
     naam: 'Kunstwerk 2',
-    data: {
-      foto: 'https://example.com/kw-2.jpg',
-      naam: 'Kunstwerk 2',
-      segmentIds: ['seg-wellness'],
-      materiaalIds: ['mat-1'],
-      maatIds: ['maat-1'],
-      formaat: 'liggend',
-      prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 200 }],
-      stijlIds: ['stijl-minimalistisch'],
-      onderwerpIds: ['onderwerp-dieren'],
-      aiGegenereerd: true,
-      omschrijvingNl: 'Wellness paneel',
-      omschrijvingFr: '',
-      omschrijvingDe: '',
-      omschrijvingEn: '',
-    },
+    segmentIds: ['seg-wellness'],
+    materiaalIds: ['mat-1'],
+    maatIds: ['maat-1'],
+    formaat: 'liggend',
+    prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 200 }],
+    stijlIds: ['stijl-minimalistisch'],
+    onderwerpIds: ['onderwerp-dieren'],
+    aiGegenereerd: true,
+    omschrijvingNl: 'Wellness paneel',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
   },
   {
     id: 'kw-3',
+    foto: 'https://example.com/kw-3.jpg',
     naam: 'Kunstwerk 3',
-    data: {
-      foto: 'https://example.com/kw-3.jpg',
-      naam: 'Kunstwerk 3',
-      segmentIds: ['seg-hotel', 'seg-wellness'],
-      materiaalIds: ['mat-1'],
-      maatIds: ['maat-1'],
-      formaat: 'vierkant',
-      prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 175 }],
-      stijlIds: ['stijl-abstract', 'stijl-minimalistisch'],
-      onderwerpIds: [],
-      omschrijvingNl: 'Kunstwerk in beide segmenten',
-      omschrijvingFr: '',
-      omschrijvingDe: '',
-      omschrijvingEn: '',
-    },
+    segmentIds: ['seg-hotel', 'seg-wellness'],
+    materiaalIds: ['mat-1'],
+    maatIds: ['maat-1'],
+    formaat: 'vierkant',
+    prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 175 }],
+    stijlIds: ['stijl-abstract', 'stijl-minimalistisch'],
+    onderwerpIds: [],
+    omschrijvingNl: 'Kunstwerk in beide segmenten',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
   },
 ];
 const MATERIALEN = [
-  { id: 'mat-1', data: { materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Veiligheidsglas' } },
+  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Veiligheidsglas' },
 ];
-const MATEN = [{ id: 'maat-1', data: { breedte: 40, hoogte: 60 } }];
-const MATERIAALSOORTEN = [{ id: 'soort-1', data: { omschrijving: 'Veiligheidsglas' } }];
+const MATEN = [{ id: 'maat-1', breedte: 40, hoogte: 60 }];
+const MATERIAALSOORTEN = [{ id: 'soort-1', omschrijving: 'Veiligheidsglas' }];
 const KUNSTENAARS = [
   {
     id: 'ka-1',
-    data: {
-      naam: 'Sabrina Glasser',
-      foto: null,
-      omschrijvingNl: 'Werkt met gesmolten glas.',
-      omschrijvingFr: '',
-      omschrijvingDe: '',
-      omschrijvingEn: '',
-      verkooprecht: 'open',
-      klantId: null,
-      exclusiefVoorKlantId: null,
-    },
+    naam: 'Sabrina Glasser',
+    foto: null,
+    omschrijvingNl: 'Werkt met gesmolten glas.',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+    verkooprecht: 'open',
+    klantId: null,
+    exclusiefVoorKlantId: null,
   },
 ];
 const STIJLEN = [
-  { id: 'stijl-abstract', data: { omschrijving: 'Abstract' } },
-  { id: 'stijl-minimalistisch', data: { omschrijving: 'Minimalistisch' } },
+  { id: 'stijl-abstract', omschrijving: 'Abstract' },
+  { id: 'stijl-minimalistisch', omschrijving: 'Minimalistisch' },
 ];
 const ONDERWERPEN = [
-  { id: 'onderwerp-bloemen', data: { omschrijving: 'Bloemen' } },
-  { id: 'onderwerp-dieren', data: { omschrijving: 'Dieren' } },
+  { id: 'onderwerp-bloemen', omschrijving: 'Bloemen' },
+  { id: 'onderwerp-dieren', omschrijving: 'Dieren' },
 ];
 
-function mockCollections() {
-  const data: Record<string, Array<{ id: string; data: Record<string, unknown> }>> = {
+let collections: Record<string, unknown[]> = {};
+let authUser: Record<string, unknown> | null = null;
+
+function mockCollections(overrides: Record<string, unknown[]> = {}) {
+  collections = {
     segmenten: SEGMENTEN,
     kunstwerken: KUNSTWERKEN,
     materialen: MATERIALEN,
@@ -157,25 +122,8 @@ function mockCollections() {
     kunstenaars: KUNSTENAARS,
     stijlen: STIJLEN,
     onderwerpen: ONDERWERPEN,
+    ...overrides,
   };
-  getDocsMock.mockImplementation((collectionRef: { name: string }) =>
-    Promise.resolve(makeSnapshot(data[collectionRef.name] ?? []))
-  );
-}
-
-function mockCollectionsWithExtraKunstwerken(extra: Array<{ id: string; data: Record<string, unknown> }>) {
-  const data: Record<string, Array<{ id: string; data: Record<string, unknown> }>> = {
-    segmenten: SEGMENTEN,
-    kunstwerken: [...KUNSTWERKEN, ...extra],
-    materialen: MATERIALEN,
-    maten: MATEN,
-    kunstenaars: KUNSTENAARS,
-    stijlen: STIJLEN,
-    onderwerpen: ONDERWERPEN,
-  };
-  getDocsMock.mockImplementation((collectionRef: { name: string }) =>
-    Promise.resolve(makeSnapshot(data[collectionRef.name] ?? []))
-  );
 }
 
 function renderProductsGrid() {
@@ -191,16 +139,20 @@ function renderProductsGrid() {
 }
 
 beforeEach(() => {
-  getDocsMock.mockReset();
-  getDocMock.mockReset();
-  onAuthStateChangedMock.mockReset();
+  fetchMock.mockReset();
   logActiviteitMock.mockReset();
   currentSearchParams = new URLSearchParams();
+  authUser = null;
   mockCollections();
-  getDocMock.mockResolvedValue({ exists: () => false });
-  onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-    callback(null);
-    return () => {};
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url === '/api/auth/me?type=klant') {
+      return { ok: true, json: async () => ({ user: authUser }) };
+    }
+    if (url === '/api/instellingen/bestelinstellingen') {
+      return { ok: true, json: async () => null };
+    }
+    const resource = url.replace(/^\/api\//, '');
+    return { ok: true, json: async () => collections[resource] ?? [] };
   });
 });
 
@@ -282,17 +234,10 @@ describe('ProductsGrid', () => {
   });
 
   it('logs kunstwerk_bekeken with the logged-in klant when a card is clicked', async () => {
-    getDocMock.mockResolvedValue({
-      exists: () => true,
-      data: () => ({ status: 'Goedgekeurd', companyName: 'Testbedrijf BV' }),
-    });
-    onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-      callback({ uid: 'uid-1', email: 'klant@example.com' });
-      return () => {};
-    });
+    authUser = { id: 'uid-1', email: 'klant@example.com', status: 'Goedgekeurd', companyName: 'Testbedrijf BV' };
     renderProductsGrid();
     const cards = await screen.findAllByTestId('product-card');
-    await waitFor(() => expect(getDocMock).toHaveBeenCalled());
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/auth/me?type=klant'));
     fireEvent.click(cards[0]);
     await waitFor(() =>
       expect(logActiviteitMock).toHaveBeenCalledWith(
@@ -459,10 +404,11 @@ describe('ProductsGrid', () => {
   });
 
   it('excludes a kunstwerk with no formaat when a formaat filter is active, without crashing', async () => {
-    mockCollectionsWithExtraKunstwerken([
-      {
-        id: 'kw-4',
-        data: {
+    mockCollections({
+      kunstwerken: [
+        ...KUNSTWERKEN,
+        {
+          id: 'kw-4',
           foto: 'https://example.com/kw-4.jpg',
           segmentIds: ['seg-hotel'],
           materiaalIds: ['mat-1'],
@@ -475,8 +421,8 @@ describe('ProductsGrid', () => {
           omschrijvingDe: '',
           omschrijvingEn: '',
         },
-      },
-    ]);
+      ],
+    });
     renderProductsGrid();
     expect(await screen.findAllByTestId('product-card')).toHaveLength(4);
 

@@ -4,7 +4,8 @@ import { NextIntlClientProvider } from 'next-intl';
 import { CollectiesDropdown } from '@/components/CollectiesDropdown';
 import messages from '../../messages/nl.json';
 
-const getDocsMock = vi.fn();
+const fetchMock = vi.fn();
+vi.stubGlobal('fetch', fetchMock);
 
 vi.mock('@/i18n/navigation', () => ({
   Link: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
@@ -13,25 +14,6 @@ vi.mock('@/i18n/navigation', () => ({
     </a>
   ),
 }));
-
-vi.mock('@/lib/firebase', () => ({ db: {} }));
-
-vi.mock('firebase/firestore', () => ({
-  collection: vi.fn((_db, name) => ({ name })),
-  doc: vi.fn(),
-  getDocs: (...args: unknown[]) => getDocsMock(...args),
-  getDoc: vi.fn(),
-  addDoc: vi.fn(),
-  updateDoc: vi.fn(),
-  deleteDoc: vi.fn(),
-}));
-
-function snapshot(items: Array<{ id: string; omschrijving: string }>) {
-  return {
-    empty: items.length === 0,
-    docs: items.map(({ id, ...data }) => ({ id, data: () => data })),
-  };
-}
 
 function renderDropdown() {
   return render(
@@ -42,13 +24,14 @@ function renderDropdown() {
 }
 
 beforeEach(() => {
-  getDocsMock.mockReset();
-  getDocsMock.mockResolvedValue(
-    snapshot([
+  fetchMock.mockReset();
+  fetchMock.mockResolvedValue({
+    ok: true,
+    json: async () => [
       { id: 'seg-hotel', omschrijving: 'Hotel' },
       { id: 'seg-wellness', omschrijving: 'Wellness' },
-    ])
-  );
+    ],
+  });
 });
 
 describe('CollectiesDropdown', () => {

@@ -2,13 +2,13 @@
 
 import { useTranslations } from 'next-intl';
 import { GlassPanel } from './GlassPanel';
-import { useFirestoreDocument } from '@/lib/useFirestoreDocument';
+import { useApiRecord } from '@/lib/useApiRecord';
 import { BEDRIJFSGEGEVENS_SEED } from '@/data/bedrijfsgegevensSeed';
 import type { Bedrijfsgegevens } from './beheer/bedrijfsgegevensTypes';
 
 export function Contact() {
   const t = useTranslations('contact');
-  const { data } = useFirestoreDocument<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens');
+  const { data } = useApiRecord<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens');
   const bedrijfsgegevens = data ?? BEDRIJFSGEGEVENS_SEED;
 
   return (

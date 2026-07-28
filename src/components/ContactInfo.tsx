@@ -1,7 +1,7 @@
 'use client';
 
 import { useLocale, useTranslations } from 'next-intl';
-import { useFirestoreDocument } from '@/lib/useFirestoreDocument';
+import { useApiRecord } from '@/lib/useApiRecord';
 import { BEDRIJFSGEGEVENS_SEED } from '@/data/bedrijfsgegevensSeed';
 import type { Bedrijfsgegevens, Taal } from './beheer/bedrijfsgegevensTypes';
 
@@ -13,7 +13,7 @@ function vertaling(tekst: Record<Taal, string>, locale: string): string {
 export function ContactInfo() {
   const t = useTranslations('contactPage');
   const locale = useLocale();
-  const { data } = useFirestoreDocument<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens');
+  const { data } = useApiRecord<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens');
   const bedrijfsgegevens = data ?? BEDRIJFSGEGEVENS_SEED;
 
   const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(

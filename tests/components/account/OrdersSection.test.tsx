@@ -5,27 +5,11 @@ import { CustomerAuthProvider } from '@/lib/useCustomerAuth';
 import { OrdersSection } from '@/components/account/OrdersSection';
 import messages from '../../../messages/nl.json';
 
-const onAuthStateChangedMock = vi.fn();
-const getDocMock = vi.fn();
-const getDocsMock = vi.fn();
+const fetchMock = vi.fn();
+vi.stubGlobal('fetch', fetchMock);
 
-vi.mock('@/lib/firebase', () => ({
-  auth: {},
-  db: {},
-}));
-
-vi.mock('firebase/auth', () => ({
-  onAuthStateChanged: (...args: unknown[]) => onAuthStateChangedMock(...args),
-}));
-
-vi.mock('firebase/firestore', () => ({
-  doc: vi.fn((_db, collectionName, id) => ({ collectionName, id })),
-  getDoc: (...args: unknown[]) => getDocMock(...args),
-  collection: vi.fn((_db, ...segments: string[]) => ({ name: segments.join('/') })),
-  query: vi.fn((collectionRef, ...constraints) => ({ collectionRef, constraints })),
-  where: vi.fn((field, op, value) => ({ field, op, value })),
-  getDocs: (...args: unknown[]) => getDocsMock(...args),
-}));
+let authUser: Record<string, unknown> | null = null;
+let ordersResponse: { ok: boolean; body?: unknown } = { ok: true, body: [] };
 
 function renderSection() {
   return render(
@@ -38,47 +22,35 @@ function renderSection() {
 }
 
 function signedInWithOneOrder() {
-  getDocMock.mockResolvedValue({ exists: () => true, data: () => ({ status: 'Goedgekeurd' }) });
-  onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-    callback({ uid: 'uid-1', email: 'klant@example.com' });
-    return () => {};
-  });
-  getDocsMock.mockImplementation((ref: { name?: string; collectionRef?: { name: string } }) => {
-    const name = ref.name ?? ref.collectionRef?.name;
-    if (name === 'bestelheaders') {
-      return Promise.resolve({
-        docs: [
-          {
-            id: 'header-1',
-            data: () => ({
-              klantId: 'uid-1',
-              bestelnr: 'GD-00001',
-              besteldatum: { toDate: () => new Date('2026-07-01T14:30:00') },
-              status: 'Te beoordelen',
-            }),
-          },
-        ],
-      });
-    }
-    if (name === 'bestelheaders/header-1/bestellines') {
-      return Promise.resolve({
-        docs: [{ id: 'line-1', data: () => ({ quantity: 2 }) }],
-      });
-    }
-    return Promise.resolve({ docs: [] });
-  });
+  authUser = { id: 'uid-1', email: 'klant@example.com', status: 'Goedgekeurd' };
+  ordersResponse = {
+    ok: true,
+    body: [
+      {
+        id: 'header-1',
+        bestelnr: 'GD-00001',
+        besteldatum: '2026-07-01T14:30:00',
+        status: 'Te beoordelen',
+        lines: [{ id: 'line-1', kunstwerkId: null, maatId: null, materiaalId: null, prijs: null, quantity: 2 }],
+      },
+    ],
+  };
 }
 
 beforeEach(() => {
   window.localStorage.clear();
-  onAuthStateChangedMock.mockReset();
-  getDocMock.mockReset();
-  getDocsMock.mockReset();
-  onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-    callback(null);
-    return () => {};
+  authUser = null;
+  ordersResponse = { ok: true, body: [] };
+  fetchMock.mockReset();
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url === '/api/auth/me?type=klant') {
+      return { ok: true, json: async () => ({ user: authUser }) };
+    }
+    if (url.startsWith('/api/bestelheaders')) {
+      return { ok: ordersResponse.ok, json: async () => ordersResponse.body };
+    }
+    return { ok: true, json: async () => [] };
   });
-  getDocsMock.mockResolvedValue({ docs: [] });
 });
 
 describe('OrdersSection', () => {
@@ -89,12 +61,8 @@ describe('OrdersSection', () => {
   });
 
   it('shows an error message when loading orders fails', async () => {
-    onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-      callback({ uid: 'uid-1', email: 'klant@example.com' });
-      return () => {};
-    });
-    getDocMock.mockResolvedValue({ exists: () => true, data: () => ({ status: 'Goedgekeurd' }) });
-    getDocsMock.mockRejectedValue(new Error('permission-denied'));
+    authUser = { id: 'uid-1', email: 'klant@example.com', status: 'Goedgekeurd' };
+    ordersResponse = { ok: false };
 
     renderSection();
 

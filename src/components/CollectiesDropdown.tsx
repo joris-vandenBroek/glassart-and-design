@@ -3,13 +3,13 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
-import { useFirestoreCollection } from '@/lib/useFirestoreCollection';
+import { useApiCollection } from '@/lib/useApiCollection';
 import type { Segment } from './beheer/materiaalTypes';
 
 export function CollectiesDropdown() {
   const t = useTranslations('nav');
   const [isOpen, setIsOpen] = useState(false);
-  const segmenten = useFirestoreCollection<Segment>('segmenten');
+  const segmenten = useApiCollection<Segment>('segmenten');
 
   return (
     <div

@@ -10,7 +10,7 @@ import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving
 import { resolveOrderRight } from '@/lib/resolveOrderRight';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { findVeiligheidsglasMateriaalId, MATERIAALLOOS_LABEL } from '@/lib/kunstwerkMateriaal';
-import { useFirestoreDocument } from '@/lib/useFirestoreDocument';
+import { useApiRecord } from '@/lib/useApiRecord';
 import { WatermarkedImage } from './WatermarkedImage';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort, Segment, Stijl, Onderwerp } from './beheer/materiaalTypes';
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
@@ -71,7 +71,7 @@ export function ProductModal({
   const [isConfirmed, setIsConfirmed] = useState(false);
   const { addItem } = useCart();
   const { user } = useCustomerAuth();
-  const { data: bestelinstellingen } = useFirestoreDocument<Bestelinstellingen>(
+  const { data: bestelinstellingen } = useApiRecord<Bestelinstellingen>(
     'instellingen',
     'bestelinstellingen'
   );
@@ -93,7 +93,7 @@ export function ProductModal({
     setMaatId(kunstwerk.maatIds[0] ?? '');
     setCustomBreedte('');
     setCustomHoogte('');
-    // Deliberately excludes effectiveMinimum (derived from useFirestoreDocument/
+    // Deliberately excludes effectiveMinimum (derived from useApiRecord/
     // useCustomerAuth): those resolve well before a customer opens the popup in
     // practice, and re-running this reset whenever effectiveMinimum changes would
     // also clobber materiaal/maat selections the customer already made. materialen/

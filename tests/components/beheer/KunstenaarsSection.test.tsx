@@ -15,35 +15,44 @@ vi.mock('@/lib/useKunstwerkFotoUpload', () => ({
   useKunstwerkFotoUpload: () => ({ uploading: mockUploading, error: mockUploadError, upload: uploadMock }),
 }));
 
-const getDocMock = vi.fn();
-const setDocMock = vi.fn();
-const deleteDocMock = vi.fn();
+const fetchMock = vi.fn();
+vi.stubGlobal('fetch', fetchMock);
 
-vi.mock('@/lib/firebase', () => ({
-  db: {},
-}));
-
-// Every `doc(collectionRef)` call mints a NEW id, so a test can prove the add path
-// reuses one generated reference across retries instead of creating duplicates.
+// Every POST /api/kunstenaars mints a NEW id, so a test can prove the add path
+// reuses the same id across retries (via PATCH) instead of creating duplicates.
 let autoIdCounter = 0;
 
-vi.mock('firebase/firestore', () => ({
-  // `doc(db, collection, id)` returns a stable stub; `doc(collectionRef)` (the
-  // client-side id generation used when adding) mints a fresh id per call.
-  doc: vi.fn((first: unknown, collectionName?: string, id?: string) =>
-    collectionName === undefined
-      ? {
-          collectionName: (first as { collectionName: string }).collectionName,
-          id: `nieuwe-ka-id-${++autoIdCounter}`,
-        }
-      : { collectionName, id }
-  ),
-  collection: vi.fn((_db: unknown, collectionName: string) => ({ collectionName })),
-  deleteField: vi.fn(() => ({ __sentinel: 'deleteField' })),
-  getDoc: (...args: unknown[]) => getDocMock(...args),
-  setDoc: (...args: unknown[]) => setDocMock(...args),
-  deleteDoc: (...args: unknown[]) => deleteDocMock(...args),
-}));
+// Per-test overrides for the two afspraken endpoints; default to a successful,
+// empty companion record.
+let afsprakenGetImpl: (id: string) => Promise<{ ok: boolean; json: () => Promise<unknown> }> = async () => ({
+  ok: true,
+  json: async () => ({ prijsafspraken: null }),
+});
+let kunstenaarPostShouldFail = false;
+let afsprakenPutShouldFail = false;
+
+function defaultFetchImpl(url: string, init?: { method?: string; body?: string }) {
+  const method = init?.method ?? 'GET';
+
+  if (url === '/api/kunstenaars' && method === 'POST') {
+    if (kunstenaarPostShouldFail) return Promise.resolve({ ok: false, json: async () => ({}) });
+    const data = JSON.parse(init!.body!) as Record<string, unknown>;
+    const id = `nieuwe-ka-id-${++autoIdCounter}`;
+    return Promise.resolve({ ok: true, json: async () => ({ id, ...data }) });
+  }
+  if (url.startsWith('/api/kunstenaars/') && method === 'PATCH') {
+    return Promise.resolve({ ok: true, json: async () => ({ ok: true }) });
+  }
+  if (url.startsWith('/api/kunstenaarAfspraken/') && method === 'PUT') {
+    if (afsprakenPutShouldFail) return Promise.resolve({ ok: false, json: async () => ({}) });
+    return Promise.resolve({ ok: true, json: async () => ({ ok: true }) });
+  }
+  if (url.startsWith('/api/kunstenaarAfspraken/') && method === 'GET') {
+    const id = url.replace('/api/kunstenaarAfspraken/', '');
+    return afsprakenGetImpl(id);
+  }
+  return Promise.resolve({ ok: true, json: async () => ({}) });
+}
 
 const logActiviteitMock = vi.fn();
 
@@ -119,18 +128,27 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Kunstenaar
   return { onUpdate, onRemove, onRefetch };
 }
 
+function kunstenaarPostCall() {
+  return fetchMock.mock.calls.find((call) => call[0] === '/api/kunstenaars' && call[1]?.method === 'POST');
+}
+
+function afsprakenPutCalls() {
+  return fetchMock.mock.calls.filter(
+    (call) => (call[0] as string).startsWith('/api/kunstenaarAfspraken/') && call[1]?.method === 'PUT'
+  );
+}
+
 beforeEach(() => {
   autoIdCounter = 0;
   uploadMock.mockReset();
   mockUploading = false;
   mockUploadError = null;
   logActiviteitMock.mockReset();
-  getDocMock.mockReset();
-  getDocMock.mockResolvedValue({ data: () => undefined });
-  setDocMock.mockReset();
-  setDocMock.mockResolvedValue(undefined);
-  deleteDocMock.mockReset();
-  deleteDocMock.mockResolvedValue(undefined);
+  afsprakenGetImpl = async () => ({ ok: true, json: async () => ({ prijsafspraken: null }) });
+  kunstenaarPostShouldFail = false;
+  afsprakenPutShouldFail = false;
+  fetchMock.mockReset();
+  fetchMock.mockImplementation(defaultFetchImpl);
 });
 
 describe('KunstenaarsSection', () => {
@@ -175,27 +193,25 @@ describe('KunstenaarsSection', () => {
     fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-option-klant-1'));
     fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
 
-    // Public document: no prijsafspraken, it is not publicly readable.
+    // Public record: no prijsafspraken, it is not publicly readable.
+    await waitFor(() => expect(kunstenaarPostCall()).toBeDefined());
+    expect(JSON.parse(kunstenaarPostCall()![1].body as string)).toEqual({
+      foto: 'https://storage.example.com/nieuw.jpg',
+      naam: 'Nieuwe Kunstenaar',
+      omschrijvingNl: 'Werkt met glas.',
+      omschrijvingFr: '',
+      omschrijvingDe: '',
+      omschrijvingEn: '',
+      verkooprecht: 'alleen-kunstenaar',
+      klantId: 'klant-1',
+      exclusiefVoorKlantId: null,
+    });
+    // Companion record in the medewerker-only table.
     await waitFor(() =>
-      expect(setDocMock).toHaveBeenCalledWith(
-        { collectionName: 'kunstenaars', id: 'nieuwe-ka-id-1' },
-        {
-          foto: 'https://storage.example.com/nieuw.jpg',
-          naam: 'Nieuwe Kunstenaar',
-          omschrijvingNl: 'Werkt met glas.',
-          omschrijvingFr: '',
-          omschrijvingDe: '',
-          omschrijvingEn: '',
-          verkooprecht: 'alleen-kunstenaar',
-          klantId: 'klant-1',
-          exclusiefVoorKlantId: null,
-        }
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/kunstenaarAfspraken/nieuwe-ka-id-1',
+        expect.objectContaining({ method: 'PUT', body: JSON.stringify({ prijsafspraken: '30% commissie' }) })
       )
-    );
-    // Companion document in the medewerker-only collection.
-    expect(setDocMock).toHaveBeenCalledWith(
-      { collectionName: 'kunstenaarAfspraken', id: 'nieuwe-ka-id-1' },
-      { prijsafspraken: '30% commissie' }
     );
     expect(onRefetch).toHaveBeenCalled();
     expect(logActiviteitMock).toHaveBeenCalledWith(
@@ -205,7 +221,7 @@ describe('KunstenaarsSection', () => {
     );
   });
 
-  it('never writes prijsafspraken onto the publicly readable kunstenaars document', async () => {
+  it('never writes prijsafspraken onto the publicly readable kunstenaars record', async () => {
     renderSection();
     fireEvent.click(screen.getByTestId('kunstenaars-add'));
     fireEvent.change(screen.getByTestId('kunstenaar-modal-naam'), { target: { value: 'X' } });
@@ -213,48 +229,32 @@ describe('KunstenaarsSection', () => {
     fireEvent.change(screen.getByTestId('kunstenaar-modal-prijsafspraken'), { target: { value: 'geheim' } });
     fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
 
-    await waitFor(() => expect(setDocMock).toHaveBeenCalledTimes(2));
-    const publicWrite = setDocMock.mock.calls.find(
-      (call) => (call[0] as { collectionName: string }).collectionName === 'kunstenaars'
-    );
-    expect(publicWrite).toBeDefined();
-    expect(Object.keys(publicWrite![1] as Record<string, unknown>)).not.toContain('prijsafspraken');
+    await waitFor(() => expect(kunstenaarPostCall()).toBeDefined());
+    const body = JSON.parse(kunstenaarPostCall()![1].body as string);
+    expect(Object.keys(body)).not.toContain('prijsafspraken');
   });
 
-  it('pre-fills the prijsafspraken textarea from the kunstenaarAfspraken companion document', async () => {
-    getDocMock.mockResolvedValue({ data: () => ({ prijsafspraken: '20% commissie' }) });
+  it('pre-fills the prijsafspraken textarea from the kunstenaarAfspraken companion record', async () => {
+    afsprakenGetImpl = async () => ({ ok: true, json: async () => ({ prijsafspraken: '20% commissie' }) });
     renderSection();
     fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
 
     await waitFor(() =>
       expect(screen.getByTestId('kunstenaar-modal-prijsafspraken')).toHaveValue('20% commissie')
     );
-    expect(getDocMock).toHaveBeenCalledWith({ collectionName: 'kunstenaarAfspraken', id: 'ka-1' });
+    expect(fetchMock).toHaveBeenCalledWith('/api/kunstenaarAfspraken/ka-1');
   });
 
-  it('leaves the prijsafspraken textarea empty when there is no companion document yet', async () => {
-    getDocMock.mockResolvedValue({ data: () => undefined });
+  it('leaves the prijsafspraken textarea empty when there is no companion record yet', async () => {
     renderSection();
     fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
 
-    await waitFor(() => expect(getDocMock).toHaveBeenCalled());
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/kunstenaarAfspraken/ka-1'));
     expect(screen.getByTestId('kunstenaar-modal-prijsafspraken')).toHaveValue('');
   });
 
-  it('falls back to a legacy prijsafspraken value still stored on the public document', async () => {
-    getDocMock.mockResolvedValue({ data: () => undefined });
-    renderSection({
-      kunstenaars: [{ ...KUNSTENAARS[0], prijsafspraken: 'legacy 15%' } as Kunstenaar],
-    });
-    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
-
-    await waitFor(() =>
-      expect(screen.getByTestId('kunstenaar-modal-prijsafspraken')).toHaveValue('legacy 15%')
-    );
-  });
-
   it('opens a row for editing pre-filled and updates it, preserving exclusiefVoorKlantId', async () => {
-    getDocMock.mockResolvedValue({ data: () => ({ prijsafspraken: '20% commissie' }) });
+    afsprakenGetImpl = async () => ({ ok: true, json: async () => ({ prijsafspraken: '20% commissie' }) });
     const { onUpdate } = renderSection({
       kunstenaars: [{ ...KUNSTENAARS[0], exclusiefVoorKlantId: 'klant-1' }],
     });
@@ -280,12 +280,10 @@ describe('KunstenaarsSection', () => {
         exclusiefVoorKlantId: 'klant-1',
       })
     );
-    await waitFor(() =>
-      expect(setDocMock).toHaveBeenCalledWith(
-        { collectionName: 'kunstenaarAfspraken', id: 'ka-1' },
-        { prijsafspraken: '20% commissie' }
-      )
-    );
+    expect(afsprakenPutCalls()).toContainEqual([
+      '/api/kunstenaarAfspraken/ka-1',
+      expect.objectContaining({ body: JSON.stringify({ prijsafspraken: '20% commissie' }) }),
+    ]);
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'kunstenaar_gewijzigd',
       expect.anything(),
@@ -305,17 +303,8 @@ describe('KunstenaarsSection', () => {
     );
   });
 
-  it('also deletes the kunstenaarAfspraken companion document when deleting a kunstenaar', async () => {
-    renderSection();
-    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
-    fireEvent.click(screen.getByTestId('kunstenaar-modal-verwijderen'));
-    await waitFor(() =>
-      expect(deleteDocMock).toHaveBeenCalledWith({ collectionName: 'kunstenaarAfspraken', id: 'ka-1' })
-    );
-  });
-
   it('shows an action error and does not log when adding fails', async () => {
-    setDocMock.mockRejectedValue(new Error('offline'));
+    kunstenaarPostShouldFail = true;
     renderSection();
     fireEvent.click(screen.getByTestId('kunstenaars-add'));
     fireEvent.change(screen.getByTestId('kunstenaar-modal-naam'), { target: { value: 'X' } });
@@ -340,32 +329,32 @@ describe('KunstenaarsSection', () => {
   });
 
   it('disables Opslaan until the prijsafspraken fetch has settled', async () => {
-    let resolveFetch: (snap: { data: () => unknown }) => void = () => {};
-    getDocMock.mockReturnValue(
-      new Promise<{ data: () => unknown }>((resolve) => {
-        resolveFetch = resolve;
-      })
-    );
+    let resolveFetch: (body: { prijsafspraken: string | null }) => void = () => {};
+    afsprakenGetImpl = () =>
+      new Promise((resolve) => {
+        resolveFetch = (body) => resolve({ ok: true, json: async () => body });
+      });
     renderSection();
     fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
 
     // naam/omschrijving are prefilled synchronously, so without the loading guard
     // Opslaan would already be clickable here and would save an empty afspraak.
     expect(screen.getByTestId('kunstenaar-modal-opslaan')).toBeDisabled();
-    resolveFetch({ data: () => ({ prijsafspraken: '20% commissie' }) });
+    resolveFetch({ prijsafspraken: '20% commissie' });
     await waitFor(() => expect(screen.getByTestId('kunstenaar-modal-opslaan')).not.toBeDisabled());
     expect(screen.getByTestId('kunstenaar-modal-prijsafspraken')).toHaveValue('20% commissie');
   });
 
   it('does not let a slow fetch for one kunstenaar overwrite the form of another', async () => {
-    let resolveEerste: (snap: { data: () => unknown }) => void = () => {};
-    getDocMock.mockImplementationOnce(
-      () =>
-        new Promise<{ data: () => unknown }>((resolve) => {
-          resolveEerste = resolve;
-        })
-    );
-    getDocMock.mockResolvedValue({ data: () => ({ prijsafspraken: 'afspraken van ka-2' }) });
+    let resolveEerste: (body: { prijsafspraken: string | null }) => void = () => {};
+    afsprakenGetImpl = (id) => {
+      if (id === 'ka-1') {
+        return new Promise((resolve) => {
+          resolveEerste = (body) => resolve({ ok: true, json: async () => body });
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ prijsafspraken: 'afspraken van ka-2' }) });
+    };
     renderSection({
       kunstenaars: [KUNSTENAARS[0], { ...KUNSTENAARS[0], id: 'ka-2', naam: 'Bram Steen' }],
     });
@@ -378,27 +367,27 @@ describe('KunstenaarsSection', () => {
     );
 
     // The stale fetch for ka-1 resolves last and must be ignored.
-    resolveEerste({ data: () => ({ prijsafspraken: 'afspraken van ka-1' }) });
+    resolveEerste({ prijsafspraken: 'afspraken van ka-1' });
     await waitFor(() => expect(screen.getByTestId('kunstenaar-modal-naam')).toHaveValue('Bram Steen'));
     expect(screen.getByTestId('kunstenaar-modal-prijsafspraken')).toHaveValue('afspraken van ka-2');
   });
 
   it('blocks saving and shows an error when the prijsafspraken fetch fails', async () => {
-    getDocMock.mockRejectedValue(new Error('offline'));
+    afsprakenGetImpl = () => Promise.reject(new Error('offline'));
     const { onUpdate } = renderSection();
     fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
 
     expect(await screen.findByTestId('kunstenaar-modal-error')).toHaveTextContent(
       'De prijsafspraken konden niet geladen worden.'
     );
-    // Saving stays blocked: falling back to '' would wipe a good companion document.
+    // Saving stays blocked: falling back to '' would wipe a good companion record.
     expect(screen.getByTestId('kunstenaar-modal-opslaan')).toBeDisabled();
     expect(onUpdate).not.toHaveBeenCalled();
   });
 
   it('reuses the same generated id when a failed add is retried, instead of duplicating', async () => {
-    // First attempt: the public write succeeds but the companion write fails.
-    setDocMock.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('offline'));
+    // First attempt: the kunstenaar POST succeeds but the companion write fails.
+    afsprakenPutShouldFail = true;
     renderSection();
     fireEvent.click(screen.getByTestId('kunstenaars-add'));
     fireEvent.change(screen.getByTestId('kunstenaar-modal-naam'), { target: { value: 'Nieuw' } });
@@ -407,14 +396,18 @@ describe('KunstenaarsSection', () => {
     await screen.findByTestId('kunstenaar-modal-error');
 
     // Retry from the still-open modal.
-    setDocMock.mockResolvedValue(undefined);
+    afsprakenPutShouldFail = false;
     fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
     await waitFor(() => expect(screen.queryByTestId('kunstenaar-modal')).not.toBeInTheDocument());
 
-    const publiekeIds = setDocMock.mock.calls
-      .filter((call) => (call[0] as { collectionName: string }).collectionName === 'kunstenaars')
-      .map((call) => (call[0] as { id: string }).id);
-    expect(publiekeIds).toEqual(['nieuwe-ka-id-1', 'nieuwe-ka-id-1']);
+    const kunstenaarPostCalls = fetchMock.mock.calls.filter(
+      (call) => call[0] === '/api/kunstenaars' && call[1]?.method === 'POST'
+    );
+    const kunstenaarPatchCalls = fetchMock.mock.calls.filter(
+      (call) => call[0] === '/api/kunstenaars/nieuwe-ka-id-1' && call[1]?.method === 'PATCH'
+    );
+    expect(kunstenaarPostCalls).toHaveLength(1);
+    expect(kunstenaarPatchCalls).toHaveLength(1);
   });
 
   it('still saves successfully when only the refetch afterwards fails', async () => {
@@ -444,7 +437,6 @@ describe('KunstenaarsSection', () => {
       'Deze kunstenaar is nog aan een kunstwerk gekoppeld en kan niet verwijderd worden.'
     );
     expect(onRemove).not.toHaveBeenCalled();
-    expect(deleteDocMock).not.toHaveBeenCalled();
   });
 
   it('blocks deleting while the kunstwerken have not loaded, instead of assuming "not in use"', async () => {
@@ -455,6 +447,5 @@ describe('KunstenaarsSection', () => {
       'Kan nog niet controleren of deze kunstenaar in gebruik is. Probeer het opnieuw.'
     );
     expect(onRemove).not.toHaveBeenCalled();
-    expect(deleteDocMock).not.toHaveBeenCalled();
   });
 });

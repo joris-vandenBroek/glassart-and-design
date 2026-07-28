@@ -3,16 +3,16 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAllOrders, type DisplayOrder } from '@/lib/useAllOrders';
-import { useFirestoreCollection } from '@/lib/useFirestoreCollection';
+import { useApiCollection } from '@/lib/useApiCollection';
 import type { Kunstwerk, Materiaal, Maat } from '@/components/beheer/materiaalTypes';
 import { AccountOrderModal } from './AccountOrderModal';
 
 export function OrdersSection() {
   const t = useTranslations('accountPage');
   const { orders, loadError } = useAllOrders();
-  const kunstwerken = useFirestoreCollection<Kunstwerk>('kunstwerken');
-  const materialen = useFirestoreCollection<Materiaal>('materialen');
-  const maten = useFirestoreCollection<Maat>('maten');
+  const kunstwerken = useApiCollection<Kunstwerk>('kunstwerken');
+  const materialen = useApiCollection<Materiaal>('materialen');
+  const maten = useApiCollection<Maat>('maten');
   const [selectedOrder, setSelectedOrder] = useState<DisplayOrder | null>(null);
 
   return (

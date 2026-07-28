@@ -2,8 +2,6 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { collection, deleteDoc, doc, getDoc, setDoc, type DocumentReference } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
 import { Combobox } from '@/components/Combobox';
@@ -23,14 +21,6 @@ interface KunstenaarsSectionProps {
   onRemove: (id: string) => Promise<boolean>;
   onRefetch: () => Promise<boolean>;
 }
-
-// Interne prijsafspraken staan in een aparte, alleen voor medewerkers leesbare
-// collectie; het kunstenaars-document zelf is publiek leesbaar (Collecties-pagina).
-const AFSPRAKEN_COLLECTION = 'kunstenaarAfspraken';
-
-// Documenten die vóór deze splitsing zijn aangemaakt hebben `prijsafspraken` nog in het
-// publieke document staan; zie de toelichting bij KunstenaarUpdate in kunstenaarTypes.ts.
-type LegacyKunstenaar = Kunstenaar & { prijsafspraken?: string };
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; kunstenaar: Kunstenaar } | null;
 type KunstenaarRow = Kunstenaar & { verkooprechtLabel: string; klantNaam: string };
@@ -72,13 +62,13 @@ export function KunstenaarsSection({
   const [prijsafsprakenLaden, setPrijsafsprakenLaden] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isDraggingFoto, setIsDraggingFoto] = useState(false);
-  // Id van de kunstenaar waarvoor de modal nú openstaat. Een trage getDoc van een
+  // Id van de kunstenaar waarvoor de modal nú openstaat. Een trage fetch van een
   // eerder geopende kunstenaar mag de afspraken van de huidige niet overschrijven.
   const geopendeKunstenaarIdRef = useRef<string | null>(null);
-  // Eén keer gegenereerde doc-referentie per 'toevoegen'-sessie, zodat een tweede
-  // poging na een mislukte opslag hetzelfde document overschrijft in plaats van een
+  // Id van de zojuist aangemaakte kunstenaar in deze 'toevoegen'-sessie, zodat een
+  // tweede poging na een mislukte opslag dat record bijwerkt in plaats van een
   // duplicaat kunstenaar aan te maken.
-  const nieuweKunstenaarRef = useRef<DocumentReference | null>(null);
+  const nieuweKunstenaarIdRef = useRef<string | null>(null);
 
   const klantNaamById = useMemo(() => {
     const map = new Map<string, string>();
@@ -124,7 +114,7 @@ export function KunstenaarsSection({
   function openAdd() {
     resetForm();
     geopendeKunstenaarIdRef.current = null;
-    nieuweKunstenaarRef.current = null;
+    nieuweKunstenaarIdRef.current = null;
     setModalState({ mode: 'add' });
   }
 
@@ -144,18 +134,14 @@ export function KunstenaarsSection({
     // klaar is en daarmee een lege afspraak wegschrijven.
     setPrijsafsprakenLaden(true);
     geopendeKunstenaarIdRef.current = kunstenaar.id;
-    nieuweKunstenaarRef.current = null;
+    nieuweKunstenaarIdRef.current = null;
     setModalState({ mode: 'edit', kunstenaar });
-    // Val terug op het legacy-veld in het publieke document, anders zouden de
-    // afspraken van nog niet gemigreerde kunstenaars bij het eerste opslaan
-    // gewist worden.
-    const legacyPrijsafspraken = (kunstenaar as LegacyKunstenaar).prijsafspraken;
     try {
-      const afsprakenSnap = await getDoc(doc(db, AFSPRAKEN_COLLECTION, kunstenaar.id));
+      const response = await fetch(`/api/kunstenaarAfspraken/${kunstenaar.id}`);
+      if (!response.ok) throw new Error('load failed');
+      const body = (await response.json()) as { prijsafspraken: string | null };
       if (geopendeKunstenaarIdRef.current !== kunstenaar.id) return;
-      setPrijsafspraken(
-        (afsprakenSnap.data()?.prijsafspraken as string | undefined) ?? legacyPrijsafspraken ?? ''
-      );
+      setPrijsafspraken(body.prijsafspraken ?? '');
       setPrijsafsprakenLaden(false);
     } catch {
       if (geopendeKunstenaarIdRef.current !== kunstenaar.id) return;
@@ -168,7 +154,7 @@ export function KunstenaarsSection({
 
   function closeModal() {
     geopendeKunstenaarIdRef.current = null;
-    nieuweKunstenaarRef.current = null;
+    nieuweKunstenaarIdRef.current = null;
     setPrijsafsprakenLaden(false);
     setModalState(null);
   }
@@ -222,25 +208,43 @@ export function KunstenaarsSection({
     let success: boolean;
     try {
       if (modalState.mode === 'add') {
-        // De generieke add() geeft het nieuwe id niet terug, en dat id is nodig om
-        // het bijbehorende afsprakendocument te kunnen schrijven. De referentie wordt
-        // per modal-sessie één keer gegenereerd: een tweede poging na een fout
-        // overschrijft hetzelfde document in plaats van een duplicaat te maken.
-        nieuweKunstenaarRef.current ??= doc(collection(db, 'kunstenaars'));
-        const nieuweRef = nieuweKunstenaarRef.current;
-        await setDoc(nieuweRef, data);
-        await setDoc(doc(db, AFSPRAKEN_COLLECTION, nieuweRef.id), { prijsafspraken });
+        // Een tweede poging na een mislukte opslag werkt de al aangemaakte kunstenaar
+        // bij in plaats van een duplicaat aan te maken (zie nieuweKunstenaarIdRef).
+        const bestaandId = nieuweKunstenaarIdRef.current;
+        const response = bestaandId
+          ? await fetch(`/api/kunstenaars/${bestaandId}`, {
+              method: 'PATCH',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify(data),
+            })
+          : await fetch('/api/kunstenaars', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify(data),
+            });
+        if (!response.ok) throw new Error('create failed');
+        const kunstenaarId = bestaandId ?? ((await response.json()) as { id: string }).id;
+        nieuweKunstenaarIdRef.current = kunstenaarId;
+        const afsprakenResponse = await fetch(`/api/kunstenaarAfspraken/${kunstenaarId}`, {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ prijsafspraken }),
+        });
+        if (!afsprakenResponse.ok) throw new Error('afspraken create failed');
         // Beide schrijfacties zijn geslaagd en dus duurzaam. Een mislukte refetch is
-        // een leesprobleem (useFirestoreCollection zet zelf zijn load-error) en mag de
+        // een leesprobleem (useApiCollection zet zelf zijn load-error) en mag de
         // opslag niet als mislukt presenteren — dat zou tot een tweede poging leiden.
         await onRefetch();
         success = true;
       } else {
-        // Eerst het afsprakendocument met de zojuist ingevoerde waarde, dán pas de update
-        // van het publieke document. onUpdate is de veilige wrapper uit BeheerShell, die
-        // een nog niet gemigreerde legacy-waarde migreert vóór hij hem stript; doordat het
-        // afsprakendocument hier al bestaat, slaat die migratie de verse invoer niet over.
-        await setDoc(doc(db, AFSPRAKEN_COLLECTION, modalState.kunstenaar.id), { prijsafspraken });
+        // Eerst het afsprakenrecord met de zojuist ingevoerde waarde, dán pas de update
+        // van het publieke kunstenaarsrecord.
+        const afsprakenResponse = await fetch(`/api/kunstenaarAfspraken/${modalState.kunstenaar.id}`, {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ prijsafspraken }),
+        });
+        if (!afsprakenResponse.ok) throw new Error('afspraken update failed');
         success = await onUpdate(modalState.kunstenaar.id, data);
       }
     } catch {
@@ -273,10 +277,9 @@ export function KunstenaarsSection({
     }
     let success: boolean;
     try {
+      // De kunstenaarAfspraken-rij heeft een ON DELETE CASCADE foreign key naar
+      // kunstenaars.id, dus die wordt door de database zelf opgeruimd.
       success = await onRemove(modalState.kunstenaar.id);
-      if (success) {
-        await deleteDoc(doc(db, AFSPRAKEN_COLLECTION, modalState.kunstenaar.id));
-      }
     } catch {
       success = false;
     }

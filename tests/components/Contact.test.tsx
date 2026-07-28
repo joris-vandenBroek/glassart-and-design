@@ -4,18 +4,8 @@ import { renderWithIntl } from '../test-utils';
 import { Contact } from '@/components/Contact';
 import messages from '../../messages/nl.json';
 
-const getDocMock = vi.fn();
-const setDocMock = vi.fn();
-
-vi.mock('@/lib/firebase', () => ({
-  db: {},
-}));
-
-vi.mock('firebase/firestore', () => ({
-  doc: vi.fn((_db, collectionName, id) => ({ collectionName, id })),
-  getDoc: (...args: unknown[]) => getDocMock(...args),
-  setDoc: (...args: unknown[]) => setDocMock(...args),
-}));
+const fetchMock = vi.fn();
+vi.stubGlobal('fetch', fetchMock);
 
 const BEDRIJFSGEGEVENS = {
   bezoekadres: 'Den Heuvel 21, 5688 EM Oirschot',
@@ -41,21 +31,17 @@ const BEDRIJFSGEGEVENS = {
   ],
 };
 
-function mockDoc(data: typeof BEDRIJFSGEGEVENS | null) {
-  getDocMock.mockResolvedValue({
-    exists: () => data !== null,
-    data: () => data,
-  });
+function mockRecord(data: typeof BEDRIJFSGEGEVENS | null) {
+  fetchMock.mockResolvedValue({ ok: data !== null, json: async () => data });
 }
 
 beforeEach(() => {
-  getDocMock.mockReset();
-  setDocMock.mockReset();
+  fetchMock.mockReset();
 });
 
 describe('Contact', () => {
   it('renders contact details from the beheer-managed bedrijfsgegevens and exposes the #contact anchor', async () => {
-    mockDoc(BEDRIJFSGEGEVENS);
+    mockRecord(BEDRIJFSGEGEVENS);
     renderWithIntl(<Contact />, 'nl', messages);
     expect(screen.getByText('Contact')).toBeInTheDocument();
     expect(screen.getByTestId('glass-panel')).toHaveAttribute('id', 'contact');
@@ -74,8 +60,8 @@ describe('Contact', () => {
     ).toHaveAttribute('href', 'tel:+31651404089');
   });
 
-  it('renders the seed data immediately as a fallback while the real document is still loading', () => {
-    getDocMock.mockReturnValue(new Promise(() => {}));
+  it('renders the seed data immediately as a fallback while the real record is still loading', () => {
+    fetchMock.mockReturnValue(new Promise(() => {}));
     renderWithIntl(<Contact />, 'nl', messages);
     expect(
       screen.getByRole('link', { name: 'info@glassartanddesign.com' })
