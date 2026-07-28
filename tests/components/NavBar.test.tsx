@@ -2,11 +2,8 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { NavBar } from '@/components/NavBar';
-import { CustomerAuthProvider } from '@/lib/useCustomerAuth';
 import messages from '../../messages/nl.json';
 
-const onAuthStateChangedMock = vi.fn();
-const getDocMock = vi.fn();
 const usePathnameMock = vi.fn(() => '/');
 const getDocsMock = vi.fn();
 
@@ -24,53 +21,44 @@ vi.mock('@/components/CartPanel', () => ({
   CartPanel: () => <div data-testid="cart-panel-stub" />,
 }));
 
+// CollectiesDropdown (rendered inside NavBar) still reads Firestore directly —
+// it hasn't been migrated to useApiCollection yet.
 vi.mock('@/lib/firebase', () => ({
   auth: {},
   db: {},
 }));
 
-vi.mock('firebase/auth', () => ({
-  onAuthStateChanged: (...args: unknown[]) => onAuthStateChangedMock(...args),
-}));
-
 vi.mock('firebase/firestore', () => ({
   collection: vi.fn((_db, name) => ({ name })),
-  doc: vi.fn((_db, collection, id) => ({ collection, id })),
-  getDoc: (...args: unknown[]) => getDocMock(...args),
   getDocs: (...args: unknown[]) => getDocsMock(...args),
-  addDoc: vi.fn(),
-  updateDoc: vi.fn(),
-  deleteDoc: vi.fn(),
+}));
+
+let isCustomer = false;
+let isHydrated = true;
+
+vi.mock('@/lib/useCustomerAuth', () => ({
+  useCustomerAuth: () => ({ isCustomer, isHydrated, user: null, logout: vi.fn() }),
 }));
 
 function renderNavBar() {
   return render(
     <NextIntlClientProvider locale="nl" messages={messages}>
-      <CustomerAuthProvider>
-        <NavBar />
-      </CustomerAuthProvider>
+      <NavBar />
     </NextIntlClientProvider>
   );
 }
 
 function signedOut() {
-  onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-    callback(null);
-    return () => {};
-  });
+  isCustomer = false;
+  isHydrated = true;
 }
 
 function signedInAsApprovedCustomer() {
-  getDocMock.mockResolvedValue({ exists: () => true, data: () => ({ status: 'Goedgekeurd' }) });
-  onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-    callback({ uid: 'uid-1', email: 'klant@example.com' });
-    return () => {};
-  });
+  isCustomer = true;
+  isHydrated = true;
 }
 
 beforeEach(() => {
-  onAuthStateChangedMock.mockReset();
-  getDocMock.mockReset();
   usePathnameMock.mockReturnValue('/');
   getDocsMock.mockReset();
   getDocsMock.mockResolvedValue({ empty: true, docs: [] });
