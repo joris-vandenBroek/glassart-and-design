@@ -18,11 +18,11 @@
 - API routes return `{ error: string }` on failure with the correct HTTP status; raw SQL errors are logged server-side only, never sent to the client.
 - Client hooks preserve the existing `'load' | 'action' | null` error-code contract used throughout the codebase.
 - Data migration is scoped to exactly two sources: `instellingen/bedrijfsgegevens` (full document) and `medewerkers` (profile fields only — **not** passwords). Every other collection starts empty in MySQL.
-- Tests for API routes run against a real local test MySQL database (`glassart_test`), never mocked queries.
+- No local database: both interactive development and the automated test suite run against **one shared staging database on mijn.host** (`glassart_staging`), reached via Remote MySQL access — there is no separate local or throwaway-test database. Tests freely wiping/reseeding staging tables is accepted (matches the existing Firestore-staging behavior of auto-reseeding empty collections). A separate `glassart_prod` database (Task 25) is never touched by tests.
 
 ---
 
-## Task 1: Local MySQL dev environment + connection pool
+## Task 1: mijn.host staging database + connection pool
 
 **Files:**
 - Create: `.env.local.example`
@@ -32,37 +32,34 @@
 **Interfaces:**
 - Produces: `getPool(): mysql2.Pool` — a singleton connection pool, reading `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` from `process.env`.
 
-- [ ] **Step 1: Install mysql2 and set up a local MySQL database**
+- [ ] **Step 1: Install mysql2**
 
 Run:
 ```bash
 npm install mysql2
 ```
 
-Install MySQL locally (pick one):
-- Docker (simplest, reproducible): `docker run --name glassart-mysql -e MYSQL_ROOT_PASSWORD=devpass -e MYSQL_DATABASE=glassart_dev -p 3306:3306 -d mysql:8`
-- Or install MySQL Community Server / XAMPP directly on Windows and create a `glassart_dev` database yourself.
+- [ ] **Step 2: Create the staging database on mijn.host and allow remote access**
 
-Then create the test database too:
-```bash
-docker exec -it glassart-mysql mysql -uroot -pdevpass -e "CREATE DATABASE glassart_test;"
-```
-(or the equivalent `CREATE DATABASE glassart_test;` in your MySQL client if not using Docker)
+In DirectAdmin ("Databases"), create a new database (e.g. `glassart_staging`, likely prefixed by DirectAdmin to something like `dv137864_staging`) and a dedicated database user with a strong password. Note the exact database name, username, and password.
 
-- [ ] **Step 2: Write `.env.local.example`**
+Open that database's **Access Hosts** (Remote MySQL) setting and add your current public IP address (find it at whatismyip.com or similar) — not the `%` wildcard, per mijn.host's own guidance. If your ISP gives you a dynamic IP, you'll need to update this whenever it changes and `pool.query` starts failing with a connection-refused error.
+
+Note the MySQL hostname shown in DirectAdmin's database overview (usually the server's own hostname, e.g. `h64.mijn.host`) — this is your `DB_HOST`, not `127.0.0.1`.
+
+- [ ] **Step 3: Write `.env.local.example`**
 
 ```
-DB_HOST=127.0.0.1
+DB_HOST=h64.mijn.host
 DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=devpass
-DB_NAME=glassart_dev
-DB_NAME_TEST=glassart_test
+DB_USER=dv137864_staging
+DB_PASSWORD=changeme
+DB_NAME=dv137864_staging
 ```
 
-Copy this to `.env.local` (gitignored) with your real local values.
+Copy this to `.env.local` (gitignored) with your real staging database values from Step 2.
 
-- [ ] **Step 3: Write the failing test**
+- [ ] **Step 4: Write the failing test**
 
 ```typescript
 // tests/lib/server/db.test.ts
@@ -82,12 +79,12 @@ describe('getPool', () => {
 });
 ```
 
-- [ ] **Step 4: Run test to verify it fails**
+- [ ] **Step 5: Run test to verify it fails**
 
 Run: `npx vitest run tests/lib/server/db.test.ts`
 Expected: FAIL — `Cannot find module '@/lib/server/db'`
 
-- [ ] **Step 5: Implement the connection pool**
+- [ ] **Step 6: Implement the connection pool**
 
 ```typescript
 // src/lib/server/db.ts
@@ -102,7 +99,7 @@ export function getPool(): mysql.Pool {
       port: Number(process.env.DB_PORT ?? 3306),
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
-      database: process.env.NODE_ENV === 'test' ? process.env.DB_NAME_TEST : process.env.DB_NAME,
+      database: process.env.DB_NAME,
       waitForConnections: true,
       connectionLimit: 10,
     });
@@ -111,7 +108,7 @@ export function getPool(): mysql.Pool {
 }
 ```
 
-- [ ] **Step 6: Load env vars in Vitest config and run the test**
+- [ ] **Step 7: Load env vars in Vitest config and run the test**
 
 Modify `vitest.config.ts` to load `.env.local` for tests:
 
@@ -122,13 +119,13 @@ dotenv.config({ path: '.env.local' });
 ```
 
 Run: `npm install --save-dev dotenv && npx vitest run tests/lib/server/db.test.ts`
-Expected: PASS (requires the local MySQL database from Step 1 to be running)
+Expected: PASS (requires the staging database from Step 2 to be reachable — check your IP is still whitelisted in Access Hosts if this fails with a connection error)
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add package.json package-lock.json .env.local.example src/lib/server/db.ts tests/lib/server/db.test.ts tests/setup.ts
-git commit -m "feat: add MySQL connection pool for local dev/test"
+git commit -m "feat: add MySQL connection pool pointed at mijn.host staging database"
 ```
 
 ---
@@ -284,17 +281,16 @@ CREATE TABLE activiteitenlog (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-- [ ] **Step 2: Apply it to both local databases**
+- [ ] **Step 2: Apply it to the mijn.host staging database**
 
-Run (adjust host/user/password to match your `.env.local`):
+Using a local MySQL client (the `mysql` CLI, or a GUI like DBeaver/TablePlus) pointed at the staging database from Task 1, Step 2 — adjust host/user/password/database to match your `.env.local`:
 ```bash
-mysql -h127.0.0.1 -uroot -pdevpass glassart_dev < db/schema.sql
-mysql -h127.0.0.1 -uroot -pdevpass glassart_test < db/schema.sql
+mysql -hh64.mijn.host -P3306 -udv137864_staging -p dv137864_staging < db/schema.sql
 ```
 
 - [ ] **Step 3: Verify tables exist**
 
-Run: `mysql -h127.0.0.1 -uroot -pdevpass glassart_dev -e "SHOW TABLES;"`
+Run: `mysql -hh64.mijn.host -P3306 -udv137864_staging -p dv137864_staging -e "SHOW TABLES;"`
 Expected: 16 tables listed (klanten, medewerkers, sessions, passwordResetTokens, segmenten, materiaalsoorten, materialen, maten, prijsgroepen, kunstwerken, instellingen, counters, bestelheaders, bestellines, activiteitenlog)
 
 - [ ] **Step 4: Commit**
@@ -3501,9 +3497,9 @@ main().catch((error) => {
 
 Run: `npm install --save-dev tsx`
 
-- [ ] **Step 3: Run it against the real Firebase project and the dev MySQL database**
+- [ ] **Step 3: Run it against the real Firebase project and the mijn.host staging database**
 
-Run (with `GOOGLE_APPLICATION_CREDENTIALS` pointing at your downloaded service-account key):
+Run (with `GOOGLE_APPLICATION_CREDENTIALS` pointing at your downloaded service-account key — `.env.local` already points `getPool()` at the staging database from Task 1):
 ```bash
 GOOGLE_APPLICATION_CREDENTIALS=./firebase-service-account.json npm run migrate:firebase-data
 ```
@@ -3513,7 +3509,7 @@ Expected output: `Migrated instellingen/bedrijfsgegevens.` and `Migrated N medew
 
 - [ ] **Step 4: Verify in MySQL**
 
-Run: `mysql -h127.0.0.1 -uroot -pdevpass glassart_dev -e "SELECT * FROM instellingen; SELECT email, naam FROM medewerkers;"`
+Run: `mysql -hh64.mijn.host -P3306 -udv137864_staging -p dv137864_staging -e "SELECT * FROM instellingen; SELECT email, naam FROM medewerkers;"`
 Expected: one `instellingen` row and one `medewerkers` row per real staff account.
 
 - [ ] **Step 5: Commit the script (not the credentials file or any data)**
@@ -3557,7 +3553,7 @@ Run: `npm run start` (in one terminal), then in another:
 ```bash
 curl http://localhost:3000/api/segmenten
 ```
-Expected: `[]` (empty array, since the local dev database's `segmenten` table starts empty)
+Expected: `[]` (empty array, since the staging database's `segmenten` table starts empty)
 
 Stop the `npm run start` process once verified (Ctrl+C).
 
@@ -3644,7 +3640,7 @@ Temporarily point your local `.env.local`'s `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PA
 ```bash
 GOOGLE_APPLICATION_CREDENTIALS=./firebase-service-account.json npm run migrate:firebase-data
 ```
-Restore your local `.env.local` to its original (dev database) values immediately after this succeeds.
+Restore your local `.env.local` to its original (staging database) values immediately after this succeeds.
 
 - [ ] **Step 4: Set up the production Node.js app in DirectAdmin**
 
