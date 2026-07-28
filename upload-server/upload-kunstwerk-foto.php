@@ -31,27 +31,23 @@ const ALLOWED_MIME_EXTENSIONS = [
     'image/webp' => 'webp',
 ];
 
-// A static shared secret per environment (same pattern as mail-server/send-mail.php),
-// checked with hash_equals() to avoid timing attacks. Test uploads from the staging
-// secret must never land among the real production photos -- route them to a
-// separate directory/URL instead, same as the production secret does for its own.
+// A static shared secret (same pattern as mail-server/send-mail.php), checked with
+// hash_equals() to avoid timing attacks. One secret for both environments -- which
+// directory a test upload lands in is decided below from the Origin header instead,
+// since NEXT_PUBLIC_* values are baked into the public JS bundle anyway and were
+// never a real per-environment secret split.
 $secret = (string) ($_POST['secret'] ?? '');
-$productionSecret = (string) ($config['upload_secret'] ?? '');
-$stagingSecret = (string) ($config['staging_upload_secret'] ?? '');
+$sharedSecret = (string) ($config['upload_secret'] ?? '');
 
-$isStagingUpload = false;
-$authorized = false;
-if ($secret !== '' && $productionSecret !== '' && hash_equals($productionSecret, $secret)) {
-    $authorized = true;
-} elseif ($secret !== '' && $stagingSecret !== '' && hash_equals($stagingSecret, $secret)) {
-    $authorized = true;
-    $isStagingUpload = true;
-}
-if (!$authorized) {
+if ($secret === '' || $sharedSecret === '' || !hash_equals($sharedSecret, $secret)) {
     http_response_code(403);
     echo json_encode(['success' => false, 'error' => 'Forbidden']);
     exit;
 }
+// Test uploads from staging must never land among the real production photos --
+// route them to a separate directory/URL based on the Origin header, which the
+// browser sets itself and our own frontend JS cannot override.
+$isStagingUpload = $requestOrigin === 'https://staging.glassartanddesign.com';
 $publicBaseUrlKey = $isStagingUpload ? 'staging_upload_public_base_url' : 'upload_public_base_url';
 if (!is_string($config[$publicBaseUrlKey] ?? null) || $config[$publicBaseUrlKey] === '') {
     // Fail before any file work happens -- catching this after move_uploaded_file() would

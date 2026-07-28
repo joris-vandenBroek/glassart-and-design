@@ -26,43 +26,75 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build static export
+      - name: Build (server mode)
         run: npm run build
         env:
           NEXT_PUBLIC_ENVIRONMENT_LABEL: 'staging'
-          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.STAGING_NEXT_PUBLIC_FIREBASE_API_KEY }}
-          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.STAGING_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
-          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.STAGING_NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
-          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.STAGING_NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
-          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ vars.STAGING_NEXT_PUBLIC_FIREBASE_APP_ID }}
           NEXT_PUBLIC_MAIL_ENDPOINT_URL: ${{ vars.NEXT_PUBLIC_MAIL_ENDPOINT_URL }}
           NEXT_PUBLIC_MAIL_SECRET: ${{ secrets.NEXT_PUBLIC_MAIL_SECRET }}
           NEXT_PUBLIC_UPLOAD_ENDPOINT_URL: ${{ vars.NEXT_PUBLIC_UPLOAD_ENDPOINT_URL }}
+          NEXT_PUBLIC_UPLOAD_SECRET: ${{ secrets.NEXT_PUBLIC_UPLOAD_SECRET }}
+        # No MIJNHOST_BUILD here: staging stays fully open (no Under Construction gate),
+        # unlike production. DB_HOST/PORT/USER/PASSWORD/NAME and
+        # MAIL_SERVER_RESET_ENDPOINT_URL are runtime-only (read by getPool() and
+        # sendResetEmail() at request time, not baked in at build time) and are already
+        # set directly in the Node.js app's DirectAdmin environment-variables panel --
+        # this workflow doesn't need to touch them.
 
-      - name: Install apache2-utils (for htpasswd)
-        run: sudo apt-get update && sudo apt-get install -y apache2-utils
+      - name: Strip devDependencies from node_modules
+        run: npm prune --omit=dev
+        # next start (via app.js) only needs "dependencies" (mysql2, next, next-intl,
+        # react, react-dom). Uploading a pruned node_modules alongside the build lets
+        # the Node.js app run immediately after this deploy, without a manual "Run NPM
+        # Install" click in DirectAdmin (that button has failed transiently before on a
+        # large install right after an extract -- see the migration plan's Task 25).
 
-      - name: Generate .htpasswd
-        env:
-          BASIC_AUTH_PASSWORD: ${{ secrets.STAGING_BASIC_AUTH_PASSWORD }}
-        run: htpasswd -bc out/.htpasswd glassart "$BASIC_AUTH_PASSWORD"
-
-      - name: Add Basic Auth .htaccess
-        env:
-          SYSTEM_USERNAME: ${{ vars.STAGING_SYSTEM_USERNAME }}
+      - name: Assemble deploy payload
         run: |
-          sed "s#USERNAME#$SYSTEM_USERNAME#" deploy/staging.htaccess > out/.htaccess
+          rm -rf deploy_payload restart_trigger
+          mkdir deploy_payload restart_trigger
+          cp -r .next public messages src node_modules deploy_payload/
+          rm -rf deploy_payload/.next/cache
+          cp app.js next.config.mjs package.json package-lock.json deploy_payload/
+          date -u > restart_trigger/restart.txt
 
-      - name: Upload to staging.glassartanddesign.com via FTPS
+      - name: Upload build to staging Node.js app via FTPS
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ vars.STAGING_FTP_HOST }}
           username: ${{ secrets.STAGING_FTP_USERNAME }}
           password: ${{ secrets.STAGING_FTP_PASSWORD }}
           protocol: ftps
-          local-dir: ./out/
-          server-dir: ./public_html/
-          dangerous-clean-slate: true
+          local-dir: ./deploy_payload/
+          # Node.js app's own Application root: a sibling of public_html under
+          # domains/staging.glassartanddesign.com/, created by DirectAdmin's Node.js
+          # Selector -- confirmed via File Manager to sit at this path, reachable by the
+          # same FTP account already used for the old public_html deploy (its home
+          # directory sits one level above both siblings, same pattern as
+          # deploy-naar-production.yml's ./public_html/ target).
+          server-dir: ./glassartanddesign.com/
+          # No dangerous-clean-slate: this directory also holds tmp/ and stderr.log,
+          # managed by the Node.js Selector/Passenger runtime, which must not be wiped.
+          # Relying on the action's default incremental sync instead, plus these excludes
+          # as a second layer of protection (same reasoning as production's workflow).
+          exclude: |
+            **/stderr.log
+            **/tmp/**
+
+      - name: Trigger restart (tmp/restart.txt touch, standard Passenger convention)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ vars.STAGING_FTP_HOST }}
+          username: ${{ secrets.STAGING_FTP_USERNAME }}
+          password: ${{ secrets.STAGING_FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./restart_trigger/
+          server-dir: ./glassartanddesign.com/tmp/
+        # Kept as a separate, narrowly-scoped upload (just this one file) so it can't
+        # touch anything else already inside the remote tmp/ folder. This is a best-effort
+        # attempt, not a confirmed mechanism for this specific DirectAdmin setup: if the
+        # Node.js Selector doesn't watch this file, the app keeps serving the previous
+        # build until someone clicks "RESTART" on the Node.js app page in DirectAdmin.
 
       - name: Smoke check
         env:
