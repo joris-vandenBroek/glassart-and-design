@@ -1909,6 +1909,87 @@ git commit -m "feat: rewrite auth providers to use session API instead of Fireba
 
 ---
 
+## Task 10a: Staff auth-gate helper
+
+**Files:**
+- Create: `src/lib/server/requireAuth.ts`
+- Test: `tests/lib/server/requireAuth.test.ts`
+
+**Interfaces:**
+- Consumes: `validateSession`/`SESSION_COOKIE_NAME` (Task 5).
+- Produces: `requireMedewerker(request: Request): Promise<string | null>` — returns the medewerker's `userId` if the request's session cookie belongs to a valid, non-expired medewerker session, otherwise `null`. Used by Task 11 (generic factory's `authRequired` option) and Tasks 11a/11b (kunstenaars/drukkers routes) to gate staff-only reads/writes now that there is no Firestore-rules layer to do this.
+
+- [ ] **Step 1: Write the failing test**
+
+```typescript
+// tests/lib/server/requireAuth.test.ts
+import { describe, expect, it, beforeEach } from 'vitest';
+import { getPool } from '@/lib/server/db';
+import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
+import { requireMedewerker } from '@/lib/server/requireAuth';
+
+beforeEach(async () => {
+  await getPool().query('DELETE FROM sessions');
+});
+
+function requestWithCookie(sessionId?: string) {
+  return new Request('http://localhost/api', {
+    headers: sessionId ? { cookie: `${SESSION_COOKIE_NAME}=${sessionId}` } : {},
+  });
+}
+
+describe('requireMedewerker', () => {
+  it('returns the userId for a valid medewerker session', async () => {
+    const sessionId = await createSession('medewerker', 'staff-1');
+    expect(await requireMedewerker(requestWithCookie(sessionId))).toBe('staff-1');
+  });
+
+  it('returns null when there is no session cookie', async () => {
+    expect(await requireMedewerker(requestWithCookie())).toBeNull();
+  });
+
+  it('returns null for a klant session (wrong user type)', async () => {
+    const sessionId = await createSession('klant', 'klant-1');
+    expect(await requireMedewerker(requestWithCookie(sessionId))).toBeNull();
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npx vitest run tests/lib/server/requireAuth.test.ts`
+Expected: FAIL — `Cannot find module '@/lib/server/requireAuth'`
+
+- [ ] **Step 3: Implement the helper**
+
+```typescript
+// src/lib/server/requireAuth.ts
+import { validateSession, SESSION_COOKIE_NAME } from './session';
+
+export async function requireMedewerker(request: Request): Promise<string | null> {
+  const cookie = request.headers.get('cookie') ?? '';
+  const match = cookie.match(new RegExp(`${SESSION_COOKIE_NAME}=([^;]+)`));
+  if (!match) return null;
+  const session = await validateSession(match[1]);
+  if (!session || session.userType !== 'medewerker') return null;
+  return session.userId;
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `npx vitest run tests/lib/server/requireAuth.test.ts`
+Expected: PASS (3 tests)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/lib/server/requireAuth.ts tests/lib/server/requireAuth.test.ts
+git commit -m "feat: add requireMedewerker staff auth-gate helper"
+```
+
+---
+
 ## Task 11: Simple lookup-resource API routes (generic CRUD)
 
 **Files:**
@@ -1917,9 +1998,10 @@ git commit -m "feat: rewrite auth providers to use session API instead of Fireba
 - Test: `tests/app/api/lookup-resources.test.ts`
 
 **Interfaces:**
-- Consumes: `listRows`/`getRow`/`insertRow`/`updateRow`/`deleteRow` (Task 3).
-- Produces: `GET/POST /api/{segmenten|materiaalsoorten|materialen|maten|prijsgroepen|kunstwerken}` and `GET/PATCH/DELETE /api/.../{id}` — consumed by `useApiCollection` (Task 9).
-- Note: `[resource]` is checked against a fixed allow-list; any other value returns 404. This keeps `klanten`, `medewerkers`, `bestelheaders`, `activiteitenlog`, `instellingen` (which need custom logic) from accidentally being exposed through the generic route.
+- Consumes: `listRows`/`getRow`/`insertRow`/`updateRow`/`deleteRow` (Task 3), `requireMedewerker` (Task 10a).
+- Produces: `GET/POST /api/{segmenten|materiaalsoorten|materialen|maten|stijlen|onderwerpen|prijsgroepen|kunstwerken|drukkers}` and `GET/PATCH/DELETE /api/.../{id}` — consumed by `useApiCollection` (Task 9).
+- Note: `[resource]` is checked against a fixed allow-list; any other value returns 404. This keeps `klanten`, `medewerkers`, `bestelheaders`, `activiteitenlog`, `instellingen`, `kunstenaars`/`kunstenaarAfspraken` (Task 11a), `drukkerZendingen` (Task 11b) — all of which need custom logic — from accidentally being exposed through the generic route.
+- `drukkers` is included in this generic allow-list (unlike `kunstenaars`) because its whole record is staff-only with no column-level split — it just needs `authRequired: 'medewerker'` on every method, which the generic factory now supports.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1962,6 +2044,27 @@ describe('generic lookup-resource routes', () => {
     expect(response.status).toBe(404);
   });
 
+  it('rejects reading a staff-only resource (drukkers) without a medewerker session', async () => {
+    const response = await listResource(
+      new Request('http://localhost/api/drukkers', { method: 'GET' }),
+      { params: { resource: 'drukkers' } }
+    );
+    expect(response.status).toBe(401);
+  });
+
+  it('allows reading drukkers with a valid medewerker session', async () => {
+    const sessionId = await createSession('medewerker', 'staff-1');
+    await getPool().query('DELETE FROM drukkers');
+    const response = await listResource(
+      new Request('http://localhost/api/drukkers', {
+        method: 'GET',
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${sessionId}` },
+      }),
+      { params: { resource: 'drukkers' } }
+    );
+    expect(response.status).toBe(200);
+  });
+
   it('gets, updates and deletes a single segment', async () => {
     await createResource(jsonRequest('POST', { omschrijving: 'Restaurant' }), {
       params: { resource: 'segmenten' },
@@ -2002,13 +2105,23 @@ Expected: FAIL — cannot find `@/app/api/[resource]/route`
 
 ```typescript
 // src/lib/server/lookupResources.ts
-export const LOOKUP_RESOURCES: Record<string, string[]> = {
-  segmenten: [],
-  materiaalsoorten: [],
-  materialen: [],
-  maten: [],
-  prijsgroepen: [],
-  kunstwerken: ['segmentIds', 'materiaalIds', 'maatIds', 'prijzen'],
+export interface LookupResourceConfig {
+  jsonColumns: string[];
+  authRequired?: 'medewerker';
+}
+
+export const LOOKUP_RESOURCES: Record<string, LookupResourceConfig> = {
+  segmenten: { jsonColumns: [] },
+  materiaalsoorten: { jsonColumns: [] },
+  materialen: { jsonColumns: [] },
+  maten: { jsonColumns: [] },
+  stijlen: { jsonColumns: [] },
+  onderwerpen: { jsonColumns: [] },
+  prijsgroepen: { jsonColumns: [] },
+  kunstwerken: {
+    jsonColumns: ['segmentIds', 'materiaalIds', 'maatIds', 'stijlIds', 'onderwerpIds', 'prijzen'],
+  },
+  drukkers: { jsonColumns: [], authRequired: 'medewerker' },
 };
 ```
 
@@ -2017,22 +2130,31 @@ export const LOOKUP_RESOURCES: Record<string, string[]> = {
 import { NextResponse } from 'next/server';
 import { listRows, insertRow } from '@/lib/server/crud';
 import { LOOKUP_RESOURCES } from '@/lib/server/lookupResources';
+import { requireMedewerker } from '@/lib/server/requireAuth';
 
-export async function GET(_request: Request, { params }: { params: { resource: string } }) {
-  if (!(params.resource in LOOKUP_RESOURCES)) {
+export async function GET(request: Request, { params }: { params: { resource: string } }) {
+  const config = LOOKUP_RESOURCES[params.resource];
+  if (!config) {
     return NextResponse.json({ error: 'not-found' }, { status: 404 });
   }
-  const rows = await listRows(params.resource, LOOKUP_RESOURCES[params.resource]);
+  if (config.authRequired && !(await requireMedewerker(request))) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
+  const rows = await listRows(params.resource, config.jsonColumns);
   return NextResponse.json(rows);
 }
 
 export async function POST(request: Request, { params }: { params: { resource: string } }) {
-  if (!(params.resource in LOOKUP_RESOURCES)) {
+  const config = LOOKUP_RESOURCES[params.resource];
+  if (!config) {
     return NextResponse.json({ error: 'not-found' }, { status: 404 });
+  }
+  if (config.authRequired && !(await requireMedewerker(request))) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
   try {
     const data = await request.json();
-    const created = await insertRow(params.resource, data, LOOKUP_RESOURCES[params.resource]);
+    const created = await insertRow(params.resource, data, config.jsonColumns);
     return NextResponse.json(created, { status: 201 });
   } catch {
     return NextResponse.json({ error: 'server-error' }, { status: 500 });
@@ -2047,15 +2169,20 @@ export async function POST(request: Request, { params }: { params: { resource: s
 import { NextResponse } from 'next/server';
 import { getRow, updateRow, deleteRow } from '@/lib/server/crud';
 import { LOOKUP_RESOURCES } from '@/lib/server/lookupResources';
+import { requireMedewerker } from '@/lib/server/requireAuth';
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: { resource: string; id: string } }
 ) {
-  if (!(params.resource in LOOKUP_RESOURCES)) {
+  const config = LOOKUP_RESOURCES[params.resource];
+  if (!config) {
     return NextResponse.json({ error: 'not-found' }, { status: 404 });
   }
-  const row = await getRow(params.resource, params.id, LOOKUP_RESOURCES[params.resource]);
+  if (config.authRequired && !(await requireMedewerker(request))) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
+  const row = await getRow(params.resource, params.id, config.jsonColumns);
   if (!row) return NextResponse.json({ error: 'not-found' }, { status: 404 });
   return NextResponse.json(row);
 }
@@ -2064,12 +2191,16 @@ export async function PATCH(
   request: Request,
   { params }: { params: { resource: string; id: string } }
 ) {
-  if (!(params.resource in LOOKUP_RESOURCES)) {
+  const config = LOOKUP_RESOURCES[params.resource];
+  if (!config) {
     return NextResponse.json({ error: 'not-found' }, { status: 404 });
+  }
+  if (config.authRequired && !(await requireMedewerker(request))) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
   try {
     const data = await request.json();
-    await updateRow(params.resource, params.id, data, LOOKUP_RESOURCES[params.resource]);
+    await updateRow(params.resource, params.id, data, config.jsonColumns);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: 'server-error' }, { status: 500 });
@@ -2077,11 +2208,15 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: { resource: string; id: string } }
 ) {
-  if (!(params.resource in LOOKUP_RESOURCES)) {
+  const config = LOOKUP_RESOURCES[params.resource];
+  if (!config) {
     return NextResponse.json({ error: 'not-found' }, { status: 404 });
+  }
+  if (config.authRequired && !(await requireMedewerker(request))) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
   await deleteRow(params.resource, params.id);
   return NextResponse.json({ ok: true });
@@ -2091,13 +2226,362 @@ export async function DELETE(
 - [ ] **Step 5: Run test to verify it passes**
 
 Run: `npx vitest run tests/app/api/lookup-resources.test.ts`
-Expected: PASS (3 tests)
+Expected: PASS (5 tests)
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add src/lib/server/lookupResources.ts src/app/api/\[resource\] tests/app/api/lookup-resources.test.ts
 git commit -m "feat: add generic CRUD API route for simple lookup resources"
+```
+
+---
+
+## Task 11a: `kunstenaars` + `kunstenaarAfspraken` API routes
+
+**Files:**
+- Create: `src/app/api/kunstenaars/route.ts`
+- Create: `src/app/api/kunstenaars/[id]/route.ts`
+- Create: `src/app/api/kunstenaarAfspraken/[id]/route.ts`
+- Test: `tests/app/api/kunstenaars.test.ts`
+
+**Interfaces:**
+- Consumes: `listRows`/`getRow`/`insertRow`/`updateRow`/`deleteRow` (Task 3), `requireMedewerker` (Task 10a), `getPool` (Task 1).
+- Produces: `GET /api/kunstenaars` (public), `POST /api/kunstenaars` (staff-only), `GET/PATCH/DELETE /api/kunstenaars/:id` (GET public, PATCH/DELETE staff-only), `GET/PUT /api/kunstenaarAfspraken/:id` (both staff-only, `:id` is the matching `kunstenaars.id` — not a separately generated id).
+- Note: these are bespoke routes, not served through the generic Task 11 factory, because (a) `kunstenaars` needs *different* auth per HTTP method (public GET, staff-only writes) which the generic factory's single `authRequired` flag can't express, and (b) `kunstenaarAfspraken`'s row id must equal the corresponding kunstenaar's id rather than a freshly generated UUID, which `insertRow` doesn't support. The field-level split that Firestore enforced via rules (public `kunstenaars` doc vs. staff-only `kunstenaarAfspraken` doc) is achieved here simply by using two separate tables — `kunstenaars` never has a `prijsafspraken` column at all, so there is nothing to accidentally leak through `SELECT *`.
+
+- [ ] **Step 1: Write the failing test**
+
+```typescript
+// tests/app/api/kunstenaars.test.ts
+import { describe, expect, it, beforeEach } from 'vitest';
+import { getPool } from '@/lib/server/db';
+import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
+import { insertRow } from '@/lib/server/crud';
+import { GET as listKunstenaars, POST as createKunstenaar } from '@/app/api/kunstenaars/route';
+import {
+  GET as getKunstenaar,
+  PATCH as patchKunstenaar,
+  DELETE as deleteKunstenaar,
+} from '@/app/api/kunstenaars/[id]/route';
+import {
+  GET as getAfspraken,
+  PUT as putAfspraken,
+} from '@/app/api/kunstenaarAfspraken/[id]/route';
+
+beforeEach(async () => {
+  await getPool().query('DELETE FROM kunstenaarAfspraken');
+  await getPool().query('DELETE FROM kunstenaars');
+});
+
+function req(method: string, body?: unknown, cookie?: string) {
+  return new Request('http://localhost/api', {
+    method,
+    headers: { 'content-type': 'application/json', ...(cookie ? { cookie } : {}) },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+}
+
+describe('kunstenaars + kunstenaarAfspraken routes', () => {
+  it('lists kunstenaars publicly, without ever exposing prijsafspraken', async () => {
+    await insertRow('kunstenaars', { naam: 'Anna', verkooprecht: 'open' } as never);
+    const response = await listKunstenaars(req('GET'));
+    const body = await response.json();
+    expect(body).toHaveLength(1);
+    expect(body[0].naam).toBe('Anna');
+    expect(body[0].prijsafspraken).toBeUndefined();
+  });
+
+  it('rejects creating a kunstenaar without a medewerker session', async () => {
+    const response = await createKunstenaar(req('POST', { naam: 'Bram', verkooprecht: 'open' }));
+    expect(response.status).toBe(401);
+  });
+
+  it('allows creating, updating and deleting a kunstenaar with a medewerker session', async () => {
+    const sessionId = await createSession('medewerker', 'staff-1');
+    const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
+
+    const createResponse = await createKunstenaar(
+      req('POST', { naam: 'Chris', verkooprecht: 'open' }, cookie)
+    );
+    expect(createResponse.status).toBe(201);
+    const created = await createResponse.json();
+
+    await patchKunstenaar(req('PATCH', { naam: 'Christiaan' }, cookie), {
+      params: { id: created.id },
+    });
+    const getResponse = await getKunstenaar(req('GET'), { params: { id: created.id } });
+    expect((await getResponse.json()).naam).toBe('Christiaan');
+
+    await deleteKunstenaar(req('DELETE', undefined, cookie), { params: { id: created.id } });
+    const afterDelete = await getKunstenaar(req('GET'), { params: { id: created.id } });
+    expect(afterDelete.status).toBe(404);
+  });
+
+  it('stores and retrieves prijsafspraken only for staff, keyed by the kunstenaar id', async () => {
+    const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+      naam: 'Dana',
+      verkooprecht: 'open',
+    } as never);
+    const sessionId = await createSession('medewerker', 'staff-1');
+    const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
+
+    const putResponse = await putAfspraken(
+      req('PUT', { prijsafspraken: '50/50 split' }, cookie),
+      { params: { id: kunstenaar.id } }
+    );
+    expect(putResponse.status).toBe(200);
+
+    const getResponse = await getAfspraken(req('GET', undefined, cookie), {
+      params: { id: kunstenaar.id },
+    });
+    expect((await getResponse.json()).prijsafspraken).toBe('50/50 split');
+
+    const unauthenticated = await getAfspraken(req('GET'), { params: { id: kunstenaar.id } });
+    expect(unauthenticated.status).toBe(401);
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npx vitest run tests/app/api/kunstenaars.test.ts`
+Expected: FAIL — cannot find the route modules
+
+- [ ] **Step 3: Implement the `kunstenaars` collection route**
+
+```typescript
+// src/app/api/kunstenaars/route.ts
+import { NextResponse } from 'next/server';
+import { listRows, insertRow } from '@/lib/server/crud';
+import { requireMedewerker } from '@/lib/server/requireAuth';
+
+export async function GET() {
+  const rows = await listRows('kunstenaars');
+  return NextResponse.json(rows);
+}
+
+export async function POST(request: Request) {
+  if (!(await requireMedewerker(request))) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
+  try {
+    const data = await request.json();
+    const created = await insertRow('kunstenaars', data);
+    return NextResponse.json(created, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: 'server-error' }, { status: 500 });
+  }
+}
+```
+
+- [ ] **Step 4: Implement the `kunstenaars` single-item route**
+
+```typescript
+// src/app/api/kunstenaars/[id]/route.ts
+import { NextResponse } from 'next/server';
+import { getRow, updateRow, deleteRow } from '@/lib/server/crud';
+import { requireMedewerker } from '@/lib/server/requireAuth';
+
+export async function GET(_request: Request, { params }: { params: { id: string } }) {
+  const row = await getRow('kunstenaars', params.id);
+  if (!row) return NextResponse.json({ error: 'not-found' }, { status: 404 });
+  return NextResponse.json(row);
+}
+
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  if (!(await requireMedewerker(request))) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
+  try {
+    const data = await request.json();
+    await updateRow('kunstenaars', params.id, data);
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: 'server-error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  if (!(await requireMedewerker(request))) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
+  await deleteRow('kunstenaars', params.id);
+  return NextResponse.json({ ok: true });
+}
+```
+
+- [ ] **Step 5: Implement the `kunstenaarAfspraken` route**
+
+```typescript
+// src/app/api/kunstenaarAfspraken/[id]/route.ts
+import { NextResponse } from 'next/server';
+import { getPool } from '@/lib/server/db';
+import { requireMedewerker } from '@/lib/server/requireAuth';
+
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  if (!(await requireMedewerker(request))) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
+  const [rows] = await getPool().query(
+    'SELECT prijsafspraken FROM kunstenaarAfspraken WHERE id = ?',
+    [params.id]
+  );
+  const row = (rows as Array<{ prijsafspraken: string | null }>)[0];
+  return NextResponse.json({ prijsafspraken: row?.prijsafspraken ?? null });
+}
+
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
+  if (!(await requireMedewerker(request))) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
+  const { prijsafspraken } = (await request.json()) as { prijsafspraken: string };
+  await getPool().query(
+    'INSERT INTO kunstenaarAfspraken (id, prijsafspraken) VALUES (?, ?) ON DUPLICATE KEY UPDATE prijsafspraken = VALUES(prijsafspraken)',
+    [params.id, prijsafspraken]
+  );
+  return NextResponse.json({ ok: true });
+}
+```
+
+- [ ] **Step 6: Run test to verify it passes**
+
+Run: `npx vitest run tests/app/api/kunstenaars.test.ts`
+Expected: PASS (4 tests)
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add src/app/api/kunstenaars src/app/api/kunstenaarAfspraken tests/app/api/kunstenaars.test.ts
+git commit -m "feat: add kunstenaars/kunstenaarAfspraken API routes with field-level split"
+```
+
+---
+
+## Task 11b: `drukkerZendingen` API route
+
+**Files:**
+- Create: `src/app/api/drukkers/[id]/zendingen/route.ts`
+- Test: `tests/app/api/drukkerZendingen.test.ts`
+
+**Interfaces:**
+- Consumes: `listRows`/`insertRow` (Task 3), `requireMedewerker` (Task 10a), `getPool` (Task 1).
+- Produces: `GET /api/drukkers/:id/zendingen` (staff-only, list newest-first), `POST /api/drukkers/:id/zendingen` (staff-only, create). No update/delete — this is an append-only shipment log, same pattern as `activiteitenlog`.
+
+- [ ] **Step 1: Write the failing test**
+
+```typescript
+// tests/app/api/drukkerZendingen.test.ts
+import { describe, expect, it, beforeEach } from 'vitest';
+import { getPool } from '@/lib/server/db';
+import { insertRow } from '@/lib/server/crud';
+import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
+import { GET as listZendingen, POST as createZending } from '@/app/api/drukkers/[id]/zendingen/route';
+
+beforeEach(async () => {
+  await getPool().query('DELETE FROM drukkerZendingen');
+  await getPool().query('DELETE FROM drukkers');
+});
+
+describe('drukkerZendingen route', () => {
+  it('rejects listing without a medewerker session', async () => {
+    const drukker = await insertRow<{ id: string }>('drukkers', { naam: 'PrintCo' } as never);
+    const response = await listZendingen(new Request('http://localhost/api'), {
+      params: { id: drukker.id },
+    });
+    expect(response.status).toBe(401);
+  });
+
+  it('creates and lists a zending for a medewerker, newest first', async () => {
+    const drukker = await insertRow<{ id: string }>('drukkers', { naam: 'PrintCo' } as never);
+    const sessionId = await createSession('medewerker', 'staff-1');
+    const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
+
+    await createZending(
+      new Request('http://localhost/api', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie },
+        body: JSON.stringify({
+          onderwerp: 'Bestellingen week 30',
+          body: 'Zie bijlage',
+          bestellingIds: ['b1', 'b2'],
+          aantalKlanten: 2,
+          aantalRegels: 3,
+          verzondDoor: 'Paul',
+        }),
+      }),
+      { params: { id: drukker.id } }
+    );
+
+    const response = await listZendingen(
+      new Request('http://localhost/api', { headers: { cookie } }),
+      { params: { id: drukker.id } }
+    );
+    const body = await response.json();
+    expect(body).toHaveLength(1);
+    expect(body[0].onderwerp).toBe('Bestellingen week 30');
+    expect(body[0].bestellingIds).toEqual(['b1', 'b2']);
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npx vitest run tests/app/api/drukkerZendingen.test.ts`
+Expected: FAIL — cannot find `@/app/api/drukkers/[id]/zendingen/route`
+
+- [ ] **Step 3: Implement the route**
+
+```typescript
+// src/app/api/drukkers/[id]/zendingen/route.ts
+import { NextResponse } from 'next/server';
+import { getPool } from '@/lib/server/db';
+import { insertRow } from '@/lib/server/crud';
+import { requireMedewerker } from '@/lib/server/requireAuth';
+
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  if (!(await requireMedewerker(request))) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
+  const [rows] = await getPool().query(
+    'SELECT * FROM drukkerZendingen WHERE drukkerId = ? ORDER BY verzondenOp DESC',
+    [params.id]
+  );
+  const parsed = (rows as Array<Record<string, unknown>>).map((row) => ({
+    ...row,
+    bestellingIds: typeof row.bestellingIds === 'string' ? JSON.parse(row.bestellingIds) : row.bestellingIds,
+  }));
+  return NextResponse.json(parsed);
+}
+
+export async function POST(request: Request, { params }: { params: { id: string } }) {
+  if (!(await requireMedewerker(request))) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
+  try {
+    const data = await request.json();
+    const created = await insertRow(
+      'drukkerZendingen',
+      { drukkerId: params.id, ...data },
+      ['bestellingIds']
+    );
+    return NextResponse.json(created, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: 'server-error' }, { status: 500 });
+  }
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `npx vitest run tests/app/api/drukkerZendingen.test.ts`
+Expected: PASS (2 tests)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/app/api/drukkers tests/app/api/drukkerZendingen.test.ts
+git commit -m "feat: add drukkerZendingen API route"
 ```
 
 ---
@@ -2166,9 +2650,12 @@ import { getPool } from '@/lib/server/db';
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   const [rows] = await getPool().query('SELECT data FROM instellingen WHERE id = ?', [params.id]);
-  const row = (rows as Array<{ data: string }>)[0];
+  const row = (rows as Array<{ data: string | object }>)[0];
   if (!row) return NextResponse.json({ error: 'not-found' }, { status: 404 });
-  return NextResponse.json(JSON.parse(row.data));
+  // mysql2 auto-parses JSON columns into objects, so `data` may already be an
+  // object rather than a string — only parse when it genuinely came back as text.
+  const data = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+  return NextResponse.json(data);
 }
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
