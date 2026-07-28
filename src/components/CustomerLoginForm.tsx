@@ -2,9 +2,6 @@
 
 import { useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
 import { useRouter } from '@/i18n/navigation';
 
 export function CustomerLoginForm() {
@@ -18,30 +15,24 @@ export function CustomerLoginForm() {
     event.preventDefault();
     setError(null);
     try {
-      const credential = await signInWithEmailAndPassword(auth, email, password);
-      const uid = credential.user.uid;
-      try {
-        const klantDoc = await getDoc(doc(db, 'klanten', uid));
-        const status = klantDoc.exists() ? (klantDoc.data() as { status?: string }).status : null;
-
-        if (status === 'Goedgekeurd') {
-          router.replace('/account');
-          return;
-        }
-
-        if (status === 'Beoordelen') {
-          setError(t('pendingMessage'));
-        } else if (status === 'Afgewezen') {
-          setError(t('rejectedMessage'));
-        } else if (!klantDoc.exists()) {
-          setError(t('accountIncompleteMessage'));
-        } else {
-          setError(t('loginError'));
-        }
-        await signOut(auth);
-      } catch {
-        await signOut(auth);
-        throw new Error('klant status check failed');
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!response.ok) {
+        setError(t('loginError'));
+        return;
+      }
+      const body = await response.json();
+      if (body.status === 'Goedgekeurd') {
+        router.replace('/account');
+      } else if (body.status === 'Beoordelen') {
+        setError(t('pendingMessage'));
+      } else if (body.status === 'Afgewezen') {
+        setError(t('rejectedMessage'));
+      } else {
+        setError(t('accountIncompleteMessage'));
       }
     } catch {
       setError(t('loginError'));

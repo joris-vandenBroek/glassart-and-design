@@ -2,9 +2,6 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
-import { createUserWithEmailAndPassword, deleteUser, signOut, type UserCredential } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
 import { logActiviteit, ONBEKENDE_ACTOR } from '@/lib/logActiviteit';
 
 export function RegistrationForm() {
@@ -35,16 +32,18 @@ export function RegistrationForm() {
 
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
+    const companyName = formData.get('companyName') as string;
 
-    let credential: UserCredential | null = null;
     try {
-      credential = await createUserWithEmailAndPassword(auth, email, password);
-      try {
-        await setDoc(doc(db, 'klanten', credential.user.uid), {
-          companyName: formData.get('companyName') as string,
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          companyName,
           kvk: formData.get('kvk') as string,
           contactPerson: formData.get('contactPerson') as string,
-          email,
           phone: formData.get('phone') as string,
           contactPreference: formData.get('contactPreference') as string,
           address: formData.get('address') as string,
@@ -56,35 +55,17 @@ export function RegistrationForm() {
           invoiceAddress: (formData.get('invoiceAddress') as string) || '',
           invoicePostcode: (formData.get('invoicePostcode') as string) || '',
           invoiceCity: (formData.get('invoiceCity') as string) || '',
-          status: 'Beoordelen',
-          prijsgroepId: null,
-          createdAt: serverTimestamp(),
-        });
-      } catch (setDocError) {
-        try {
-          await deleteUser(credential.user);
-        } catch {
-          // Best-effort cleanup only; ignore failures here and fall through
-          // to the original error below.
-        }
-        throw setDocError;
-      }
-      void logActiviteit('word_klant_aanvraag', {
-        id: credential.user.uid,
-        email,
-        naam: formData.get('companyName') as string,
+        }),
       });
-      await signOut(auth);
-      setIsSubmitted(true);
-    } catch (error) {
-      const code = (error as { code?: string }).code;
-      if (code === 'auth/email-already-in-use') {
-        setSubmitError(t('emailInUseError'));
-      } else if (code === 'auth/weak-password') {
-        setSubmitError(t('weakPasswordError'));
-      } else {
-        setSubmitError(t('submitError'));
+      if (!response.ok) {
+        const body = await response.json();
+        setSubmitError(body.error === 'email-in-use' ? t('emailInUseError') : t('submitError'));
+        return;
       }
+      void logActiviteit('word_klant_aanvraag', { id: null, email, naam: companyName });
+      setIsSubmitted(true);
+    } catch {
+      setSubmitError(t('submitError'));
     }
   }
 

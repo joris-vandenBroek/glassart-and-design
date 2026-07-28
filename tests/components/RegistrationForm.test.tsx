@@ -4,32 +4,13 @@ import { NextIntlClientProvider } from 'next-intl';
 import { RegistrationForm } from '@/components/RegistrationForm';
 import messages from '../../messages/nl.json';
 
-const createUserMock = vi.fn();
-const signOutMock = vi.fn();
-const setDocMock = vi.fn();
-const deleteUserMock = vi.fn();
+const fetchMock = vi.fn();
 const logActiviteitMock = vi.fn();
-
-vi.mock('@/lib/firebase', () => ({
-  auth: {},
-  db: {},
-}));
+vi.stubGlobal('fetch', fetchMock);
 
 vi.mock('@/lib/logActiviteit', () => ({
   logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
   ONBEKENDE_ACTOR: { id: null, email: 'Onbekend', naam: 'Onbekend' },
-}));
-
-vi.mock('firebase/auth', () => ({
-  createUserWithEmailAndPassword: (...args: unknown[]) => createUserMock(...args),
-  signOut: (...args: unknown[]) => signOutMock(...args),
-  deleteUser: (...args: unknown[]) => deleteUserMock(...args),
-}));
-
-vi.mock('firebase/firestore', () => ({
-  doc: vi.fn((_db, collection, id) => ({ collection, id })),
-  setDoc: (...args: unknown[]) => setDocMock(...args),
-  serverTimestamp: () => 'MOCK_TIMESTAMP',
 }));
 
 function renderForm() {
@@ -64,10 +45,7 @@ function fillRequiredFields() {
 }
 
 beforeEach(() => {
-  createUserMock.mockReset();
-  signOutMock.mockReset();
-  setDocMock.mockReset();
-  deleteUserMock.mockReset();
+  fetchMock.mockReset();
   logActiviteitMock.mockReset();
 });
 
@@ -138,13 +116,11 @@ describe('RegistrationForm', () => {
     expect(screen.getByTestId('word-klant-password-error')).toHaveTextContent(
       'Wachtwoorden komen niet overeen.'
     );
-    expect(createUserMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('creates a Firebase account, saves a "Beoordelen" klanten document, signs out, and shows the confirmation screen', async () => {
-    createUserMock.mockResolvedValue({ user: { uid: 'uid-123' } });
-    setDocMock.mockResolvedValue(undefined);
-    signOutMock.mockResolvedValue(undefined);
+  it('POSTs to /api/auth/register with the form data and shows the confirmation screen', async () => {
+    fetchMock.mockResolvedValue({ ok: true });
     renderForm();
     fillRequiredFields();
 
@@ -152,48 +128,44 @@ describe('RegistrationForm', () => {
 
     await waitFor(() => expect(screen.getByTestId('word-klant-confirmation')).toBeInTheDocument());
 
-    expect(createUserMock).toHaveBeenCalledWith({}, 'jan@example.com', 'geheim123');
-    expect(setDocMock).toHaveBeenCalledWith(
-      { collection: 'klanten', id: 'uid-123' },
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/auth/register',
       expect.objectContaining({
-        companyName: 'Testbedrijf BV',
-        kvk: '12345678',
-        contactPerson: 'Jan Jansen',
-        email: 'jan@example.com',
-        phone: '0612345678',
-        address: 'Teststraat 1',
-        postcode: '1234 AB',
-        city: 'Teststad',
-        status: 'Beoordelen',
-        prijsgroepId: null,
+        method: 'POST',
+        body: JSON.stringify({
+          email: 'jan@example.com',
+          password: 'geheim123',
+          companyName: 'Testbedrijf BV',
+          kvk: '12345678',
+          contactPerson: 'Jan Jansen',
+          phone: '0612345678',
+          contactPreference: '',
+          address: 'Teststraat 1',
+          postcode: '1234 AB',
+          city: 'Teststad',
+          deliveryAddress: '',
+          deliveryPostcode: '',
+          deliveryCity: '',
+          invoiceAddress: '',
+          invoicePostcode: '',
+          invoiceCity: '',
+        }),
       })
     );
-    expect(signOutMock).toHaveBeenCalledWith({});
   });
 
   it('shows a specific error when the email address is already in use', async () => {
-    createUserMock.mockRejectedValue({ code: 'auth/email-already-in-use' });
+    fetchMock.mockResolvedValue({ ok: false, json: async () => ({ error: 'email-in-use' }) });
     renderForm();
     fillRequiredFields();
     fireEvent.submit(screen.getByTestId('word-klant-submit').closest('form')!);
     expect(await screen.findByTestId('word-klant-submit-error')).toHaveTextContent(
       'Dit e-mailadres is al geregistreerd.'
     );
-    expect(setDocMock).not.toHaveBeenCalled();
-  });
-
-  it('shows a specific error for a weak password', async () => {
-    createUserMock.mockRejectedValue({ code: 'auth/weak-password' });
-    renderForm();
-    fillRequiredFields();
-    fireEvent.submit(screen.getByTestId('word-klant-submit').closest('form')!);
-    expect(await screen.findByTestId('word-klant-submit-error')).toHaveTextContent(
-      'Wachtwoord moet minimaal 6 tekens bevatten.'
-    );
   });
 
   it('shows a generic error for any other failure', async () => {
-    createUserMock.mockRejectedValue({ code: 'auth/network-request-failed' });
+    fetchMock.mockResolvedValue({ ok: false, json: async () => ({ error: 'server-error' }) });
     renderForm();
     fillRequiredFields();
     fireEvent.submit(screen.getByTestId('word-klant-submit').closest('form')!);
@@ -202,19 +174,14 @@ describe('RegistrationForm', () => {
     );
   });
 
-  it('cleans up the orphaned Firebase account when setDoc fails after account creation', async () => {
-    const createdUser = { uid: 'uid-orphan' };
-    createUserMock.mockResolvedValue({ user: createdUser });
-    setDocMock.mockRejectedValue(new Error('firestore-unavailable'));
-    deleteUserMock.mockResolvedValue(undefined);
+  it('shows a generic error when the request itself fails (network error)', async () => {
+    fetchMock.mockRejectedValue(new Error('network error'));
     renderForm();
     fillRequiredFields();
     fireEvent.submit(screen.getByTestId('word-klant-submit').closest('form')!);
-
     expect(await screen.findByTestId('word-klant-submit-error')).toHaveTextContent(
       'Er is iets misgegaan, probeer het opnieuw.'
     );
-    expect(deleteUserMock).toHaveBeenCalledWith(createdUser);
   });
 
   it('logs word_klant_bezocht as Onbekend exactly once on mount', () => {
@@ -227,23 +194,21 @@ describe('RegistrationForm', () => {
     });
   });
 
-  it('logs word_klant_aanvraag with the new account and company name on successful submit', async () => {
-    createUserMock.mockResolvedValue({ user: { uid: 'uid-123' } });
-    setDocMock.mockResolvedValue(undefined);
-    signOutMock.mockResolvedValue(undefined);
+  it('logs word_klant_aanvraag with the company name on successful submit', async () => {
+    fetchMock.mockResolvedValue({ ok: true });
     renderForm();
     fillRequiredFields();
     fireEvent.submit(screen.getByTestId('word-klant-submit').closest('form')!);
     await waitFor(() => expect(screen.getByTestId('word-klant-confirmation')).toBeInTheDocument());
     expect(logActiviteitMock).toHaveBeenCalledWith('word_klant_aanvraag', {
-      id: 'uid-123',
+      id: null,
       email: 'jan@example.com',
       naam: 'Testbedrijf BV',
     });
   });
 
-  it('does not log word_klant_aanvraag when the account creation fails', async () => {
-    createUserMock.mockRejectedValue({ code: 'auth/email-already-in-use' });
+  it('does not log word_klant_aanvraag when registration fails', async () => {
+    fetchMock.mockResolvedValue({ ok: false, json: async () => ({ error: 'email-in-use' }) });
     renderForm();
     fillRequiredFields();
     fireEvent.submit(screen.getByTestId('word-klant-submit').closest('form')!);

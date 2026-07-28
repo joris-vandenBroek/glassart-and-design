@@ -7,42 +7,26 @@ import { SettingsSection } from '@/components/account/SettingsSection';
 import messages from '../../../messages/nl.json';
 
 const replaceMock = vi.fn();
-const onAuthStateChangedMock = vi.fn();
-const getDocMock = vi.fn();
-const signInMock = vi.fn();
-const signOutMock = vi.fn();
-const deleteUserMock = vi.fn();
-const deleteDocMock = vi.fn();
+const fetchMock = vi.fn();
+vi.stubGlobal('fetch', fetchMock);
 
 vi.mock('@/i18n/navigation', () => ({
   usePathname: () => '/account',
   useRouter: () => ({ replace: replaceMock }),
 }));
 
-vi.mock('@/lib/firebase', () => ({
-  auth: {},
-  db: {},
-}));
-
-vi.mock('firebase/auth', () => ({
-  onAuthStateChanged: (...args: unknown[]) => onAuthStateChangedMock(...args),
-  signInWithEmailAndPassword: (...args: unknown[]) => signInMock(...args),
-  signOut: (...args: unknown[]) => signOutMock(...args),
-  deleteUser: (...args: unknown[]) => deleteUserMock(...args),
-}));
-
-vi.mock('firebase/firestore', () => ({
-  doc: vi.fn((_db, collection, id) => ({ collection, id })),
-  getDoc: (...args: unknown[]) => getDocMock(...args),
-  deleteDoc: (...args: unknown[]) => deleteDocMock(...args),
-}));
-
 function renderSection() {
-  onAuthStateChangedMock.mockImplementation((_auth, callback) => {
-    callback({ uid: 'uid-1', email: 'klant@example.com' });
-    return () => {};
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url === '/api/auth/me?type=klant') {
+      return {
+        ok: true,
+        json: async () => ({
+          user: { id: 'uid-1', email: 'klant@example.com', status: 'Goedgekeurd' },
+        }),
+      };
+    }
+    return { ok: true };
   });
-  getDocMock.mockResolvedValue({ exists: () => true, data: () => ({ status: 'Goedgekeurd' }) });
   return render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <CustomerAuthProvider>
@@ -57,12 +41,7 @@ function renderSection() {
 beforeEach(() => {
   window.localStorage.clear();
   replaceMock.mockClear();
-  onAuthStateChangedMock.mockReset();
-  getDocMock.mockReset();
-  signInMock.mockReset();
-  signOutMock.mockReset();
-  deleteUserMock.mockReset();
-  deleteDocMock.mockReset();
+  fetchMock.mockReset();
 });
 
 describe('SettingsSection', () => {
@@ -120,24 +99,28 @@ describe('SettingsSection', () => {
   });
 
   it('shows an error and deletes nothing when the confirmation password is wrong', async () => {
-    signInMock.mockRejectedValue(new Error('auth/wrong-password'));
     renderSection();
     await waitFor(() => expect(screen.getByTestId('delete-account-submit')).toBeInTheDocument());
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/auth/login') return { ok: false };
+      return { ok: true };
+    });
     fireEvent.change(screen.getByTestId('delete-account-password'), {
       target: { value: 'fout' },
     });
     fireEvent.click(screen.getByTestId('delete-account-submit'));
     expect(await screen.findByTestId('delete-account-error')).toBeInTheDocument();
-    expect(deleteDocMock).not.toHaveBeenCalled();
-    expect(deleteUserMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/klanten/uid-1', expect.anything());
   });
 
-  it('shows a distinct partial-error message and stays on the page when deleteDoc succeeds but deleteUser fails', async () => {
-    signInMock.mockResolvedValue({ user: { uid: 'uid-1' } });
-    deleteDocMock.mockResolvedValue(undefined);
-    deleteUserMock.mockRejectedValue(new Error('requires-recent-login'));
+  it('shows a distinct partial-error message and stays on the page when re-auth succeeds but the account delete fails', async () => {
     renderSection();
     await waitFor(() => expect(screen.getByTestId('delete-account-submit')).toBeInTheDocument());
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/auth/login') return { ok: true };
+      if (url === `/api/klanten/uid-1`) return { ok: false };
+      return { ok: true };
+    });
     fireEvent.change(screen.getByTestId('delete-account-password'), {
       target: { value: 'geheim123' },
     });
@@ -147,14 +130,9 @@ describe('SettingsSection', () => {
       'Uw gegevens zijn verwijderd, maar er ging iets mis bij het volledig verwijderen van uw account. Neem contact met ons op.'
     );
     expect(replaceMock).not.toHaveBeenCalled();
-    expect(signOutMock).not.toHaveBeenCalled();
   });
 
-  it('re-authenticates, deletes the klant document and Firebase account, signs out and redirects home', async () => {
-    signInMock.mockResolvedValue({ user: { uid: 'uid-1' } });
-    deleteDocMock.mockResolvedValue(undefined);
-    deleteUserMock.mockResolvedValue(undefined);
-    signOutMock.mockResolvedValue(undefined);
+  it('re-authenticates, deletes the klant record, logs out and redirects home', async () => {
     renderSection();
     await waitFor(() => expect(screen.getByTestId('delete-account-submit')).toBeInTheDocument());
     fireEvent.change(screen.getByTestId('delete-account-password'), {
@@ -164,9 +142,14 @@ describe('SettingsSection', () => {
 
     await waitFor(() => expect(replaceMock).toHaveBeenCalledWith('/'));
 
-    expect(signInMock).toHaveBeenCalledWith({}, 'klant@example.com', 'geheim123');
-    expect(deleteDocMock).toHaveBeenCalledWith({ collection: 'klanten', id: 'uid-1' });
-    expect(deleteUserMock).toHaveBeenCalledWith({ uid: 'uid-1' });
-    expect(signOutMock).toHaveBeenCalledWith({});
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/auth/login',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ email: 'klant@example.com', password: 'geheim123' }),
+      })
+    );
+    expect(fetchMock).toHaveBeenCalledWith('/api/klanten/uid-1', { method: 'DELETE' });
+    expect(fetchMock).toHaveBeenCalledWith('/api/auth/logout', expect.objectContaining({ method: 'POST' }));
   });
 });

@@ -10,9 +10,6 @@ import {
   type ContactPreference,
   type LanguagePreference,
 } from '@/lib/useMockProfile';
-import { signInWithEmailAndPassword, deleteUser } from 'firebase/auth';
-import { doc, deleteDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
 
 export function SettingsSection() {
@@ -74,27 +71,23 @@ export function SettingsSection() {
   async function handleDeleteAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setDeleteError(null);
-    let response;
     try {
-      response = await signInWithEmailAndPassword(auth, user?.email ?? '', deletePassword);
-    } catch {
-      setDeleteError(t('deleteAccountError'));
-      return;
-    }
-
-    try {
-      await deleteDoc(doc(db, 'klanten', user?.uid ?? ''));
-    } catch {
-      setDeleteError(t('deleteAccountError'));
-      return;
-    }
-
-    try {
-      if (response.user) {
-        await deleteUser(response.user);
+      const loginResponse = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: user?.email ?? '', password: deletePassword }),
+      });
+      if (!loginResponse.ok) {
+        setDeleteError(t('deleteAccountError'));
+        return;
+      }
+      const deleteResponse = await fetch(`/api/klanten/${user?.uid ?? ''}`, { method: 'DELETE' });
+      if (!deleteResponse.ok) {
+        setDeleteError(t('deleteAccountPartialError'));
+        return;
       }
     } catch {
-      setDeleteError(t('deleteAccountPartialError'));
+      setDeleteError(t('deleteAccountError'));
       return;
     }
 
