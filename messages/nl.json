@@ -282,6 +282,7 @@
   },
   "beheer": {
     "title": "Beheer",
+    "naarWebsiteLink": "Naar de website",
     "labelEmail": "E-mailadres",
     "labelPassword": "Wachtwoord",
     "submit": "Inloggen",
