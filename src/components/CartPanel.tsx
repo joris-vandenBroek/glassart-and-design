@@ -3,12 +3,9 @@
 import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useCart } from '@/lib/useCart';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
-import { useFirestoreCollection } from '@/lib/useFirestoreCollection';
-import { generateBestelnr } from '@/lib/generateBestelnr';
+import { useApiCollection } from '@/lib/useApiCollection';
 import { useOverlayDismiss } from '@/lib/useOverlayDismiss';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { resolveOrderRight } from '@/lib/resolveOrderRight';
@@ -31,8 +28,8 @@ export function CartPanel() {
   // goedgekeurde klanten: dit paneel hangt in de navigatie van élke pagina, en niemand
   // anders kan een bestelling plaatsen. `skip` haalt de collecties alsnog op zodra de
   // klantstatus binnen is.
-  const kunstwerken = useFirestoreCollection<Kunstwerk>('kunstwerken', { skip: !isCustomer });
-  const kunstenaars = useFirestoreCollection<Kunstenaar>('kunstenaars', { skip: !isCustomer });
+  const kunstwerken = useApiCollection<Kunstwerk>('kunstwerken', { skip: !isCustomer });
+  const kunstenaars = useApiCollection<Kunstenaar>('kunstenaars', { skip: !isCustomer });
   const bestelControleGereed = kunstwerken.items !== null && kunstenaars.items !== null;
   const panelRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -75,16 +72,12 @@ export function CartPanel() {
       return;
     }
     try {
-      const bestelnr = await generateBestelnr();
-      const headerDoc = await addDoc(collection(db, 'bestelheaders'), {
-        klantId: user.uid,
-        bestelnr,
-        besteldatum: serverTimestamp(),
-        status: 'Te beoordelen',
-      });
-      await Promise.all(
-        items.map((item) =>
-          addDoc(collection(db, 'bestelheaders', headerDoc.id, 'bestellines'), {
+      const response = await fetch('/api/bestelheaders', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          klantId: user.uid,
+          lines: items.map((item) => ({
             kunstwerkId: item.kunstwerkId,
             maatId: item.maatId,
             materiaalId: item.materiaalId,
@@ -92,9 +85,11 @@ export function CartPanel() {
             quantity: item.quantity,
             ...(item.breedte != null ? { breedte: item.breedte } : {}),
             ...(item.hoogte != null ? { hoogte: item.hoogte } : {}),
-          })
-        )
-      );
+          })),
+        }),
+      });
+      if (!response.ok) throw new Error('order failed');
+      const { bestelnr } = await response.json();
       clear();
       setOrderPlaced(true);
       void logActiviteit('bestelling_geplaatst', actorFromCustomer(user), bestelnr);
