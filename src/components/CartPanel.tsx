@@ -60,7 +60,7 @@ export function CartPanel() {
       return;
     }
     // Vóór de header, niet erna: `bestelheaders/{id}` mag niet verwijderd worden, dus een
-    // regel die door de Firestore-regels geweigerd wordt zou een half geschreven bestelling
+    // regel die door de server-side controle geweigerd wordt zou een half geschreven bestelling
     // achterlaten die niemand nog kan opruimen.
     const blockedItem = items.find((item) => {
       const kunstwerk = (kunstwerken.items ?? []).find((kw) => kw.id === item.kunstwerkId);
@@ -122,7 +122,7 @@ export function CartPanel() {
         setEmailError(true);
       }
     } catch {
-      // Best-effort -- the order itself already succeeded via Firestore, so
+      // Best-effort -- the order itself already succeeded, so
       // this only surfaces a soft warning rather than blocking the order.
       setEmailError(true);
     }

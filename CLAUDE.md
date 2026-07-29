@@ -12,7 +12,6 @@ npm run lint             # next lint
 npm test                 # vitest run (all tests, single run — not watch mode)
 npx vitest run tests/app/api/klanten.test.ts   # run a single test file
 npx vitest run -t "some test name"             # run tests matching a name
-npm run migrate:firebase-data                  # one-off Firebase -> MySQL data migration script (scripts/migrate-firebase-data.ts)
 ```
 
 **Production builds for mijn.host must set `MIJNHOST_BUILD=true`** (PowerShell: `$env:MIJNHOST_BUILD='true'; npm run build`). `src/config/pageAvailability.ts` reads this flag to gate `collecties`/`word-klant`/`inloggen`/`account`/`contact` behind the Under Construction page; `beheer` is always live. A plain `npm run build` leaves those routes fully public.
@@ -62,9 +61,9 @@ Vitest is **not** mocking the database — `tests/setup.ts` loads `.env.local` a
 
 - `master` is the only branch production deploys from (enforced in the workflow itself, not just by convention).
 - There is no local database: local dev (`npm run dev`) and the test suite both connect to the same shared MySQL **staging** database on mijn.host via `.env.local` (`DB_HOST`/`DB_USER`/etc., see `.env.local.example`) — there's no throwaway/local MySQL instance to set up.
-- Three `workflow_dispatch` GitHub Actions live in `.github/workflows/`:
-  - `deploy-naar-staging.yml` — builds and FTP-deploys to `staging.glassartanddesign.com` (Basic Auth via `.htaccess`, `dangerous-clean-slate: true`).
-  - `deploy-naar-production.yml` — only runs when dispatched against `refs/heads/master`; FTP-deploys to `glassartanddesign.com`, excluding `mail-server/`/`upload-server/` from the sync so those PHP endpoints aren't wiped.
-  - `deploy-pages.yml` — deploys to GitHub Pages on every push to `master` (dev/staging environment kept alongside mijn.host per an earlier explicit client decision).
+- Two `workflow_dispatch` GitHub Actions live in `.github/workflows/`:
+  - `deploy-naar-staging.yml` — builds in server mode and SFTP-deploys the Node.js app (`.next`, `public`, `messages`, `src`, `app.js`, `package.json`) to `staging.glassartanddesign.com`'s DirectAdmin Node.js app root. Working end-to-end as of 2026-07-29. `node_modules` is a DirectAdmin-managed symlink and is deliberately not uploaded — after any `package.json` change, manually click "Run NPM Install" then "RESTART" in DirectAdmin's Node.js Selector (no API exists for this).
+  - `deploy-naar-production.yml` — only runs when dispatched against `refs/heads/master`.
+- GitHub Pages hosting has been retired (repo Pages setting disabled 2026-07-29) and the old `deploy-pages.yml` workflow removed — it served a static export built against Firebase/Firestore, which predates the MySQL migration and no longer works now that the Firebase project has been deleted entirely. GitHub itself is still used for version control / CI, just not for hosting.
 
-**⚠️ Known-stale: none of these three workflows have been updated for the Next.js server-mode + MySQL migration.** All three still run a plain `npm run build` expecting a static `out/` export and pass `NEXT_PUBLIC_FIREBASE_*` env vars that no longer exist in the app (Firebase was fully removed). They predate — and are not accounted for in — the migration plan's Task 25 (steps 5-8 of `docs/superpowers/plans/2026-07-23-firebase-to-mysql-migration.md` are still unchecked: setting production env vars, building+uploading the Node app, restarting/verifying, and retiring GitHub Pages). Don't assume a green run of these workflows reflects the current server-mode architecture — they need to be rewritten (Node/Passenger deploy instead of static FTP upload, MySQL env vars instead of Firebase ones) before they're trustworthy again.
+**⚠️ Known-stale: `deploy-naar-production.yml` has not been updated for the Next.js server-mode + MySQL migration.** It still runs `npm run build` expecting a static `out/` export and FTP-uploads `./out/` — but the app builds in server mode now (no `output: 'export'` in `next.config.mjs`), so this workflow currently deploys nothing usable. It needs the same rewrite `deploy-naar-staging.yml` already got (SFTP upload of `.next`/`app.js`/etc. to the production Node.js app) before it's trustworthy — see the migration plan's Task 25 (`docs/superpowers/plans/2026-07-23-firebase-to-mysql-migration.md`) for the remaining unchecked steps.

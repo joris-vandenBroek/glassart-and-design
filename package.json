@@ -7,8 +7,7 @@
     "build": "next build",
     "start": "node app.js",
     "lint": "next lint",
-    "test": "vitest run",
-    "migrate:firebase-data": "tsx scripts/migrate-firebase-data.ts"
+    "test": "vitest run"
   },
   "dependencies": {
     "mysql2": "^3.23.2",
@@ -28,7 +27,6 @@
     "dotenv": "^17.4.2",
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.0",
-    "firebase-admin": "^14.2.0",
     "jsdom": "^24.1.0",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.0",

@@ -725,7 +725,7 @@ describe('KunstwerkenSection', () => {
     await waitFor(() => expect(onAddStijl).toHaveBeenCalledWith({ omschrijving: 'Jugendstil' }));
 
     // Simulate BeheerShell re-rendering this component with the freshly-refetched stijlen list,
-    // the way it really would once useFirestoreCollection('stijlen').add() resolves.
+    // the way it really would once onAddStijl's API call resolves and useApiCollection refetches.
     rerender(
       <NextIntlClientProvider locale="nl" messages={messages}>
         <CustomerAuthProvider>

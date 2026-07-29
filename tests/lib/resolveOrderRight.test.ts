@@ -25,9 +25,9 @@ describe('resolveOrderRight', () => {
   });
 
   it('treats a kunstwerk document without a kunstenaarId field at all as having no kunstenaar', () => {
-    // Documenten van vóór deze feature hebben het veld niet; useFirestoreCollection spreidt de
-    // ruwe documentdata, dus dat leest als `undefined` in plaats van `null`. firestore.rules
-    // doet hetzelfde via `!('kunstenaarId' in kw) || kw.kunstenaarId == null`.
+    // Rijen van vóór deze feature hebben het veld niet; de API spreidt de ruwe rijdata,
+    // dus dat leest als `undefined` in plaats van `null`. De server-side check in
+    // api/bestelheaders/route.ts doet hetzelfde via een expliciete null-of-ontbrekend check.
     expect(resolveOrderRight(undefined as unknown as null, [kunstenaar()], 'uid-1')).toEqual({
       canOrder: true,
       blockedReason: null,
