@@ -207,6 +207,11 @@ jobs:
       - name: Compute next version number
         id: version
         run: |
+          if [ "${{ github.ref }}" != "refs/heads/master" ]; then
+            echo "tag=" >> "$GITHUB_OUTPUT"
+            echo "Not master -- feature-branch staging deploys aren't versioned (no promotable vN, no beheer version label)."
+            exit 0
+          fi
           latest=$(git tag -l 'v[0-9]*' | sed 's/^v//' | sort -n | tail -1)
           if [ -z "$latest" ]; then
             next=1
@@ -218,6 +223,9 @@ jobs:
         # Only computes the candidate number -- the actual git tag is created and pushed
         # in "Tag staged version" below, and ONLY after the smoke check passes. A failed
         # build/deploy/smoke-check simply skips that number; gaps are expected/harmless.
+        # Non-master runs deliberately get an empty tag: NEXT_PUBLIC_APP_VERSION ends up
+        # unset, so AppVersionLabel shows nothing (same as local dev) instead of a version
+        # number that could collide with -- or be confused for -- a real promotable build.
 
       - name: Build (server mode)
         run: npm run build
@@ -346,15 +354,21 @@ jobs:
           fi
 
       - name: Tag staged version
+        if: github.ref == 'refs/heads/master'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag "${{ steps.version.outputs.tag }}" "${{ github.sha }}"
           git push origin "${{ steps.version.outputs.tag }}"
           echo "Tagged and pushed ${{ steps.version.outputs.tag }} -- production can now promote this exact commit."
-        # Placed after the smoke check on purpose: this step only runs if every step
-        # above it succeeded (GitHub Actions' default job behavior), so a failed build,
-        # deploy, or smoke check never tags broken code as a promotable version.
+        # Master-only: staging itself can be dispatched from any branch for review, but
+        # only a master commit is allowed to become a promotable vN version -- this is
+        # what makes production's own master-ref guard meaningful instead of trivially
+        # true. Also placed after the smoke check, so this only runs once build, deploy,
+        # and smoke check have all succeeded -- but that means the tag says "built and
+        # uploaded successfully", not "a human reviewed this version on staging". Actually
+        # verifying the new version (after the manual RESTART above) is still the
+        # developer's job before ever promoting it to production.
 ```
 
 - [ ] **Step 2: Validate YAML syntax**
@@ -405,10 +419,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Production only ever deploys a commit that was already tagged by a staging run --
-    # staging exists precisely so unreviewed code gets tested before it reaches real
-    # customers. Dispatching this workflow against any ref other than master skips the
-    # job instead of deploying it.
+    # Only checks which ref this workflow itself was dispatched against -- the real
+    # guarantee that a vN tag always points at a master commit comes from staging's
+    # "Tag staged version" step being master-gated too (see deploy-naar-staging.yml).
     if: github.ref == 'refs/heads/master'
     steps:
       - name: Checkout
@@ -419,8 +432,10 @@ jobs:
 
       - name: Resolve version to deploy
         id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          input_version="${{ inputs.version }}"
+          input_version="$INPUT_VERSION"
           if [ -n "$input_version" ]; then
             tag="$input_version"
             if ! git rev-parse "refs/tags/$tag" >/dev/null 2>&1; then
@@ -435,11 +450,23 @@ jobs:
             fi
             tag="v$latest"
           fi
+          if ! echo "$tag" | grep -Eq '^v[0-9]+$'; then
+            echo "::error::Resolved tag '$tag' does not match the required ^v[0-9]+\$ format -- refusing to use it."
+            exit 1
+          fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "Deploying version: $tag"
         # Default behavior (blank input) promotes the latest version that was staged and
         # tagged by deploy-naar-staging.yml. An explicit input value redeploys that exact
         # tagged commit instead -- this is the rollback path, no new staging round needed.
+        # INPUT_VERSION is read via env: rather than interpolated straight into the script
+        # body, and the resolved tag (either branch) is validated against ^v[0-9]+$ before
+        # use -- workflow_dispatch inputs are attacker-controlled text substituted before
+        # bash ever parses the script, so a raw ${{ inputs.version }} here would let a
+        # crafted dispatch value inject arbitrary shell into a runner holding production
+        # secrets. Once this output is guaranteed to be v-plus-digits, every later
+        # steps.version.outputs.tag reference in this file is inherently safe to
+        # interpolate.
 
       - name: Checkout resolved version
         run: git checkout "${{ steps.version.outputs.tag }}"
@@ -480,9 +507,9 @@ jobs:
           cp -r .next public messages src deploy_payload/
           rm -rf deploy_payload/.next/cache
           cp app.js next.config.mjs package.json package-lock.json deploy_payload/
-        # Same shape as deploy-naar-staging.yml's payload -- node_modules deliberately
-        # excluded (managed via DirectAdmin's "Run NPM Install" button, see the manual
-        # restart reminder below).
+        # Same shape as the equivalent step in deploy-naar-staging.yml -- node_modules
+        # deliberately excluded (managed via DirectAdmin's "Run NPM Install" button, see
+        # the manual restart reminder below).
 
       - name: Upload build to production Node.js app via SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.6
@@ -542,6 +569,7 @@ jobs:
 
       - name: Smoke check
         run: |
+          sleep 5
           attempt=1
           max_attempts=3
           status=""
