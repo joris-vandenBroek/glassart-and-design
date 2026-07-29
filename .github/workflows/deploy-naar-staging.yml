@@ -41,21 +41,18 @@ jobs:
         # set directly in the Node.js app's DirectAdmin environment-variables panel --
         # this workflow doesn't need to touch them.
 
-      - name: Strip devDependencies from node_modules
-        run: npm prune --omit=dev
-        # next start (via app.js) only needs "dependencies" (mysql2, next, next-intl,
-        # react, react-dom). Uploading a pruned node_modules alongside the build lets
-        # the Node.js app run immediately after this deploy, without a manual "Run NPM
-        # Install" click in DirectAdmin (that button has failed transiently before on a
-        # large install right after an extract -- see the migration plan's Task 25).
-
       - name: Assemble deploy payload
         run: |
           rm -rf deploy_payload
           mkdir deploy_payload
-          cp -r .next public messages src node_modules deploy_payload/
+          cp -r .next public messages src deploy_payload/
           rm -rf deploy_payload/.next/cache
           cp app.js next.config.mjs package.json package-lock.json deploy_payload/
+        # node_modules deliberately excluded -- on this host it's a symlink into a
+        # DirectAdmin-managed nodeenv location (visible as `Lrwxrwxrwx` in File Manager),
+        # not a plain directory. Trying to upload a real node_modules folder over it fails
+        # ("path canonicalization failed"). Managing it is DirectAdmin's "Run NPM Install"
+        # button's job, not this workflow's -- see the manual-steps reminder below.
 
       - name: Upload build to staging Node.js app via SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.6
@@ -76,28 +73,49 @@ jobs:
           # Node.js app screen) is a standalone top-level folder, staging.glassartanddesign.
           # com/, a SIBLING of domains/ itself -- not nested inside domains/ at all. Earlier
           # attempts pointed at domains/staging.glassartanddesign.com/glassartanddesign.com/,
-          # a real but unrelated, never-executed folder (confirmed by its stale, day-old
-          # placeholder files) that kept accumulating extra nesting from path experiments.
-          # The staging-deploy FTP account's custom directory is now set directly to that
-          # true top-level folder, so remote_path here is just "/".
+          # a real but unrelated, never-executed folder that kept accumulating extra
+          # nesting from path experiments. The staging-deploy FTP account's custom
+          # directory is now set directly to the true top-level folder, so remote_path
+          # here is just "/".
+          #
+          # local_path uses "*" (not ".*") deliberately: this only matches non-hidden
+          # entries (messages/public/src), which is fine here because .next is uploaded
+          # separately below -- shell globbing here doesn't expand dotfiles/dotdirs, so a
+          # bare "*" would otherwise silently skip .next with no error.
           local_path: './deploy_payload/*'
           remote_path: '/'
         # sftp_only skips remote directory auto-creation for remote_path itself (must
         # already exist, which it does), but nested folders inside an uploaded directory
-        # are still created via SFTP's own MKDIR, no shell needed. No delete_remote_files:
-        # this only PUTs files that exist locally, it never removes anything not in
-        # deploy_payload/ -- tmp/ and stderr.log (Node.js Selector/Passenger-managed)
-        # are left alone by construction, no explicit exclude needed like FTP required.
+        # are still created via SFTP's own MKDIR, no shell needed -- as long as the
+        # top-level target folder already exists (confirmed for messages/public/src from
+        # the original manual deploy). No delete_remote_files: this only PUTs files that
+        # exist locally, it never removes anything not in deploy_payload/ -- tmp/ and
+        # stderr.log (Node.js Selector-managed) are left alone by construction.
+
+      - name: Upload .next build via SFTP
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
+        with:
+          server: ${{ vars.STAGING_FTP_HOST }}
+          port: 22
+          username: ${{ secrets.STAGING_FTP_USERNAME }}
+          password: ${{ secrets.STAGING_FTP_PASSWORD }}
+          sftp_only: true
+          local_path: './deploy_payload/.next/*'
+          remote_path: '/.next'
+        # Separate step because .next is a dotdir the main step's "*" glob can't see (see
+        # comment above). remote_path /.next already exists (from the original manual
+        # deploy), so this only needs to write/overwrite files inside it, not create it.
 
       - name: Manual restart reminder
         run: |
-          echo '::warning::Staging is uploaded but NOT restarted -- DirectAdmin Node.js app has no API for this, only a UI button. Go to DirectAdmin > Node.js app (staging) > click RESTART, or the site keeps serving the previous build.'
+          echo '::warning::Staging is uploaded but NOT restarted -- DirectAdmin Node.js app has no API for this, only UI buttons. If package.json/package-lock.json changed, click Run NPM Install first, then always click RESTART -- otherwise the site keeps serving the previous build.'
           {
-            echo '## :warning: Manual step required'
+            echo '## :warning: Manual steps required'
             echo ''
-            echo 'Files are uploaded to staging, but the Node.js app was **not** restarted automatically -- DirectAdmin Node.js Selector has no API for start/restart/npm-install, only a web UI button (none of the 269 endpoints in its own Swagger spec relate to Node.js/unit/passenger), and the restart.txt Passenger convention does not get picked up on this host either.'
+            echo 'Files are uploaded to staging, but the Node.js app was **not** restarted automatically, and dependencies were **not** installed automatically -- DirectAdmin Node.js Selector has no API for start/restart/npm-install, only web UI buttons (none of the 269 endpoints in its own Swagger spec relate to Node.js/unit/passenger), and the restart.txt Passenger convention does not get picked up on this host either.'
             echo ''
-            echo '**Go to DirectAdmin, open the staging Node.js app, and click RESTART** for this deploy to actually take effect.'
+            echo '1. If `package.json` or `package-lock.json` changed in this deploy, go to DirectAdmin, open the staging Node.js app, and click **Run NPM Install** (node_modules is a symlink into a DirectAdmin-managed location, so this workflow cannot upload it directly).'
+            echo '2. Always click **RESTART** afterwards -- this is what makes the new deploy actually take effect.'
           } >> "$GITHUB_STEP_SUMMARY"
         # Tried tmp/restart.txt (standard Passenger convention) as a separate, narrowly
         # scoped upload first -- landed fine but the app kept serving the old build, so
