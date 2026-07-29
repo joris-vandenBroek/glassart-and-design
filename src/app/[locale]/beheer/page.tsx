@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { GlassPanel } from '@/components/GlassPanel';
 import { AdminDashboard } from '@/components/beheer/AdminDashboard';
+import { AppVersionLabel } from '@/components/AppVersionLabel';
 import { pageAvailability } from '@/config/pageAvailability';
 import { UnderConstruction } from '@/components/UnderConstruction';
 import { Link } from '@/i18n/navigation';
@@ -27,6 +28,7 @@ export default async function BeheerPage({
     <main className="relative min-h-screen bg-gradient-to-b from-ink via-charcoal to-graphite px-4 pb-16 pt-24 sm:px-8">
       <GlassPanel className="relative mx-auto mb-6 !max-w-none !py-5 text-center">
         <h1 className="text-2xl font-light text-white sm:text-3xl">{t('title')}</h1>
+        <AppVersionLabel />
         <Link
           href="/"
           target="_blank"
