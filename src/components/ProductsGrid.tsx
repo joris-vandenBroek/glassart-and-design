@@ -7,7 +7,7 @@ import { useApiCollection } from '@/lib/useApiCollection';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
-import { WatermarkedImage } from './WatermarkedImage';
+import { ProductImage } from './ProductImage';
 import { ProductModal } from './ProductModal';
 import { Combobox } from './Combobox';
 import { Breadcrumb } from './Breadcrumb';
@@ -403,7 +403,7 @@ export function ProductsGrid() {
                   }}
                   className="group relative aspect-square cursor-pointer overflow-hidden rounded border border-gold/50 bg-white transition duration-300 hover:-translate-y-1 hover:border-gold hover:shadow-[0_8px_24px_rgba(212,175,55,0.25)] focus-visible:-translate-y-1 focus-visible:border-gold focus-visible:outline-none"
                 >
-                  <WatermarkedImage src={kunstwerk.foto} alt={omschrijving} className="h-full w-full" fit="contain" />
+                  <ProductImage src={kunstwerk.foto} alt={omschrijving} className="h-full w-full" fit="contain" />
                   <div
                     aria-hidden="true"
                     className="pointer-events-none absolute inset-0 flex items-end bg-gradient-to-t from-black/80 via-black/10 to-transparent p-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100"

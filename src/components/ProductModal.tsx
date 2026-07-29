@@ -11,7 +11,7 @@ import { resolveOrderRight } from '@/lib/resolveOrderRight';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { findVeiligheidsglasMateriaalId, MATERIAALLOOS_LABEL } from '@/lib/kunstwerkMateriaal';
 import { useApiRecord } from '@/lib/useApiRecord';
-import { WatermarkedImage } from './WatermarkedImage';
+import { ProductImage } from './ProductImage';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort, Segment, Stijl, Onderwerp } from './beheer/materiaalTypes';
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
 import type { Bestelinstellingen } from './beheer/bestelinstellingenTypes';
@@ -282,7 +282,7 @@ export function ProductModal({
 
   const body = (
     <>
-      <WatermarkedImage
+      <ProductImage
         src={kunstwerk.foto}
         alt={omschrijving}
         fit="contain"

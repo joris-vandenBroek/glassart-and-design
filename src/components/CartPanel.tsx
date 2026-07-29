@@ -9,7 +9,7 @@ import { useApiCollection } from '@/lib/useApiCollection';
 import { useOverlayDismiss } from '@/lib/useOverlayDismiss';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { resolveOrderRight } from '@/lib/resolveOrderRight';
-import { WatermarkedImage } from './WatermarkedImage';
+import { ProductImage } from './ProductImage';
 import { Link } from '@/i18n/navigation';
 import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
 import type { Kunstwerk } from './beheer/materiaalTypes';
@@ -203,7 +203,7 @@ export function CartPanel() {
                         data-testid={`cart-item-${item.id}`}
                         className="flex gap-3 rounded-md border border-white/10 bg-graphite/60 p-3 text-xs text-white/80"
                       >
-                        <WatermarkedImage src={item.foto} alt="" className="h-12 w-12 rounded" />
+                        <ProductImage src={item.foto} alt="" className="h-12 w-12 rounded" />
                         <div className="flex-1">
                           <p>{item.omschrijving}</p>
                           <p className="text-white/50">

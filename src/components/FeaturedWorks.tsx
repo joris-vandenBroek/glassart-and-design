@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useApiCollection } from '@/lib/useApiCollection';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
-import { WatermarkedImage } from './WatermarkedImage';
+import { ProductImage } from './ProductImage';
 import { GlassPanel } from './GlassPanel';
 import type { Kunstwerk } from './beheer/materiaalTypes';
 
@@ -39,7 +39,7 @@ export function FeaturedWorks() {
             data-testid="featured-work"
             className="aspect-square overflow-hidden rounded border border-white/10"
           >
-            <WatermarkedImage
+            <ProductImage
               src={kunstwerk.foto}
               alt={resolveKunstwerkOmschrijving(kunstwerk, locale)}
               className="h-full w-full"

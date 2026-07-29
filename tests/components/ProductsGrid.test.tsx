@@ -227,10 +227,10 @@ describe('ProductsGrid', () => {
     expect(screen.getByTestId('product-modal')).toBeInTheDocument();
   });
 
-  it('shows a watermark overlay on every product card photo', async () => {
+  it('shows a photo on every product card', async () => {
     renderProductsGrid();
     await screen.findAllByTestId('product-card');
-    expect(screen.getAllByTestId('watermark-overlay').length).toBeGreaterThanOrEqual(3);
+    expect(screen.getAllByTestId('product-image').length).toBeGreaterThanOrEqual(3);
   });
 
   it('logs kunstwerk_bekeken with the logged-in klant when a card is clicked', async () => {

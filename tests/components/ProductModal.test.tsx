@@ -500,14 +500,14 @@ describe('ProductModal', () => {
     expect(closeButton).toHaveFocus();
   });
 
-  it('shows a watermark overlay on the photo', () => {
+  it('shows the photo', () => {
     renderModal();
-    expect(screen.getByTestId('watermark-overlay')).toBeInTheDocument();
+    expect(screen.getByTestId('product-image')).toBeInTheDocument();
   });
 
   it('shows the full artwork on a dark, gold-bordered panel instead of a cropped white one', () => {
     renderModal();
-    const image = screen.getByTestId('watermarked-image');
+    const image = screen.getByTestId('product-image');
     expect(image).toHaveClass('border-gold/50');
     expect(image).toHaveClass('bg-ink');
   });
@@ -948,14 +948,14 @@ describe('ProductModal', () => {
     const panel = screen.getByTestId('product-modal');
     expect(panel.parentElement).toHaveClass('pm-preview-frame');
     expect(panel.className).toMatch(/(^|\s)pm-preview-panel(\s|$)/);
-    expect(screen.getByTestId('watermarked-image').className).toMatch(/(^|\s)pm-preview-image(\s|$)/);
+    expect(screen.getByTestId('product-image').className).toMatch(/(^|\s)pm-preview-image(\s|$)/);
   });
 
   it('dialog variant: does not carry the preview container-query markers', () => {
     renderModal();
     const panel = screen.getByTestId('product-modal-backdrop').nextElementSibling as HTMLElement;
     expect(panel.className).not.toMatch(/pm-preview/);
-    expect(screen.getByTestId('watermarked-image').className).not.toMatch(/pm-preview/);
+    expect(screen.getByTestId('product-image').className).not.toMatch(/pm-preview/);
   });
 
   it('preview variant: disables the confirm button and never adds to the cart', () => {

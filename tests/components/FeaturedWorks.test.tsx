@@ -40,9 +40,9 @@ describe('FeaturedWorks', () => {
     await waitFor(() => expect(screen.getAllByTestId('featured-work')).toHaveLength(2));
   });
 
-  it('shows a watermark overlay on each featured photo', async () => {
+  it('shows a photo for each featured work', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => ['a', 'b', 'c'].map(makeKunstwerk) });
     renderWithIntl(<FeaturedWorks />, 'nl', messages);
-    await waitFor(() => expect(screen.getAllByTestId('watermark-overlay')).toHaveLength(3));
+    await waitFor(() => expect(screen.getAllByTestId('product-image')).toHaveLength(3));
   });
 });

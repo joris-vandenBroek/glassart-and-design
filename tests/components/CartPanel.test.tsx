@@ -190,11 +190,11 @@ describe('CartPanel', () => {
     expect(screen.getByTestId('cart-total')).toHaveTextContent('€ 300,00');
   });
 
-  it('shows a watermark overlay on each cart item photo', () => {
+  it('shows the photo for each cart item', () => {
     renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
-    expect(screen.getByTestId('watermark-overlay')).toBeInTheDocument();
+    expect(screen.getByTestId('product-image')).toBeInTheDocument();
   });
 
   it('removes an item when its remove button is clicked', () => {

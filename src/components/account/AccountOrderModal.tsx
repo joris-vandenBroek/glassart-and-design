@@ -2,7 +2,7 @@
 
 import { useLocale, useTranslations } from 'next-intl';
 import { Modal } from '@/components/Modal';
-import { WatermarkedImage } from '@/components/WatermarkedImage';
+import { ProductImage } from '@/components/ProductImage';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
 import { formatCurrency } from '@/lib/formatCurrency';
 import type { DisplayOrder } from '@/lib/useAllOrders';
@@ -57,7 +57,7 @@ export function AccountOrderModal({
                   >
                     {kunstwerk ? (
                       <div className="flex items-center gap-2">
-                        <WatermarkedImage src={kunstwerk.foto} alt="" className="h-10 w-10 rounded" />
+                        <ProductImage src={kunstwerk.foto} alt="" className="h-10 w-10 rounded" />
                         <div>
                           <p>{resolveKunstwerkOmschrijving(kunstwerk, locale)}</p>
                           <p className="text-white/50">
