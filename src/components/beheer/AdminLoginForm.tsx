@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAdminAuth } from '@/lib/useAdminAuth';
+import { PasswordInput } from '@/components/PasswordInput';
 
 export function AdminLoginForm() {
   const t = useTranslations('beheer');
@@ -55,8 +56,7 @@ export function AdminLoginForm() {
 
       <label className={labelClassName}>
         {t('labelPassword')}
-        <input
-          type="password"
+        <PasswordInput
           required
           value={password}
           onChange={(event) => setPassword(event.target.value)}

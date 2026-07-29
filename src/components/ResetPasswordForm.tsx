@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { Link } from '@/i18n/navigation';
+import { PasswordInput } from '@/components/PasswordInput';
 
 export function ResetPasswordForm() {
   const t = useTranslations('resetPasswordPage');
@@ -67,8 +68,7 @@ export function ResetPasswordForm() {
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-sm text-white/80">
       <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
         {t('labelNewPassword')}
-        <input
-          type="password"
+        <PasswordInput
           required
           value={newPassword}
           onChange={(event) => setNewPassword(event.target.value)}
@@ -78,8 +78,7 @@ export function ResetPasswordForm() {
       </label>
       <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
         {t('labelConfirmPassword')}
-        <input
-          type="password"
+        <PasswordInput
           required
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}

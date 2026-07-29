@@ -104,26 +104,12 @@ export function SegmentenSection({ segmenten, loadError, onAdd, onUpdate, onRemo
         emptyLabel={t('segmentenEmpty')}
         searchPlaceholder={t('dataTableSearchPlaceholder')}
       />
-      <Modal isOpen={modalState !== null} onClose={closeModal} closeLabel={t('modalClose')}>
-        <div data-testid="segment-modal" className="flex flex-col gap-2 text-sm text-white/80">
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('segmentenLabelOmschrijving')}
-            <input
-              type="text"
-              value={omschrijving}
-              onChange={(event) => setOmschrijving(event.target.value)}
-              data-testid="segment-modal-omschrijving"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-            />
-          </label>
-
-          {actionError && (
-            <p data-testid="segment-modal-error" className="text-xs text-red-400">
-              {actionError}
-            </p>
-          )}
-
-          <div className="flex gap-2">
+      <Modal
+        isOpen={modalState !== null}
+        onClose={closeModal}
+        closeLabel={t('modalClose')}
+        footerActions={
+          <>
             <button
               type="button"
               onClick={handleSave}
@@ -143,7 +129,26 @@ export function SegmentenSection({ segmenten, loadError, onAdd, onUpdate, onRemo
                 {t('segmentenVerwijderen')}
               </button>
             )}
-          </div>
+          </>
+        }
+      >
+        <div data-testid="segment-modal" className="flex flex-col gap-2 text-sm text-white/80">
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+            {t('segmentenLabelOmschrijving')}
+            <input
+              type="text"
+              value={omschrijving}
+              onChange={(event) => setOmschrijving(event.target.value)}
+              data-testid="segment-modal-omschrijving"
+              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+            />
+          </label>
+
+          {actionError && (
+            <p data-testid="segment-modal-error" className="text-xs text-red-400">
+              {actionError}
+            </p>
+          )}
         </div>
       </Modal>
     </div>

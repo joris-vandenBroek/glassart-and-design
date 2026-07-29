@@ -123,7 +123,34 @@ export function PrijsgroepenSection({
         emptyLabel={t('prijsgroepenEmpty')}
         searchPlaceholder={t('dataTableSearchPlaceholder')}
       />
-      <Modal isOpen={modalState !== null} onClose={closeModal} closeLabel={t('modalClose')}>
+      <Modal
+        isOpen={modalState !== null}
+        onClose={closeModal}
+        closeLabel={t('modalClose')}
+        footerActions={
+          <>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!naam}
+              data-testid="prijsgroep-modal-opslaan"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+            >
+              {t('prijsgroepenOpslaan')}
+            </button>
+            {modalState?.mode === 'edit' && (
+              <button
+                type="button"
+                onClick={handleRemove}
+                data-testid="prijsgroep-modal-verwijderen"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+              >
+                {t('prijsgroepenVerwijderen')}
+              </button>
+            )}
+          </>
+        }
+      >
         <div data-testid="prijsgroep-modal" className="flex flex-col gap-2 text-sm text-white/80">
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
             {t('prijsgroepenLabelNaam')}
@@ -151,28 +178,6 @@ export function PrijsgroepenSection({
               {actionError}
             </p>
           )}
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={!naam}
-              data-testid="prijsgroep-modal-opslaan"
-              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
-            >
-              {t('prijsgroepenOpslaan')}
-            </button>
-            {modalState?.mode === 'edit' && (
-              <button
-                type="button"
-                onClick={handleRemove}
-                data-testid="prijsgroep-modal-verwijderen"
-                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
-              >
-                {t('prijsgroepenVerwijderen')}
-              </button>
-            )}
-          </div>
         </div>
       </Modal>
     </div>

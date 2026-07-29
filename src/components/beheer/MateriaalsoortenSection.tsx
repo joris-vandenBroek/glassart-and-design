@@ -138,7 +138,34 @@ export function MateriaalsoortenSection({
         emptyLabel={t('materiaalsoortenEmpty')}
         searchPlaceholder={t('dataTableSearchPlaceholder')}
       />
-      <Modal isOpen={modalState !== null} onClose={closeModal} closeLabel={t('modalClose')}>
+      <Modal
+        isOpen={modalState !== null}
+        onClose={closeModal}
+        closeLabel={t('modalClose')}
+        footerActions={
+          <>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!omschrijving}
+              data-testid="materiaalsoort-modal-opslaan"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+            >
+              {t('materiaalsoortenOpslaan')}
+            </button>
+            {modalState?.mode === 'edit' && (
+              <button
+                type="button"
+                onClick={handleRemove}
+                data-testid="materiaalsoort-modal-verwijderen"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+              >
+                {t('materiaalsoortenVerwijderen')}
+              </button>
+            )}
+          </>
+        }
+      >
         <div data-testid="materiaalsoort-modal" className="flex flex-col gap-2 text-sm text-white/80">
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
             {t('materiaalsoortenLabelOmschrijving')}
@@ -201,28 +228,6 @@ export function MateriaalsoortenSection({
               {actionError}
             </p>
           )}
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={!omschrijving}
-              data-testid="materiaalsoort-modal-opslaan"
-              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
-            >
-              {t('materiaalsoortenOpslaan')}
-            </button>
-            {modalState?.mode === 'edit' && (
-              <button
-                type="button"
-                onClick={handleRemove}
-                data-testid="materiaalsoort-modal-verwijderen"
-                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
-              >
-                {t('materiaalsoortenVerwijderen')}
-              </button>
-            )}
-          </div>
         </div>
       </Modal>
     </div>

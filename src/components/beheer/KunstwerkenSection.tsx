@@ -529,7 +529,35 @@ export function KunstwerkenSection({
         emptyLabel={t('kunstwerkenEmpty')}
         searchPlaceholder={t('dataTableSearchPlaceholder')}
       />
-      <Modal isOpen={modalState !== null} onClose={closeModal} closeLabel={t('modalClose')} wide>
+      <Modal
+        isOpen={modalState !== null}
+        onClose={closeModal}
+        closeLabel={t('modalClose')}
+        wide
+        footerActions={
+          <>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={opslaanDisabled}
+              data-testid="kunstwerk-modal-opslaan"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+            >
+              {t('kunstwerkenOpslaan')}
+            </button>
+            {modalState?.mode === 'edit' && (
+              <button
+                type="button"
+                onClick={handleRemove}
+                data-testid="kunstwerk-modal-verwijderen"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+              >
+                {t('kunstwerkenVerwijderen')}
+              </button>
+            )}
+          </>
+        }
+      >
         <div
           data-testid="kunstwerk-modal"
           className="grid grid-cols-1 gap-6 text-sm text-white/80 lg:grid-cols-[minmax(0,1fr)_320px] min-[1432px]:grid-cols-[minmax(0,1fr)_560px]"
@@ -897,28 +925,6 @@ export function KunstwerkenSection({
               {actionError}
             </p>
           )}
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={opslaanDisabled}
-              data-testid="kunstwerk-modal-opslaan"
-              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
-            >
-              {t('kunstwerkenOpslaan')}
-            </button>
-            {modalState?.mode === 'edit' && (
-              <button
-                type="button"
-                onClick={handleRemove}
-                data-testid="kunstwerk-modal-verwijderen"
-                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
-              >
-                {t('kunstwerkenVerwijderen')}
-              </button>
-            )}
-          </div>
           </div>
 
           <div className="lg:sticky lg:top-0 lg:pt-10">

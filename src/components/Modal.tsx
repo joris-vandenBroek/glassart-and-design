@@ -13,9 +13,19 @@ interface ModalProps {
   wide?: boolean;
   title?: ReactNode;
   subtitle?: ReactNode;
+  footerActions?: ReactNode;
 }
 
-export function Modal({ isOpen, onClose, closeLabel, children, wide = false, title, subtitle }: ModalProps) {
+export function Modal({
+  isOpen,
+  onClose,
+  closeLabel,
+  children,
+  wide = false,
+  title,
+  subtitle,
+  footerActions,
+}: ModalProps) {
   const t = useTranslations('modal');
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -66,7 +76,8 @@ export function Modal({ isOpen, onClose, closeLabel, children, wide = false, tit
           </div>
         )}
         {children}
-        <div className="mt-4 flex justify-end border-t border-white/10 pt-4">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
+          <div className="flex flex-wrap gap-2">{footerActions}</div>
           <button
             type="button"
             data-testid="modal-footer-close"

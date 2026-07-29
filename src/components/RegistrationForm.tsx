@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { logActiviteit, ONBEKENDE_ACTOR } from '@/lib/logActiviteit';
+import { PasswordInput } from '@/components/PasswordInput';
 
 export function RegistrationForm() {
   const t = useTranslations('registrationPage');
@@ -139,8 +140,7 @@ export function RegistrationForm() {
 
       <label className={labelClassName}>
         {t('labelPassword')}
-        <input
-          type="password"
+        <PasswordInput
           name="password"
           required
           data-testid="word-klant-password"
@@ -150,8 +150,7 @@ export function RegistrationForm() {
 
       <label className={labelClassName}>
         {t('labelPasswordConfirm')}
-        <input
-          type="password"
+        <PasswordInput
           name="passwordConfirm"
           required
           data-testid="word-klant-password-confirm"

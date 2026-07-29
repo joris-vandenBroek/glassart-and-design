@@ -144,7 +144,7 @@ export function KlantModal({
 
     try {
       // Eerst de back-pointers op de kunstenaars, dán pas het klantdocument. Alleen
-      // `Kunstenaar.exclusiefVoorKlantId` wordt door de Firestore-regels en de winkel-UI
+      // `Kunstenaar.exclusiefVoorKlantId` wordt door de server-side check en de winkel-UI
       // gelezen; `Klant.exclusieveKunstenaarIds` is puur administratief. Faalt een
       // back-pointer halverwege, dan stoppen we met het klantdocument ONGEWIJZIGD in
       // plaats van met een klant die een niet-gehandhaafde exclusiviteit claimt.
@@ -231,6 +231,51 @@ export function KlantModal({
       onClose={onClose}
       closeLabel={t('modalClose')}
       title={t('klantenModalTitel')}
+      footerActions={
+        klant && fields ? (
+          <>
+            {isEditing && (
+              <button
+                type="button"
+                onClick={handleAnnuleren}
+                data-testid="klant-modal-annuleren"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+              >
+                {t('annuleren')}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleOpslaan}
+              data-testid="klant-modal-opslaan"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+            >
+              {t('klantenOpslaan')}
+            </button>
+            {!isEditing && klant.status !== 'Goedgekeurd' && (
+              <button
+                type="button"
+                onClick={handleGoedkeuren}
+                disabled={!prijsgroepId}
+                data-testid="klant-modal-goedkeuren"
+                className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+              >
+                {t('klantenGoedkeuren')}
+              </button>
+            )}
+            {!isEditing && (
+              <button
+                type="button"
+                onClick={handleAfwijzen}
+                data-testid="klant-modal-afwijzen"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+              >
+                {t('klantenAfwijzen')}
+              </button>
+            )}
+          </>
+        ) : null
+      }
     >
       {klant && fields && (
         <div data-testid="klant-modal" className="flex flex-col gap-3 text-sm text-white/80">
@@ -397,19 +442,6 @@ export function KlantModal({
             )}
           </div>
 
-          {isEditing && (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleAnnuleren}
-                data-testid="klant-modal-annuleren"
-                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
-              >
-                {t('annuleren')}
-              </button>
-            </div>
-          )}
-
           <div className="flex items-end gap-2">
             <label className="flex flex-1 flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
               {t('klantenLabelPrijsgroep')}
@@ -462,43 +494,10 @@ export function KlantModal({
             </label>
           </div>
 
-          <button
-            type="button"
-            onClick={handleOpslaan}
-            data-testid="klant-modal-opslaan"
-            className="btn-beheer-primary w-fit rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
-          >
-            {t('klantenOpslaan')}
-          </button>
-
           {error && (
             <p data-testid="klant-modal-error" className="text-xs text-red-400">
               {error}
             </p>
-          )}
-
-          {!isEditing && (
-            <div className="flex gap-2">
-              {klant.status !== 'Goedgekeurd' && (
-                <button
-                  type="button"
-                  onClick={handleGoedkeuren}
-                  disabled={!prijsgroepId}
-                  data-testid="klant-modal-goedkeuren"
-                  className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
-                >
-                  {t('klantenGoedkeuren')}
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={handleAfwijzen}
-                data-testid="klant-modal-afwijzen"
-                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
-              >
-                {t('klantenAfwijzen')}
-              </button>
-            </div>
           )}
         </div>
       )}

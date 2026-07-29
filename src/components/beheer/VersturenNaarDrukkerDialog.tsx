@@ -145,7 +145,34 @@ export function VersturenNaarDrukkerDialog({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={handleDialogClose} closeLabel={t('modalClose')} title={t('drukkerVersturenTitel')}>
+    <Modal
+      isOpen={isOpen}
+      onClose={handleDialogClose}
+      closeLabel={t('modalClose')}
+      title={t('drukkerVersturenTitel')}
+      footerActions={
+        <>
+          <button
+            type="button"
+            onClick={handleVersturen}
+            disabled={isSending || !drukkerId || mailSent || heeftOntbrekendeKlantgegevens}
+            data-testid="drukker-versturen-versturen"
+            className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+          >
+            {t('drukkerVersturenVersturen')}
+          </button>
+          <button
+            type="button"
+            onClick={handleDialogClose}
+            disabled={isSending}
+            data-testid="drukker-versturen-annuleren"
+            className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
+          >
+            {t('annuleren')}
+          </button>
+        </>
+      }
+    >
       <div className="flex flex-col gap-3 text-sm text-white/80">
         <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
           {t('drukkerVersturenLabelDrukker')}
@@ -186,27 +213,6 @@ export function VersturenNaarDrukkerDialog({
             {error}
           </p>
         )}
-
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={handleVersturen}
-            disabled={isSending || !drukkerId || mailSent || heeftOntbrekendeKlantgegevens}
-            data-testid="drukker-versturen-versturen"
-            className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
-          >
-            {t('drukkerVersturenVersturen')}
-          </button>
-          <button
-            type="button"
-            onClick={handleDialogClose}
-            disabled={isSending}
-            data-testid="drukker-versturen-annuleren"
-            className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
-          >
-            {t('annuleren')}
-          </button>
-        </div>
       </div>
     </Modal>
   );
