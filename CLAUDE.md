@@ -58,6 +58,8 @@ Vitest is **not** mocking the database — `tests/setup.ts` loads `.env.local` a
 
 ## GitHub / CI
 
+**Hard rule: never dispatch `deploy-naar-production.yml` without first deploying the same commit to staging and verifying it there.** This is a standing client/team rule, not a per-request judgment call — always deploy to staging first, confirm it looks right, then deploy to production. Don't offer or trigger a production deploy as a shortcut just because a fix is small or was already verified locally/in the dev preview.
+
 - `master` is the only branch production deploys from (enforced in the workflow itself, not just by convention).
 - There is no local database: local dev (`npm run dev`) and the test suite both connect to the same shared MySQL **staging** database on mijn.host via `.env.local` (`DB_HOST`/`DB_USER`/etc., see `.env.local.example`) — there's no throwaway/local MySQL instance to set up.
 - Three `workflow_dispatch` GitHub Actions live in `.github/workflows/`:
