@@ -51,12 +51,11 @@ jobs:
 
       - name: Assemble deploy payload
         run: |
-          rm -rf deploy_payload restart_trigger
-          mkdir deploy_payload restart_trigger
+          rm -rf deploy_payload
+          mkdir deploy_payload
           cp -r .next public messages src node_modules deploy_payload/
           rm -rf deploy_payload/.next/cache
           cp app.js next.config.mjs package.json package-lock.json deploy_payload/
-          date -u > restart_trigger/restart.txt
 
       - name: Upload build to staging Node.js app via SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.6
@@ -73,14 +72,16 @@ jobs:
           # connection (confirmed listening: `h64.mijn.host:22` answers with
           # "SSH-2.0-mod_sftp") and has no separate data-channel step to fail.
           #
-          # remote_path "/" (this account's own SFTP root) failed with "No such file" for
-          # every top-level folder (messages, node_modules, public, src) -- the
-          # DirectAdmin "Custom Directory" setting saved for the FTP protocol apparently
-          # doesn't apply to mod_sftp, which roots SFTP sessions one level higher instead
-          # (domains/staging.glassartanddesign.com/, sibling of public_html and
-          # glassartanddesign.com). Pointing remote_path at that sibling folder directly.
+          # The Node.js app's real "Application root" (confirmed directly in DirectAdmin's
+          # Node.js app screen) is a standalone top-level folder, staging.glassartanddesign.
+          # com/, a SIBLING of domains/ itself -- not nested inside domains/ at all. Earlier
+          # attempts pointed at domains/staging.glassartanddesign.com/glassartanddesign.com/,
+          # a real but unrelated, never-executed folder (confirmed by its stale, day-old
+          # placeholder files) that kept accumulating extra nesting from path experiments.
+          # The staging-deploy FTP account's custom directory is now set directly to that
+          # true top-level folder, so remote_path here is just "/".
           local_path: './deploy_payload/*'
-          remote_path: '/glassartanddesign.com'
+          remote_path: '/'
         # sftp_only skips remote directory auto-creation for remote_path itself (must
         # already exist, which it does), but nested folders inside an uploaded directory
         # are still created via SFTP's own MKDIR, no shell needed. No delete_remote_files:
@@ -88,22 +89,20 @@ jobs:
         # deploy_payload/ -- tmp/ and stderr.log (Node.js Selector/Passenger-managed)
         # are left alone by construction, no explicit exclude needed like FTP required.
 
-      - name: Trigger restart (tmp/restart.txt touch, standard Passenger convention)
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
-        with:
-          server: ${{ vars.STAGING_FTP_HOST }}
-          port: 22
-          username: ${{ secrets.STAGING_FTP_USERNAME }}
-          password: ${{ secrets.STAGING_FTP_PASSWORD }}
-          sftp_only: true
-          local_path: './restart_trigger/*'
-          remote_path: '/glassartanddesign.com/tmp'
-        # Kept as a separate, narrowly-scoped upload (just this one file, into the
-        # already-existing tmp/ folder) so it can't touch anything else in there. This is
-        # a best-effort attempt, not a confirmed mechanism for this specific DirectAdmin
-        # setup: if the Node.js Selector doesn't watch this file, the app keeps serving
-        # the previous build until someone clicks "RESTART" on the Node.js app page in
-        # DirectAdmin.
+      - name: Manual restart reminder
+        run: |
+          echo '::warning::Staging is uploaded but NOT restarted -- DirectAdmin Node.js app has no API for this, only a UI button. Go to DirectAdmin > Node.js app (staging) > click RESTART, or the site keeps serving the previous build.'
+          {
+            echo '## :warning: Manual step required'
+            echo ''
+            echo 'Files are uploaded to staging, but the Node.js app was **not** restarted automatically -- DirectAdmin Node.js Selector has no API for start/restart/npm-install, only a web UI button (none of the 269 endpoints in its own Swagger spec relate to Node.js/unit/passenger), and the restart.txt Passenger convention does not get picked up on this host either.'
+            echo ''
+            echo '**Go to DirectAdmin, open the staging Node.js app, and click RESTART** for this deploy to actually take effect.'
+          } >> "$GITHUB_STEP_SUMMARY"
+        # Tried tmp/restart.txt (standard Passenger convention) as a separate, narrowly
+        # scoped upload first -- landed fine but the app kept serving the old build, so
+        # this host's Node.js Selector doesn't watch that file. Removed rather than left
+        # in as a no-op.
 
       - name: Smoke check
         env:
