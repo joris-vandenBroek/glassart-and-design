@@ -254,13 +254,15 @@ export function KunstwerkenSection({
 
   function setFormaat(optie: KunstwerkFormaat) {
     setFormaatState(optie);
-    setMaatIds((current) =>
-      current.filter((id) => {
-        const maat = (maten ?? []).find((m) => m.id === id);
-        if (!maat) return true;
-        return optie === 'vierkant' ? isVierkanteMaat(maat) : !isVierkanteMaat(maat);
-      })
+    setMaatIds(
+      (maten ?? [])
+        .filter((maat) => (optie === 'vierkant' ? isVierkanteMaat(maat) : !isVierkanteMaat(maat)))
+        .map((maat) => maat.id)
     );
+    // A kunstwerk with every materiaal unchecked is deliberately materiaalloos (priced per
+    // m² instead), not "hasn't picked yet" — resetForm() always starts non-empty, so an
+    // empty selection here only ever means the admin chose that. Leave it alone.
+    setMateriaalIds((current) => (current.length === 0 ? current : (materialen ?? []).map((materiaal) => materiaal.id)));
   }
 
   if (loadError) {

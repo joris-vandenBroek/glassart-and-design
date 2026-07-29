@@ -179,6 +179,11 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled();
 
     fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
+    expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled(); // naam, prijs, omschrijving and formaat still missing
+
+    // Pick the formaat before narrowing materiaal/maat: choosing a formaat re-checks every
+    // materiaal and every compatible maat, so narrowing first would just get overwritten.
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
     expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled(); // naam, prijs and omschrijving still missing
@@ -186,9 +191,6 @@ describe('KunstwerkenSection', () => {
     fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Test' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-mat-1-maat-1'), { target: { value: '99' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Test' } });
-    expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled(); // formaat still missing
-
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     expect(screen.getByTestId('kunstwerk-modal-opslaan')).not.toBeDisabled();
   });
 
@@ -226,13 +228,13 @@ describe('KunstwerkenSection', () => {
     fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
     fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Vibrant Spirit' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'ka-1' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-mat-1-maat-1'), { target: { value: '99' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Nieuw kunstwerk' } });
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
 
     await waitFor(() =>
@@ -326,12 +328,12 @@ describe('KunstwerkenSection', () => {
     fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
     fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Nieuw kunstwerk' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-mat-1-maat-1'), { target: { value: '99' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Nieuw kunstwerk' } });
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
 
     await waitFor(() =>
@@ -381,12 +383,12 @@ describe('KunstwerkenSection', () => {
     fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
     fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Nieuw kunstwerk' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-mat-1-maat-1'), { target: { value: '99' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Nieuw kunstwerk' } });
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
 
     await screen.findByTestId('kunstwerk-modal-error');
@@ -563,6 +565,33 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).not.toBeDisabled();
   });
 
+  it('re-checks every materiaal and every compatible maat when the formaat changes, even if the admin had narrowed the selection first', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-1'));
+
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
+
+    expect(screen.getByTestId('kunstwerk-modal-materiaal-mat-1')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-materiaal-mat-2')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-2')).toBeChecked();
+  });
+
+  it('keeps a materiaalloos kunstwerk materiaalloos when a formaat is chosen afterwards', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
+
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-vierkant'));
+
+    expect(screen.getByTestId('kunstwerk-modal-materiaal-mat-1')).not.toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-materiaal-mat-2')).not.toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-prijs-per-m2')).toBeInTheDocument();
+  });
+
   it('pre-selects the detected formaat when a new photo is uploaded, overridable by the admin', async () => {
     uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
     detectFormaatFromFileMock.mockResolvedValue('liggend');
@@ -660,13 +689,13 @@ describe('KunstwerkenSection', () => {
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
     fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Test' } });
     fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
-    // materiaal/maat now default to "all checked" (materiaal-maat-defaults feature) — narrow
-    // down to just mat-1 + maat-1 before picking a formaat, since an incompatible maat's
-    // checkbox becomes disabled (and thus stuck) once a formaat is chosen.
+    // Pick the formaat first, then narrow down to just mat-1 + maat-1: choosing a formaat
+    // re-checks every materiaal and every compatible maat, so narrowing before that point
+    // would just get overwritten (maat-3 is square, so it's already excluded/disabled once
+    // "staand" is picked — no need to uncheck it separately).
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-3'));
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-mat-1-maat-1'), { target: { value: '100' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Test omschrijving' } });
 
