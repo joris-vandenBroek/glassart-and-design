@@ -233,7 +233,6 @@
   },
   "accountPage": {
     "navOrders": "Bestellungen",
-    "navConversations": "Gesprächsverlauf",
     "navSettings": "Einstellungen",
     "logout": "Abmelden",
     "orders": {
@@ -245,15 +244,6 @@
       "modalLineUnknown": "Unbekannter Artikel",
       "modalLinePriceOnRequest": "Preis auf Anfrage",
       "loadError": "Bestellungen konnten nicht geladen werden. Bitte versuchen Sie es später erneut."
-    },
-    "conversations": {
-      "empty": "Keine Gespräche gefunden.",
-      "items": {
-        "conversation1": { "topic": "Frage zur Lieferzeit" },
-        "conversation2": { "topic": "Angebot Hotelprojekt" },
-        "conversation3": { "topic": "Frage zur Montage" },
-        "conversation4": { "topic": "Änderung der Lieferadresse" }
-      }
     },
     "settings": {
       "labelCompanyName": "Firmenname",
@@ -271,8 +261,10 @@
       "labelPassword": "Passwort",
       "labelPasswordConfirm": "Passwort wiederholen",
       "passwordMismatch": "Die Passwörter stimmen nicht überein.",
+      "passwordTooShort": "Das Passwort muss mindestens 8 Zeichen lang sein.",
       "save": "Speichern",
       "saved": "Gespeichert!",
+      "saveError": "Speichern fehlgeschlagen. Bitte versuchen Sie es erneut.",
       "deleteAccountTitle": "Konto löschen",
       "deleteAccountLabelPassword": "Passwort (zur Bestätigung)",
       "deleteAccountSubmit": "Endgültig löschen",
@@ -282,5 +274,9 @@
   },
   "modal": {
     "closeTooltip": "Schließen Sie dieses Fenster, etwaige Änderungen werden nicht gespeichert!"
+  },
+  "password": {
+    "show": "Passwort anzeigen",
+    "hide": "Passwort verbergen"
   }
 }

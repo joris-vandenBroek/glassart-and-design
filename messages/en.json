@@ -236,7 +236,6 @@
     "navInvoicesDue": "Invoices due",
     "navInvoicesPaid": "Paid invoices",
     "navReturns": "Returns",
-    "navConversations": "Conversation history",
     "navSettings": "Settings",
     "logout": "Log out",
     "orders": {
@@ -276,15 +275,6 @@
       "existingReturnsTitle": "Previously registered returns",
       "statusRegistered": "Return registered"
     },
-    "conversations": {
-      "empty": "No conversations found.",
-      "items": {
-        "conversation1": { "topic": "Question about delivery time" },
-        "conversation2": { "topic": "Hotel project quote" },
-        "conversation3": { "topic": "Question about mounting" },
-        "conversation4": { "topic": "Delivery address change" }
-      }
-    },
     "settings": {
       "labelCompanyName": "Company name",
       "labelContactPerson": "Contact person",
@@ -301,8 +291,10 @@
       "labelPassword": "Password",
       "labelPasswordConfirm": "Confirm password",
       "passwordMismatch": "Passwords do not match.",
+      "passwordTooShort": "The password must be at least 8 characters long.",
       "save": "Save",
       "saved": "Saved!",
+      "saveError": "Saving failed. Please try again.",
       "deleteAccountTitle": "Delete account",
       "deleteAccountLabelPassword": "Password (to confirm)",
       "deleteAccountSubmit": "Permanently delete",
@@ -312,5 +304,9 @@
   },
   "modal": {
     "closeTooltip": "Close this screen, any changes will not be saved!"
+  },
+  "password": {
+    "show": "Show password",
+    "hide": "Hide password"
   }
 }

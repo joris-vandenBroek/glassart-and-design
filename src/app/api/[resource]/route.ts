@@ -8,7 +8,7 @@ export async function GET(request: Request, { params }: { params: { resource: st
   if (!config) {
     return NextResponse.json({ error: 'not-found' }, { status: 404 });
   }
-  if (config.authRequired && !(await requireMedewerker(request))) {
+  if (config.readAuthRequired && !(await requireMedewerker(request))) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
   const rows = await listRows(params.resource, config.jsonColumns);
@@ -20,7 +20,7 @@ export async function POST(request: Request, { params }: { params: { resource: s
   if (!config) {
     return NextResponse.json({ error: 'not-found' }, { status: 404 });
   }
-  if (config.authRequired && !(await requireMedewerker(request))) {
+  if (config.writeAuthRequired && !(await requireMedewerker(request))) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
   try {

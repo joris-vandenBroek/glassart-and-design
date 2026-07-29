@@ -233,7 +233,6 @@
   },
   "accountPage": {
     "navOrders": "Bestellingen",
-    "navConversations": "Gesprekgeschiedenis",
     "navSettings": "Instellingen",
     "logout": "Uitloggen",
     "orders": {
@@ -245,15 +244,6 @@
       "modalLineUnknown": "Onbekend artikel",
       "modalLinePriceOnRequest": "Prijs op aanvraag",
       "loadError": "Bestellingen konden niet worden geladen. Probeer het later opnieuw."
-    },
-    "conversations": {
-      "empty": "Geen gesprekken gevonden.",
-      "items": {
-        "conversation1": { "topic": "Vraag over levertijd" },
-        "conversation2": { "topic": "Offerte hotelproject" },
-        "conversation3": { "topic": "Vraag over montage" },
-        "conversation4": { "topic": "Wijziging afleveradres" }
-      }
     },
     "settings": {
       "labelCompanyName": "Bedrijfsnaam",
@@ -271,8 +261,10 @@
       "labelPassword": "Wachtwoord",
       "labelPasswordConfirm": "Wachtwoord opnieuw",
       "passwordMismatch": "Wachtwoorden komen niet overeen.",
+      "passwordTooShort": "Het wachtwoord moet minimaal 8 tekens lang zijn.",
       "save": "Opslaan",
       "saved": "Opgeslagen!",
+      "saveError": "Opslaan is niet gelukt. Probeer het opnieuw.",
       "deleteAccountTitle": "Account verwijderen",
       "deleteAccountLabelPassword": "Wachtwoord (ter bevestiging)",
       "deleteAccountSubmit": "Definitief verwijderen",
@@ -624,5 +616,9 @@
   },
   "modal": {
     "closeTooltip": "Sluit dit scherm, eventuele wijzigingen worden niet opgeslagen!"
+  },
+  "password": {
+    "show": "Wachtwoord tonen",
+    "hide": "Wachtwoord verbergen"
   }
 }

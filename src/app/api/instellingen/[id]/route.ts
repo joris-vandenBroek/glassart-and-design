@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getPool } from '@/lib/server/db';
+import { requireMedewerker } from '@/lib/server/requireAuth';
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   const [rows] = await getPool().query('SELECT data FROM instellingen WHERE id = ?', [params.id]);
@@ -12,6 +13,9 @@ export async function GET(_request: Request, { params }: { params: { id: string 
 }
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  if (!(await requireMedewerker(request))) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
   const data = await request.json();
   await getPool().query(
     'INSERT INTO instellingen (id, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = VALUES(data)',

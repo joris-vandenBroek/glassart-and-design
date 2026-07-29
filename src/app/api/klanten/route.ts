@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { listRows } from '@/lib/server/crud';
+import { requireMedewerker } from '@/lib/server/requireAuth';
 
 // Without this, Next.js statically caches this GET handler at build time (it's
 // the only route in the API that exports GET with no other method and no
@@ -9,7 +10,10 @@ export const dynamic = 'force-dynamic';
 
 const KLANTEN_JSON_COLUMNS = ['exclusieveKunstenaarIds'];
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!(await requireMedewerker(request))) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
   const klanten = await listRows('klanten', KLANTEN_JSON_COLUMNS);
   return NextResponse.json(klanten);
 }

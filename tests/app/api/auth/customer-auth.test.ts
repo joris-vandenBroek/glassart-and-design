@@ -1,5 +1,6 @@
 import { describe, expect, it, afterEach } from 'vitest';
 import { getPool } from '@/lib/server/db';
+import { randomUUID } from 'crypto';
 import { POST as register } from '@/app/api/auth/register/route';
 import { POST as login } from '@/app/api/auth/login/route';
 import { POST as logout } from '@/app/api/auth/logout/route';
@@ -34,6 +35,36 @@ describe('customer auth routes', () => {
       })
     );
     expect(response.status).toBe(201);
+  });
+
+  it('ignores status/prijsgroepId/id sent in the registration body (no self-approval)', async () => {
+    const forgedId = randomUUID();
+    const response = await register(
+      jsonRequest({
+        id: forgedId,
+        email: 'escalatie@example.com',
+        password: 'wachtwoord123',
+        companyName: 'Escalatie BV',
+        status: 'Goedgekeurd',
+        prijsgroepId: 'pg-1',
+        wachtwoordHash: 'not-a-real-hash',
+      })
+    );
+    expect(response.status).toBe(201);
+    const [rows] = await getPool().query(
+      'SELECT id, status, prijsgroepId, wachtwoordHash FROM klanten WHERE email = ?',
+      ['escalatie@example.com']
+    );
+    const row = (rows as Array<{
+      id: string;
+      status: string;
+      prijsgroepId: string | null;
+      wachtwoordHash: string;
+    }>)[0];
+    expect(row.id).not.toBe(forgedId);
+    expect(row.status).toBe('Beoordelen');
+    expect(row.prijsgroepId).toBeNull();
+    expect(row.wachtwoordHash).not.toBe('not-a-real-hash');
   });
 
   it('rejects registering the same email twice', async () => {
@@ -73,6 +104,7 @@ describe('customer auth routes', () => {
     );
     const meBody = await meResponse.json();
     expect(meBody.user.email).toBe('me@example.com');
+    expect(meBody.user.wachtwoordHash).toBeUndefined();
 
     await logout(jsonRequest({}, cookie));
     const afterLogout = await me(

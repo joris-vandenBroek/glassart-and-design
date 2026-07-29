@@ -15,6 +15,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ user: null });
   }
   const table = type === 'klant' ? 'klanten' : 'medewerkers';
-  const user = await getRow(table, session.userId);
-  return NextResponse.json({ user });
+  const user = await getRow<Record<string, unknown>>(table, session.userId);
+  if (!user) {
+    return NextResponse.json({ user: null });
+  }
+  const { wachtwoordHash: _wachtwoordHash, ...safeUser } = user;
+  return NextResponse.json({ user: safeUser });
 }

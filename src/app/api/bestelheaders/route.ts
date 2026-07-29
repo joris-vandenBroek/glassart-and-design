@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { getPool } from '@/lib/server/db';
+import { requireKlant, requireMedewerker } from '@/lib/server/requireAuth';
 import type { PoolConnection } from 'mysql2/promise';
 
 const BESTELNR_PADDING = 5;
@@ -26,7 +27,7 @@ function validateLine(line: LineInput): string | null {
 }
 
 // Mirrors src/lib/resolveOrderRight.ts, which is now a client-side UI hint only —
-// this is the real enforcement, since there is no Firestore-rules layer anymore.
+// this is the real enforcement, since there is no rules-based enforcement layer anymore.
 async function checkOrderRight(
   connection: PoolConnection,
   kunstwerkId: string,
@@ -58,7 +59,13 @@ async function checkOrderRight(
 }
 
 export async function POST(request: Request) {
-  const { klantId, lines } = (await request.json()) as { klantId: string; lines: LineInput[] };
+  // klantId comes from the session, never from the request body -- otherwise anyone
+  // could place an order "as" any customer just by putting a different id in the body.
+  const klantId = await requireKlant(request);
+  if (!klantId) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
+  const { lines } = (await request.json()) as { lines: LineInput[] };
 
   for (const line of lines) {
     const validationError = validateLine(line);
@@ -126,6 +133,23 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const klantId = url.searchParams.get('klantId');
+
+  // No klantId -- this is the beheer bulk view of every order, staff only.
+  // A klantId is present -- allow staff, or the klant themselves viewing their own orders.
+  if (!klantId) {
+    if (!(await requireMedewerker(request))) {
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    }
+  } else {
+    const isMedewerker = await requireMedewerker(request);
+    if (!isMedewerker) {
+      const ownKlantId = await requireKlant(request);
+      if (ownKlantId !== klantId) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+    }
+  }
+
   const pool = getPool();
 
   const [headers] = klantId

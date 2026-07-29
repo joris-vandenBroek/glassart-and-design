@@ -1,69 +1,117 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
-import { useTranslations } from 'next-intl';
+import { useEffect, useState, type FormEvent } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { routing } from '@/i18n/routing';
 import { usePathname, useRouter } from '@/i18n/navigation';
 import { LOCALE_META } from '@/lib/localeMeta';
-import {
-  useMockProfile,
-  type ContactPreference,
-  type LanguagePreference,
-} from '@/lib/useMockProfile';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
+import { PasswordInput } from '@/components/PasswordInput';
+
+type ContactPreference = 'email' | 'phone' | 'whatsapp';
+
+interface KlantProfile {
+  companyName: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  address: string;
+  postcode: string;
+  city: string;
+  contactPreference: ContactPreference;
+}
+
+const EMPTY_PROFILE: KlantProfile = {
+  companyName: '',
+  contactPerson: '',
+  email: '',
+  phone: '',
+  address: '',
+  postcode: '',
+  city: '',
+  contactPreference: 'email',
+};
 
 export function SettingsSection() {
   const t = useTranslations('accountPage.settings');
-  const { profile, updateProfile } = useMockProfile();
+  const activeLocale = useLocale();
   const { user, logout } = useCustomerAuth();
   const pathname = usePathname();
   const router = useRouter();
 
-  const [companyName, setCompanyName] = useState(profile.companyName);
-  const [contactPerson, setContactPerson] = useState(profile.contactPerson);
-  const [email, setEmail] = useState(profile.email);
-  const [phone, setPhone] = useState(profile.phone);
-  const [address, setAddress] = useState(profile.address);
-  const [postcode, setPostcode] = useState(profile.postcode);
-  const [city, setCity] = useState(profile.city);
-  const [contactPreference, setContactPreference] = useState<ContactPreference>(
-    profile.contactPreference
-  );
-  const [languagePreference, setLanguagePreference] = useState<LanguagePreference>(
-    profile.languagePreference
-  );
+  const [profile, setProfile] = useState<KlantProfile>(EMPTY_PROFILE);
+  const [languagePreference, setLanguagePreference] = useState(activeLocale);
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const response = await fetch('/api/klanten/me');
+      if (!response.ok || cancelled) return;
+      const klant = (await response.json()) as Partial<KlantProfile>;
+      if (cancelled) return;
+      setProfile({
+        companyName: klant.companyName ?? '',
+        contactPerson: klant.contactPerson ?? '',
+        email: klant.email ?? '',
+        phone: klant.phone ?? '',
+        address: klant.address ?? '',
+        postcode: klant.postcode ?? '',
+        city: klant.city ?? '',
+        contactPreference: klant.contactPreference ?? 'email',
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  function setField<K extends keyof KlantProfile>(key: K, value: KlantProfile[K]) {
+    setProfile((current) => ({ ...current, [key]: value }));
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setSaveError(null);
+    setIsSaved(false);
 
     if (password && password !== passwordConfirm) {
       setPasswordError(t('passwordMismatch'));
-      setIsSaved(false);
+      return;
+    }
+    if (password && password.length < 8) {
+      setPasswordError(t('passwordTooShort'));
       return;
     }
     setPasswordError(null);
 
-    updateProfile({
-      companyName,
-      contactPerson,
-      email,
-      phone,
-      address,
-      postcode,
-      city,
-      contactPreference,
-      languagePreference,
-      ...(password ? { password } : {}),
-    });
+    try {
+      const response = await fetch('/api/klanten/me', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ...profile, ...(password ? { password } : {}) }),
+      });
+      if (!response.ok) {
+        setSaveError(t('saveError'));
+        return;
+      }
+    } catch {
+      setSaveError(t('saveError'));
+      return;
+    }
+
+    setPassword('');
+    setPasswordConfirm('');
     setIsSaved(true);
 
-    if (languagePreference !== profile.languagePreference) {
+    if (languagePreference !== activeLocale) {
       router.replace(pathname, { locale: languagePreference });
     }
   }
@@ -109,8 +157,8 @@ export function SettingsSection() {
         {t('labelCompanyName')}
         <input
           type="text"
-          value={companyName}
-          onChange={(e) => setCompanyName(e.target.value)}
+          value={profile.companyName}
+          onChange={(e) => setField('companyName', e.target.value)}
           data-testid="settings-company-name"
           className={fieldClassName}
         />
@@ -119,8 +167,8 @@ export function SettingsSection() {
         {t('labelContactPerson')}
         <input
           type="text"
-          value={contactPerson}
-          onChange={(e) => setContactPerson(e.target.value)}
+          value={profile.contactPerson}
+          onChange={(e) => setField('contactPerson', e.target.value)}
           data-testid="settings-contact-person"
           className={fieldClassName}
         />
@@ -129,8 +177,8 @@ export function SettingsSection() {
         {t('labelEmail')}
         <input
           type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          value={profile.email}
+          onChange={(e) => setField('email', e.target.value)}
           data-testid="settings-email"
           className={fieldClassName}
         />
@@ -139,8 +187,8 @@ export function SettingsSection() {
         {t('labelPhone')}
         <input
           type="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          value={profile.phone}
+          onChange={(e) => setField('phone', e.target.value)}
           data-testid="settings-phone"
           className={fieldClassName}
         />
@@ -149,8 +197,8 @@ export function SettingsSection() {
         {t('labelAddress')}
         <input
           type="text"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
+          value={profile.address}
+          onChange={(e) => setField('address', e.target.value)}
           data-testid="settings-address"
           className={fieldClassName}
         />
@@ -159,8 +207,8 @@ export function SettingsSection() {
         {t('labelPostcode')}
         <input
           type="text"
-          value={postcode}
-          onChange={(e) => setPostcode(e.target.value)}
+          value={profile.postcode}
+          onChange={(e) => setField('postcode', e.target.value)}
           data-testid="settings-postcode"
           className={fieldClassName}
         />
@@ -169,8 +217,8 @@ export function SettingsSection() {
         {t('labelCity')}
         <input
           type="text"
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
+          value={profile.city}
+          onChange={(e) => setField('city', e.target.value)}
           data-testid="settings-city"
           className={fieldClassName}
         />
@@ -179,8 +227,8 @@ export function SettingsSection() {
       <label className={labelClassName}>
         {t('labelContactPreference')}
         <select
-          value={contactPreference}
-          onChange={(e) => setContactPreference(e.target.value as ContactPreference)}
+          value={profile.contactPreference}
+          onChange={(e) => setField('contactPreference', e.target.value as ContactPreference)}
           data-testid="settings-contact-preference"
           className={fieldClassName}
         >
@@ -194,7 +242,7 @@ export function SettingsSection() {
         {t('labelLanguagePreference')}
         <select
           value={languagePreference}
-          onChange={(e) => setLanguagePreference(e.target.value as LanguagePreference)}
+          onChange={(e) => setLanguagePreference(e.target.value)}
           data-testid="settings-language-preference"
           className={fieldClassName}
         >
@@ -208,8 +256,7 @@ export function SettingsSection() {
 
       <label className={labelClassName}>
         {t('labelPassword')}
-        <input
-          type="password"
+        <PasswordInput
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           data-testid="settings-password"
@@ -218,8 +265,7 @@ export function SettingsSection() {
       </label>
       <label className={labelClassName}>
         {t('labelPasswordConfirm')}
-        <input
-          type="password"
+        <PasswordInput
           value={passwordConfirm}
           onChange={(e) => setPasswordConfirm(e.target.value)}
           data-testid="settings-password-confirm"
@@ -229,6 +275,11 @@ export function SettingsSection() {
       {passwordError && (
         <p data-testid="settings-password-error" className="text-xs text-red-400">
           {passwordError}
+        </p>
+      )}
+      {saveError && (
+        <p data-testid="settings-save-error" className="text-xs text-red-400">
+          {saveError}
         </p>
       )}
 
@@ -255,8 +306,7 @@ export function SettingsSection() {
         <p className="text-white">{t('deleteAccountTitle')}</p>
         <label className={labelClassName}>
           {t('deleteAccountLabelPassword')}
-          <input
-            type="password"
+          <PasswordInput
             value={deletePassword}
             onChange={(e) => setDeletePassword(e.target.value)}
             data-testid="delete-account-password"

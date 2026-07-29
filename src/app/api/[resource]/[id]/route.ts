@@ -11,7 +11,7 @@ export async function GET(
   if (!config) {
     return NextResponse.json({ error: 'not-found' }, { status: 404 });
   }
-  if (config.authRequired && !(await requireMedewerker(request))) {
+  if (config.readAuthRequired && !(await requireMedewerker(request))) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
   const row = await getRow(params.resource, params.id, config.jsonColumns);
@@ -27,7 +27,7 @@ export async function PATCH(
   if (!config) {
     return NextResponse.json({ error: 'not-found' }, { status: 404 });
   }
-  if (config.authRequired && !(await requireMedewerker(request))) {
+  if (config.writeAuthRequired && !(await requireMedewerker(request))) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
   try {
@@ -47,7 +47,7 @@ export async function DELETE(
   if (!config) {
     return NextResponse.json({ error: 'not-found' }, { status: 404 });
   }
-  if (config.authRequired && !(await requireMedewerker(request))) {
+  if (config.writeAuthRequired && !(await requireMedewerker(request))) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
   await deleteRow(params.resource, params.id);
