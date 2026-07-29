@@ -84,6 +84,10 @@ jobs:
           # bare "*" would otherwise silently skip .next with no error.
           local_path: './deploy_payload/*'
           remote_path: '/'
+          # Retries the underlying sftp client's own connection attempt a few times
+          # before giving up, so a one-off "Network unreachable" blip (seen once already)
+          # doesn't fail the whole run and require a manual re-dispatch.
+          sftpArgs: '-o ConnectionAttempts=5 -o ConnectTimeout=15'
         # sftp_only skips remote directory auto-creation for remote_path itself (must
         # already exist, which it does), but nested folders inside an uploaded directory
         # are still created via SFTP's own MKDIR, no shell needed -- as long as the
@@ -102,6 +106,7 @@ jobs:
           sftp_only: true
           local_path: './deploy_payload/.next/*'
           remote_path: '/.next'
+          sftpArgs: '-o ConnectionAttempts=5 -o ConnectTimeout=15'
         # Separate step because .next is a dotdir the main step's "*" glob can't see (see
         # comment above). remote_path /.next already exists (from the original manual
         # deploy), so this only needs to write/overwrite files inside it, not create it.
