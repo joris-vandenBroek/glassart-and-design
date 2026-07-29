@@ -487,36 +487,41 @@ jobs:
       - name: Upload build to production Node.js app via SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.6
         with:
-          server: ${{ vars.PRODUCTION_FTP_HOST }}
+          server: ${{ vars.PRODUCTION_SFTP_HOST }}
           port: 22
-          username: ${{ secrets.PRODUCTION_FTP_USERNAME }}
-          password: ${{ secrets.PRODUCTION_FTP_PASSWORD }}
+          username: ${{ secrets.PRODUCTION_SFTP_USERNAME }}
+          password: ${{ secrets.PRODUCTION_SFTP_PASSWORD }}
           sftp_only: true
           local_path: './deploy_payload/*'
           remote_path: '/'
           sftpArgs: '-o ConnectionAttempts=5 -o ConnectTimeout=15'
-        # KNOWN UNKNOWN: PRODUCTION_FTP_USERNAME/PASSWORD/HOST currently belong to the OLD
-        # static-export FTP account (which uploaded straight into public_html/, alongside
-        # mail-server/ and upload-server/). The production Node.js app has its own
+        # KNOWN UNKNOWN: PRODUCTION_SFTP_HOST/USERNAME/PASSWORD are intentionally NEW
+        # secret/variable names, not yet created -- deliberately distinct from the OLD
+        # PRODUCTION_FTP_HOST/USERNAME/PASSWORD ones, which belong to the old
+        # static-export FTP account (uploads straight into public_html/, alongside
+        # mail-server/ and upload-server/) and are left untouched/unused here in case
+        # anything else still needs them. The production Node.js app has its own
         # separate, isolated "Application root" folder -- same shape as staging's, see
-        # above -- with no overlap with public_html or the PHP endpoints. These
-        # credentials will very likely need to be replaced with a dedicated SFTP account
-        # for that app root, the way staging needed its own distinct SFTP account. Expect
-        # this first production dispatch to need the same kind of iteration
-        # deploy-naar-staging.yml went through (wrong host/path/protocol) before it lands
-        # correctly -- check DirectAdmin's Node.js app screen for the real Application
-        # root and create/adjust an SFTP-capable account for it if this step fails or
-        # uploads to the wrong place. Unlike the old workflow, no `exclude` for
-        # mail-server/upload-server is needed here: the Node.js app root is entirely
-        # separate from public_html by construction, there's nothing to accidentally wipe.
+        # above -- with no overlap with public_html or the PHP endpoints, so reusing the
+        # old FTP account's credentials here (if it happens to also have SFTP access)
+        # would risk silently uploading to the wrong directory while still reporting a
+        # green run. Using brand-new names means the SFTP steps fail loudly with a
+        # missing/empty credential error on the first dispatch instead -- create
+        # PRODUCTION_SFTP_HOST/USERNAME/PASSWORD (`gh variable set` / `gh secret set`)
+        # pointing at a dedicated SFTP-capable DirectAdmin account for the production
+        # Node.js app's actual Application root -- mirroring how staging needed its own
+        # distinct SFTP account -- BEFORE the first dispatch of this workflow. Unlike the
+        # old workflow, no `exclude` for mail-server/upload-server is needed here: the
+        # Node.js app root is entirely separate from public_html by construction, there's
+        # nothing to accidentally wipe.
 
       - name: Upload .next build via SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.6
         with:
-          server: ${{ vars.PRODUCTION_FTP_HOST }}
+          server: ${{ vars.PRODUCTION_SFTP_HOST }}
           port: 22
-          username: ${{ secrets.PRODUCTION_FTP_USERNAME }}
-          password: ${{ secrets.PRODUCTION_FTP_PASSWORD }}
+          username: ${{ secrets.PRODUCTION_SFTP_USERNAME }}
+          password: ${{ secrets.PRODUCTION_SFTP_PASSWORD }}
           sftp_only: true
           local_path: './deploy_payload/.next/*'
           remote_path: '/.next'
@@ -620,7 +625,7 @@ This can't be automated or verified without actually running the workflows again
 
 - [ ] **Step 2: Dispatch production with a blank `version` input** (`gh workflow run deploy-naar-production.yml`) and confirm:
   - It resolves and deploys the same `vN` tag staging just produced (check the run log for "Deploying version: vN").
-  - **Expect to need to fix the SFTP target** (see the "KNOWN UNKNOWN" comment in Task 4) — check DirectAdmin's Node.js app screen for the production app's real Application root, and update `PRODUCTION_FTP_HOST`/`PRODUCTION_FTP_USERNAME`/`PRODUCTION_FTP_PASSWORD` (`gh secret set` / `gh variable set`) if the upload fails or lands in the wrong place, the same way staging's did.
+  - **`PRODUCTION_SFTP_HOST`/`PRODUCTION_SFTP_USERNAME`/`PRODUCTION_SFTP_PASSWORD` must be created before this first dispatch**, not just adjusted if wrong (see the "KNOWN UNKNOWN" comment in Task 4) — check DirectAdmin's Node.js app screen for the production app's real Application root, create a dedicated SFTP-capable account for it, and set the three new secrets/variables (`gh secret set` / `gh variable set`) accordingly, the same way staging needed its own distinct SFTP account.
   - After manually clicking Run NPM Install (if needed) + RESTART, `https://glassartanddesign.com/nl/beheer` shows the identical `vN`.
 
 - [ ] **Step 3: Verify the rollback path** — dispatch production again with an explicit older `version` input (e.g. the tag from before Step 1, if one exists) and confirm the deployed commit and the beheer header's version both match that older tag, not the latest one.
