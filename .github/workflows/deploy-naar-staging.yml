@@ -58,21 +58,6 @@ jobs:
           cp app.js next.config.mjs package.json package-lock.json deploy_payload/
           date -u > restart_trigger/restart.txt
 
-      - name: Debug -- list SFTP root
-        env:
-          SFTP_HOST: ${{ vars.STAGING_FTP_HOST }}
-          SFTP_USER: ${{ secrets.STAGING_FTP_USERNAME }}
-          SFTP_PASS: ${{ secrets.STAGING_FTP_PASSWORD }}
-        run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
-          printf 'pwd\nls -la\nls -la glassartanddesign.com\nls -la ..\n' > /tmp/sftp-batch.txt
-          sshpass -p "$SFTP_PASS" sftp -o StrictHostKeyChecking=no -o PreferredAuthentications=password -o PubkeyAuthentication=no -b /tmp/sftp-batch.txt "$SFTP_USER@$SFTP_HOST" || true
-        # Temporary -- remove once we know where this account's SFTP session actually
-        # lands. The FTP-side "Custom Directory" setting saved in DirectAdmin may not
-        # apply to mod_sftp, which could be rooting SFTP sessions one level higher
-        # (domains/staging.glassartanddesign.com/, sibling of both public_html and
-        # glassartanddesign.com) instead of directly in the Node app's Application root.
-
       - name: Upload build to staging Node.js app via SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.6
         with:
@@ -88,12 +73,14 @@ jobs:
           # connection (confirmed listening: `h64.mijn.host:22` answers with
           # "SSH-2.0-mod_sftp") and has no separate data-channel step to fail.
           #
-          # The staging-deploy FTP account's own home directory was set (in DirectAdmin)
-          # directly to the Node.js app's Application root -- domains/
-          # staging.glassartanddesign.com/glassartanddesign.com/, a sibling of
-          # public_html -- so remote_path here is just "/", not a subfolder.
+          # remote_path "/" (this account's own SFTP root) failed with "No such file" for
+          # every top-level folder (messages, node_modules, public, src) -- the
+          # DirectAdmin "Custom Directory" setting saved for the FTP protocol apparently
+          # doesn't apply to mod_sftp, which roots SFTP sessions one level higher instead
+          # (domains/staging.glassartanddesign.com/, sibling of public_html and
+          # glassartanddesign.com). Pointing remote_path at that sibling folder directly.
           local_path: './deploy_payload/*'
-          remote_path: '/'
+          remote_path: '/glassartanddesign.com'
         # sftp_only skips remote directory auto-creation for remote_path itself (must
         # already exist, which it does), but nested folders inside an uploaded directory
         # are still created via SFTP's own MKDIR, no shell needed. No delete_remote_files:
@@ -110,7 +97,7 @@ jobs:
           password: ${{ secrets.STAGING_FTP_PASSWORD }}
           sftp_only: true
           local_path: './restart_trigger/*'
-          remote_path: '/tmp'
+          remote_path: '/glassartanddesign.com/tmp'
         # Kept as a separate, narrowly-scoped upload (just this one file, into the
         # already-existing tmp/ folder) so it can't touch anything else in there. This is
         # a best-effort attempt, not a confirmed mechanism for this specific DirectAdmin
