@@ -65,8 +65,8 @@ jobs:
           SFTP_PASS: ${{ secrets.STAGING_FTP_PASSWORD }}
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
-          printf 'pwd\nls -la\nls -la glassartanddesign.com\n' > /tmp/sftp-batch.txt
-          sshpass -p "$SFTP_PASS" sftp -o StrictHostKeyChecking=no -b /tmp/sftp-batch.txt "$SFTP_USER@$SFTP_HOST" || true
+          printf 'pwd\nls -la\nls -la glassartanddesign.com\nls -la ..\n' > /tmp/sftp-batch.txt
+          sshpass -p "$SFTP_PASS" sftp -o StrictHostKeyChecking=no -o PreferredAuthentications=password -o PubkeyAuthentication=no -b /tmp/sftp-batch.txt "$SFTP_USER@$SFTP_HOST" || true
         # Temporary -- remove once we know where this account's SFTP session actually
         # lands. The FTP-side "Custom Directory" setting saved in DirectAdmin may not
         # apply to mod_sftp, which could be rooting SFTP sessions one level higher
