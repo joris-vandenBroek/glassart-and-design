@@ -29,6 +29,8 @@ export default async function BeheerPage({
         <h1 className="text-2xl font-light text-white sm:text-3xl">{t('title')}</h1>
         <Link
           href="/"
+          target="_blank"
+          rel="noopener noreferrer"
           className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-white/60 hover:text-white sm:right-6"
         >
           {t('naarWebsiteLink')}
