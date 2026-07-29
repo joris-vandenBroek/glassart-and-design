@@ -58,43 +58,50 @@ jobs:
           cp app.js next.config.mjs package.json package-lock.json deploy_payload/
           date -u > restart_trigger/restart.txt
 
-      - name: Upload build to staging Node.js app via FTPS
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      - name: Upload build to staging Node.js app via SFTP
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
         with:
           server: ${{ vars.STAGING_FTP_HOST }}
+          port: 22
           username: ${{ secrets.STAGING_FTP_USERNAME }}
           password: ${{ secrets.STAGING_FTP_PASSWORD }}
-          protocol: ftps
-          local-dir: ./deploy_payload/
-          # Node.js app's own Application root: a sibling of public_html under
-          # domains/staging.glassartanddesign.com/, created by DirectAdmin's Node.js
-          # Selector -- confirmed via File Manager to sit at this path, reachable by the
-          # same FTP account already used for the old public_html deploy (its home
-          # directory sits one level above both siblings, same pattern as
-          # deploy-naar-production.yml's ./public_html/ target).
-          server-dir: ./glassartanddesign.com/
-          # No dangerous-clean-slate: this directory also holds tmp/ and stderr.log,
-          # managed by the Node.js Selector/Passenger runtime, which must not be wiped.
-          # Relying on the action's default incremental sync instead, plus these excludes
-          # as a second layer of protection (same reasoning as production's workflow).
-          exclude: |
-            **/stderr.log
-            **/tmp/**
+          sftp_only: true
+          # Plain FTP/FTPS to this host fails after tens of minutes with "425 Unable to
+          # build data connection" -- reproduced identically from a local session and
+          # from GitHub Actions, so it's a server-side passive-mode/data-channel problem,
+          # not fixable client-side. SFTP tunnels everything over the one already-open
+          # connection (confirmed listening: `h64.mijn.host:22` answers with
+          # "SSH-2.0-mod_sftp") and has no separate data-channel step to fail.
+          #
+          # The staging-deploy FTP account's own home directory was set (in DirectAdmin)
+          # directly to the Node.js app's Application root -- domains/
+          # staging.glassartanddesign.com/glassartanddesign.com/, a sibling of
+          # public_html -- so remote_path here is just "/", not a subfolder.
+          local_path: './deploy_payload/*'
+          remote_path: '/'
+        # sftp_only skips remote directory auto-creation for remote_path itself (must
+        # already exist, which it does), but nested folders inside an uploaded directory
+        # are still created via SFTP's own MKDIR, no shell needed. No delete_remote_files:
+        # this only PUTs files that exist locally, it never removes anything not in
+        # deploy_payload/ -- tmp/ and stderr.log (Node.js Selector/Passenger-managed)
+        # are left alone by construction, no explicit exclude needed like FTP required.
 
       - name: Trigger restart (tmp/restart.txt touch, standard Passenger convention)
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
         with:
           server: ${{ vars.STAGING_FTP_HOST }}
+          port: 22
           username: ${{ secrets.STAGING_FTP_USERNAME }}
           password: ${{ secrets.STAGING_FTP_PASSWORD }}
-          protocol: ftps
-          local-dir: ./restart_trigger/
-          server-dir: ./glassartanddesign.com/tmp/
-        # Kept as a separate, narrowly-scoped upload (just this one file) so it can't
-        # touch anything else already inside the remote tmp/ folder. This is a best-effort
-        # attempt, not a confirmed mechanism for this specific DirectAdmin setup: if the
-        # Node.js Selector doesn't watch this file, the app keeps serving the previous
-        # build until someone clicks "RESTART" on the Node.js app page in DirectAdmin.
+          sftp_only: true
+          local_path: './restart_trigger/*'
+          remote_path: '/tmp'
+        # Kept as a separate, narrowly-scoped upload (just this one file, into the
+        # already-existing tmp/ folder) so it can't touch anything else in there. This is
+        # a best-effort attempt, not a confirmed mechanism for this specific DirectAdmin
+        # setup: if the Node.js Selector doesn't watch this file, the app keeps serving
+        # the previous build until someone clicks "RESTART" on the Node.js app page in
+        # DirectAdmin.
 
       - name: Smoke check
         env:
