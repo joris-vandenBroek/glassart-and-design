@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: "staging"
@@ -16,6 +16,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Full history + tags needed so "Compute next version number" below can see
+          # every existing vN tag, not just what a shallow clone would include.
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -26,10 +30,26 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Compute next version number
+        id: version
+        run: |
+          latest=$(git tag -l 'v[0-9]*' | sed 's/^v//' | sort -n | tail -1)
+          if [ -z "$latest" ]; then
+            next=1
+          else
+            next=$((latest + 1))
+          fi
+          echo "tag=v$next" >> "$GITHUB_OUTPUT"
+          echo "Next version: v$next"
+        # Only computes the candidate number -- the actual git tag is created and pushed
+        # in "Tag staged version" below, and ONLY after the smoke check passes. A failed
+        # build/deploy/smoke-check simply skips that number; gaps are expected/harmless.
+
       - name: Build (server mode)
         run: npm run build
         env:
           NEXT_PUBLIC_ENVIRONMENT_LABEL: 'staging'
+          NEXT_PUBLIC_APP_VERSION: ${{ steps.version.outputs.tag }}
           NEXT_PUBLIC_MAIL_ENDPOINT_URL: ${{ vars.NEXT_PUBLIC_MAIL_ENDPOINT_URL }}
           NEXT_PUBLIC_MAIL_SECRET: ${{ secrets.NEXT_PUBLIC_MAIL_SECRET }}
           NEXT_PUBLIC_UPLOAD_ENDPOINT_URL: ${{ vars.NEXT_PUBLIC_UPLOAD_ENDPOINT_URL }}
@@ -150,3 +170,14 @@ jobs:
             echo "Staging did not respond with 200 after $max_attempts attempts (last status: $status)"
             exit 1
           fi
+
+      - name: Tag staged version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.version.outputs.tag }}" "${{ github.sha }}"
+          git push origin "${{ steps.version.outputs.tag }}"
+          echo "Tagged and pushed ${{ steps.version.outputs.tag }} -- production can now promote this exact commit."
+        # Placed after the smoke check on purpose: this step only runs if every step
+        # above it succeeded (GitHub Actions' default job behavior), so a failed build,
+        # deploy, or smoke check never tags broken code as a promotable version.
