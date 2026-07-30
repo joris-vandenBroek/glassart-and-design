@@ -221,4 +221,10 @@ describe('RegistrationForm', () => {
     renderForm();
     expect(screen.getByTestId('word-klant-verplicht-legende')).toHaveTextContent('* verplicht veld');
   });
+
+  it('marks the Bedrijfsnaam label as required with an asterisk', () => {
+    renderForm();
+    const label = screen.getByTestId('word-klant-company-name').closest('label');
+    expect(label).toHaveTextContent('Bedrijfsnaam *');
+  });
 });

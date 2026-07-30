@@ -173,6 +173,14 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-verplicht-legende')).toHaveTextContent('* verplicht veld');
   });
 
+  it('marks the Formaat legend as required with an asterisk', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    const fieldset = screen.getByTestId('kunstwerk-modal-formaat-vierkant').closest('fieldset');
+    const legend = fieldset?.querySelector('legend');
+    expect(legend).toHaveTextContent('Formaat *');
+  });
+
   it('keeps Opslaan disabled until a photo is uploaded, then enables once all required fields are filled', async () => {
     uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
     renderSection();

@@ -220,4 +220,11 @@ describe('MatenSection', () => {
     fireEvent.click(screen.getByTestId('maten-add'));
     expect(screen.getByTestId('maat-modal-verplicht-legende')).toHaveTextContent('* verplicht veld');
   });
+
+  it('marks the Breedte label as required with an asterisk', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('maten-add'));
+    const label = screen.getByTestId('maat-modal-breedte').closest('label');
+    expect(label).toHaveTextContent('Breedte (cm) *');
+  });
 });
