@@ -90,4 +90,9 @@ describe('CustomerLoginForm', () => {
       'E-mailadres of wachtwoord onjuist.'
     );
   });
+
+  it('shows the required-field legend', () => {
+    renderForm();
+    expect(screen.getByTestId('login-verplicht-legende')).toHaveTextContent('* verplicht veld');
+  });
 });

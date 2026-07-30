@@ -183,7 +183,8 @@
     "loginError": "Email address or password is incorrect.",
     "pendingMessage": "Your application is still being reviewed.",
     "rejectedMessage": "Unfortunately, your application has been rejected.",
-    "accountIncompleteMessage": "Something went wrong with your previous application. Please contact us."
+    "accountIncompleteMessage": "Something went wrong with your previous application. Please contact us.",
+    "verplichtVeldLegende": "* required field"
   },
   "resetPasswordPage": {
     "title": "Reset password",

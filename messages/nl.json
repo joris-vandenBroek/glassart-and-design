@@ -183,7 +183,8 @@
     "loginError": "E-mailadres of wachtwoord onjuist.",
     "pendingMessage": "Uw aanvraag wordt nog beoordeeld.",
     "rejectedMessage": "Uw aanvraag is helaas afgewezen.",
-    "accountIncompleteMessage": "Er ging iets mis bij uw eerdere aanvraag. Neem contact met ons op."
+    "accountIncompleteMessage": "Er ging iets mis bij uw eerdere aanvraag. Neem contact met ons op.",
+    "verplichtVeldLegende": "* verplicht veld"
   },
   "resetPasswordPage": {
     "title": "Wachtwoord opnieuw instellen",

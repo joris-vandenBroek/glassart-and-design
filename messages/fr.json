@@ -183,7 +183,8 @@
     "loginError": "Adresse e-mail ou mot de passe incorrect.",
     "pendingMessage": "Votre demande est en cours d'examen.",
     "rejectedMessage": "Malheureusement, votre demande a été refusée.",
-    "accountIncompleteMessage": "Un problème est survenu avec votre demande précédente. Veuillez nous contacter."
+    "accountIncompleteMessage": "Un problème est survenu avec votre demande précédente. Veuillez nous contacter.",
+    "verplichtVeldLegende": "* champ obligatoire"
   },
   "resetPasswordPage": {
     "title": "Réinitialiser le mot de passe",
