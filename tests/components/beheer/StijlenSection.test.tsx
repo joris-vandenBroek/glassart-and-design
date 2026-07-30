@@ -108,4 +108,10 @@ describe('StijlenSection', () => {
     fireEvent.click(screen.getByTestId('data-table-row-stijl-2'));
     expect(screen.getByTestId('modal-header')).toHaveTextContent('Stijl bewerken');
   });
+
+  it('shows the required-field legend', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('stijlen-add'));
+    expect(screen.getByTestId('stijl-modal-verplicht-legende')).toHaveTextContent('* verplicht veld');
+  });
 });
