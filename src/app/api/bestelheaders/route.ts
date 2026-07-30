@@ -125,7 +125,7 @@ export async function POST(request: Request) {
           ? JSON.parse(kunstwerkRow.materiaalIds)
           : kunstwerkRow.materiaalIds ?? [];
 
-      if (maatIds.length > 0 && !materiaalIds.includes(line.materiaalId)) {
+      if (materiaalIds.length > 0 && !materiaalIds.includes(line.materiaalId)) {
         await connection.rollback();
         return NextResponse.json({ error: 'materiaal-niet-beschikbaar' }, { status: 400 });
       }

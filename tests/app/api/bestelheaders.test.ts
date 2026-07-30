@@ -506,4 +506,43 @@ describe('bestelheaders routes', () => {
     );
     expect(allowedForB.status).toBe(201);
   });
+
+  it('rejects a maatloos-with-materialen kunstwerk ordered with a materiaalId not in its own materiaalIds', async () => {
+    const { cookie } = await klant('maatloos-mat@example.com');
+    const materiaalIdA = await maakMateriaal();
+    const materiaalIdB = await maakMateriaal();
+    const kunstwerk = await insertRow<{ id: string }>(
+      'kunstwerken',
+      {
+        naam: 'Maatloos met materialen werk',
+        materiaalIds: [materiaalIdA],
+        maatIds: [],
+        prijsPerM2: 50,
+      } as never,
+      ['materiaalIds', 'maatIds']
+    );
+    createdKunstwerkIds.push(kunstwerk.id);
+
+    const response = await createHeader(
+      postRequest(
+        {
+          lines: [
+            {
+              kunstwerkId: kunstwerk.id,
+              maatId: '',
+              materiaalId: materiaalIdB,
+              prijs: 1,
+              quantity: 1,
+              breedte: 100,
+              hoogte: 100,
+            },
+          ],
+        },
+        cookie
+      )
+    );
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe('materiaal-niet-beschikbaar');
+  });
 });
