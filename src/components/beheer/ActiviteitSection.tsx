@@ -66,7 +66,7 @@ const TYPE_LABEL_KEYS: Record<ActiviteitType, string> = {
   kunstenaar_toegevoegd: 'activiteitTypeKunstenaarToegevoegd',
   kunstenaar_gewijzigd: 'activiteitTypeKunstenaarGewijzigd',
   kunstenaar_verwijderd: 'activiteitTypeKunstenaarVerwijderd',
-  klant_exclusiviteit_gewijzigd: 'activiteitTypeKlantExclusiviteitGewijzigd',
+  klant_kunstenaarkoppeling_gewijzigd: 'activiteitTypeKlantKunstenaarkoppelingGewijzigd',
   drukker_toegevoegd: 'activiteitTypeDrukkerToegevoegd',
   drukker_gewijzigd: 'activiteitTypeDrukkerGewijzigd',
   drukker_verwijderd: 'activiteitTypeDrukkerVerwijderd',

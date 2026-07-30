@@ -7,7 +7,6 @@ interface CustomerUser {
   email: string | null;
   companyName: string | null;
   contactPerson: string | null;
-  exclusieveKunstenaarIds: string[];
   minimaleAfname: number | null;
 }
 
@@ -39,7 +38,6 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
               companyName?: string;
               contactPerson?: string;
               status?: string;
-              exclusieveKunstenaarIds?: string[];
               minimaleAfname?: number | null;
             }
           | null;
@@ -52,7 +50,6 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
             email: klant.email,
             companyName: klant.companyName ?? null,
             contactPerson: klant.contactPerson ?? null,
-            exclusieveKunstenaarIds: klant.exclusieveKunstenaarIds ?? [],
             minimaleAfname: klant.minimaleAfname ?? null,
           });
           setIsCustomer(klant.status === 'Goedgekeurd');

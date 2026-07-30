@@ -4,8 +4,6 @@ import { requireKlant } from '@/lib/server/requireAuth';
 import { hashPassword } from '@/lib/server/password';
 import { SELF_EDITABLE_KLANT_FIELDS } from '@/lib/server/klantFields';
 
-const KLANTEN_JSON_COLUMNS = ['exclusieveKunstenaarIds'];
-
 // email isn't in the shared registration allowlist (register/route.ts handles it
 // separately via a uniqueness check) but a klant editing their own profile may change it.
 const SELF_EDITABLE_FIELDS = [...SELF_EDITABLE_KLANT_FIELDS, 'email'] as const;
@@ -15,7 +13,7 @@ export async function GET(request: Request) {
   if (!klantId) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
-  const klant = await getRow<Record<string, unknown>>('klanten', klantId, KLANTEN_JSON_COLUMNS);
+  const klant = await getRow<Record<string, unknown>>('klanten', klantId);
   if (!klant) {
     return NextResponse.json({ error: 'not-found' }, { status: 404 });
   }
@@ -43,7 +41,7 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    await updateRow('klanten', klantId, updates, KLANTEN_JSON_COLUMNS);
+    await updateRow('klanten', klantId, updates);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: 'server-error' }, { status: 500 });

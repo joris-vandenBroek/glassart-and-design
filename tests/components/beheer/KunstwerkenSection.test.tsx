@@ -71,9 +71,7 @@ const KUNSTENAARS: Kunstenaar[] = [
     omschrijvingFr: '',
     omschrijvingDe: '',
     omschrijvingEn: '',
-    verkooprecht: 'open',
-    klantId: null,
-    exclusiefVoorKlantId: null,
+    exclusieveKlantIds: [],
   },
 ];
 const KUNSTWERKEN: Kunstwerk[] = [

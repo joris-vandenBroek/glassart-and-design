@@ -109,9 +109,7 @@ const KUNSTENAARS: Kunstenaar[] = [
     omschrijvingFr: '',
     omschrijvingDe: '',
     omschrijvingEn: '',
-    verkooprecht: 'open',
-    klantId: null,
-    exclusiefVoorKlantId: null,
+    exclusieveKlantIds: [],
   },
   {
     id: 'ka-exclusief',
@@ -121,21 +119,7 @@ const KUNSTENAARS: Kunstenaar[] = [
     omschrijvingFr: '',
     omschrijvingDe: '',
     omschrijvingEn: '',
-    verkooprecht: 'open',
-    klantId: null,
-    exclusiefVoorKlantId: 'ander-klant-uid',
-  },
-  {
-    id: 'ka-alleen-zelf',
-    naam: 'Solo Artiest',
-    foto: null,
-    omschrijvingNl: '',
-    omschrijvingFr: '',
-    omschrijvingDe: '',
-    omschrijvingEn: '',
-    verkooprecht: 'alleen-kunstenaar',
-    klantId: null,
-    exclusiefVoorKlantId: null,
+    exclusieveKlantIds: ['ander-klant-uid'],
   },
   {
     id: 'ka-eigen',
@@ -145,9 +129,7 @@ const KUNSTENAARS: Kunstenaar[] = [
     omschrijvingFr: '',
     omschrijvingDe: '',
     omschrijvingEn: '',
-    verkooprecht: 'alleen-kunstenaar',
-    klantId: 'kunstenaar-uid',
-    exclusiefVoorKlantId: 'ander-klant-uid',
+    exclusieveKlantIds: ['ander-klant-uid'],
   },
 ];
 
@@ -223,14 +205,6 @@ describe('ProductModal', () => {
     );
   });
 
-  it('disables the confirm button and explains why for a kunstwerk that only the artist may order', () => {
-    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-alleen-zelf' });
-    expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
-    expect(screen.getByTestId('product-modal-order-blocked')).toHaveTextContent(
-      'Dit kunstwerk kan alleen door de kunstenaar zelf besteld worden.'
-    );
-  });
-
   it('does not block ordering for a kunstwerk with no kunstenaar or an open one', () => {
     renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: null });
     expect(screen.queryByTestId('product-modal-order-blocked')).not.toBeInTheDocument();
@@ -262,15 +236,20 @@ describe('ProductModal', () => {
     );
   });
 
-  it('still allows the kunstenaar to order their own exclusive, artist-only work', async () => {
+  it("blocks the kunstenaar's own linked klant account from ordering their own exclusive work when it isn't explicitly listed", async () => {
+    // Mirrors resolveOrderRight's "no automatic artist-can-always-order-own-work bypass"
+    // coverage: being the artist behind a kunstwerk grants no special access anymore, only
+    // an explicit entry in exclusieveKlantIds does.
     vi.useRealTimers();
     authUser = { id: 'kunstenaar-uid', email: 'ka@example.com', status: 'Goedgekeurd', companyName: 'Atelier' };
     renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-eigen' });
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
-    expect(screen.queryByTestId('product-modal-order-blocked')).not.toBeInTheDocument();
-    expect(screen.getByTestId('product-modal-confirm')).not.toBeDisabled();
+    expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
+    expect(screen.getByTestId('product-modal-order-blocked')).toHaveTextContent(
+      'Dit kunstwerk is exclusief voorbehouden aan een andere klant.'
+    );
   });
 
   it('shows the resolved description, defaults to the first materiaal/maat, and the matching price', () => {

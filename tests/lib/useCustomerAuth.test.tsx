@@ -20,7 +20,6 @@ describe('useCustomerAuth', () => {
           companyName: 'Acme',
           contactPerson: 'Jan',
           status: 'Goedgekeurd',
-          exclusieveKunstenaarIds: ['ka-1'],
           minimaleAfname: 5,
         },
       }),
@@ -32,7 +31,6 @@ describe('useCustomerAuth', () => {
       email: 'k@example.com',
       companyName: 'Acme',
       contactPerson: 'Jan',
-      exclusieveKunstenaarIds: ['ka-1'],
       minimaleAfname: 5,
     });
     expect(result.current.isCustomer).toBe(true);

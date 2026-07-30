@@ -500,11 +500,7 @@ export function ProductModal({
         </div>
         {variant === 'dialog' && blockedReason && (
           <p data-testid="product-modal-order-blocked" className="text-xs text-amber-400">
-            {blockedReason === 'exclusive'
-              ? t('orderBlockedExclusive')
-              : blockedReason === 'artistOnly'
-              ? t('orderBlockedArtistOnly')
-              : t('orderBlockedUnavailable')}
+            {blockedReason === 'exclusive' ? t('orderBlockedExclusive') : t('orderBlockedUnavailable')}
           </p>
         )}
         <button
