@@ -445,8 +445,10 @@ export function KlantModal({
 
           <div className="flex items-end gap-2">
             <label className="flex flex-1 flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-              {t('klantenLabelPrijsgroep')}
-              <RequiredMark />
+              <span>
+                {t('klantenLabelPrijsgroep')}
+                <RequiredMark />
+              </span>
               <select
                 value={prijsgroepId}
                 onChange={(event) => setPrijsgroepId(event.target.value)}
