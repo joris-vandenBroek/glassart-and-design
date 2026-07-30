@@ -43,8 +43,9 @@ lookup-add-call die `stijlen.add`/`onderwerpen.add` al gebruiken.
 
 ### i18n
 
-Nieuwe keys in alle 4 localebestanden (`messages/nl.json`, `en.json`, `de.json`, `fr.json`),
-gemodelleerd naar de bestaande Stijl-keys:
+De `beheer`-namespace bestaat alleen in `messages/nl.json` (het beheerscherm is Nederlandstalig;
+`en`/`de`/`fr` hebben geen `beheer`-sectie) — dus nieuwe keys hoeven alleen in `nl.json` te worden
+toegevoegd, gemodelleerd naar de bestaande Stijl-keys:
 
 - `kunstwerkenNieuweSegmentPlaceholder`
 - `kunstwerkenNieuweSegmentToevoegen`
