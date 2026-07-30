@@ -92,6 +92,16 @@ CREATE TABLE prijsgroepen (
   kortingspercentage DECIMAL(5,2) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE prijsmatrix (
+  id CHAR(36) PRIMARY KEY,
+  maatId CHAR(36) NOT NULL,
+  materiaalId CHAR(36) NOT NULL,
+  prijs DECIMAL(10,2),
+  UNIQUE KEY unique_maat_materiaal (maatId, materiaalId),
+  FOREIGN KEY (maatId) REFERENCES maten(id) ON DELETE CASCADE,
+  FOREIGN KEY (materiaalId) REFERENCES materialen(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE kunstenaars (
   id CHAR(36) PRIMARY KEY,
   naam VARCHAR(255) NOT NULL,
@@ -108,6 +118,7 @@ CREATE TABLE kunstenaars (
 CREATE TABLE kunstenaarAfspraken (
   id CHAR(36) PRIMARY KEY,
   prijsafspraken TEXT,
+  prijsopslag DECIMAL(10,2) NOT NULL DEFAULT 0,
   FOREIGN KEY (id) REFERENCES kunstenaars(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -150,7 +161,6 @@ CREATE TABLE kunstwerken (
   stijlIds JSON,
   onderwerpIds JSON,
   aiGegenereerd BOOLEAN DEFAULT FALSE,
-  prijzen JSON,
   prijsPerM2 DECIMAL(10,2),
   FOREIGN KEY (kunstenaarId) REFERENCES kunstenaars(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
