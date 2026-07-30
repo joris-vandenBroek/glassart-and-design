@@ -108,4 +108,10 @@ describe('OnderwerpenSection', () => {
     fireEvent.click(screen.getByTestId('data-table-row-onderwerp-2'));
     expect(screen.getByTestId('modal-header')).toHaveTextContent('Onderwerp bewerken');
   });
+
+  it('shows the required-field legend', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('onderwerpen-add'));
+    expect(screen.getByTestId('onderwerp-modal-verplicht-legende')).toHaveTextContent('* verplicht veld');
+  });
 });

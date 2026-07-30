@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
+import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import type { Onderwerp } from './materiaalTypes';
@@ -134,7 +135,10 @@ export function OnderwerpenSection({ onderwerpen, loadError, onAdd, onUpdate, on
       >
         <div data-testid="onderwerp-modal" className="flex flex-col gap-2 text-sm text-white/80">
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('onderwerpenLabelOmschrijving')}
+            <span>
+              {t('onderwerpenLabelOmschrijving')}
+              <RequiredMark />
+            </span>
             <input
               type="text"
               value={omschrijving}
@@ -143,6 +147,8 @@ export function OnderwerpenSection({ onderwerpen, loadError, onAdd, onUpdate, on
               className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
             />
           </label>
+
+          <RequiredLegend testId="onderwerp-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
 
           {actionError && (
             <p data-testid="onderwerp-modal-error" className="text-xs text-red-400">
