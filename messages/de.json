@@ -275,7 +275,8 @@
       "deleteAccountLabelPassword": "Passwort (zur Bestätigung)",
       "deleteAccountSubmit": "Endgültig löschen",
       "deleteAccountError": "Falsches Passwort, Konto wurde nicht gelöscht.",
-      "deleteAccountPartialError": "Ihre Daten wurden gelöscht, aber beim vollständigen Löschen Ihres Kontos ist etwas schiefgelaufen. Bitte kontaktieren Sie uns."
+      "deleteAccountPartialError": "Ihre Daten wurden gelöscht, aber beim vollständigen Löschen Ihres Kontos ist etwas schiefgelaufen. Bitte kontaktieren Sie uns.",
+      "verplichtVeldLegende": "* Pflichtfeld"
     }
   },
   "modal": {

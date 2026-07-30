@@ -216,4 +216,24 @@ describe('SettingsSection', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/klanten/uid-1', { method: 'DELETE' });
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/logout', expect.objectContaining({ method: 'POST' }));
   });
+
+  it('marks the seven profile fields as required', async () => {
+    renderSection();
+    await waitFor(() => expect(screen.getByTestId('settings-company-name')).toHaveValue('Hotel De Zilveren Zwaan'));
+    expect(screen.getByTestId('settings-company-name')).toBeRequired();
+    expect(screen.getByTestId('settings-contact-person')).toBeRequired();
+    expect(screen.getByTestId('settings-email')).toBeRequired();
+    expect(screen.getByTestId('settings-phone')).toBeRequired();
+    expect(screen.getByTestId('settings-address')).toBeRequired();
+    expect(screen.getByTestId('settings-postcode')).toBeRequired();
+    expect(screen.getByTestId('settings-city')).toBeRequired();
+    expect(screen.getByTestId('settings-password')).not.toBeRequired();
+    expect(screen.getByTestId('settings-password-confirm')).not.toBeRequired();
+  });
+
+  it('shows the required-field legend', async () => {
+    renderSection();
+    await waitFor(() => expect(screen.getByTestId('settings-company-name')).toHaveValue('Hotel De Zilveren Zwaan'));
+    expect(screen.getByTestId('settings-verplicht-legende')).toHaveTextContent('* verplicht veld');
+  });
 });

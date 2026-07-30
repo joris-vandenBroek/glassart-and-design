@@ -275,7 +275,8 @@
       "deleteAccountLabelPassword": "Wachtwoord (ter bevestiging)",
       "deleteAccountSubmit": "Definitief verwijderen",
       "deleteAccountError": "Wachtwoord onjuist, account niet verwijderd.",
-      "deleteAccountPartialError": "Uw gegevens zijn verwijderd, maar er ging iets mis bij het volledig verwijderen van uw account. Neem contact met ons op."
+      "deleteAccountPartialError": "Uw gegevens zijn verwijderd, maar er ging iets mis bij het volledig verwijderen van uw account. Neem contact met ons op.",
+      "verplichtVeldLegende": "* verplicht veld"
     }
   },
   "beheer": {

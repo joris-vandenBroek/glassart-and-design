@@ -7,6 +7,7 @@ import { usePathname, useRouter } from '@/i18n/navigation';
 import { LOCALE_META } from '@/lib/localeMeta';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { PasswordInput } from '@/components/PasswordInput';
+import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 
 type ContactPreference = 'email' | 'phone' | 'whatsapp';
 
@@ -154,9 +155,13 @@ export function SettingsSection() {
         className="flex flex-col gap-4 text-sm text-white/80"
       >
       <label className={labelClassName}>
-        {t('labelCompanyName')}
+        <span>
+          {t('labelCompanyName')}
+          <RequiredMark />
+        </span>
         <input
           type="text"
+          required
           value={profile.companyName}
           onChange={(e) => setField('companyName', e.target.value)}
           data-testid="settings-company-name"
@@ -164,9 +169,13 @@ export function SettingsSection() {
         />
       </label>
       <label className={labelClassName}>
-        {t('labelContactPerson')}
+        <span>
+          {t('labelContactPerson')}
+          <RequiredMark />
+        </span>
         <input
           type="text"
+          required
           value={profile.contactPerson}
           onChange={(e) => setField('contactPerson', e.target.value)}
           data-testid="settings-contact-person"
@@ -174,9 +183,13 @@ export function SettingsSection() {
         />
       </label>
       <label className={labelClassName}>
-        {t('labelEmail')}
+        <span>
+          {t('labelEmail')}
+          <RequiredMark />
+        </span>
         <input
           type="email"
+          required
           value={profile.email}
           onChange={(e) => setField('email', e.target.value)}
           data-testid="settings-email"
@@ -184,9 +197,13 @@ export function SettingsSection() {
         />
       </label>
       <label className={labelClassName}>
-        {t('labelPhone')}
+        <span>
+          {t('labelPhone')}
+          <RequiredMark />
+        </span>
         <input
           type="tel"
+          required
           value={profile.phone}
           onChange={(e) => setField('phone', e.target.value)}
           data-testid="settings-phone"
@@ -194,9 +211,13 @@ export function SettingsSection() {
         />
       </label>
       <label className={labelClassName}>
-        {t('labelAddress')}
+        <span>
+          {t('labelAddress')}
+          <RequiredMark />
+        </span>
         <input
           type="text"
+          required
           value={profile.address}
           onChange={(e) => setField('address', e.target.value)}
           data-testid="settings-address"
@@ -204,9 +225,13 @@ export function SettingsSection() {
         />
       </label>
       <label className={labelClassName}>
-        {t('labelPostcode')}
+        <span>
+          {t('labelPostcode')}
+          <RequiredMark />
+        </span>
         <input
           type="text"
+          required
           value={profile.postcode}
           onChange={(e) => setField('postcode', e.target.value)}
           data-testid="settings-postcode"
@@ -214,15 +239,21 @@ export function SettingsSection() {
         />
       </label>
       <label className={labelClassName}>
-        {t('labelCity')}
+        <span>
+          {t('labelCity')}
+          <RequiredMark />
+        </span>
         <input
           type="text"
+          required
           value={profile.city}
           onChange={(e) => setField('city', e.target.value)}
           data-testid="settings-city"
           className={fieldClassName}
         />
       </label>
+
+      <RequiredLegend testId="settings-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
 
       <label className={labelClassName}>
         {t('labelContactPreference')}

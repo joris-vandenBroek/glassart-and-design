@@ -305,7 +305,8 @@
       "deleteAccountLabelPassword": "Password (to confirm)",
       "deleteAccountSubmit": "Permanently delete",
       "deleteAccountError": "Incorrect password, account not deleted.",
-      "deleteAccountPartialError": "Your data has been deleted, but something went wrong completing account deletion. Please contact us."
+      "deleteAccountPartialError": "Your data has been deleted, but something went wrong completing account deletion. Please contact us.",
+      "verplichtVeldLegende": "* required field"
     }
   },
   "modal": {
