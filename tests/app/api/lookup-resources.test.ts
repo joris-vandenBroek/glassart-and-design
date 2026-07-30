@@ -7,6 +7,8 @@ import {
   PATCH as patchResource,
   DELETE as deleteResource,
 } from '@/app/api/[resource]/[id]/route';
+import { insertRow } from '@/lib/server/crud';
+import { hashPassword } from '@/lib/server/password';
 
 // Tracks the exact ids each test creates and removes only those afterward -- never
 // a table-wide DELETE. Previously "gets, updates and deletes a single segment" blindly
@@ -34,6 +36,26 @@ function jsonRequest(method: string, body?: unknown, cookie?: string) {
 async function medewerkerCookie(): Promise<string> {
   const sessionId = await createSession('medewerker', 'staff-1');
   return `${SESSION_COOKIE_NAME}=${sessionId}`;
+}
+
+async function maakBestellijnVoorMaat(maatId: string): Promise<{ headerId: string; klantEmail: string }> {
+  const klantEmail = `bestellijn-guard-${maatId}@example.com`;
+  const klant = await insertRow<{ id: string }>('klanten', {
+    email: klantEmail,
+    wachtwoordHash: await hashPassword('x'),
+    status: 'Goedgekeurd',
+  } as never);
+  const header = await insertRow<{ id: string }>('bestelheaders', {
+    klantId: klant.id,
+    bestelnr: 'GD-TEST',
+    status: 'Te beoordelen',
+  } as never);
+  await insertRow<{ id: string }>('bestellines', {
+    bestelheaderId: header.id,
+    maatId,
+    quantity: 1,
+  } as never);
+  return { headerId: header.id, klantEmail };
 }
 
 describe('generic lookup-resource routes', () => {
@@ -149,5 +171,36 @@ describe('generic lookup-resource routes', () => {
       { params: { resource: 'prijsgroepen' } }
     );
     expect(writeResponse.status).toBe(401);
+  });
+
+  it('rejects deleting a maat that is still referenced by a bestellijn, even if no kunstwerk uses it', async () => {
+    const cookie = await medewerkerCookie();
+    const createResponse = await createResource(jsonRequest('POST', { breedte: 12, hoogte: 34 }, cookie), {
+      params: { resource: 'maten' },
+    });
+    const created = await createResponse.json();
+    const { headerId, klantEmail } = await maakBestellijnVoorMaat(created.id);
+
+    const deleteResponse = await deleteResource(jsonRequest('DELETE', undefined, cookie), {
+      params: { resource: 'maten', id: created.id },
+    });
+    expect(deleteResponse.status).toBe(409);
+
+    await getPool().query('DELETE FROM bestelheaders WHERE id = ?', [headerId]);
+    await getPool().query('DELETE FROM klanten WHERE email = ?', [klantEmail]);
+    await getPool().query('DELETE FROM maten WHERE id = ?', [created.id]);
+  });
+
+  it('allows deleting a maat that has never been used in a bestellijn', async () => {
+    const cookie = await medewerkerCookie();
+    const createResponse = await createResource(jsonRequest('POST', { breedte: 13, hoogte: 35 }, cookie), {
+      params: { resource: 'maten' },
+    });
+    const created = await createResponse.json();
+
+    const deleteResponse = await deleteResource(jsonRequest('DELETE', undefined, cookie), {
+      params: { resource: 'maten', id: created.id },
+    });
+    expect(deleteResponse.status).toBe(200);
   });
 });
