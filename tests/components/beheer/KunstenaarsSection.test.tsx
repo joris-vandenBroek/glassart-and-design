@@ -88,7 +88,28 @@ const KLANTEN: Klant[] = [
     invoiceCity: '',
     status: 'Goedgekeurd',
     prijsgroepId: null,
-    exclusieveKunstenaarIds: [],
+    kunstenaarId: null,
+  },
+  {
+    id: 'klant-2',
+    companyName: 'Sabrina Glasser (eigen account)',
+    kvk: '87654321',
+    contactPerson: 'Sabrina Glasser',
+    email: 'sabrina@example.com',
+    phone: '0612340000',
+    contactPreference: 'email',
+    address: 'Glasstraat 2',
+    postcode: '5678 CD',
+    city: 'Glasstad',
+    deliveryAddress: '',
+    deliveryPostcode: '',
+    deliveryCity: '',
+    invoiceAddress: '',
+    invoicePostcode: '',
+    invoiceCity: '',
+    status: 'Goedgekeurd',
+    prijsgroepId: null,
+    kunstenaarId: 'ka-1',
   },
 ];
 
@@ -101,9 +122,7 @@ const KUNSTENAARS: Kunstenaar[] = [
     omschrijvingFr: '',
     omschrijvingDe: '',
     omschrijvingEn: '',
-    verkooprecht: 'open',
-    klantId: null,
-    exclusiefVoorKlantId: null,
+    exclusieveKlantIds: [],
   },
 ];
 
@@ -162,10 +181,15 @@ describe('KunstenaarsSection', () => {
     expect(screen.queryByTestId('kunstenaars-section')).not.toBeInTheDocument();
   });
 
-  it('lists kunstenaars with their verkooprecht label', () => {
+  it('lists kunstenaars with an "open" exclusiviteit summary when the list is empty', () => {
     renderSection();
     expect(screen.getByTestId('data-table-row-ka-1')).toHaveTextContent('Sabrina Glasser');
     expect(screen.getByTestId('data-table-row-ka-1')).toHaveTextContent('Open voor alle klanten');
+  });
+
+  it('lists kunstenaars with the names of their exclusieve klanten when the list is non-empty', () => {
+    renderSection({ kunstenaars: [{ ...KUNSTENAARS[0], exclusieveKlantIds: ['klant-1', 'klant-2'] }] });
+    expect(screen.getByTestId('data-table-row-ka-1')).toHaveTextContent('Galerie De Boer, Sabrina Glasser (eigen account)');
   });
 
   it('disables Opslaan until naam and the NL description are filled in', () => {
@@ -178,7 +202,7 @@ describe('KunstenaarsSection', () => {
     expect(screen.getByTestId('kunstenaar-modal-opslaan')).not.toBeDisabled();
   });
 
-  it('adds a new kunstenaar with an uploaded photo, verkooprecht and gekoppelde klant', async () => {
+  it('adds a new kunstenaar with an uploaded photo and one exclusieve klant', async () => {
     uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
     const { onRefetch } = renderSection();
     fireEvent.click(screen.getByTestId('kunstenaars-add'));
@@ -188,9 +212,7 @@ describe('KunstenaarsSection', () => {
     fireEvent.change(screen.getByTestId('kunstenaar-modal-naam'), { target: { value: 'Nieuwe Kunstenaar' } });
     fireEvent.change(screen.getByTestId('kunstenaar-modal-omschrijving-nl'), { target: { value: 'Werkt met glas.' } });
     fireEvent.change(screen.getByTestId('kunstenaar-modal-prijsafspraken'), { target: { value: '30% commissie' } });
-    fireEvent.change(screen.getByTestId('kunstenaar-modal-verkooprecht'), { target: { value: 'alleen-kunstenaar' } });
-    fireEvent.focus(screen.getByTestId('kunstenaar-modal-klant'));
-    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-option-klant-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-klant-1'));
     fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
 
     // Public record: no prijsafspraken, it is not publicly readable.
@@ -202,9 +224,7 @@ describe('KunstenaarsSection', () => {
       omschrijvingFr: '',
       omschrijvingDe: '',
       omschrijvingEn: '',
-      verkooprecht: 'alleen-kunstenaar',
-      klantId: 'klant-1',
-      exclusiefVoorKlantId: null,
+      exclusieveKlantIds: ['klant-1'],
     });
     // Companion record in the medewerker-only table.
     await waitFor(() =>
@@ -218,6 +238,36 @@ describe('KunstenaarsSection', () => {
       'kunstenaar_toegevoegd',
       { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'Nieuwe Kunstenaar'
+    );
+  });
+
+  it('a new kunstenaar cannot select a second exclusieve klant -- there is no own account yet to satisfy the rule', async () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstenaars-add'));
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-klant-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-klant-2'));
+    expect(screen.getByTestId('kunstenaar-modal-error')).toHaveTextContent(
+      'Bij 2 klanten moet één daarvan het klantaccount van deze kunstenaar zelf zijn.'
+    );
+    expect(screen.getByTestId('kunstenaar-modal-klant-klant-2')).not.toBeChecked();
+  });
+
+  it('allows a second exclusieve klant on an existing kunstenaar when one of the two is its own linked klant', async () => {
+    const { onUpdate } = renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+    // Opslaan stays disabled until the async prijsafspraken fetch settles (see the
+    // sibling 'opens a row for editing pre-filled...' test) -- wait for it before saving.
+    await waitFor(() => expect(screen.getByTestId('kunstenaar-modal-opslaan')).not.toBeDisabled());
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-klant-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-klant-2'));
+    expect(screen.queryByTestId('kunstenaar-modal-error')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
+
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith(
+        'ka-1',
+        expect.objectContaining({ exclusieveKlantIds: ['klant-1', 'klant-2'] })
+      )
     );
   });
 
@@ -253,16 +303,17 @@ describe('KunstenaarsSection', () => {
     expect(screen.getByTestId('kunstenaar-modal-prijsafspraken')).toHaveValue('');
   });
 
-  it('opens a row for editing pre-filled and updates it, preserving exclusiefVoorKlantId', async () => {
+  it('opens a row for editing pre-filled and updates it, keeping its exclusieveKlantIds', async () => {
     afsprakenGetImpl = async () => ({ ok: true, json: async () => ({ prijsafspraken: '20% commissie' }) });
     const { onUpdate } = renderSection({
-      kunstenaars: [{ ...KUNSTENAARS[0], exclusiefVoorKlantId: 'klant-1' }],
+      kunstenaars: [{ ...KUNSTENAARS[0], exclusieveKlantIds: ['klant-1'] }],
     });
     fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
     expect(screen.getByTestId('kunstenaar-modal-naam')).toHaveValue('Sabrina Glasser');
     await waitFor(() =>
       expect(screen.getByTestId('kunstenaar-modal-prijsafspraken')).toHaveValue('20% commissie')
     );
+    expect(screen.getByTestId('kunstenaar-modal-klant-klant-1')).toBeChecked();
 
     fireEvent.change(screen.getByTestId('kunstenaar-modal-naam'), { target: { value: 'Sabrina G.' } });
     fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
@@ -275,9 +326,7 @@ describe('KunstenaarsSection', () => {
         omschrijvingFr: '',
         omschrijvingDe: '',
         omschrijvingEn: '',
-        verkooprecht: 'open',
-        klantId: null,
-        exclusiefVoorKlantId: 'klant-1',
+        exclusieveKlantIds: ['klant-1'],
       })
     );
     expect(afsprakenPutCalls()).toContainEqual([
