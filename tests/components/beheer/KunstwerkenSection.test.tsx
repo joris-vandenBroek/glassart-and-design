@@ -577,6 +577,24 @@ describe('KunstwerkenSection', () => {
     );
   });
 
+  it('does not show the "kies minimaal één maat" hint once a materiaal is chosen but every maat is unchecked', async () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-vierkant'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materialen-maten-toggle'));
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).toBeChecked());
+
+    // 'vierkant' auto-selects only the square maat (maat-3); unchecking it leaves 0 maten
+    // while mat-1/mat-2 stay checked — a deliberate, valid "maatloos-met-materiaal" state,
+    // not an incomplete/error one, so no "kies minimaal één maat" warning should appear.
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-3'));
+
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).not.toBeChecked());
+    expect(screen.getByTestId('kunstwerk-modal-materiaal-mat-1')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-materiaal-mat-2')).toBeChecked();
+    expect(screen.queryByTestId('kunstwerk-modal-maten-hint')).not.toBeInTheDocument();
+  });
+
   it('never targets a maatloos-met-materiaal kunstwerk (0 maten, materiaal wel gekozen) with the "Materialen/maten aanvullen" backfill', async () => {
     const maatloosMetMateriaal: Kunstwerk = {
       ...KUNSTWERKEN[0],

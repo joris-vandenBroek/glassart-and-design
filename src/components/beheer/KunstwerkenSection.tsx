@@ -705,11 +705,7 @@ export function KunstwerkenSection({
             )}
           </fieldset>
 
-          <details
-            className={`flex flex-col gap-3 rounded-sm border px-3 py-2 ${
-              !isMateriaalloos && maatIds.length === 0 ? 'border-red-500/70' : 'border-white/10'
-            }`}
-          >
+          <details className="flex flex-col gap-3 rounded-sm border border-white/10 px-3 py-2">
             <summary
               data-testid="kunstwerk-modal-materialen-maten-toggle"
               className="cursor-pointer text-xs uppercase tracking-wide text-white/60"
@@ -756,11 +752,6 @@ export function KunstwerkenSection({
                   </label>
                 );
               })}
-              {!isMateriaalloos && maatIds.length === 0 && (
-                <span data-testid="kunstwerk-modal-maten-hint" className="text-xs text-red-400">
-                  {t('kunstwerkenMatenVerplicht')}
-                </span>
-              )}
             </fieldset>
           </details>
 
