@@ -1963,7 +1963,11 @@ function validateLine(line: LineInput): string | null {
         [line.kunstwerkId]
       );
       const kunstwerkRow = (
-        kunstwerkRows as Array<{ kunstenaarId: string | null; maatIds: string | null; prijsPerM2: string | null }>
+        kunstwerkRows as Array<{
+          kunstenaarId: string | null;
+          maatIds: string | string[] | null;
+          prijsPerM2: string | null;
+        }>
       )[0];
       if (!kunstwerkRow) {
         await connection.rollback();
@@ -1973,7 +1977,14 @@ function validateLine(line: LineInput): string | null {
         connection,
         {
           kunstenaarId: kunstwerkRow.kunstenaarId,
-          maatIds: kunstwerkRow.maatIds ? JSON.parse(kunstwerkRow.maatIds) : [],
+          // mysql2 auto-parses a native JSON column to an array/object on a plain
+          // pool/connection.query() (confirmed during Task 3's review) -- only JSON.parse
+          // it when it actually comes back as a string, same guard as prijsmodule.ts's
+          // berekenPrijzenVoorAlleKunstwerken and crud.ts's deserializeRow.
+          maatIds:
+            typeof kunstwerkRow.maatIds === 'string'
+              ? JSON.parse(kunstwerkRow.maatIds)
+              : kunstwerkRow.maatIds ?? [],
           prijsPerM2: kunstwerkRow.prijsPerM2 != null ? Number(kunstwerkRow.prijsPerM2) : null,
         },
         line
