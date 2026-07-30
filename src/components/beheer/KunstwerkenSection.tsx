@@ -189,6 +189,9 @@ export function KunstwerkenSection({
   }, [kunstenaars]);
 
   const isMateriaalloos = materiaalIds.length === 0;
+  // Superset of isMateriaalloos: also true when a materiaal is chosen but every maat is
+  // deliberately unchecked (e.g. "4mm veiligheidsglas, custom size, priced per m²").
+  const isMaatloos = isMateriaalloos || maatIds.length === 0;
   const prijsCombinaties = materiaalIds.flatMap((materiaalId) =>
     maatIds.map((maatId) => ({ materiaalId, maatId }))
   );
@@ -201,11 +204,11 @@ export function KunstwerkenSection({
       formaat,
       segmentIds,
       materiaalIds,
-      maatIds: isMateriaalloos ? [] : maatIds,
+      maatIds: isMaatloos ? [] : maatIds,
       stijlIds,
       onderwerpIds,
       aiGegenereerd,
-      prijzen: isMateriaalloos
+      prijzen: isMaatloos
         ? []
         : prijsCombinaties.map(({ materiaalId, maatId }) => ({
             materiaalId,
@@ -217,7 +220,7 @@ export function KunstwerkenSection({
       omschrijvingDe,
       omschrijvingEn,
     };
-    return isMateriaalloos ? { ...basis, prijsPerM2: Number(prijsPerM2) } : basis;
+    return isMaatloos ? { ...basis, prijsPerM2: Number(prijsPerM2) } : basis;
   }
 
   const previewKunstwerk: Kunstwerk = useMemo(
@@ -409,9 +412,7 @@ export function KunstwerkenSection({
     uploading ||
     !naam ||
     segmentIds.length === 0 ||
-    (isMateriaalloos
-      ? !prijsPerM2 || Number(prijsPerM2) <= 0
-      : maatIds.length === 0 || !allePrijzenIngevuld) ||
+    (isMaatloos ? !prijsPerM2 || Number(prijsPerM2) <= 0 : !allePrijzenIngevuld) ||
     !omschrijvingNl;
 
   async function handleSave() {
@@ -461,6 +462,7 @@ export function KunstwerkenSection({
   const kunstwerkenZonderAlleMaterialenMaten = kunstwerken.filter(
     (kunstwerk) =>
       kunstwerk.materiaalIds.length > 0 &&
+      kunstwerk.maatIds.length > 0 &&
       (alleMateriaalIds.some((id) => !kunstwerk.materiaalIds.includes(id)) ||
         alleMaatIds.some((id) => !kunstwerk.maatIds.includes(id)))
   );
@@ -913,7 +915,7 @@ export function KunstwerkenSection({
             </div>
           )}
 
-          {isMateriaalloos && (
+          {isMaatloos && (
             <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
               {t('kunstwerkenLabelPrijsPerM2')}
               <div className="flex items-center gap-1">
