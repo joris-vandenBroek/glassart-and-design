@@ -8,7 +8,7 @@ export const GET = withApiErrorHandling('GET /api/kunstwerken/prijzen', async (r
   const materiaalIdsParam = url.searchParams.get('materiaalIds');
   const maatIdsParam = url.searchParams.get('maatIds');
 
-  if (materiaalIdsParam !== null && maatIdsParam !== null) {
+  if (materiaalIdsParam !== null || maatIdsParam !== null) {
     const kunstenaarId = url.searchParams.get('kunstenaarId') || null;
     const materiaalIds = materiaalIdsParam ? materiaalIdsParam.split(',') : [];
     const maatIds = maatIdsParam ? maatIdsParam.split(',') : [];

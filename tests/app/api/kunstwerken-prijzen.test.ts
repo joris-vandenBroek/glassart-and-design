@@ -84,4 +84,26 @@ describe('GET /api/kunstwerken/prijzen', () => {
     const body = await response.json();
     expect(body.prijzen).toEqual([{ maatId, materiaalId, prijs: 175 }]);
   });
+
+  it('ad-hoc mode: triggers with only materiaalIds param, maatIds absent, returns empty prijzen array', async () => {
+    const materiaalId = await maakMateriaal();
+
+    const response = await getKunstwerkPrijzen(
+      new Request(`http://localhost/api/kunstwerken/prijzen?materiaalIds=${materiaalId}`)
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.prijzen).toEqual([]);
+  });
+
+  it('ad-hoc mode: triggers with only maatIds param, materiaalIds absent, returns empty prijzen array', async () => {
+    const maatId = await maakMaat(43, 63);
+
+    const response = await getKunstwerkPrijzen(
+      new Request(`http://localhost/api/kunstwerken/prijzen?maatIds=${maatId}`)
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.prijzen).toEqual([]);
+  });
 });
