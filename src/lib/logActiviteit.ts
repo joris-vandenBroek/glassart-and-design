@@ -29,6 +29,7 @@ export const ACTIVITEIT_TYPES = [
   'prijsgroep_toegevoegd',
   'prijsgroep_gewijzigd',
   'prijsgroep_verwijderd',
+  'prijsmatrix_gewijzigd',
   'bedrijfsgegevens_gewijzigd',
   'mandje_eigen_maat_toegevoegd',
   'bestelling_prijs_vastgesteld',

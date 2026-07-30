@@ -47,7 +47,7 @@ describe('kunstenaars + kunstenaarAfspraken routes', () => {
       ['exclusieveKlantIds']
     );
     createdKunstenaarIds.push(kunstenaar.id);
-    const response = await listKunstenaars(req('GET'));
+    const response = await listKunstenaars();
     const body = await response.json();
     const found = body.find((row: { id: string }) => row.id === kunstenaar.id);
     expect(found.naam).toBe('Anna');
@@ -93,7 +93,7 @@ describe('kunstenaars + kunstenaarAfspraken routes', () => {
     expect((await getResponse.json()).exclusieveKlantIds).toEqual(['klant-a', 'klant-b']);
   });
 
-  it('stores and retrieves prijsafspraken only for staff, keyed by the kunstenaar id', async () => {
+  it('stores and retrieves prijsafspraken and prijsopslag only for staff, keyed by the kunstenaar id', async () => {
     const kunstenaar = await insertRow<{ id: string }>(
       'kunstenaars',
       { naam: 'Dana', exclusieveKlantIds: [] } as never,
@@ -104,7 +104,7 @@ describe('kunstenaars + kunstenaarAfspraken routes', () => {
     const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
 
     const putResponse = await putAfspraken(
-      req('PUT', { prijsafspraken: '50/50 split' }, cookie),
+      req('PUT', { prijsafspraken: '50/50 split', prijsopslag: 35 }, cookie),
       { params: { id: kunstenaar.id } }
     );
     expect(putResponse.status).toBe(200);
@@ -112,9 +112,24 @@ describe('kunstenaars + kunstenaarAfspraken routes', () => {
     const getResponse = await getAfspraken(req('GET', undefined, cookie), {
       params: { id: kunstenaar.id },
     });
-    expect((await getResponse.json()).prijsafspraken).toBe('50/50 split');
+    const body = await getResponse.json();
+    expect(body.prijsafspraken).toBe('50/50 split');
+    expect(body.prijsopslag).toBe(35);
 
     const unauthenticated = await getAfspraken(req('GET'), { params: { id: kunstenaar.id } });
     expect(unauthenticated.status).toBe(401);
+  });
+
+  it('defaults prijsopslag to 0 for a kunstenaar with no kunstenaarAfspraken row yet', async () => {
+    const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+      naam: 'Erik',
+    } as never);
+    createdKunstenaarIds.push(kunstenaar.id);
+    const sessionId = await createSession('medewerker', 'staff-1');
+    const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
+
+    const response = await getAfspraken(req('GET', undefined, cookie), { params: { id: kunstenaar.id } });
+    const body = await response.json();
+    expect(body.prijsopslag).toBe(0);
   });
 });

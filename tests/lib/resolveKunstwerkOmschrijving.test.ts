@@ -10,7 +10,6 @@ const BASE_KUNSTWERK: Kunstwerk = {
   segmentIds: [],
   materiaalIds: [],
   maatIds: [],
-  prijzen: [],
   omschrijvingNl: 'Nederlandse tekst',
   omschrijvingFr: 'Texte français',
   omschrijvingDe: 'Deutscher Text',
