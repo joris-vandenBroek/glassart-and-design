@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
+import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 
 const SUBMITTED_RESET_MS = 2500;
 
@@ -26,7 +27,10 @@ export function ContactForm() {
       </p>
 
       <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-        {t('formName')}
+        <span>
+          {t('formName')}
+          <RequiredMark />
+        </span>
         <input
           type="text"
           name="name"
@@ -47,7 +51,10 @@ export function ContactForm() {
       </label>
 
       <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-        {t('formEmail')}
+        <span>
+          {t('formEmail')}
+          <RequiredMark />
+        </span>
         <input
           type="email"
           name="email"
@@ -68,7 +75,10 @@ export function ContactForm() {
       </label>
 
       <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-        {t('formSubject')}
+        <span>
+          {t('formSubject')}
+          <RequiredMark />
+        </span>
         <select
           name="subject"
           required
@@ -86,7 +96,10 @@ export function ContactForm() {
       </label>
 
       <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-        {t('formMessage')}
+        <span>
+          {t('formMessage')}
+          <RequiredMark />
+        </span>
         <textarea
           name="message"
           required
@@ -95,6 +108,8 @@ export function ContactForm() {
           className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
         />
       </label>
+
+      <RequiredLegend testId="contact-form-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
 
       <button
         type="submit"

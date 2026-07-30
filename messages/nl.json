@@ -138,7 +138,8 @@
     "subjectOther": "Overig",
     "formMessage": "Bericht",
     "formSubmit": "Versturen",
-    "formSubmitted": "Verzonden!"
+    "formSubmitted": "Verzonden!",
+    "verplichtVeldLegende": "* verplicht veld"
   },
   "registrationPage": {
     "title": "Word klant",

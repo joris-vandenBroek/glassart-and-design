@@ -68,4 +68,9 @@ describe('ContactForm', () => {
     expect(screen.getByTestId('contact-form-submit')).not.toBeDisabled();
     expect(screen.getByTestId('contact-form-name')).toHaveValue('');
   });
+
+  it('shows the required-field legend', () => {
+    renderForm();
+    expect(screen.getByTestId('contact-form-verplicht-legende')).toHaveTextContent('* verplicht veld');
+  });
 });

@@ -138,7 +138,8 @@
     "subjectOther": "Sonstiges",
     "formMessage": "Nachricht",
     "formSubmit": "Senden",
-    "formSubmitted": "Gesendet!"
+    "formSubmitted": "Gesendet!",
+    "verplichtVeldLegende": "* Pflichtfeld"
   },
   "registrationPage": {
     "title": "Kunde werden",

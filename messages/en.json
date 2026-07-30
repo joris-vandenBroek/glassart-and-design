@@ -138,7 +138,8 @@
     "subjectOther": "Other",
     "formMessage": "Message",
     "formSubmit": "Send",
-    "formSubmitted": "Sent!"
+    "formSubmitted": "Sent!",
+    "verplichtVeldLegende": "* required field"
   },
   "registrationPage": {
     "title": "Become a client",
