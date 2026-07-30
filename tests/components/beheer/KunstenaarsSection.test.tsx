@@ -457,4 +457,10 @@ describe('KunstenaarsSection', () => {
     fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
     expect(screen.getByTestId('modal-header')).toHaveTextContent('Kunstenaar bewerken');
   });
+
+  it('shows the required-field legend when the modal is open', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstenaars-add'));
+    expect(screen.getByTestId('kunstenaar-modal-verplicht-legende')).toHaveTextContent('* verplicht veld');
+  });
 });
