@@ -100,6 +100,7 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Kunstwerke
   const onRemove = overrides.onRemove ?? vi.fn().mockResolvedValue(true);
   const onAddStijl = overrides.onAddStijl ?? vi.fn().mockResolvedValue(true);
   const onAddOnderwerp = overrides.onAddOnderwerp ?? vi.fn().mockResolvedValue(true);
+  const onAddSegment = overrides.onAddSegment ?? vi.fn().mockResolvedValue(true);
   const result = render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <CustomerAuthProvider>
@@ -116,6 +117,7 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Kunstwerke
             onAdd={onAdd}
             onUpdate={onUpdate}
             onRemove={onRemove}
+            onAddSegment={onAddSegment}
             onAddStijl={onAddStijl}
             onAddOnderwerp={onAddOnderwerp}
             {...overrides}
@@ -124,7 +126,7 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Kunstwerke
       </CustomerAuthProvider>
     </NextIntlClientProvider>
   );
-  return { onAdd, onUpdate, onRemove, onAddStijl, onAddOnderwerp, rerender: result.rerender };
+  return { onAdd, onUpdate, onRemove, onAddStijl, onAddOnderwerp, onAddSegment, rerender: result.rerender };
 }
 
 beforeEach(() => {
@@ -901,6 +903,46 @@ describe('KunstwerkenSection', () => {
     );
 
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-stijl-stijl-3')).toBeChecked());
+  });
+
+  it('creates a brand-new segment inline, adds it to the Segmenten table, and auto-selects it on the kunstwerk', async () => {
+    const onAddSegment = vi.fn().mockResolvedValue(true);
+    const { rerender } = renderSection({ onAddSegment });
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-nieuwe-segment-naam'), { target: { value: 'Kantoor' } });
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-nieuwe-segment-toevoegen'));
+    await waitFor(() => expect(onAddSegment).toHaveBeenCalledWith({ omschrijving: 'Kantoor' }));
+
+    // Simulate BeheerShell re-rendering this component with the freshly-refetched segmenten list,
+    // the way it really would once onAddSegment's API call resolves and useApiCollection refetches.
+    rerender(
+      <NextIntlClientProvider locale="nl" messages={messages}>
+        <CustomerAuthProvider>
+          <CartProvider>
+            <KunstwerkenSection
+              kunstwerken={KUNSTWERKEN}
+              segmenten={[...SEGMENTEN, { id: 'seg-3', omschrijving: 'Kantoor' }]}
+              materialen={MATERIALEN}
+              materiaalsoorten={null}
+              maten={MATEN}
+              stijlen={STIJLEN}
+              onderwerpen={ONDERWERPEN}
+              kunstenaars={KUNSTENAARS}
+              loadError={null}
+              onAdd={vi.fn().mockResolvedValue(true)}
+              onUpdate={vi.fn().mockResolvedValue(true)}
+              onRemove={vi.fn().mockResolvedValue(true)}
+              onAddStijl={vi.fn().mockResolvedValue(true)}
+              onAddOnderwerp={vi.fn().mockResolvedValue(true)}
+              onAddSegment={onAddSegment}
+            />
+          </CartProvider>
+        </CustomerAuthProvider>
+      </NextIntlClientProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-segment-seg-3')).toBeChecked());
   });
 
   describe('klant-dialoog preview', () => {

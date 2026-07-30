@@ -368,6 +368,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             onAdd={kunstwerken.add}
             onUpdate={kunstwerken.update}
             onRemove={kunstwerken.remove}
+            onAddSegment={segmenten.add}
             onAddStijl={stijlen.add}
             onAddOnderwerp={onderwerpen.add}
           />

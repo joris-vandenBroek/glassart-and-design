@@ -27,6 +27,7 @@ interface KunstwerkenSectionProps {
   onAdd: (data: Omit<Kunstwerk, 'id'>) => Promise<boolean>;
   onUpdate: (id: string, data: Omit<Kunstwerk, 'id'>) => Promise<boolean>;
   onRemove: (id: string) => Promise<boolean>;
+  onAddSegment: (data: Omit<Segment, 'id'>) => Promise<boolean>;
   onAddStijl: (data: Omit<Stijl, 'id'>) => Promise<boolean>;
   onAddOnderwerp: (data: Omit<Onderwerp, 'id'>) => Promise<boolean>;
 }
@@ -76,6 +77,7 @@ export function KunstwerkenSection({
   onAdd,
   onUpdate,
   onRemove,
+  onAddSegment,
   onAddStijl,
   onAddOnderwerp,
 }: KunstwerkenSectionProps) {
@@ -93,6 +95,9 @@ export function KunstwerkenSection({
   const [stijlIds, setStijlIds] = useState<string[]>(LEGE_FORM.stijlIds);
   const [onderwerpIds, setOnderwerpIds] = useState<string[]>(LEGE_FORM.onderwerpIds);
   const [aiGegenereerd, setAiGegenereerd] = useState<boolean>(LEGE_FORM.aiGegenereerd);
+  const [nieuweSegmentNaam, setNieuweSegmentNaam] = useState('');
+  const [pendingNieuweSegmentNaam, setPendingNieuweSegmentNaam] = useState<string | null>(null);
+  const [segmentToevoegenError, setSegmentToevoegenError] = useState<string | null>(null);
   const [nieuweStijlNaam, setNieuweStijlNaam] = useState('');
   const [nieuweOnderwerpNaam, setNieuweOnderwerpNaam] = useState('');
   const [pendingNieuweStijlNaam, setPendingNieuweStijlNaam] = useState<string | null>(null);
@@ -113,6 +118,16 @@ export function KunstwerkenSection({
   const [activeTab, setActiveTab] = useState<TabId>('algemeen');
 
   useEffect(() => {
+    if (!pendingNieuweSegmentNaam) return;
+    const gevonden = (segmenten ?? []).find((segment) => segment.omschrijving === pendingNieuweSegmentNaam);
+    if (gevonden) {
+      setSegmentIds((current) => (current.includes(gevonden.id) ? current : [...current, gevonden.id]));
+      setPendingNieuweSegmentNaam(null);
+      setNieuweSegmentNaam('');
+    }
+  }, [segmenten, pendingNieuweSegmentNaam]);
+
+  useEffect(() => {
     if (!pendingNieuweStijlNaam) return;
     const gevonden = (stijlen ?? []).find((stijl) => stijl.omschrijving === pendingNieuweStijlNaam);
     if (gevonden) {
@@ -131,6 +146,28 @@ export function KunstwerkenSection({
       setNieuweOnderwerpNaam('');
     }
   }, [onderwerpen, pendingNieuweOnderwerpNaam]);
+
+  async function handleAddNieuweSegment() {
+    const naam = nieuweSegmentNaam.trim();
+    if (!naam) return;
+    setSegmentToevoegenError(null);
+    const bestaande = (segmenten ?? []).find(
+      (segment) => segment.omschrijving.toLowerCase() === naam.toLowerCase()
+    );
+    if (bestaande) {
+      setSegmentIds((current) => (current.includes(bestaande.id) ? current : [...current, bestaande.id]));
+      setNieuweSegmentNaam('');
+      return;
+    }
+    setPendingNieuweSegmentNaam(naam);
+    const success = await onAddSegment({ omschrijving: naam });
+    if (success) {
+      void logActiviteit('segment_toegevoegd', actorFromMedewerker(user));
+    } else {
+      setPendingNieuweSegmentNaam(null);
+      setSegmentToevoegenError(t('kunstwerkenNieuweSegmentError'));
+    }
+  }
 
   async function handleAddNieuweStijl() {
     const naam = nieuweStijlNaam.trim();
@@ -306,6 +343,9 @@ export function KunstwerkenSection({
     setKunstenaarId(LEGE_FORM.kunstenaarId);
     setFormaatState(LEGE_FORM.formaat);
     setSegmentIds(LEGE_FORM.segmentIds);
+    setNieuweSegmentNaam('');
+    setPendingNieuweSegmentNaam(null);
+    setSegmentToevoegenError(null);
     setMateriaalIds((materialen ?? []).map((materiaal) => materiaal.id));
     setMaatIds((maten ?? []).map((maat) => maat.id));
     setStijlIds(LEGE_FORM.stijlIds);
@@ -732,6 +772,30 @@ export function KunstwerkenSection({
                 {segment.omschrijving}
               </label>
             ))}
+            <div className="mt-1 flex gap-2">
+              <input
+                type="text"
+                value={nieuweSegmentNaam}
+                onChange={(event) => setNieuweSegmentNaam(event.target.value)}
+                placeholder={t('kunstwerkenNieuweSegmentPlaceholder')}
+                data-testid="kunstwerk-modal-nieuwe-segment-naam"
+                className="flex-1 rounded-sm bg-black/40 px-3 py-1.5 text-sm text-white"
+              />
+              <button
+                type="button"
+                onClick={handleAddNieuweSegment}
+                disabled={!nieuweSegmentNaam.trim()}
+                data-testid="kunstwerk-modal-nieuwe-segment-toevoegen"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-3 py-1.5 text-xs text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
+              >
+                {t('kunstwerkenNieuweSegmentToevoegen')}
+              </button>
+            </div>
+            {segmentToevoegenError && (
+              <span data-testid="kunstwerk-modal-nieuwe-segment-error" className="text-xs text-red-400">
+                {segmentToevoegenError}
+              </span>
+            )}
             {segmentIds.length === 0 && (
               <span data-testid="kunstwerk-modal-segmenten-hint" className="text-xs text-red-400">
                 {t('kunstwerkenSegmentenVerplicht')}
