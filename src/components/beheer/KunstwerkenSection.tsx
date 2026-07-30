@@ -162,7 +162,7 @@ export function KunstwerkenSection({
     setPendingNieuweSegmentNaam(naam);
     const success = await onAddSegment({ omschrijving: naam });
     if (success) {
-      void logActiviteit('segment_toegevoegd', actorFromMedewerker(user));
+      void logActiviteit('segment_toegevoegd', actorFromMedewerker(user), naam);
     } else {
       setPendingNieuweSegmentNaam(null);
       setSegmentToevoegenError(t('kunstwerkenNieuweSegmentError'));
