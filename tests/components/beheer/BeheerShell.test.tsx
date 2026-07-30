@@ -180,6 +180,35 @@ describe('BeheerShell', () => {
     );
   });
 
+  it('opens a klant via the Klanten section, links a kunstenaar via the combobox, and PATCHes /api/klanten/{id}', async () => {
+    mockCollections({
+      klanten: [{ id: 'uid-1', ...KLANT_DATA }],
+      kunstenaars: [
+        { id: 'ka-1', naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', exclusieveKlantIds: [] },
+      ],
+    });
+    renderShell();
+    screen.getByTestId('beheer-nav-klanten').click();
+    expect(await screen.findByTestId('klanten-section')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('data-table-row-uid-1'));
+    expect(await screen.findByTestId('klant-modal')).toBeInTheDocument();
+
+    fireEvent.focus(screen.getByTestId('klant-modal-kunstenaar'));
+    fireEvent.click(screen.getByTestId('klant-modal-kunstenaar-option-ka-1'));
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/klanten/uid-1',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ kunstenaarId: 'ka-1' }),
+        })
+      )
+    );
+  });
+
   it('shows the materiaalsoorten count and switches to the Materiaalsoorten section', async () => {
     mockCollections({
       materiaalsoorten: [
