@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getPool } from '@/lib/server/db';
 import { hashPassword } from '@/lib/server/password';
+import { withApiErrorHandling } from '@/lib/server/apiRoute';
 
-export async function POST(request: Request) {
+export const POST = withApiErrorHandling('POST /api/auth/reset-password/confirm', async (request: Request) => {
   const { token, newPassword } = (await request.json()) as { token: string; newPassword: string };
 
   const [rows] = await getPool().query(
@@ -23,4 +24,4 @@ export async function POST(request: Request) {
   await getPool().query('DELETE FROM passwordResetTokens WHERE token = ?', [token]);
 
   return NextResponse.json({ ok: true });
-}
+});

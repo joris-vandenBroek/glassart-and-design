@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { getPool } from '@/lib/server/db';
 import { verifyPassword } from '@/lib/server/password';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
+import { withApiErrorHandling } from '@/lib/server/apiRoute';
 
-export async function POST(request: Request) {
+export const POST = withApiErrorHandling('POST /api/auth/login', async (request: Request) => {
   const { email, password } = (await request.json()) as { email: string; password: string };
 
   const [rows] = await getPool().query(
@@ -25,4 +26,4 @@ export async function POST(request: Request) {
     maxAge: 60 * 60 * 24 * 30,
   });
   return response;
-}
+});

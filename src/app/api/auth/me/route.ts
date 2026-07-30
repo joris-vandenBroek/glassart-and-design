@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getRow } from '@/lib/server/crud';
 import { validateSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
+import { withApiErrorHandling } from '@/lib/server/apiRoute';
 
-export async function GET(request: Request) {
+export const GET = withApiErrorHandling('GET /api/auth/me', async (request: Request) => {
   const url = new URL(request.url);
   const type = url.searchParams.get('type') ?? 'klant';
   const cookie = request.headers.get('cookie') ?? '';
@@ -21,4 +22,4 @@ export async function GET(request: Request) {
   }
   const { wachtwoordHash: _wachtwoordHash, ...safeUser } = user;
   return NextResponse.json({ user: safeUser });
-}
+});

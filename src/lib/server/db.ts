@@ -16,7 +16,19 @@ export function getPool(): mysql.Pool {
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
       waitForConnections: true,
-      connectionLimit: 10,
+      // Overridable per environment (DB_CONNECTION_LIMIT) since staging/production get
+      // different max_user_connections grants from the host and may need different tuning
+      // without a code change.
+      connectionLimit: Number(process.env.DB_CONNECTION_LIMIT ?? 10),
+      // A saturated pool should fail fast with a clear error rather than hang requests
+      // indefinitely waiting for a free connection (mysql2's default queueLimit is 0 =
+      // unlimited queueing).
+      queueLimit: Number(process.env.DB_QUEUE_LIMIT ?? 20),
+      // Detects and drops half-dead TCP connections (e.g. after a network blip or the
+      // MySQL server closing an idle connection) instead of handing them back out of the
+      // pool and failing the next query that tries to use them.
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 10_000,
     });
   }
   return globalForPool.__mysqlPool;
