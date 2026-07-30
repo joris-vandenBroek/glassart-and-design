@@ -34,7 +34,8 @@ export async function PATCH(
     const data = await request.json();
     await updateRow(params.resource, params.id, data, config.jsonColumns);
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (err) {
+    console.error(`PATCH /api/${params.resource}/${params.id} failed`, err);
     return NextResponse.json({ error: 'server-error' }, { status: 500 });
   }
 }

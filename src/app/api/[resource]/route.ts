@@ -27,7 +27,8 @@ export async function POST(request: Request, { params }: { params: { resource: s
     const data = await request.json();
     const created = await insertRow(params.resource, data, config.jsonColumns);
     return NextResponse.json(created, { status: 201 });
-  } catch {
+  } catch (err) {
+    console.error(`POST /api/${params.resource} failed`, err);
     return NextResponse.json({ error: 'server-error' }, { status: 500 });
   }
 }

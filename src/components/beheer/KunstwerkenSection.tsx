@@ -571,7 +571,7 @@ export function KunstwerkenSection({
               onDrop={handleFotoDrop}
               data-testid="kunstwerk-modal-foto-dropzone"
               className={`flex flex-col items-center gap-2 rounded-sm border border-dashed px-3 py-4 text-center transition-colors ${
-                isDraggingFoto ? 'border-silver bg-white/10' : 'border-white/20'
+                isDraggingFoto ? 'border-silver bg-white/10' : foto ? 'border-white/20' : 'border-red-500/70'
               }`}
             >
               <span className="text-xs normal-case tracking-normal text-white/60">
@@ -586,6 +586,11 @@ export function KunstwerkenSection({
               />
             </span>
           </label>
+          {!foto && (
+            <p data-testid="kunstwerk-modal-foto-hint" className="text-xs text-red-400">
+              {t('kunstwerkenFotoVerplicht')}
+            </p>
+          )}
           {uploading && (
             <p data-testid="kunstwerk-modal-foto-uploading" className="text-xs text-white/60">
               {t('kunstwerkenFotoUploading')}
@@ -604,8 +609,15 @@ export function KunstwerkenSection({
               value={naam}
               onChange={(event) => setNaam(event.target.value)}
               data-testid="kunstwerk-modal-naam"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+              className={`rounded-sm border bg-black/40 px-3 py-2 text-sm text-white ${
+                naam ? 'border-transparent' : 'border-red-500/70'
+              }`}
             />
+            {!naam && (
+              <span data-testid="kunstwerk-modal-naam-hint" className="normal-case tracking-normal text-red-400">
+                {t('kunstwerkenNaamVerplicht')}
+              </span>
+            )}
           </label>
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
             {t('kunstwerkenLabelKunstenaar')}
@@ -624,7 +636,11 @@ export function KunstwerkenSection({
             </select>
           </label>
 
-          <fieldset className="flex flex-col gap-1">
+          <fieldset
+            className={`flex flex-col gap-1 rounded-sm border px-2 py-1.5 ${
+              formaat === null ? 'border-red-500/70' : 'border-transparent'
+            }`}
+          >
             <legend className="text-xs uppercase tracking-wide text-white/60">
               {t('kunstwerkenLabelFormaat')}
             </legend>
@@ -643,7 +659,7 @@ export function KunstwerkenSection({
               ))}
             </div>
             {formaat === null && (
-              <span data-testid="kunstwerk-modal-formaat-hint" className="text-xs text-white/50">
+              <span data-testid="kunstwerk-modal-formaat-hint" className="text-xs text-red-400">
                 {t('kunstwerkenFormaatVerplicht')}
               </span>
             )}
@@ -658,7 +674,11 @@ export function KunstwerkenSection({
             />
           )}
 
-          <fieldset className="flex flex-col gap-1">
+          <fieldset
+            className={`flex flex-col gap-1 rounded-sm border px-2 py-1.5 ${
+              segmentIds.length === 0 ? 'border-red-500/70' : 'border-transparent'
+            }`}
+          >
             <legend className="text-xs uppercase tracking-wide text-white/60">
               {t('kunstwerkenLabelSegmenten')}
             </legend>
@@ -673,9 +693,18 @@ export function KunstwerkenSection({
                 {segment.omschrijving}
               </label>
             ))}
+            {segmentIds.length === 0 && (
+              <span data-testid="kunstwerk-modal-segmenten-hint" className="text-xs text-red-400">
+                {t('kunstwerkenSegmentenVerplicht')}
+              </span>
+            )}
           </fieldset>
 
-          <details className="flex flex-col gap-3 rounded-sm border border-white/10 px-3 py-2">
+          <details
+            className={`flex flex-col gap-3 rounded-sm border px-3 py-2 ${
+              !isMateriaalloos && maatIds.length === 0 ? 'border-red-500/70' : 'border-white/10'
+            }`}
+          >
             <summary
               data-testid="kunstwerk-modal-materialen-maten-toggle"
               className="cursor-pointer text-xs uppercase tracking-wide text-white/60"
@@ -720,6 +749,11 @@ export function KunstwerkenSection({
                   </label>
                 );
               })}
+              {!isMateriaalloos && maatIds.length === 0 && (
+                <span data-testid="kunstwerk-modal-maten-hint" className="text-xs text-red-400">
+                  {t('kunstwerkenMatenVerplicht')}
+                </span>
+              )}
             </fieldset>
           </details>
 
@@ -854,7 +888,9 @@ export function KunstwerkenSection({
                                       setPrijzen((current) => ({ ...current, [key]: event.target.value }))
                                     }
                                     data-testid={`kunstwerk-modal-prijs-${materiaal.id}-${maat.id}`}
-                                    className="w-20 rounded-sm bg-black/40 px-2 py-1 text-sm text-white"
+                                    className={`w-20 rounded-sm border bg-black/40 px-2 py-1 text-sm text-white ${
+                                      (prijzen[key] ?? '') === '' ? 'border-red-500/70' : 'border-transparent'
+                                    }`}
                                   />
                                 </div>
                               </td>
@@ -864,6 +900,11 @@ export function KunstwerkenSection({
                     ))}
                 </tbody>
               </table>
+              {!allePrijzenIngevuld && (
+                <span data-testid="kunstwerk-modal-prijzen-hint" className="text-xs text-red-400">
+                  {t('kunstwerkenPrijzenVerplicht')}
+                </span>
+              )}
             </div>
           )}
 
@@ -877,9 +918,16 @@ export function KunstwerkenSection({
                   value={prijsPerM2}
                   onChange={(event) => setPrijsPerM2(event.target.value)}
                   data-testid="kunstwerk-modal-prijs-per-m2"
-                  className="w-24 rounded-sm bg-black/40 px-2 py-1 text-sm text-white"
+                  className={`w-24 rounded-sm border bg-black/40 px-2 py-1 text-sm text-white ${
+                    !prijsPerM2 || Number(prijsPerM2) <= 0 ? 'border-red-500/70' : 'border-transparent'
+                  }`}
                 />
               </div>
+              {(!prijsPerM2 || Number(prijsPerM2) <= 0) && (
+                <span data-testid="kunstwerk-modal-prijs-per-m2-hint" className="normal-case tracking-normal text-red-400">
+                  {t('kunstwerkenPrijsPerM2Verplicht')}
+                </span>
+              )}
             </label>
           )}
 
@@ -889,8 +937,15 @@ export function KunstwerkenSection({
               value={omschrijvingNl}
               onChange={(event) => setOmschrijvingNl(event.target.value)}
               data-testid="kunstwerk-modal-omschrijving-nl"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+              className={`rounded-sm border bg-black/40 px-3 py-2 text-sm text-white ${
+                omschrijvingNl ? 'border-transparent' : 'border-red-500/70'
+              }`}
             />
+            {!omschrijvingNl && (
+              <span data-testid="kunstwerk-modal-omschrijving-nl-hint" className="normal-case tracking-normal text-red-400">
+                {t('kunstwerkenOmschrijvingNlVerplicht')}
+              </span>
+            )}
           </label>
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
             {t('kunstwerkenLabelOmschrijvingFr')}
