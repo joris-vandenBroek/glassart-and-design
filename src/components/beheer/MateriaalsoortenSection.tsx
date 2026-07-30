@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
+import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import type { Materiaalsoort, Materiaal } from './materiaalTypes';
@@ -169,7 +170,10 @@ export function MateriaalsoortenSection({
       >
         <div data-testid="materiaalsoort-modal" className="flex flex-col gap-2 text-sm text-white/80">
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('materiaalsoortenLabelOmschrijving')}
+            <span>
+              {t('materiaalsoortenLabelOmschrijving')}
+              <RequiredMark />
+            </span>
             <input
               type="text"
               value={omschrijving}
@@ -178,6 +182,8 @@ export function MateriaalsoortenSection({
               className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
             />
           </label>
+
+          <RequiredLegend testId="materiaalsoort-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
 
           <label className="flex items-center gap-2 text-xs uppercase tracking-wide text-white/60">
             <input
