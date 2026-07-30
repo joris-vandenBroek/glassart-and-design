@@ -73,9 +73,7 @@ const KUNSTENAARS: Kunstenaar[] = [
     omschrijvingFr: '',
     omschrijvingDe: '',
     omschrijvingEn: '',
-    verkooprecht: 'open',
-    klantId: null,
-    exclusiefVoorKlantId: null,
+    exclusieveKlantIds: [],
   },
 ];
 const KUNSTWERKEN: Kunstwerk[] = [
@@ -101,6 +99,7 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Kunstwerke
   const onRemove = overrides.onRemove ?? vi.fn().mockResolvedValue(true);
   const onAddStijl = overrides.onAddStijl ?? vi.fn().mockResolvedValue(true);
   const onAddOnderwerp = overrides.onAddOnderwerp ?? vi.fn().mockResolvedValue(true);
+  const onAddSegment = overrides.onAddSegment ?? vi.fn().mockResolvedValue(true);
   const result = render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <CustomerAuthProvider>
@@ -109,6 +108,7 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Kunstwerke
             kunstwerken={KUNSTWERKEN}
             segmenten={SEGMENTEN}
             materialen={MATERIALEN}
+            materiaalsoorten={[]}
             maten={MATEN}
             stijlen={STIJLEN}
             onderwerpen={ONDERWERPEN}
@@ -117,6 +117,7 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Kunstwerke
             onAdd={onAdd}
             onUpdate={onUpdate}
             onRemove={onRemove}
+            onAddSegment={onAddSegment}
             onAddStijl={onAddStijl}
             onAddOnderwerp={onAddOnderwerp}
             {...overrides}
@@ -125,7 +126,7 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Kunstwerke
       </CustomerAuthProvider>
     </NextIntlClientProvider>
   );
-  return { onAdd, onUpdate, onRemove, onAddStijl, onAddOnderwerp, rerender: result.rerender };
+  return { onAdd, onUpdate, onRemove, onAddStijl, onAddOnderwerp, onAddSegment, rerender: result.rerender };
 }
 
 beforeEach(() => {
@@ -860,6 +861,7 @@ describe('KunstwerkenSection', () => {
               onAdd={vi.fn().mockResolvedValue(true)}
               onUpdate={vi.fn().mockResolvedValue(true)}
               onRemove={vi.fn().mockResolvedValue(true)}
+              onAddSegment={vi.fn().mockResolvedValue(true)}
               onAddStijl={onAddStijl}
               onAddOnderwerp={vi.fn().mockResolvedValue(true)}
             />
@@ -877,6 +879,46 @@ describe('KunstwerkenSection', () => {
     const cel = await screen.findByTestId('kunstwerk-modal-prijs-preview-mat-1-maat-1');
     expect(cel).toHaveTextContent('€ 150,00');
     expect(screen.queryByTestId('kunstwerk-modal-prijs-mat-1-maat-1')).not.toBeInTheDocument();
+  });
+
+  it('creates a brand-new segment inline, adds it to the Segmenten table, and auto-selects it on the kunstwerk', async () => {
+    const onAddSegment = vi.fn().mockResolvedValue(true);
+    const { rerender } = renderSection({ onAddSegment });
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-nieuwe-segment-naam'), { target: { value: 'Kantoor' } });
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-nieuwe-segment-toevoegen'));
+    await waitFor(() => expect(onAddSegment).toHaveBeenCalledWith({ omschrijving: 'Kantoor' }));
+
+    // Simulate BeheerShell re-rendering this component with the freshly-refetched segmenten list,
+    // the way it really would once onAddSegment's API call resolves and useApiCollection refetches.
+    rerender(
+      <NextIntlClientProvider locale="nl" messages={messages}>
+        <CustomerAuthProvider>
+          <CartProvider>
+            <KunstwerkenSection
+              kunstwerken={KUNSTWERKEN}
+              segmenten={[...SEGMENTEN, { id: 'seg-3', omschrijving: 'Kantoor' }]}
+              materialen={MATERIALEN}
+              materiaalsoorten={null}
+              maten={MATEN}
+              stijlen={STIJLEN}
+              onderwerpen={ONDERWERPEN}
+              kunstenaars={KUNSTENAARS}
+              loadError={null}
+              onAdd={vi.fn().mockResolvedValue(true)}
+              onUpdate={vi.fn().mockResolvedValue(true)}
+              onRemove={vi.fn().mockResolvedValue(true)}
+              onAddStijl={vi.fn().mockResolvedValue(true)}
+              onAddOnderwerp={vi.fn().mockResolvedValue(true)}
+              onAddSegment={onAddSegment}
+            />
+          </CartProvider>
+        </CustomerAuthProvider>
+      </NextIntlClientProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-segment-seg-3')).toBeChecked());
   });
 
   describe('klant-dialoog preview', () => {
@@ -921,5 +963,43 @@ describe('KunstwerkenSection', () => {
       fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
       expect(screen.getByTestId('product-modal-omschrijving')).toHaveTextContent('Hotel paneel 1');
     });
+  });
+
+  it('shows the toevoegen title when adding and the bewerken title when editing', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Kunstwerk toevoegen');
+    fireEvent.click(screen.getByTestId('modal-close'));
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Kunstwerk bewerken');
+  });
+
+  it('starts on the Algemeen tab and switches tab content when a tab is clicked', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    expect(screen.getByTestId('kunstwerk-modal-tab-algemeen')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('kunstwerk-modal-tab-omschrijvingen')).toHaveAttribute('aria-selected', 'false');
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-tab-omschrijvingen'));
+    expect(screen.getByTestId('kunstwerk-modal-tab-omschrijvingen')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('kunstwerk-modal-tab-algemeen')).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('shows an error dot on the Algemeen tab when naam is empty, and on the Omschrijvingen tab when omschrijvingNl is empty', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    expect(screen.getByTestId('kunstwerk-modal-tab-algemeen-error-dot')).toBeInTheDocument();
+    expect(screen.getByTestId('kunstwerk-modal-tab-omschrijvingen-error-dot')).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Nieuw kunstwerk' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Omschrijving' } });
+    expect(screen.queryByTestId('kunstwerk-modal-tab-omschrijvingen-error-dot')).not.toBeInTheDocument();
+  });
+
+  it('resets to the Algemeen tab each time the modal is reopened', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-tab-omschrijvingen'));
+    fireEvent.click(screen.getByTestId('modal-close'));
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    expect(screen.getByTestId('kunstwerk-modal-tab-algemeen')).toHaveAttribute('aria-selected', 'true');
   });
 });

@@ -9,9 +9,9 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   closeLabel: string;
+  title: ReactNode;
   children: ReactNode;
   wide?: boolean;
-  title?: ReactNode;
   subtitle?: ReactNode;
   footerActions?: ReactNode;
 }
@@ -20,9 +20,9 @@ export function Modal({
   isOpen,
   onClose,
   closeLabel,
+  title,
   children,
   wide = false,
-  title,
   subtitle,
   footerActions,
 }: ModalProps) {
@@ -55,7 +55,7 @@ export function Modal({
         className="absolute inset-0 bg-black/75 backdrop-blur-sm"
       />
       <div
-        className={`relative z-10 max-h-[85vh] w-full overflow-y-auto rounded-lg border border-white/10 bg-charcoal p-6 ${
+        className={`relative z-10 flex max-h-[90vh] w-full flex-col rounded-lg border border-white/10 bg-charcoal ${
           wide ? 'max-w-[1400px]' : 'max-w-lg'
         }`}
       >
@@ -69,14 +69,17 @@ export function Modal({
         >
           ×
         </button>
-        {title && (
-          <div data-testid="modal-header" className="mb-4 border-b border-white/10 pb-3 pr-10">
-            <h2 className="text-base font-semibold tracking-wide text-white">{title}</h2>
-            {subtitle && <p className="mt-0.5 text-xs text-white/50">{subtitle}</p>}
-          </div>
-        )}
-        {children}
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
+        <div data-testid="modal-header" className="shrink-0 border-b border-white/10 px-6 pb-3 pt-6 pr-10">
+          <h2 className="text-base font-semibold tracking-wide text-white">{title}</h2>
+          {subtitle && <p className="mt-0.5 text-xs text-white/50">{subtitle}</p>}
+        </div>
+        <div data-testid="modal-body" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+          {children}
+        </div>
+        <div
+          data-testid="modal-footer"
+          className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-white/10 px-6 pb-6 pt-4"
+        >
           <div className="flex flex-wrap gap-2">{footerActions}</div>
           <button
             type="button"

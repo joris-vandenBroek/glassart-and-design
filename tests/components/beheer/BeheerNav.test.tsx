@@ -6,7 +6,7 @@ import messages from '../../../messages/nl.json';
 
 function renderNav(
   activeSection: BeheerSection = 'klanten',
-  overrideCounts?: Partial<Record<BeheerSection, number>>
+  overrideCounts?: Partial<Record<`${BeheerSection}Count`, number>>
 ) {
   const onSelect = vi.fn();
   const onLogout = vi.fn();

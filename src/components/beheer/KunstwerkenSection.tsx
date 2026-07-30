@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
+import { ModalTabs } from '@/components/ModalTabs';
 import { ProductModal } from '@/components/ProductModal';
 import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 import { useAdminAuth } from '@/lib/useAdminAuth';
@@ -26,11 +27,13 @@ interface KunstwerkenSectionProps {
   onAdd: (data: Omit<Kunstwerk, 'id'>) => Promise<boolean>;
   onUpdate: (id: string, data: Omit<Kunstwerk, 'id'>) => Promise<boolean>;
   onRemove: (id: string) => Promise<boolean>;
+  onAddSegment: (data: Omit<Segment, 'id'>) => Promise<boolean>;
   onAddStijl: (data: Omit<Stijl, 'id'>) => Promise<boolean>;
   onAddOnderwerp: (data: Omit<Onderwerp, 'id'>) => Promise<boolean>;
 }
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; kunstwerk: Kunstwerk } | null;
+type TabId = 'algemeen' | 'kenmerken' | 'prijzen' | 'omschrijvingen';
 type KunstwerkRow = Kunstwerk & { segmentNamen: string; kunstenaarNaam: string };
 
 function toggle(list: string[], id: string): string[] {
@@ -68,6 +71,7 @@ export function KunstwerkenSection({
   onAdd,
   onUpdate,
   onRemove,
+  onAddSegment,
   onAddStijl,
   onAddOnderwerp,
 }: KunstwerkenSectionProps) {
@@ -85,6 +89,9 @@ export function KunstwerkenSection({
   const [stijlIds, setStijlIds] = useState<string[]>(LEGE_FORM.stijlIds);
   const [onderwerpIds, setOnderwerpIds] = useState<string[]>(LEGE_FORM.onderwerpIds);
   const [aiGegenereerd, setAiGegenereerd] = useState<boolean>(LEGE_FORM.aiGegenereerd);
+  const [nieuweSegmentNaam, setNieuweSegmentNaam] = useState('');
+  const [pendingNieuweSegmentNaam, setPendingNieuweSegmentNaam] = useState<string | null>(null);
+  const [segmentToevoegenError, setSegmentToevoegenError] = useState<string | null>(null);
   const [nieuweStijlNaam, setNieuweStijlNaam] = useState('');
   const [nieuweOnderwerpNaam, setNieuweOnderwerpNaam] = useState('');
   const [pendingNieuweStijlNaam, setPendingNieuweStijlNaam] = useState<string | null>(null);
@@ -100,6 +107,18 @@ export function KunstwerkenSection({
   const [isDraggingFoto, setIsDraggingFoto] = useState(false);
   const [backfillBezig, setBackfillBezig] = useState(false);
   const formaatSessionRef = useRef(0);
+
+  const [activeTab, setActiveTab] = useState<TabId>('algemeen');
+
+  useEffect(() => {
+    if (!pendingNieuweSegmentNaam) return;
+    const gevonden = (segmenten ?? []).find((segment) => segment.omschrijving === pendingNieuweSegmentNaam);
+    if (gevonden) {
+      setSegmentIds((current) => (current.includes(gevonden.id) ? current : [...current, gevonden.id]));
+      setPendingNieuweSegmentNaam(null);
+      setNieuweSegmentNaam('');
+    }
+  }, [segmenten, pendingNieuweSegmentNaam]);
 
   useEffect(() => {
     if (!pendingNieuweStijlNaam) return;
@@ -120,6 +139,28 @@ export function KunstwerkenSection({
       setNieuweOnderwerpNaam('');
     }
   }, [onderwerpen, pendingNieuweOnderwerpNaam]);
+
+  async function handleAddNieuweSegment() {
+    const naam = nieuweSegmentNaam.trim();
+    if (!naam) return;
+    setSegmentToevoegenError(null);
+    const bestaande = (segmenten ?? []).find(
+      (segment) => segment.omschrijving.toLowerCase() === naam.toLowerCase()
+    );
+    if (bestaande) {
+      setSegmentIds((current) => (current.includes(bestaande.id) ? current : [...current, bestaande.id]));
+      setNieuweSegmentNaam('');
+      return;
+    }
+    setPendingNieuweSegmentNaam(naam);
+    const success = await onAddSegment({ omschrijving: naam });
+    if (success) {
+      void logActiviteit('segment_toegevoegd', actorFromMedewerker(user), naam);
+    } else {
+      setPendingNieuweSegmentNaam(null);
+      setSegmentToevoegenError(t('kunstwerkenNieuweSegmentError'));
+    }
+  }
 
   async function handleAddNieuweStijl() {
     const naam = nieuweStijlNaam.trim();
@@ -320,6 +361,9 @@ export function KunstwerkenSection({
     setKunstenaarId(LEGE_FORM.kunstenaarId);
     setFormaatState(LEGE_FORM.formaat);
     setSegmentIds(LEGE_FORM.segmentIds);
+    setNieuweSegmentNaam('');
+    setPendingNieuweSegmentNaam(null);
+    setSegmentToevoegenError(null);
     setMateriaalIds((materialen ?? []).map((materiaal) => materiaal.id));
     setMaatIds((maten ?? []).map((maat) => maat.id));
     setStijlIds(LEGE_FORM.stijlIds);
@@ -341,12 +385,14 @@ export function KunstwerkenSection({
 
   function openAdd() {
     formaatSessionRef.current += 1;
+    setActiveTab('algemeen');
     resetForm();
     setModalState({ mode: 'add' });
   }
 
   function openEdit(kunstwerk: Kunstwerk) {
     formaatSessionRef.current += 1;
+    setActiveTab('algemeen');
     const session = formaatSessionRef.current;
     setFoto(kunstwerk.foto);
     setNaam(kunstwerk.naam ?? '');
@@ -422,6 +468,12 @@ export function KunstwerkenSection({
     await handleFotoFile(file);
   }
 
+  const algemeenHeeftFout = !foto || !naam || formaat === null;
+  const kenmerkenHeeftFout = segmentIds.length === 0;
+  // Prices are computed automatically (Prijsmatrix + kunstenaar-opslag), nothing for the
+  // admin to fill in here anymore, so this tab has no error state outside the maatloos case.
+  const prijzenHeeftFout = isMaatloos ? !prijsPerM2 || Number(prijsPerM2) <= 0 : false;
+  const omschrijvingenHeeftFout = !omschrijvingNl;
   const opslaanDisabled =
     !foto ||
     formaat === null ||
@@ -554,6 +606,7 @@ export function KunstwerkenSection({
         isOpen={modalState !== null}
         onClose={closeModal}
         closeLabel={t('modalClose')}
+        title={modalState?.mode === 'edit' ? t('kunstwerkenModalTitelBewerken') : t('kunstwerkenModalTitelToevoegen')}
         wide
         footerActions={
           <>
@@ -583,7 +636,21 @@ export function KunstwerkenSection({
           data-testid="kunstwerk-modal"
           className="grid grid-cols-1 gap-6 text-sm text-white/80 lg:grid-cols-[minmax(0,1fr)_320px] min-[1432px]:grid-cols-[minmax(0,1fr)_560px]"
         >
+          <div className="sticky top-0 z-10 col-span-full bg-charcoal pb-2">
+            <ModalTabs
+              tabs={[
+                { id: 'algemeen', label: t('kunstwerkenTabAlgemeen'), hasError: algemeenHeeftFout },
+                { id: 'kenmerken', label: t('kunstwerkenTabKenmerken'), hasError: kenmerkenHeeftFout },
+                { id: 'prijzen', label: t('kunstwerkenTabPrijzen'), hasError: prijzenHeeftFout },
+                { id: 'omschrijvingen', label: t('kunstwerkenTabOmschrijvingen'), hasError: omschrijvingenHeeftFout },
+              ]}
+              activeTabId={activeTab}
+              onTabChange={setActiveTab}
+              testIdPrefix="kunstwerk-modal"
+            />
+          </div>
           <div className="flex flex-col gap-3">
+              <div className={activeTab === 'algemeen' ? 'flex flex-col gap-3' : 'hidden'}>
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
             {t('kunstwerkenLabelFoto')}
             <span
@@ -694,7 +761,9 @@ export function KunstwerkenSection({
               className="h-24 w-24 rounded object-cover"
             />
           )}
+              </div>
 
+              <div className={activeTab === 'kenmerken' ? 'flex flex-col gap-3' : 'hidden'}>
           <fieldset
             className={`flex flex-col gap-1 rounded-sm border px-2 py-1.5 ${
               segmentIds.length === 0 ? 'border-red-500/70' : 'border-transparent'
@@ -714,6 +783,30 @@ export function KunstwerkenSection({
                 {segment.omschrijving}
               </label>
             ))}
+            <div className="mt-1 flex gap-2">
+              <input
+                type="text"
+                value={nieuweSegmentNaam}
+                onChange={(event) => setNieuweSegmentNaam(event.target.value)}
+                placeholder={t('kunstwerkenNieuweSegmentPlaceholder')}
+                data-testid="kunstwerk-modal-nieuwe-segment-naam"
+                className="flex-1 rounded-sm bg-black/40 px-3 py-1.5 text-sm text-white"
+              />
+              <button
+                type="button"
+                onClick={handleAddNieuweSegment}
+                disabled={!nieuweSegmentNaam.trim()}
+                data-testid="kunstwerk-modal-nieuwe-segment-toevoegen"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-3 py-1.5 text-xs text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
+              >
+                {t('kunstwerkenNieuweSegmentToevoegen')}
+              </button>
+            </div>
+            {segmentToevoegenError && (
+              <span data-testid="kunstwerk-modal-nieuwe-segment-error" className="text-xs text-red-400">
+                {segmentToevoegenError}
+              </span>
+            )}
             {segmentIds.length === 0 && (
               <span data-testid="kunstwerk-modal-segmenten-hint" className="text-xs text-red-400">
                 {t('kunstwerkenSegmentenVerplicht')}
@@ -862,7 +955,9 @@ export function KunstwerkenSection({
             />
             {t('kunstwerkenLabelAiGegenereerd')}
           </label>
+              </div>
 
+              <div className={activeTab === 'prijzen' ? 'flex flex-col gap-3' : 'hidden'}>
           {materiaalIds.length > 0 && maatIds.length > 0 && (
             <div className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wide text-white/60">{t('kunstwerkenLabelPrijzen')}</span>
@@ -935,7 +1030,9 @@ export function KunstwerkenSection({
               )}
             </label>
           )}
+              </div>
 
+              <div className={activeTab === 'omschrijvingen' ? 'flex flex-col gap-3' : 'hidden'}>
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
             {t('kunstwerkenLabelOmschrijvingNl')}
             <textarea
@@ -979,13 +1076,14 @@ export function KunstwerkenSection({
               className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
             />
           </label>
+              </div>
 
-          {actionError && (
-            <p data-testid="kunstwerk-modal-error" className="text-xs text-red-400">
-              {actionError}
-            </p>
-          )}
-          </div>
+              {actionError && (
+                <p data-testid="kunstwerk-modal-error" className="text-xs text-red-400">
+                  {actionError}
+                </p>
+              )}
+            </div>
 
           <div className="lg:sticky lg:top-0 lg:pt-10">
             <div className="flex flex-col gap-1">

@@ -99,4 +99,13 @@ describe('OnderwerpenSection', () => {
       })
     );
   });
+
+  it('shows the toevoegen title when adding and the bewerken title when editing', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('onderwerpen-add'));
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Onderwerp toevoegen');
+    fireEvent.click(screen.getByTestId('modal-close'));
+    fireEvent.click(screen.getByTestId('data-table-row-onderwerp-2'));
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Onderwerp bewerken');
+  });
 });

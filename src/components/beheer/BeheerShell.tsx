@@ -257,13 +257,6 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   });
   const prijsgroepen = useApiCollection<Prijsgroep>('prijsgroepen');
   const kunstenaars = useApiCollection<Kunstenaar>('kunstenaars');
-
-  async function updateKunstenaarVeilig(
-    id: string,
-    data: Partial<Omit<Kunstenaar, 'id'>>
-  ): Promise<boolean> {
-    return kunstenaars.update(id, data);
-  }
   const drukkers = useApiCollection<Drukker>('drukkers');
   const bedrijfsgegevens = useApiRecord<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens', {
     seed: BEDRIJFSGEGEVENS_SEED,
@@ -324,7 +317,6 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             kunstenaars={kunstenaars.items}
             loadError={loadError}
             onKlantUpdated={handleKlantUpdated}
-            onKunstenaarUpdated={updateKunstenaarVeilig}
           />
         ) : activeSection === 'bestellingen' ? (
           <BestellingenSection
@@ -410,6 +402,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             onAdd={kunstwerken.add}
             onUpdate={kunstwerken.update}
             onRemove={kunstwerken.remove}
+            onAddSegment={segmenten.add}
             onAddStijl={stijlen.add}
             onAddOnderwerp={onderwerpen.add}
           />
@@ -419,7 +412,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             klanten={klanten}
             kunstwerken={kunstwerken.items}
             loadError={kunstenaars.error === 'load' ? t('kunstenaarsLoadError') : null}
-            onUpdate={updateKunstenaarVeilig}
+            onUpdate={kunstenaars.update}
             onRemove={kunstenaars.remove}
             onRefetch={kunstenaars.refetch}
           />

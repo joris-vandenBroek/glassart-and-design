@@ -146,6 +146,7 @@ export function MaterialenSection({
         isOpen={modalState !== null}
         onClose={closeModal}
         closeLabel={t('modalClose')}
+        title={modalState?.mode === 'edit' ? t('materialenModalTitelBewerken') : t('materialenModalTitelToevoegen')}
         footerActions={
           <>
             <button

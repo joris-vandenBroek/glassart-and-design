@@ -118,4 +118,27 @@ describe('DrukkerModal zendingen', () => {
     );
     expect(onRemove).not.toHaveBeenCalled();
   });
+
+  it('caps the zendingen list height so it scrolls independently of the modal frame', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => [
+        {
+          id: 'zending-1',
+          verzondenOp: '2026-07-24T10:00:00Z',
+          onderwerp: 'Nieuwe order(s) voor de drukker – 24-7-2026',
+          body: '== Testbedrijf BV ==',
+          bestellingIds: ['header-1'],
+          aantalKlanten: 1,
+          aantalRegels: 1,
+          verzondDoor: 'paul@glassartanddesign.com',
+        },
+      ],
+    });
+    renderModal({ mode: 'edit', drukker: DRUKKER });
+    const zendingRow = await screen.findByTestId('drukker-zending-zending-1');
+    const list = zendingRow.closest('ul');
+    expect(list?.className).toMatch(/max-h-64/);
+    expect(list?.className).toMatch(/overflow-y-auto/);
+  });
 });

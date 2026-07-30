@@ -63,7 +63,8 @@ export interface Kunstwerk {
 export interface Prijsgroep {
   id: string;
   naam: string;
-  kortingspercentage: number;
+  kortingspercentage: number | null;
+  opslagpercentage: number | null;
 }
 
 export interface Drukker {

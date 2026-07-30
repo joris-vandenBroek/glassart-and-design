@@ -31,16 +31,6 @@ function validateLine(line: LineInput): string | null {
 
 // Mirrors src/lib/resolveOrderRight.ts, which is now a client-side UI hint only —
 // this is the real enforcement, since there is no rules-based enforcement layer anymore.
-//
-// NOTE (Task 10): the `kunstenaars` schema used to have `verkooprecht`/`klantId`/
-// `exclusiefVoorKlantId` columns, which this function originally queried. The shared
-// staging database this worktree connects to has already been migrated (by the
-// not-yet-merged-to-master kunstenaar-exclusiviteit-herontwerp work) to a single
-// `exclusieveKlantIds` JSON column, dropping the old three entirely -- querying the
-// old column names now throws "Unknown column" against the real DB. This function is
-// updated here to match the live schema (ported verbatim from that worktree's
-// route.ts) so Task 10's price-recompute logic has a working checkOrderRight to sit
-// behind; the artist-only ("alleen-kunstenaar") concept no longer exists.
 async function checkOrderRight(
   connection: PoolConnection,
   kunstwerkId: string,

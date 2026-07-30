@@ -99,9 +99,7 @@ const KUNSTENAARS = [
     omschrijvingFr: '',
     omschrijvingDe: '',
     omschrijvingEn: '',
-    verkooprecht: 'open',
-    klantId: null,
-    exclusiefVoorKlantId: null,
+    exclusieveKlantIds: [],
   },
 ];
 const STIJLEN = [

@@ -24,7 +24,7 @@ function klant(overrides: Partial<Klant> = {}): Klant {
     invoiceCity: '',
     status: 'Goedgekeurd',
     prijsgroepId: 'pg-1',
-    exclusieveKunstenaarIds: [],
+    kunstenaarId: null,
     ...overrides,
   };
 }

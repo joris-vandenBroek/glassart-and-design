@@ -42,12 +42,14 @@ const KLANT: Klant = {
   invoiceCity: '',
   status: 'Beoordelen',
   prijsgroepId: null,
-  exclusieveKunstenaarIds: [],
+  kunstenaarId: null,
 };
 
+const ANDERE_KLANT: Klant = { ...KLANT, id: 'uid-2', companyName: 'Ander Bedrijf BV', kunstenaarId: 'ka-2' };
+
 const PRIJSGROEPEN: Prijsgroep[] = [
-  { id: 'pg-1', naam: 'Standaard', kortingspercentage: 0 },
-  { id: 'pg-2', naam: 'Premium', kortingspercentage: 10 },
+  { id: 'pg-1', naam: 'Standaard', kortingspercentage: 0, opslagpercentage: null },
+  { id: 'pg-2', naam: 'Premium', kortingspercentage: 10, opslagpercentage: null },
 ];
 
 const KUNSTENAARS: Kunstenaar[] = [
@@ -59,9 +61,7 @@ const KUNSTENAARS: Kunstenaar[] = [
     omschrijvingFr: '',
     omschrijvingDe: '',
     omschrijvingEn: '',
-    verkooprecht: 'open',
-    klantId: null,
-    exclusiefVoorKlantId: null,
+    exclusieveKlantIds: [],
   },
   {
     id: 'ka-2',
@@ -71,9 +71,7 @@ const KUNSTENAARS: Kunstenaar[] = [
     omschrijvingFr: '',
     omschrijvingDe: '',
     omschrijvingEn: '',
-    verkooprecht: 'open',
-    klantId: null,
-    exclusiefVoorKlantId: 'uid-2',
+    exclusieveKlantIds: ['uid-2'],
   },
 ];
 
@@ -81,24 +79,23 @@ function renderModal(
   klant: Klant | null,
   prijsgroepen: Prijsgroep[] | null = PRIJSGROEPEN,
   kunstenaars: Kunstenaar[] | null = KUNSTENAARS,
-  onKunstenaarUpdatedOverride?: (id: string, data: Partial<Omit<Kunstenaar, 'id'>>) => Promise<boolean>
+  klanten: Klant[] | null = [KLANT, ANDERE_KLANT]
 ) {
   const onClose = vi.fn();
   const onUpdated = vi.fn();
-  const onKunstenaarUpdated = onKunstenaarUpdatedOverride ?? vi.fn().mockResolvedValue(true);
   render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <KlantModal
         klant={klant}
         prijsgroepen={prijsgroepen}
         kunstenaars={kunstenaars}
-        onKunstenaarUpdated={onKunstenaarUpdated}
+        klanten={klanten}
         onClose={onClose}
         onUpdated={onUpdated}
       />
     </NextIntlClientProvider>
   );
-  return { onClose, onUpdated, onKunstenaarUpdated };
+  return { onClose, onUpdated };
 }
 
 function patchCall() {
@@ -383,64 +380,51 @@ describe('KlantModal', () => {
     expect(logActiviteitMock).not.toHaveBeenCalled();
   });
 
-  it('toggles a kunstenaar checkbox on and saves exclusieveKunstenaarIds, updating the kunstenaar back-pointer', async () => {
-    const { onUpdated, onKunstenaarUpdated } = renderModal(KLANT);
-    fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-1'));
+  it('shows "Geen" for exclusief recht op kunstenaars when no kunstenaar lists this klant', () => {
+    renderModal(KLANT);
+    expect(screen.getByTestId('klant-modal-exclusieve-kunstenaars-leeg')).toHaveTextContent('Geen');
+  });
+
+  it('shows the kunstenaars that list this klant in hun exclusieveKlantIds, read-only', () => {
+    renderModal(ANDERE_KLANT);
+    expect(screen.getByTestId('klant-modal-exclusieve-kunstenaars')).toHaveTextContent('Bram Steen');
+    expect(screen.queryByTestId('klant-modal-exclusief-ka-2')).not.toBeInTheDocument();
+  });
+
+  it('links this klant account to a kunstenaar via the combobox and saves kunstenaarId', async () => {
+    const { onUpdated } = renderModal(KLANT);
+    fireEvent.focus(screen.getByTestId('klant-modal-kunstenaar'));
+    fireEvent.click(screen.getByTestId('klant-modal-kunstenaar-option-ka-1'));
     fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
+
     await waitFor(() => expect(patchCall()).toBeDefined());
-    expect(patchBody()).toEqual({ exclusieveKunstenaarIds: ['ka-1'] });
-    expect(onKunstenaarUpdated).toHaveBeenCalledWith('ka-1', { exclusiefVoorKlantId: 'uid-1' });
-    expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, exclusieveKunstenaarIds: ['ka-1'] });
+    expect(patchBody()).toEqual({ kunstenaarId: 'ka-1' });
+    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, kunstenaarId: 'ka-1' }));
     expect(logActiviteitMock).toHaveBeenCalledWith(
-      'klant_exclusiviteit_gewijzigd',
+      'klant_kunstenaarkoppeling_gewijzigd',
       { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'Testbedrijf BV'
     );
   });
 
-  it('blocks checking a kunstenaar that another klant already holds exclusively', () => {
+  it('blocks linking a kunstenaar that another klant already claims', () => {
     renderModal(KLANT);
-    fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-2'));
+    fireEvent.focus(screen.getByTestId('klant-modal-kunstenaar'));
+    fireEvent.click(screen.getByTestId('klant-modal-kunstenaar-option-ka-2'));
     expect(screen.getByTestId('klant-modal-error')).toHaveTextContent(
-      'Deze kunstenaar is al exclusief toegewezen aan een andere klant.'
+      'Deze kunstenaar is al gekoppeld aan een ander klantaccount.'
     );
-    expect(screen.getByTestId('klant-modal-exclusief-ka-2')).not.toBeChecked();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('allows unchecking a kunstenaar this klant already holds exclusively, clearing the back-pointer on save', async () => {
-    const { onKunstenaarUpdated } = renderModal({ ...KLANT, exclusieveKunstenaarIds: ['ka-2'] }, PRIJSGROEPEN, [
-      { ...KUNSTENAARS[1], exclusiefVoorKlantId: 'uid-1' },
-    ]);
-    fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-2'));
-    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
-    await waitFor(() => expect(onKunstenaarUpdated).toHaveBeenCalledWith('ka-2', { exclusiefVoorKlantId: null }));
-  });
-
-  it('shows an error and does not report success when a kunstenaar back-pointer write fails', async () => {
-    const onKunstenaarUpdated = vi.fn().mockResolvedValue(false);
-    const { onUpdated } = renderModal(KLANT, PRIJSGROEPEN, KUNSTENAARS, onKunstenaarUpdated);
-    fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-1'));
-    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
-
-    expect(await screen.findByTestId('klant-modal-error')).toHaveTextContent(
-      'Er is iets misgegaan. Probeer het opnieuw.'
-    );
-    expect(onUpdated).not.toHaveBeenCalled();
-    expect(logActiviteitMock).not.toHaveBeenCalled();
-    // De back-pointer is wat de server-side enforcement leest; mislukt die, dan mag het
-    // klantdocument geen exclusiviteit claimen die nergens gehandhaafd wordt.
-    expect(patchCall()).toBeUndefined();
-  });
-
-  it('writes the kunstenaar back-pointer before the klant document', async () => {
-    const onKunstenaarUpdated = vi.fn().mockResolvedValue(true);
-    renderModal(KLANT, PRIJSGROEPEN, KUNSTENAARS, onKunstenaarUpdated);
-    fireEvent.click(screen.getByTestId('klant-modal-exclusief-ka-1'));
+  it('allows clearing an existing kunstenaar-koppeling', async () => {
+    const { onUpdated } = renderModal({ ...KLANT, kunstenaarId: 'ka-1' });
+    fireEvent.focus(screen.getByTestId('klant-modal-kunstenaar'));
+    fireEvent.click(screen.getByTestId('klant-modal-kunstenaar-option-clear'));
     fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
 
     await waitFor(() => expect(patchCall()).toBeDefined());
-    expect(onKunstenaarUpdated.mock.invocationCallOrder[0]).toBeLessThan(
-      fetchMock.mock.invocationCallOrder[fetchMock.mock.calls.indexOf(patchCall()!)]
-    );
+    expect(patchBody()).toEqual({ kunstenaarId: null });
+    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, kunstenaarId: null }));
   });
 });

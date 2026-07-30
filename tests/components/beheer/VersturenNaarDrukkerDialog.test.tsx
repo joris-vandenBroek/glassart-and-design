@@ -43,7 +43,7 @@ const KLANT: Klant = {
   invoiceCity: '',
   status: 'Goedgekeurd',
   prijsgroepId: 'pg-1',
-  exclusieveKunstenaarIds: [],
+  kunstenaarId: null,
 };
 
 const DRUKKERS: Drukker[] = [

@@ -196,7 +196,7 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
                 {t('drukkersZendingenLeeg')}
               </p>
             ) : (
-              <ul className="flex flex-col gap-2">
+              <ul className="flex max-h-64 flex-col gap-2 overflow-y-auto">
                 {zendingen.map((zending) => (
                   <li key={zending.id} data-testid={`drukker-zending-${zending.id}`} className="rounded-sm bg-black/30 p-2 text-xs">
                     <div className="flex items-center justify-between gap-2">

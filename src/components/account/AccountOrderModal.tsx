@@ -35,16 +35,20 @@ export function AccountOrderModal({
   const locale = useLocale();
 
   return (
-    <Modal isOpen={order !== null} onClose={onClose} closeLabel={t('modalClose')}>
+    <Modal
+      isOpen={order !== null}
+      onClose={onClose}
+      closeLabel={t('modalClose')}
+      title={order ? t('modalTitel', { id: order.id }) : ''}
+    >
       {order && (
         <div data-testid="account-order-modal" className="flex flex-col gap-3 text-sm text-white/80">
-          <p className="font-medium">{order.id}</p>
           <p className="text-white/60">
             {order.date} {order.time}
           </p>
 
           {order.lines && order.lines.length > 0 ? (
-            <ul className="flex flex-col gap-2 text-xs">
+            <ul className="flex max-h-72 flex-col gap-2 overflow-y-auto text-xs">
               {order.lines.map((line) => {
                 const kunstwerk = (kunstwerken ?? []).find((k) => k.id === line.kunstwerkId);
                 const materiaal = (materialen ?? []).find((m) => m.id === line.materiaalId);
