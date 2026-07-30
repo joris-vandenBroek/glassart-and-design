@@ -399,6 +399,79 @@ describe('bestelheaders routes', () => {
     expect(lineResponse.status).toBe(401);
   });
 
+  it('rejects a non-positive/non-integer breedte or hoogte on a maatloos kunstwerk', async () => {
+    const { cookie } = await klant('badafmeting@example.com');
+    const kunstwerk = await insertRow<{ id: string }>(
+      'kunstwerken',
+      { naam: 'Maatloos werk 2', materiaalIds: [], maatIds: [], prijsPerM2: 100 } as never,
+      ['materiaalIds', 'maatIds']
+    );
+    createdKunstwerkIds.push(kunstwerk.id);
+
+    const response = await createHeader(
+      postRequest(
+        {
+          lines: [
+            { kunstwerkId: kunstwerk.id, maatId: '', materiaalId: '', prijs: 1, quantity: 1, breedte: -120, hoogte: 60 },
+          ],
+        },
+        cookie
+      )
+    );
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe('invalid-afmeting');
+  });
+
+  it('rejects a maatloos kunstwerk with a zero prijsPerM2 rather than storing a zero prijs', async () => {
+    const { cookie } = await klant('zeroprijsperm2@example.com');
+    const kunstwerk = await insertRow<{ id: string }>(
+      'kunstwerken',
+      { naam: 'Maatloos werk gratis', materiaalIds: [], maatIds: [], prijsPerM2: 0 } as never,
+      ['materiaalIds', 'maatIds']
+    );
+    createdKunstwerkIds.push(kunstwerk.id);
+
+    const response = await createHeader(
+      postRequest(
+        {
+          lines: [
+            { kunstwerkId: kunstwerk.id, maatId: '', materiaalId: '', prijs: 1, quantity: 1, breedte: 120, hoogte: 60 },
+          ],
+        },
+        cookie
+      )
+    );
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe('prijs-onbekend');
+  });
+
+  it('rejects a materiaalId that is not in the kunstwerk\'s own materiaalIds', async () => {
+    const { cookie } = await klant('badmateriaal@example.com');
+    const maatId = await maakMaat(50, 70);
+    const materiaalIdA = await maakMateriaal();
+    const materiaalIdB = await maakMateriaal();
+    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalIdA, 100);
+    // Seed a matrix price for the other materiaal/maat combo too, so if the check were
+    // missing the order would otherwise price and succeed.
+    await getPool().query('INSERT INTO prijsmatrix (id, maatId, materiaalId, prijs) VALUES (UUID(), ?, ?, ?)', [
+      maatId,
+      materiaalIdB,
+      100,
+    ]);
+
+    const response = await createHeader(
+      postRequest(
+        { lines: [{ kunstwerkId, maatId, materiaalId: materiaalIdB, prijs: 100, quantity: 1 }] },
+        cookie
+      )
+    );
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe('materiaal-niet-beschikbaar');
+  });
+
   it('rejects a line with a non-positive quantity', async () => {
     const { cookie } = await klant('e@example.com');
     const maatId = await maakMaat(48, 68);
