@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
+import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import type { Materiaal, Materiaalsoort, Kunstwerk } from './materiaalTypes';
@@ -173,7 +174,10 @@ export function MaterialenSection({
       >
         <div data-testid="materiaal-modal" className="flex flex-col gap-2 text-sm text-white/80">
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('materialenLabelMateriaalsoort')}
+            <span>
+              {t('materialenLabelMateriaalsoort')}
+              <RequiredMark />
+            </span>
             <select
               value={materiaalsoortId}
               onChange={(event) => setMateriaalsoortId(event.target.value)}
@@ -188,7 +192,10 @@ export function MaterialenSection({
             </select>
           </label>
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('materialenLabelDikte')}
+            <span>
+              {t('materialenLabelDikte')}
+              <RequiredMark />
+            </span>
             <input
               type="number"
               value={materiaaldikte}
@@ -198,7 +205,10 @@ export function MaterialenSection({
             />
           </label>
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('materialenLabelOmschrijving')}
+            <span>
+              {t('materialenLabelOmschrijving')}
+              <RequiredMark />
+            </span>
             <input
               type="text"
               value={omschrijving}
@@ -207,6 +217,8 @@ export function MaterialenSection({
               className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
             />
           </label>
+
+          <RequiredLegend testId="materiaal-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
 
           {actionError && (
             <p data-testid="materiaal-modal-error" className="text-xs text-red-400">
