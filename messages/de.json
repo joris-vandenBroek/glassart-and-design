@@ -105,7 +105,6 @@
     "priceOnRequest": "Preis auf Anfrage",
     "customSizeNote": "{count, plural, one {+ # Artikel, Preis folgt nach Angebot} other {+ # Artikel, Preis folgt nach Angebot}}",
     "orderBlockedExclusive": "Dieses Kunstwerk ist exklusiv für einen anderen Kunden reserviert.",
-    "orderBlockedArtistOnly": "Dieses Kunstwerk kann nur vom Künstler selbst bestellt werden.",
     "orderBlockedUnavailable": "Dieses Kunstwerk kann derzeit nicht bestellt werden. Bitte versuchen Sie es später erneut.",
     "placeOrderBlockedItem": "Bestellung kann nicht aufgegeben werden: \"{omschrijving}\" ist nicht (mehr) verfügbar. Entfernen Sie diesen Artikel aus Ihrem Warenkorb und versuchen Sie es erneut.",
     "minimumQuantityError": "Mindestens {minimum} Stück"

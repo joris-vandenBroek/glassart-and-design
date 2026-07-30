@@ -77,7 +77,7 @@ describe('klanten self-service route', () => {
           companyName: 'Escalatiepoging BV',
           status: 'Goedgekeurd',
           prijsgroepId: 'pg-1',
-          exclusieveKunstenaarIds: ['kunstenaar-1'],
+          kunstenaarId: 'kunstenaar-1',
           minimaleAfname: 1,
         },
         cookie
