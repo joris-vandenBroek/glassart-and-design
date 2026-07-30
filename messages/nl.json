@@ -506,6 +506,7 @@
     "kunstwerkenFormaat_vierkant": "Vierkant",
     "kunstwerkenFormaat_liggend": "Liggend",
     "kunstwerkenFormaat_staand": "Staand",
+    "kunstwerkenFormaat_alle": "Alle",
     "kunstwerkenFormaatVerplicht": "Kies een formaat.",
     "kunstwerkenLabelSegmenten": "Segmenten",
     "kunstwerkenSegmentenVerplicht": "Kies minimaal één segment.",

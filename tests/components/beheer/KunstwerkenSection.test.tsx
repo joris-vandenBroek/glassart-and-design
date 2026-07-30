@@ -565,6 +565,30 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).not.toBeDisabled();
   });
 
+  it('selects every maat and disables none when Formaat "Alle" is chosen', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-alle'));
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-2')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).not.toBeDisabled();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).not.toBeDisabled();
+  });
+
+  it('re-enables and re-checks every maat when switching from a narrower formaat to Alle', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1')); // kw-1: formaat 'staand', maatIds ['maat-1']
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-vierkant'));
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).toBeDisabled();
+
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-alle'));
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).not.toBeDisabled();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).not.toBeDisabled();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).toBeChecked();
+  });
+
   it('re-checks every materiaal and every compatible maat when the formaat changes, even if the admin had narrowed the selection first', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('kunstwerken-add'));

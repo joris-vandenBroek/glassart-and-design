@@ -256,7 +256,10 @@ export function KunstwerkenSection({
     setFormaatState(optie);
     setMaatIds(
       (maten ?? [])
-        .filter((maat) => (optie === 'vierkant' ? isVierkanteMaat(maat) : !isVierkanteMaat(maat)))
+        .filter((maat) => {
+          if (optie === 'alle') return true;
+          return optie === 'vierkant' ? isVierkanteMaat(maat) : !isVierkanteMaat(maat);
+        })
         .map((maat) => maat.id)
     );
     // A kunstwerk with every materiaal unchecked is deliberately materiaalloos (priced per
@@ -645,7 +648,7 @@ export function KunstwerkenSection({
               {t('kunstwerkenLabelFormaat')}
             </legend>
             <div className="flex gap-4">
-              {(['vierkant', 'liggend', 'staand'] as const).map((optie) => (
+              {(['vierkant', 'liggend', 'staand', 'alle'] as const).map((optie) => (
                 <label key={optie} className="flex items-center gap-2 text-sm text-white/80">
                   <input
                     type="radio"
@@ -732,7 +735,9 @@ export function KunstwerkenSection({
               <legend className="text-xs uppercase tracking-wide text-white/60">{t('kunstwerkenLabelMaten')}</legend>
               {(maten ?? []).map((maat) => {
                 const incompatibel =
-                  formaat !== null && (formaat === 'vierkant' ? !isVierkanteMaat(maat) : isVierkanteMaat(maat));
+                  formaat !== null &&
+                  formaat !== 'alle' &&
+                  (formaat === 'vierkant' ? !isVierkanteMaat(maat) : isVierkanteMaat(maat));
                 return (
                   <label
                     key={maat.id}
