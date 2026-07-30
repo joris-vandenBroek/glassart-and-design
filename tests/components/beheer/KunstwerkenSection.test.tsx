@@ -722,6 +722,33 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-formaat-staand')).not.toBeChecked();
   });
 
+  it('keeps a maatloos-met-materiaal kunstwerk maatloos when a replacement photo triggers formaat auto-detection', async () => {
+    uploadMock.mockResolvedValue('https://storage.example.com/vervangen.jpg');
+    detectFormaatFromFileMock.mockResolvedValue('staand');
+    const maatloosKunstwerk: Kunstwerk = {
+      ...KUNSTWERKEN[0],
+      id: 'kw-maatloos',
+      materiaalIds: ['mat-1'],
+      maatIds: [],
+      prijzen: [],
+      prijsPerM2: 120,
+    };
+    renderSection({ kunstwerken: [...KUNSTWERKEN, maatloosKunstwerk] });
+
+    fireEvent.click(screen.getByTestId('data-table-row-kw-maatloos'));
+    expect(screen.getByTestId('kunstwerk-modal-prijs-per-m2')).toBeInTheDocument();
+
+    const file = new File(['x'], 'nieuwe-foto.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
+
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-formaat-staand')).toBeChecked());
+
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).not.toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-2')).not.toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-prijs-per-m2')).toBeInTheDocument();
+    expect(screen.getByTestId('kunstwerk-modal-opslaan')).not.toBeDisabled();
+  });
+
   it('detects formaat from the existing photo when opening a kunstwerk that has none set yet', async () => {
     detectFormaatFromImageUrlMock.mockResolvedValue('staand');
     const zonderFormaat: Kunstwerk = { ...KUNSTWERKEN[0], id: 'kw-3', formaat: undefined };
@@ -750,6 +777,28 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-formaat-vierkant')).not.toBeChecked();
     expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).toBeChecked();
     expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).toBeChecked();
+  });
+
+  it('keeps a maatloos-met-materiaal kunstwerk maatloos when opening it auto-detects a formaat', async () => {
+    detectFormaatFromImageUrlMock.mockResolvedValue('vierkant');
+    const maatloosZonderFormaat: Kunstwerk = {
+      ...KUNSTWERKEN[0],
+      id: 'kw-maatloos-zonder-formaat',
+      formaat: undefined,
+      materiaalIds: ['mat-1'],
+      maatIds: [],
+      prijzen: [],
+      prijsPerM2: 120,
+    };
+    renderSection({ kunstwerken: [...KUNSTWERKEN, maatloosZonderFormaat] });
+
+    fireEvent.click(screen.getByTestId('data-table-row-kw-maatloos-zonder-formaat'));
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-formaat-vierkant')).toBeChecked());
+
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).not.toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).not.toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-prijs-per-m2')).toBeInTheDocument();
+    expect(screen.getByTestId('kunstwerk-modal-opslaan')).not.toBeDisabled();
   });
 
   it('does not call the detector when opening a kunstwerk that already has a formaat', () => {

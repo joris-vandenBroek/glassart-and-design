@@ -255,16 +255,23 @@ export function KunstwerkenSection({
     return `${materiaal.materiaaldikte}mm — ${soortNaam}`;
   }
 
-  function setFormaat(optie: KunstwerkFormaat) {
+  // `preserveMaatloos`: when the admin explicitly picks a Formaat radio, every compatible maat
+  // should always be (re-)selected — that's a deliberate, fresh choice. But formaat is also set
+  // automatically in the background by photo auto-detection (handleFotoFile, and openEdit's
+  // detection for legacy rows without a stored formaat); that's a suggestion, not an explicit
+  // admin action, so it must not clobber a deliberately-empty maatIds the same way it must not
+  // clobber a deliberately-empty materiaalIds below. Auto-detect call sites pass `true`.
+  function setFormaat(optie: KunstwerkFormaat, preserveMaatloos = false) {
     setFormaatState(optie);
-    setMaatIds(
-      (maten ?? [])
+    setMaatIds((current) => {
+      if (preserveMaatloos && current.length === 0) return current;
+      return (maten ?? [])
         .filter((maat) => {
           if (optie === 'alle') return true;
           return optie === 'vierkant' ? isVierkanteMaat(maat) : !isVierkanteMaat(maat);
         })
-        .map((maat) => maat.id)
-    );
+        .map((maat) => maat.id);
+    });
     // A kunstwerk with every materiaal unchecked is deliberately materiaalloos (priced per
     // m² instead), not "hasn't picked yet" — resetForm() always starts non-empty, so an
     // empty selection here only ever means the admin chose that. Leave it alone.
@@ -355,7 +362,7 @@ export function KunstwerkenSection({
           return gedetecteerd === 'vierkant' ? !isVierkanteMaat(maat) : isVierkanteMaat(maat);
         });
         if (!conflicteertMetOpgeslagenMaten) {
-          setFormaat(gedetecteerd);
+          setFormaat(gedetecteerd, true);
         }
       });
     }
@@ -374,7 +381,7 @@ export function KunstwerkenSection({
       setFoto(url);
       const gedetecteerd = await detectFormaatFromFile(file);
       if (gedetecteerd && formaatSessionRef.current === session) {
-        setFormaat(gedetecteerd);
+        setFormaat(gedetecteerd, true);
       }
     }
   }

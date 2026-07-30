@@ -90,6 +90,16 @@ const MAATLOOS_MET_MATERIAAL_KUNSTWERK: Kunstwerk = {
   omschrijvingDe: '',
   omschrijvingEn: '',
 };
+// Bad-data fixture: materiaalIds empty (materiaalloos) but maatIds non-empty, which the admin
+// form itself never writes (buildKunstwerkData in KunstwerkenSection.tsx always force-clears
+// maatIds to [] whenever isMateriaalloos). isMaatloos must still treat this as maatloos so a
+// row written some other way (direct API call, migration, hand edit) doesn't render as an
+// unorderable product with no visible select, no price and a permanently disabled button.
+const MATERIAALLOOS_MET_ONVERWACHTE_MAATIDS_KUNSTWERK: Kunstwerk = {
+  ...MATERIAALLOOS_KUNSTWERK,
+  id: 'kw-materiaalloos-bad-data',
+  maatIds: ['maat-1', 'maat-2'],
+};
 const KUNSTENAARS: Kunstenaar[] = [
   {
     id: 'ka-open',
@@ -831,6 +841,17 @@ describe('ProductModal', () => {
     fireEvent.change(screen.getByTestId('product-modal-maat-custom-breedte'), { target: { value: '100' } });
     fireEvent.change(screen.getByTestId('product-modal-maat-custom-hoogte'), { target: { value: '200' } });
     expect(screen.getByTestId('product-modal-prijs')).toHaveTextContent('€ 130,00');
+  });
+
+  it('still treats a materiaalloos kunstwerk as maatloos even if maatIds is unexpectedly non-empty (bad/legacy data), showing free-size inputs and a price', () => {
+    renderModal(() => {}, MATERIAALLOOS_MET_ONVERWACHTE_MAATIDS_KUNSTWERK);
+    expect(screen.queryByTestId('product-modal-materiaal')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('product-modal-maat')).not.toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-maat-custom-breedte')).toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-maat-custom-hoogte')).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('product-modal-maat-custom-breedte'), { target: { value: '100' } });
+    fireEvent.change(screen.getByTestId('product-modal-maat-custom-hoogte'), { target: { value: '200' } });
+    expect(screen.getByTestId('product-modal-prijs')).toHaveTextContent('€ 360,00');
   });
 
   it('adds a maatloos-met-materiaal item to the cart with the chosen materiaal, computed price and entered size', async () => {

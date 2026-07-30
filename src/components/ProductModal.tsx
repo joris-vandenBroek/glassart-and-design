@@ -148,7 +148,7 @@ export function ProductModal({
   // A materiaalloos kunstwerk is always persisted with maatIds: [] (see buildKunstwerkData
   // in KunstwerkenSection.tsx), so isMaatloos is a superset of isMateriaalloos: it also covers
   // "materiaal wel gekozen, maar 0 maten" (e.g. custom-size glass priced per m²).
-  const isMaatloos = kunstwerk.maatIds.length === 0;
+  const isMaatloos = isMateriaalloos || kunstwerk.maatIds.length === 0;
   const prijsRegel = !isCustomSize
     ? kunstwerk.prijzen.find((regel) => regel.materiaalId === materiaalId && regel.maatId === maatId)
     : undefined;
