@@ -448,4 +448,13 @@ describe('KunstenaarsSection', () => {
     );
     expect(onRemove).not.toHaveBeenCalled();
   });
+
+  it('shows the toevoegen title when adding and the bewerken title when editing', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstenaars-add'));
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Kunstenaar toevoegen');
+    fireEvent.click(screen.getByTestId('modal-close'));
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Kunstenaar bewerken');
+  });
 });

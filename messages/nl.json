@@ -585,6 +585,8 @@
     "kunstenaarsToevoegen": "Kunstenaar toevoegen",
     "kunstenaarsOpslaan": "Opslaan",
     "kunstenaarsVerwijderen": "Verwijderen",
+    "kunstenaarsModalTitelToevoegen": "Kunstenaar toevoegen",
+    "kunstenaarsModalTitelBewerken": "Kunstenaar bewerken",
     "kunstenaarsVerwijderBlocked": "Deze kunstenaar is nog aan een kunstwerk gekoppeld en kan niet verwijderd worden.",
     "kunstenaarsVerwijderOnbekend": "Kan nog niet controleren of deze kunstenaar in gebruik is. Probeer het opnieuw.",
     "navKunstenaars": "Kunstenaars",
