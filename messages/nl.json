@@ -276,6 +276,7 @@
   },
   "beheer": {
     "title": "Beheer",
+    "verplichtVeldLegende": "* verplicht veld",
     "naarWebsiteLink": "Naar de website",
     "labelEmail": "E-mailadres",
     "labelPassword": "Wachtwoord",
