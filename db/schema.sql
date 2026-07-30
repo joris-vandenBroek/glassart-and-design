@@ -21,7 +21,8 @@ CREATE TABLE klanten (
   prijsgroepId CHAR(36),
   kunstenaarId CHAR(36),
   minimaleAfname INT,
-  createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_klanten_kunstenaarId (kunstenaarId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE medewerkers (
