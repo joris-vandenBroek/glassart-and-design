@@ -21,7 +21,7 @@ vi.mock('@/lib/logActiviteit', () => ({
 
 const PRIJSGROEPEN: Prijsgroep[] = [
   { id: 'pg-1', naam: 'Standaard', kortingspercentage: 0, opslagpercentage: null },
-  { id: 'pg-2', naam: 'Wholesale', kortingspercentage: 15, opslagpercentage: null },
+  { id: 'pg-2', naam: 'Wholesale', kortingspercentage: '15.00' as unknown as number, opslagpercentage: null },
   { id: 'pg-3', naam: 'Duur', kortingspercentage: null, opslagpercentage: 8 },
 ];
 
@@ -67,6 +67,7 @@ describe('PrijsgroepenSection', () => {
     expect(screen.getByTestId('data-table-row-pg-2')).toHaveTextContent('Wholesale');
     expect(screen.getByTestId('data-table-row-pg-2')).toHaveTextContent('Korting');
     expect(screen.getByTestId('data-table-row-pg-2')).toHaveTextContent('15%');
+    expect(screen.getByTestId('data-table-row-pg-2')).not.toHaveTextContent('15.00%');
     expect(screen.getByTestId('data-table-row-pg-3')).toHaveTextContent('Duur');
     expect(screen.getByTestId('data-table-row-pg-3')).toHaveTextContent('Opslag');
     expect(screen.getByTestId('data-table-row-pg-3')).toHaveTextContent('8%');
@@ -166,12 +167,17 @@ describe('PrijsgroepenSection', () => {
     expect(onRemove).not.toHaveBeenCalled();
   });
 
-  it('deletes a prijsgroep no klant has assigned', async () => {
+  it('deletes a prijsgroep no klant has assigned, and logs prijsgroep_verwijderd', async () => {
     const { onRemove } = renderSection({
       klanten: [{ id: 'uid-1', prijsgroepId: 'pg-2' } as never],
     });
     fireEvent.click(screen.getByTestId('data-table-row-pg-1'));
     fireEvent.click(screen.getByTestId('prijsgroep-modal-verwijderen'));
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith('pg-1'));
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'prijsgroep_verwijderd',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'Standaard'
+    );
   });
 });

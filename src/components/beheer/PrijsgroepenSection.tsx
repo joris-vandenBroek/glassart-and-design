@@ -64,7 +64,7 @@ export function PrijsgroepenSection({
       setPercentage(String(prijsgroep.kortingspercentage));
     } else {
       setType('opslag');
-      setPercentage(String(prijsgroep.opslagpercentage));
+      setPercentage(String(prijsgroep.opslagpercentage ?? ''));
     }
     setActionError(null);
     setModalState({ mode: 'edit', prijsgroep });
@@ -115,12 +115,14 @@ export function PrijsgroepenSection({
     {
       key: 'kortingspercentage',
       label: t('prijsgroepenColType'),
+      sortable: false,
       render: (row) => (row.kortingspercentage != null ? t('prijsgroepenTypeKorting') : t('prijsgroepenTypeOpslag')),
     },
     {
       key: 'opslagpercentage',
       label: t('prijsgroepenColPercentage'),
-      render: (row) => `${row.kortingspercentage ?? row.opslagpercentage}%`,
+      sortable: false,
+      render: (row) => `${Number(row.kortingspercentage ?? row.opslagpercentage)}%`,
     },
   ];
 
