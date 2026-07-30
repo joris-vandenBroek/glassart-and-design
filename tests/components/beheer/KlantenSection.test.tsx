@@ -66,8 +66,8 @@ const KLANTEN: Klant[] = [
 ];
 
 const PRIJSGROEPEN: Prijsgroep[] = [
-  { id: 'pg-1', naam: 'Standaard', kortingspercentage: 0 },
-  { id: 'pg-2', naam: 'Premium', kortingspercentage: 10 },
+  { id: 'pg-1', naam: 'Standaard', kortingspercentage: 0, opslagpercentage: null },
+  { id: 'pg-2', naam: 'Premium', kortingspercentage: 10, opslagpercentage: null },
 ];
 
 function renderSection(overrides: Partial<React.ComponentProps<typeof KlantenSection>> = {}) {

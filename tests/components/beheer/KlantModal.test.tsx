@@ -48,8 +48,8 @@ const KLANT: Klant = {
 const ANDERE_KLANT: Klant = { ...KLANT, id: 'uid-2', companyName: 'Ander Bedrijf BV', kunstenaarId: 'ka-2' };
 
 const PRIJSGROEPEN: Prijsgroep[] = [
-  { id: 'pg-1', naam: 'Standaard', kortingspercentage: 0 },
-  { id: 'pg-2', naam: 'Premium', kortingspercentage: 10 },
+  { id: 'pg-1', naam: 'Standaard', kortingspercentage: 0, opslagpercentage: null },
+  { id: 'pg-2', naam: 'Premium', kortingspercentage: 10, opslagpercentage: null },
 ];
 
 const KUNSTENAARS: Kunstenaar[] = [
