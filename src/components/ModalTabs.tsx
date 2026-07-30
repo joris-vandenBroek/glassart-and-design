@@ -1,19 +1,19 @@
 'use client';
 
-export interface ModalTab {
-  id: string;
+export interface ModalTab<Id extends string = string> {
+  id: Id;
   label: string;
   hasError?: boolean;
 }
 
-interface ModalTabsProps {
-  tabs: ModalTab[];
-  activeTabId: string;
-  onTabChange: (id: string) => void;
+interface ModalTabsProps<Id extends string> {
+  tabs: ModalTab<Id>[];
+  activeTabId: Id;
+  onTabChange: (id: Id) => void;
   testIdPrefix: string;
 }
 
-export function ModalTabs({ tabs, activeTabId, onTabChange, testIdPrefix }: ModalTabsProps) {
+export function ModalTabs<Id extends string>({ tabs, activeTabId, onTabChange, testIdPrefix }: ModalTabsProps<Id>) {
   return (
     <div role="tablist" className="flex shrink-0 gap-1 border-b border-white/10">
       {tabs.map((tab) => {
@@ -34,10 +34,14 @@ export function ModalTabs({ tabs, activeTabId, onTabChange, testIdPrefix }: Moda
           >
             {tab.label}
             {tab.hasError && (
-              <span
-                data-testid={`${testIdPrefix}-tab-${tab.id}-error-dot`}
-                className="absolute right-1 top-1.5 h-1.5 w-1.5 rounded-full bg-red-400"
-              />
+              <>
+                <span className="sr-only"> (bevat een fout)</span>
+                <span
+                  data-testid={`${testIdPrefix}-tab-${tab.id}-error-dot`}
+                  aria-hidden="true"
+                  className="absolute right-1 top-1.5 h-1.5 w-1.5 rounded-full bg-red-400"
+                />
+              </>
             )}
           </button>
         );

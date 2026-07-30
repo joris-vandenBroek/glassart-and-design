@@ -43,7 +43,6 @@ export function AccountOrderModal({
     >
       {order && (
         <div data-testid="account-order-modal" className="flex flex-col gap-3 text-sm text-white/80">
-          <p className="font-medium">{order.id}</p>
           <p className="text-white/60">
             {order.date} {order.time}
           </p>

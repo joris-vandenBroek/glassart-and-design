@@ -33,6 +33,7 @@ interface KunstwerkenSectionProps {
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; kunstwerk: Kunstwerk } | null;
 type PrijzenState = Record<string, string>;
+type TabId = 'algemeen' | 'kenmerken' | 'prijzen' | 'omschrijvingen';
 type KunstwerkRow = Kunstwerk & { segmentNamen: string; kunstenaarNaam: string };
 
 function prijsKey(materiaalId: string, maatId: string) {
@@ -109,7 +110,6 @@ export function KunstwerkenSection({
   const [backfillBezig, setBackfillBezig] = useState(false);
   const formaatSessionRef = useRef(0);
 
-  type TabId = 'algemeen' | 'kenmerken' | 'prijzen' | 'omschrijvingen';
   const [activeTab, setActiveTab] = useState<TabId>('algemeen');
 
   useEffect(() => {
@@ -585,7 +585,7 @@ export function KunstwerkenSection({
           data-testid="kunstwerk-modal"
           className="grid grid-cols-1 gap-6 text-sm text-white/80 lg:grid-cols-[minmax(0,1fr)_320px] min-[1432px]:grid-cols-[minmax(0,1fr)_560px]"
         >
-          <div className="col-span-full">
+          <div className="sticky top-0 z-10 col-span-full bg-charcoal pb-2">
             <ModalTabs
               tabs={[
                 { id: 'algemeen', label: t('kunstwerkenTabAlgemeen'), hasError: algemeenHeeftFout },
@@ -594,7 +594,7 @@ export function KunstwerkenSection({
                 { id: 'omschrijvingen', label: t('kunstwerkenTabOmschrijvingen'), hasError: omschrijvingenHeeftFout },
               ]}
               activeTabId={activeTab}
-              onTabChange={(id) => setActiveTab(id as TabId)}
+              onTabChange={setActiveTab}
               testIdPrefix="kunstwerk-modal"
             />
           </div>
