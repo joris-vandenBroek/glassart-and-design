@@ -214,4 +214,10 @@ describe('MatenSection', () => {
     fireEvent.click(screen.getByTestId('data-table-row-maat-2'));
     expect(screen.getByTestId('modal-header')).toHaveTextContent('Maat bewerken');
   });
+
+  it('shows the required-field legend', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('maten-add'));
+    expect(screen.getByTestId('maat-modal-verplicht-legende')).toHaveTextContent('* verplicht veld');
+  });
 });
