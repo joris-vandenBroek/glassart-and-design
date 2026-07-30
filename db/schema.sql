@@ -90,7 +90,10 @@ CREATE TABLE maten (
 CREATE TABLE prijsgroepen (
   id CHAR(36) PRIMARY KEY,
   naam VARCHAR(255) NOT NULL,
-  kortingspercentage DECIMAL(5,2) NOT NULL DEFAULT 0
+  kortingspercentage DECIMAL(5,2) NULL,
+  opslagpercentage DECIMAL(5,2) NULL,
+  CONSTRAINT chk_prijsgroep_korting_xor_opslag
+    CHECK ((kortingspercentage IS NULL) <> (opslagpercentage IS NULL))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE kunstenaars (
