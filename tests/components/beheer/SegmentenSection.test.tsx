@@ -169,4 +169,10 @@ describe('SegmentenSection', () => {
     fireEvent.click(screen.getByTestId('data-table-row-seg-2'));
     expect(screen.getByTestId('modal-header')).toHaveTextContent('Segment bewerken');
   });
+
+  it('shows the required-field legend', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('segmenten-add'));
+    expect(screen.getByTestId('segment-modal-verplicht-legende')).toHaveTextContent('* verplicht veld');
+  });
 });
