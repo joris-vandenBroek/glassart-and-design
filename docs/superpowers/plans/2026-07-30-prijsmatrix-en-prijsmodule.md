@@ -267,7 +267,6 @@ async function maakMateriaal(dikte: number) {
 async function maakKunstenaarMetOpslag(prijsopslag: number) {
   const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
     naam: 'Test kunstenaar',
-    verkooprecht: 'open',
   } as never);
   createdKunstenaarIds.push(kunstenaar.id);
   await getPool().query(
@@ -291,7 +290,6 @@ describe('prijsopslagVoorKunstenaar', () => {
   it('returns 0 for a kunstenaar with no kunstenaarAfspraken row', async () => {
     const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
       naam: 'Geen afspraken',
-      verkooprecht: 'open',
     } as never);
     createdKunstenaarIds.push(kunstenaar.id);
     expect(await prijsopslagVoorKunstenaar(getPool(), kunstenaar.id)).toBe(0);
@@ -765,7 +763,6 @@ In `tests/app/api/kunstenaars.test.ts`, change the test `'stores and retrieves p
   it('stores and retrieves prijsafspraken and prijsopslag only for staff, keyed by the kunstenaar id', async () => {
     const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
       naam: 'Dana',
-      verkooprecht: 'open',
     } as never);
     createdKunstenaarIds.push(kunstenaar.id);
     const sessionId = await createSession('medewerker', 'staff-1');
@@ -791,7 +788,6 @@ In `tests/app/api/kunstenaars.test.ts`, change the test `'stores and retrieves p
   it('defaults prijsopslag to 0 for a kunstenaar with no kunstenaarAfspraken row yet', async () => {
     const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
       naam: 'Erik',
-      verkooprecht: 'open',
     } as never);
     createdKunstenaarIds.push(kunstenaar.id);
     const sessionId = await createSession('medewerker', 'staff-1');
@@ -1650,7 +1646,6 @@ describe('bestelheaders routes', () => {
     const materiaalId = await maakMateriaal();
     const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
       naam: 'Opslag Artiest',
-      verkooprecht: 'open',
     } as never);
     createdKunstenaarIds.push(kunstenaar.id);
     await getPool().query('INSERT INTO kunstenaarAfspraken (id, prijsopslag) VALUES (?, ?)', [kunstenaar.id, 40]);
@@ -1918,11 +1913,11 @@ describe('bestelheaders routes', () => {
     const klantB = await klant('h@example.com');
     const maatId = await maakMaat(49, 69);
     const materiaalId = await maakMateriaal();
-    const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
-      naam: 'Exclusieve Artiest',
-      verkooprecht: 'open',
-      exclusiefVoorKlantId: klantB.id,
-    } as never);
+    const kunstenaar = await insertRow<{ id: string }>(
+      'kunstenaars',
+      { naam: 'Exclusieve Artiest', exclusieveKlantIds: [klantB.id] } as never,
+      ['exclusieveKlantIds']
+    );
     createdKunstenaarIds.push(kunstenaar.id);
     const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100, kunstenaar.id);
 
@@ -1936,25 +1931,10 @@ describe('bestelheaders routes', () => {
     );
     expect(allowedForB.status).toBe(201);
   });
-
-  it('rejects ordering an artist-only artwork from a klant who is not that artist', async () => {
-    const { cookie } = await klant('i@example.com');
-    const maatId = await maakMaat(51, 71);
-    const materiaalId = await maakMateriaal();
-    const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
-      naam: 'Alleen-zelf Artiest',
-      verkooprecht: 'alleen-kunstenaar',
-    } as never);
-    createdKunstenaarIds.push(kunstenaar.id);
-    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100, kunstenaar.id);
-
-    const response = await createHeader(
-      postRequest({ lines: [{ kunstwerkId, maatId, materiaalId, prijs: 100, quantity: 1 }] }, cookie)
-    );
-    expect(response.status).toBe(403);
-  });
 });
 ```
+
+Note on this rewrite: the plan as originally written (against `db/schema.sql` on `master`) assumed `kunstenaars` still had `verkooprecht`/`klantId`/`exclusiefVoorKlantId` and included a second test for an "artist-only" artwork (`verkooprecht: 'alleen-kunstenaar'`). That concept has been dropped entirely from the live schema/application in the (not yet merged into `master`) exclusiviteit-herontwerp work — `checkOrderRight` in `src/app/api/bestelheaders/route.ts` only ever checks `exclusieveKlantIds` now, with no equivalent "artist-only" case. The exclusivity test above was adapted to `exclusieveKlantIds`; the artist-only test was dropped because it no longer corresponds to any real code path. `insertRow` needs `['exclusieveKlantIds']` as its `jsonColumns` argument here since it's a JSON column (unlike the other `kunstenaars` inserts in this file, which only set `naam` and have no JSON columns to serialize).
 
 - [ ] **Step 2: Run tests to verify the new/changed ones fail**
 
