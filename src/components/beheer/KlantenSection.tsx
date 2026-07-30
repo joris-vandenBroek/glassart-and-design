@@ -36,7 +36,6 @@ interface KlantenSectionProps {
   kunstenaars: Kunstenaar[] | null;
   loadError: string | null;
   onKlantUpdated: (klant: Klant) => void;
-  onKunstenaarUpdated: (id: string, data: Partial<Omit<Kunstenaar, 'id'>>) => Promise<boolean>;
 }
 
 export function KlantenSection({
@@ -45,7 +44,6 @@ export function KlantenSection({
   kunstenaars,
   loadError,
   onKlantUpdated,
-  onKunstenaarUpdated,
 }: KlantenSectionProps) {
   const t = useTranslations('beheer');
   const [selectedKlant, setSelectedKlant] = useState<Klant | null>(null);
@@ -92,7 +90,7 @@ export function KlantenSection({
         klant={selectedKlant}
         prijsgroepen={prijsgroepen}
         kunstenaars={kunstenaars}
-        onKunstenaarUpdated={onKunstenaarUpdated}
+        klanten={klanten}
         onClose={() => setSelectedKlant(null)}
         onUpdated={(updated) => {
           onKlantUpdated(updated);
