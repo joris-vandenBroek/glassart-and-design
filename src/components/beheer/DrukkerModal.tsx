@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Modal } from '@/components/Modal';
+import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import { useDrukkerZendingen } from '@/lib/useDrukkerZendingen';
@@ -116,7 +117,10 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
     >
       <div data-testid="drukker-modal" className="flex flex-col gap-2 text-sm text-white/80">
         <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-          {t('drukkersLabelNaam')}
+          <span>
+            {t('drukkersLabelNaam')}
+            <RequiredMark />
+          </span>
           <input
             type="text"
             value={fields.naam}
@@ -158,7 +162,10 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
           </label>
         </div>
         <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-          {t('drukkersLabelEmail')}
+          <span>
+            {t('drukkersLabelEmail')}
+            <RequiredMark />
+          </span>
           <input
             type="email"
             value={fields.email}
@@ -177,6 +184,8 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
             className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
           />
         </label>
+
+        <RequiredLegend testId="drukker-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
 
         {actionError && (
           <p data-testid="drukker-modal-error" className="text-xs text-red-400">

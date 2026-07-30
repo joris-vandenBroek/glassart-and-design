@@ -44,6 +44,14 @@ beforeEach(() => {
   fetchMock.mockReset();
 });
 
+describe('DrukkerModal verplichte velden', () => {
+  it('shows the required-field legend', () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal({ mode: 'add' });
+    expect(screen.getByTestId('drukker-modal-verplicht-legende')).toHaveTextContent('* verplicht veld');
+  });
+});
+
 describe('DrukkerModal zendingen', () => {
   it('shows "nog geen mails verzonden" once loaded empty', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
