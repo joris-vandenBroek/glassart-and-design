@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Modal } from '@/components/Modal';
+import { Combobox } from '@/components/Combobox';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import type { Klant } from './KlantenSection';
@@ -57,22 +58,22 @@ interface KlantModalProps {
   klant: Klant | null;
   prijsgroepen: Prijsgroep[] | null;
   kunstenaars: Kunstenaar[] | null;
+  klanten: Klant[] | null;
   onClose: () => void;
   onUpdated: (klant: Klant) => void;
-  onKunstenaarUpdated: (id: string, data: Partial<Omit<Kunstenaar, 'id'>>) => Promise<boolean>;
 }
 
 export function KlantModal({
   klant,
   prijsgroepen,
   kunstenaars,
+  klanten,
   onClose,
   onUpdated,
-  onKunstenaarUpdated,
 }: KlantModalProps) {
   const t = useTranslations('beheer');
   const [prijsgroepId, setPrijsgroepId] = useState('');
-  const [exclusieveKunstenaarIds, setExclusieveKunstenaarIds] = useState<string[]>([]);
+  const [kunstenaarId, setKunstenaarId] = useState<string | null>(null);
   const [minimaleAfname, setMinimaleAfname] = useState('');
   const [fields, setFields] = useState<EditableFields | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -82,7 +83,7 @@ export function KlantModal({
   useEffect(() => {
     if (klant) {
       setPrijsgroepId(klant.prijsgroepId ?? '');
-      setExclusieveKunstenaarIds(klant.exclusieveKunstenaarIds);
+      setKunstenaarId(klant.kunstenaarId);
       setMinimaleAfname(klant.minimaleAfname != null ? String(klant.minimaleAfname) : '');
       setFields(fieldsFromKlant(klant));
       setIsEditing(false);
@@ -105,19 +106,18 @@ export function KlantModal({
     setIsEditing(false);
   }
 
-  function toggle(list: string[], id: string): string[] {
-    return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
-  }
-
-  function toggleExclusiviteit(kunstenaarId: string) {
-    const kunstenaar = (kunstenaars ?? []).find((item) => item.id === kunstenaarId);
-    const isChecked = exclusieveKunstenaarIds.includes(kunstenaarId);
-    if (!isChecked && kunstenaar?.exclusiefVoorKlantId && kunstenaar.exclusiefVoorKlantId !== klant?.id) {
-      setError(t('klantenExclusiviteitBlocked'));
-      return;
+  function handleKunstenaarChange(nextKunstenaarId: string | null) {
+    if (nextKunstenaarId) {
+      const alreadyClaimedBy = (klanten ?? []).find(
+        (other) => other.id !== klant?.id && other.kunstenaarId === nextKunstenaarId
+      );
+      if (alreadyClaimedBy) {
+        setError(t('klantenKunstenaarBlocked'));
+        return;
+      }
     }
     setError(null);
-    setExclusieveKunstenaarIds((current) => toggle(current, kunstenaarId));
+    setKunstenaarId(nextKunstenaarId);
   }
 
   async function handleOpslaan() {
@@ -129,46 +129,22 @@ export function KlantModal({
       isEditing && (Object.keys(origineleFields) as (keyof EditableFields)[]).some((key) => fields[key] !== origineleFields[key]);
     const prijsgroepGewijzigd =
       klant.status === 'Goedgekeurd' && prijsgroepId !== '' && prijsgroepId !== (klant.prijsgroepId ?? '');
-    const exclusiviteitGewijzigd =
-      exclusieveKunstenaarIds.length !== klant.exclusieveKunstenaarIds.length ||
-      exclusieveKunstenaarIds.some((id) => !klant.exclusieveKunstenaarIds.includes(id));
+    const kunstenaarIdGewijzigd = kunstenaarId !== (klant.kunstenaarId ?? null);
     const trimmedMinimaleAfname = minimaleAfname.trim();
     const parsedMinimaleAfname =
       trimmedMinimaleAfname === '' ? null : Math.max(1, Math.round(Number(trimmedMinimaleAfname)) || 1);
     const minimaleAfnameGewijzigd = parsedMinimaleAfname !== (klant.minimaleAfname ?? null);
 
-    if (!veldenGewijzigd && !prijsgroepGewijzigd && !exclusiviteitGewijzigd && !minimaleAfnameGewijzigd) {
+    if (!veldenGewijzigd && !prijsgroepGewijzigd && !kunstenaarIdGewijzigd && !minimaleAfnameGewijzigd) {
       setIsEditing(false);
       return;
     }
 
     try {
-      // Eerst de back-pointers op de kunstenaars, dán pas het klantdocument. Alleen
-      // `Kunstenaar.exclusiefVoorKlantId` wordt door de server-side check en de winkel-UI
-      // gelezen; `Klant.exclusieveKunstenaarIds` is puur administratief. Faalt een
-      // back-pointer halverwege, dan stoppen we met het klantdocument ONGEWIJZIGD in
-      // plaats van met een klant die een niet-gehandhaafde exclusiviteit claimt.
-      if (exclusiviteitGewijzigd) {
-        const added = exclusieveKunstenaarIds.filter((id) => !klant.exclusieveKunstenaarIds.includes(id));
-        const removed = klant.exclusieveKunstenaarIds.filter((id) => !exclusieveKunstenaarIds.includes(id));
-        for (const id of added) {
-          if (!(await onKunstenaarUpdated(id, { exclusiefVoorKlantId: klant.id }))) {
-            setError(t('klantenActionError'));
-            return;
-          }
-        }
-        for (const id of removed) {
-          if (!(await onKunstenaarUpdated(id, { exclusiefVoorKlantId: null }))) {
-            setError(t('klantenActionError'));
-            return;
-          }
-        }
-      }
-
       const updates: Partial<Klant> = {};
       if (veldenGewijzigd) Object.assign(updates, fields);
       if (prijsgroepGewijzigd) updates.prijsgroepId = prijsgroepId;
-      if (exclusiviteitGewijzigd) updates.exclusieveKunstenaarIds = exclusieveKunstenaarIds;
+      if (kunstenaarIdGewijzigd) updates.kunstenaarId = kunstenaarId;
       if (minimaleAfnameGewijzigd) updates.minimaleAfname = parsedMinimaleAfname;
 
       const response = await fetch(`/api/klanten/${klant.id}`, {
@@ -180,7 +156,7 @@ export function KlantModal({
 
       if (veldenGewijzigd) void logActiviteit('klant_gewijzigd', actorFromMedewerker(user), klant.companyName);
       if (prijsgroepGewijzigd) void logActiviteit('klant_prijsgroep_gewijzigd', actorFromMedewerker(user), klant.companyName);
-      if (exclusiviteitGewijzigd) void logActiviteit('klant_exclusiviteit_gewijzigd', actorFromMedewerker(user), klant.companyName);
+      if (kunstenaarIdGewijzigd) void logActiviteit('klant_kunstenaarkoppeling_gewijzigd', actorFromMedewerker(user), klant.companyName);
       if (minimaleAfnameGewijzigd) void logActiviteit('klant_minimale_afname_gewijzigd', actorFromMedewerker(user), klant.companyName);
 
       onUpdated({ ...klant, ...updates });
@@ -463,22 +439,38 @@ export function KlantModal({
             </label>
           </div>
 
-          <fieldset className="flex flex-col gap-1">
-            <legend className="text-xs uppercase tracking-wide text-white/60">
+          <div className="flex items-end gap-2">
+            <label className="flex flex-1 flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+              {t('klantenLabelKunstenaar')}
+              <Combobox
+                options={(kunstenaars ?? []).map((kunstenaar) => ({ value: kunstenaar.id, label: kunstenaar.naam }))}
+                value={kunstenaarId}
+                onChange={handleKunstenaarChange}
+                placeholder={t('klantenKunstenaarPlaceholder')}
+                noResultsLabel={t('klantenKunstenaarGeenResultaten')}
+                clearLabel={t('klantenKunstenaarGeen')}
+                testId="klant-modal-kunstenaar"
+              />
+            </label>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-xs uppercase tracking-wide text-white/60">
               {t('klantenLabelExclusieveKunstenaars')}
-            </legend>
-            {(kunstenaars ?? []).map((kunstenaar) => (
-              <label key={kunstenaar.id} className="flex items-center gap-2 text-sm text-white/80">
-                <input
-                  type="checkbox"
-                  checked={exclusieveKunstenaarIds.includes(kunstenaar.id)}
-                  onChange={() => toggleExclusiviteit(kunstenaar.id)}
-                  data-testid={`klant-modal-exclusief-${kunstenaar.id}`}
-                />
-                {kunstenaar.naam}
-              </label>
-            ))}
-          </fieldset>
+            </span>
+            {(() => {
+              const namen = (kunstenaars ?? [])
+                .filter((kunstenaar) => kunstenaar.exclusieveKlantIds.includes(klant.id))
+                .map((kunstenaar) => kunstenaar.naam);
+              return namen.length === 0 ? (
+                <p data-testid="klant-modal-exclusieve-kunstenaars-leeg" className="text-white/50">
+                  {t('klantenExclusieveKunstenaarsLeeg')}
+                </p>
+              ) : (
+                <p data-testid="klant-modal-exclusieve-kunstenaars">{namen.join(', ')}</p>
+              );
+            })()}
+          </div>
 
           <div className="flex items-end gap-2">
             <label className="flex flex-1 flex-col gap-1 text-xs uppercase tracking-wide text-white/60">

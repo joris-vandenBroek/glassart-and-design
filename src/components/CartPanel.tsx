@@ -23,7 +23,7 @@ export function CartPanel() {
   const [emailError, setEmailError] = useState(false);
   const { items, isHydrated, totalQuantity, totalPrice, unpricedLineCount, removeItem, clear } = useCart();
   const { user, isCustomer } = useCustomerAuth();
-  // Het mandje leeft in localStorage en kan dagen oud zijn; de verkooprechten worden
+  // Het mandje leeft in localStorage en kan dagen oud zijn; de exclusiviteit wordt
   // daarom vlak vóór het plaatsen opnieuw uit de actuele collecties gelezen. Alleen voor
   // goedgekeurde klanten: dit paneel hangt in de navigatie van élke pagina, en niemand
   // anders kan een bestelling plaatsen. `skip` haalt de collecties alsnog op zodra de

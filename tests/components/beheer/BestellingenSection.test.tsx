@@ -64,7 +64,7 @@ const KLANTEN: Klant[] = [
     invoiceCity: '',
     status: 'Goedgekeurd',
     prijsgroepId: 'pg-1',
-    exclusieveKunstenaarIds: [],
+    kunstenaarId: null,
   },
 ];
 

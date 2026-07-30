@@ -2,9 +2,7 @@ import { NextResponse } from 'next/server';
 import { updateRow, deleteRow } from '@/lib/server/crud';
 import { requireMedewerker, requireKlant } from '@/lib/server/requireAuth';
 
-const KLANTEN_JSON_COLUMNS = ['exclusieveKunstenaarIds'];
-
-// Full-field admin edit (status, prijsgroepId, exclusieveKunstenaarIds, ...) -- staff only.
+// Full-field admin edit (status, prijsgroepId, kunstenaarId, ...) -- staff only.
 // A klant's own self-service edit goes through the narrowly-scoped /api/klanten/me instead.
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   if (!(await requireMedewerker(request))) {
@@ -12,7 +10,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
   try {
     const data = await request.json();
-    await updateRow('klanten', params.id, data, KLANTEN_JSON_COLUMNS);
+    await updateRow('klanten', params.id, data);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: 'server-error' }, { status: 500 });

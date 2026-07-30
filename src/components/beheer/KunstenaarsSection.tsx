@@ -4,7 +4,6 @@ import { useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
-import { Combobox } from '@/components/Combobox';
 import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
@@ -23,7 +22,7 @@ interface KunstenaarsSectionProps {
 }
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; kunstenaar: Kunstenaar } | null;
-type KunstenaarRow = Kunstenaar & { verkooprechtLabel: string; klantNaam: string };
+type KunstenaarRow = Kunstenaar & { exclusiviteitLabel: string };
 
 const LEGE_FORM = {
   foto: null as string | null,
@@ -33,8 +32,7 @@ const LEGE_FORM = {
   omschrijvingDe: '',
   omschrijvingEn: '',
   prijsafspraken: '',
-  verkooprecht: 'open' as Kunstenaar['verkooprecht'],
-  klantId: null as string | null,
+  exclusieveKlantIds: [] as string[],
 };
 
 export function KunstenaarsSection({
@@ -57,8 +55,7 @@ export function KunstenaarsSection({
   const [omschrijvingDe, setOmschrijvingDe] = useState(LEGE_FORM.omschrijvingDe);
   const [omschrijvingEn, setOmschrijvingEn] = useState(LEGE_FORM.omschrijvingEn);
   const [prijsafspraken, setPrijsafspraken] = useState(LEGE_FORM.prijsafspraken);
-  const [verkooprecht, setVerkooprecht] = useState<Kunstenaar['verkooprecht']>(LEGE_FORM.verkooprecht);
-  const [klantId, setKlantId] = useState<string | null>(LEGE_FORM.klantId);
+  const [exclusieveKlantIds, setExclusieveKlantIds] = useState<string[]>(LEGE_FORM.exclusieveKlantIds);
   const [prijsafsprakenLaden, setPrijsafsprakenLaden] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isDraggingFoto, setIsDraggingFoto] = useState(false);
@@ -76,6 +73,13 @@ export function KunstenaarsSection({
     return map;
   }, [klanten]);
 
+  // De klant (indien aanwezig) wiens kunstenaarId naar déze kunstenaar wijst -- gebruikt
+  // om de "bij 2 klanten moet 1 de kunstenaar zelf zijn"-regel te valideren.
+  function eigenKlantId(kunstenaarId: string | null): string | null {
+    if (kunstenaarId === null) return null;
+    return (klanten ?? []).find((klant) => klant.kunstenaarId === kunstenaarId)?.id ?? null;
+  }
+
   if (loadError) {
     return (
       <p data-testid="kunstenaars-error" className="text-xs text-red-400">
@@ -90,11 +94,10 @@ export function KunstenaarsSection({
 
   const rows: KunstenaarRow[] = kunstenaars.map((kunstenaar) => ({
     ...kunstenaar,
-    verkooprechtLabel:
-      kunstenaar.verkooprecht === 'open'
-        ? t('kunstenaarsVerkooprechtOpen')
-        : t('kunstenaarsVerkooprechtAlleenKunstenaar'),
-    klantNaam: kunstenaar.klantId ? klantNaamById.get(kunstenaar.klantId) ?? kunstenaar.klantId : '',
+    exclusiviteitLabel:
+      kunstenaar.exclusieveKlantIds.length === 0
+        ? t('kunstenaarsExclusiviteitOpen')
+        : kunstenaar.exclusieveKlantIds.map((id) => klantNaamById.get(id) ?? id).join(', '),
   }));
 
   function resetForm() {
@@ -105,8 +108,7 @@ export function KunstenaarsSection({
     setOmschrijvingDe(LEGE_FORM.omschrijvingDe);
     setOmschrijvingEn(LEGE_FORM.omschrijvingEn);
     setPrijsafspraken(LEGE_FORM.prijsafspraken);
-    setVerkooprecht(LEGE_FORM.verkooprecht);
-    setKlantId(LEGE_FORM.klantId);
+    setExclusieveKlantIds(LEGE_FORM.exclusieveKlantIds);
     setPrijsafsprakenLaden(false);
     setActionError(null);
   }
@@ -126,8 +128,7 @@ export function KunstenaarsSection({
     setOmschrijvingDe(kunstenaar.omschrijvingDe);
     setOmschrijvingEn(kunstenaar.omschrijvingEn);
     setPrijsafspraken(LEGE_FORM.prijsafspraken);
-    setVerkooprecht(kunstenaar.verkooprecht);
-    setKlantId(kunstenaar.klantId);
+    setExclusieveKlantIds(kunstenaar.exclusieveKlantIds);
     setActionError(null);
     // Opslaan blijft geblokkeerd tot de afspraken geladen zijn: naam en omschrijving
     // zijn al ingevuld, dus zonder deze vlag zou je kunnen opslaan vóórdat de fetch
@@ -190,10 +191,44 @@ export function KunstenaarsSection({
     await handleFotoFile(file);
   }
 
+  function toggleExclusieveKlant(klantId: string, huidigeKunstenaarId: string | null) {
+    const isChecked = exclusieveKlantIds.includes(klantId);
+    if (isChecked) {
+      setActionError(null);
+      setExclusieveKlantIds((current) => current.filter((id) => id !== klantId));
+      return;
+    }
+    if (exclusieveKlantIds.length >= 2) return;
+    const next = [...exclusieveKlantIds, klantId];
+    if (next.length === 2) {
+      const eigenId = eigenKlantId(huidigeKunstenaarId);
+      if (eigenId === null || !next.includes(eigenId)) {
+        setActionError(t('kunstenaarsExclusiviteitOngeldig'));
+        return;
+      }
+    }
+    setActionError(null);
+    setExclusieveKlantIds(next);
+  }
+
   const opslaanDisabled = !naam || !omschrijvingNl || uploading || prijsafsprakenLaden;
 
   async function handleSave() {
     if (!modalState) return;
+    // Defensieve herhaling van de check die toggleExclusieveKlant al bij het aanvinken
+    // uitvoert: een klant kan tussentijds via het Klant-scherm ontkoppeld zijn (of aan
+    // een andere kunstenaar gekoppeld), waardoor een eerder geldige 2-klantenlijst
+    // ongeldig wordt zonder dat deze modal daar iets van meekrijgt. Zonder deze check
+    // zou opslaan van een niet-gerelateerd veld die ongeldige lijst stilzwijgend
+    // verbatim wegschrijven.
+    if (exclusieveKlantIds.length === 2) {
+      const huidigeKunstenaarId = modalState.mode === 'edit' ? modalState.kunstenaar.id : null;
+      const eigenId = eigenKlantId(huidigeKunstenaarId);
+      if (eigenId === null || !exclusieveKlantIds.includes(eigenId)) {
+        setActionError(t('kunstenaarsExclusiviteitOngeldig'));
+        return;
+      }
+    }
     const data = {
       foto,
       naam,
@@ -201,9 +236,7 @@ export function KunstenaarsSection({
       omschrijvingFr,
       omschrijvingDe,
       omschrijvingEn,
-      verkooprecht,
-      klantId,
-      exclusiefVoorKlantId: modalState.mode === 'edit' ? modalState.kunstenaar.exclusiefVoorKlantId : null,
+      exclusieveKlantIds,
     };
     let success: boolean;
     try {
@@ -293,8 +326,7 @@ export function KunstenaarsSection({
 
   const columns: Column<KunstenaarRow>[] = [
     { key: 'naam', label: t('kunstenaarsColNaam') },
-    { key: 'verkooprechtLabel', label: t('kunstenaarsColVerkooprecht') },
-    { key: 'klantNaam', label: t('kunstenaarsColKlant') },
+    { key: 'exclusiviteitLabel', label: t('kunstenaarsColKlant') },
   ];
 
   return (
@@ -446,31 +478,28 @@ export function KunstenaarsSection({
             />
           </label>
 
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('kunstenaarsLabelVerkooprecht')}
-            <select
-              value={verkooprecht}
-              onChange={(event) => setVerkooprecht(event.target.value as Kunstenaar['verkooprecht'])}
-              data-testid="kunstenaar-modal-verkooprecht"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-            >
-              <option value="open">{t('kunstenaarsVerkooprechtOpen')}</option>
-              <option value="alleen-kunstenaar">{t('kunstenaarsVerkooprechtAlleenKunstenaar')}</option>
-            </select>
-          </label>
-
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('kunstenaarsLabelKlant')}
-            <Combobox
-              options={(klanten ?? []).map((klant) => ({ value: klant.id, label: klant.companyName }))}
-              value={klantId}
-              onChange={setKlantId}
-              placeholder={t('kunstenaarsKlantPlaceholder')}
-              noResultsLabel={t('kunstenaarsKlantGeenResultaten')}
-              clearLabel={t('kunstenaarsKlantGeen')}
-              testId="kunstenaar-modal-klant"
-            />
-          </label>
+          <fieldset className="flex flex-col gap-1">
+            <legend className="text-xs uppercase tracking-wide text-white/60">
+              {t('kunstenaarsLabelKlant')}
+            </legend>
+            {(klanten ?? []).map((klant) => {
+              const huidigeKunstenaarId = modalState?.mode === 'edit' ? modalState.kunstenaar.id : null;
+              const isChecked = exclusieveKlantIds.includes(klant.id);
+              const isDisabled = !isChecked && exclusieveKlantIds.length >= 2;
+              return (
+                <label key={klant.id} className="flex items-center gap-2 text-sm text-white/80">
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    disabled={isDisabled}
+                    onChange={() => toggleExclusieveKlant(klant.id, huidigeKunstenaarId)}
+                    data-testid={`kunstenaar-modal-klant-${klant.id}`}
+                  />
+                  {klant.companyName}
+                </label>
+              );
+            })}
+          </fieldset>
 
           {actionError && (
             <p data-testid="kunstenaar-modal-error" className="text-xs text-red-400">
