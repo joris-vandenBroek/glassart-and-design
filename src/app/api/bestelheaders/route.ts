@@ -41,21 +41,18 @@ async function checkOrderRight(
   if (!kunstenaarId) return true;
 
   const [kunstenaarRows] = await connection.query(
-    'SELECT verkooprecht, klantId, exclusiefVoorKlantId FROM kunstenaars WHERE id = ?',
+    'SELECT exclusieveKlantIds FROM kunstenaars WHERE id = ?',
     [kunstenaarId]
   );
-  const kunstenaar = (
-    kunstenaarRows as Array<{ verkooprecht: string; klantId: string | null; exclusiefVoorKlantId: string | null }>
-  )[0];
+  const kunstenaar = (kunstenaarRows as Array<{ exclusieveKlantIds: string | null }>)[0];
   if (!kunstenaar) return false;
 
-  const isOwnArtwork = kunstenaar.klantId != null && kunstenaar.klantId === klantId;
-  if (isOwnArtwork) return true;
-  const isExclusiveToOther =
-    kunstenaar.exclusiefVoorKlantId != null && kunstenaar.exclusiefVoorKlantId !== klantId;
-  if (isExclusiveToOther) return false;
-  const isArtistOnlyForOthers = kunstenaar.verkooprecht !== 'open';
-  return !isArtistOnlyForOthers;
+  const exclusieveKlantIds: string[] =
+    typeof kunstenaar.exclusieveKlantIds === 'string'
+      ? JSON.parse(kunstenaar.exclusieveKlantIds)
+      : kunstenaar.exclusieveKlantIds ?? [];
+  if (exclusieveKlantIds.length === 0) return true;
+  return exclusieveKlantIds.includes(klantId);
 }
 
 export async function POST(request: Request) {

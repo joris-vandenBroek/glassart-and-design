@@ -250,14 +250,14 @@ describe('bestelheaders routes', () => {
     expect(response.status).toBe(400);
   });
 
-  it('rejects ordering an artwork exclusively reserved for a different klant', async () => {
+  it('rejects ordering an artwork exclusively reserved for a different klant, allows the listed klant', async () => {
     const klantA = await klant('g@example.com');
     const klantB = await klant('h@example.com');
-    const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
-      naam: 'Exclusieve Artiest',
-      verkooprecht: 'open',
-      exclusiefVoorKlantId: klantB.id,
-    } as never);
+    const kunstenaar = await insertRow<{ id: string }>(
+      'kunstenaars',
+      { naam: 'Exclusieve Artiest', exclusieveKlantIds: [klantB.id] } as never,
+      ['exclusieveKlantIds']
+    );
     createdKunstenaarIds.push(kunstenaar.id);
     const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
       naam: 'Werk',
@@ -282,12 +282,15 @@ describe('bestelheaders routes', () => {
     expect(allowedForB.status).toBe(201);
   });
 
-  it('rejects ordering an artist-only artwork from a klant who is not that artist', async () => {
-    const { cookie } = await klant('i@example.com');
-    const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
-      naam: 'Alleen-zelf Artiest',
-      verkooprecht: 'alleen-kunstenaar',
-    } as never);
+  it('rejects ordering an artwork exclusive to 2 klanten from a third klant, allows both listed klanten', async () => {
+    const klantA = await klant('exclusief-a@example.com');
+    const klantB = await klant('exclusief-b@example.com');
+    const klantC = await klant('exclusief-c@example.com');
+    const kunstenaar = await insertRow<{ id: string }>(
+      'kunstenaars',
+      { naam: 'Twee-klanten Artiest', exclusieveKlantIds: [klantA.id, klantB.id] } as never,
+      ['exclusieveKlantIds']
+    );
     createdKunstenaarIds.push(kunstenaar.id);
     const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
       naam: 'Werk 2',
@@ -295,12 +298,9 @@ describe('bestelheaders routes', () => {
     } as never);
     createdKunstwerkIds.push(kunstwerk.id);
 
-    const response = await createHeader(
-      postRequest(
-        { lines: [{ kunstwerkId: kunstwerk.id, maatId: 'maat-1', materiaalId: 'mat-1', prijs: 100, quantity: 1 }] },
-        cookie
-      )
-    );
-    expect(response.status).toBe(403);
+    const line = { kunstwerkId: kunstwerk.id, maatId: 'maat-1', materiaalId: 'mat-1', prijs: 100, quantity: 1 };
+    expect((await createHeader(postRequest({ lines: [line] }, klantA.cookie))).status).toBe(201);
+    expect((await createHeader(postRequest({ lines: [line] }, klantB.cookie))).status).toBe(201);
+    expect((await createHeader(postRequest({ lines: [line] }, klantC.cookie))).status).toBe(403);
   });
 });

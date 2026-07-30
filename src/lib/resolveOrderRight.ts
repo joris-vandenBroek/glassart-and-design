@@ -1,6 +1,6 @@
 import type { Kunstenaar } from '@/components/beheer/kunstenaarTypes';
 
-export type OrderBlockedReason = 'exclusive' | 'artistOnly' | 'unavailable' | null;
+export type OrderBlockedReason = 'exclusive' | 'unavailable' | null;
 
 export interface OrderRight {
   canOrder: boolean;
@@ -15,6 +15,11 @@ export interface OrderRight {
  * (een dangling `kunstenaarId` is daar een afwijzing), faalt deze helper óók: een nog niet
  * geladen collectie of een dangling `kunstenaarId` levert `blockedReason: 'unavailable'`
  * op in plaats van stilzwijgend "wel bestelbaar".
+ *
+ * `exclusieveKlantIds` is de enige bron van waarheid: een lege lijst is open voor
+ * iedereen, een gevulde lijst is alleen voor de klanten daarin — ook als de kunstenaar
+ * zelf een gekoppeld klantaccount heeft dat er niet in staat. Er is bewust géén
+ * automatische "kunstenaar mag altijd eigen werk bestellen"-uitzondering meer.
  */
 export function resolveOrderRight(
   kunstenaarId: string | null,
@@ -28,19 +33,10 @@ export function resolveOrderRight(
   const kunstenaar =
     kunstenaarId && kunstenaars ? kunstenaars.find((item) => item.id === kunstenaarId) ?? null : null;
   const missing = kunstenaarId != null && kunstenaars !== null && kunstenaar === null;
-  const isOwnArtwork = kunstenaar?.klantId != null && kunstenaar.klantId === userUid;
-  const isExclusiveToOther = kunstenaar?.exclusiefVoorKlantId != null && kunstenaar.exclusiefVoorKlantId !== userUid;
-  // Spiegelt `ka.verkooprecht == 'open'` uit de regels: alles wat niet expliciet 'open' is,
-  // valt dicht — ook een ontbrekende of onbekende waarde.
-  const isArtistOnlyForOthers = kunstenaar?.verkooprecht !== 'open' && !isOwnArtwork;
-  const canOrder =
-    dataReady && !missing && (!kunstenaar || isOwnArtwork || (!isExclusiveToOther && !isArtistOnlyForOthers));
-  const blockedReason: OrderBlockedReason = canOrder
-    ? null
-    : !dataReady || missing
-    ? 'unavailable'
-    : isExclusiveToOther
-    ? 'exclusive'
-    : 'artistOnly';
+  const exclusieveKlantIds = kunstenaar?.exclusieveKlantIds ?? [];
+  const isRestricted = exclusieveKlantIds.length > 0;
+  const isAllowed = userUid != null && exclusieveKlantIds.includes(userUid);
+  const canOrder = dataReady && !missing && (!kunstenaar || !isRestricted || isAllowed);
+  const blockedReason: OrderBlockedReason = canOrder ? null : !dataReady || missing ? 'unavailable' : 'exclusive';
   return { canOrder, blockedReason };
 }

@@ -26,7 +26,7 @@ export interface Klant {
   invoiceCity: string;
   status: 'Beoordelen' | 'Goedgekeurd' | 'Afgewezen';
   prijsgroepId: string | null;
-  exclusieveKunstenaarIds: string[];
+  kunstenaarId: string | null;
   minimaleAfname?: number | null;
 }
 
