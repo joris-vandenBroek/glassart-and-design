@@ -171,7 +171,8 @@
     "confirmationMessage": "Wir melden uns innerhalb von 2 Werktagen bei Ihnen.",
     "emailInUseError": "Diese E-Mail-Adresse ist bereits registriert.",
     "weakPasswordError": "Das Passwort muss mindestens 6 Zeichen enthalten.",
-    "submitError": "Etwas ist schiefgelaufen, bitte versuchen Sie es erneut."
+    "submitError": "Etwas ist schiefgelaufen, bitte versuchen Sie es erneut.",
+    "verplichtVeldLegende": "* Pflichtfeld"
   },
   "loginPage": {
     "title": "Anmelden",

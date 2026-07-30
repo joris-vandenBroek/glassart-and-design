@@ -171,7 +171,8 @@
     "confirmationMessage": "Nous vous contacterons sous 2 jours ouvrés.",
     "emailInUseError": "Cette adresse e-mail est déjà utilisée.",
     "weakPasswordError": "Le mot de passe doit contenir au moins 6 caractères.",
-    "submitError": "Une erreur s'est produite, veuillez réessayer."
+    "submitError": "Une erreur s'est produite, veuillez réessayer.",
+    "verplichtVeldLegende": "* champ obligatoire"
   },
   "loginPage": {
     "title": "Connexion",

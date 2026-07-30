@@ -171,7 +171,8 @@
     "confirmationMessage": "We nemen binnen 2 werkdagen contact met u op.",
     "emailInUseError": "Dit e-mailadres is al geregistreerd.",
     "weakPasswordError": "Wachtwoord moet minimaal 6 tekens bevatten.",
-    "submitError": "Er is iets misgegaan, probeer het opnieuw."
+    "submitError": "Er is iets misgegaan, probeer het opnieuw.",
+    "verplichtVeldLegende": "* verplicht veld"
   },
   "loginPage": {
     "title": "Inloggen",

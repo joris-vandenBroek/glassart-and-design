@@ -171,7 +171,8 @@
     "confirmationMessage": "We'll get in touch within 2 business days.",
     "emailInUseError": "This email address is already registered.",
     "weakPasswordError": "Password must be at least 6 characters.",
-    "submitError": "Something went wrong, please try again."
+    "submitError": "Something went wrong, please try again.",
+    "verplichtVeldLegende": "* required field"
   },
   "loginPage": {
     "title": "Log in",

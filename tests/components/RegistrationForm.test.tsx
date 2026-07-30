@@ -216,4 +216,9 @@ describe('RegistrationForm', () => {
     expect(logActiviteitMock).toHaveBeenCalledTimes(1); // only the page-visit log
     expect(logActiviteitMock).not.toHaveBeenCalledWith('word_klant_aanvraag', expect.anything());
   });
+
+  it('shows the required-field legend', () => {
+    renderForm();
+    expect(screen.getByTestId('word-klant-verplicht-legende')).toHaveTextContent('* verplicht veld');
+  });
 });
