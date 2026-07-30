@@ -38,7 +38,6 @@ const KUNSTWERKEN = [
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
     formaat: 'staand',
-    prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 150 }],
     kunstenaarId: 'ka-1',
     stijlIds: ['stijl-abstract'],
     onderwerpIds: ['onderwerp-bloemen'],
@@ -55,7 +54,6 @@ const KUNSTWERKEN = [
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
     formaat: 'liggend',
-    prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 200 }],
     stijlIds: ['stijl-minimalistisch'],
     onderwerpIds: ['onderwerp-dieren'],
     aiGegenereerd: true,
@@ -72,7 +70,6 @@ const KUNSTWERKEN = [
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
     formaat: 'vierkant',
-    prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 175 }],
     stijlIds: ['stijl-abstract', 'stijl-minimalistisch'],
     onderwerpIds: [],
     omschrijvingNl: 'Kunstwerk in beide segmenten',
@@ -81,6 +78,13 @@ const KUNSTWERKEN = [
     omschrijvingEn: '',
   },
 ];
+const KUNSTWERKEN_PRIJZEN: Record<string, Array<{ materiaalId: string; maatId: string; prijs: number }>> = {
+  'kw-1': [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 150 }],
+  'kw-2': [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 200 }],
+  'kw-3': [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 175 }],
+  'kw-4': [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 220 }],
+  'kw-alle': [],
+};
 const MATERIALEN = [
   { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Veiligheidsglas' },
 ];
@@ -150,6 +154,9 @@ beforeEach(() => {
     }
     if (url === '/api/instellingen/bestelinstellingen') {
       return { ok: true, json: async () => null };
+    }
+    if (url === '/api/kunstwerken/prijzen') {
+      return { ok: true, json: async () => KUNSTWERKEN_PRIJZEN };
     }
     const resource = url.replace(/^\/api\//, '');
     return { ok: true, json: async () => collections[resource] ?? [] };
@@ -413,7 +420,6 @@ describe('ProductsGrid', () => {
           segmentIds: ['seg-hotel'],
           materiaalIds: ['mat-1'],
           maatIds: ['maat-1'],
-          prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 220 }],
           stijlIds: [],
           onderwerpIds: [],
           omschrijvingNl: 'Kunstwerk zonder formaat',
@@ -442,7 +448,6 @@ describe('ProductsGrid', () => {
           materiaalIds: ['mat-1'],
           maatIds: [],
           formaat: 'alle',
-          prijzen: [],
           prijsPerM2: 65,
           stijlIds: [],
           onderwerpIds: [],

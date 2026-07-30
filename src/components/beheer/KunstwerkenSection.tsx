@@ -993,6 +993,7 @@ export function KunstwerkenSection({
               <ProductModal
                 variant="preview"
                 kunstwerk={previewKunstwerk}
+                prijzen={[]}
                 materialen={materialen}
                 maten={maten}
                 materiaalsoorten={materiaalsoorten}
