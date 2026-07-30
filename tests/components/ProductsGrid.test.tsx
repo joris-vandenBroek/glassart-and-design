@@ -430,4 +430,41 @@ describe('ProductsGrid', () => {
     const filtered = screen.getAllByTestId('product-card');
     expect(filtered).toHaveLength(1); // only kw-1, kw-4 has no formaat so never matches
   });
+
+  it('matches a kunstwerk with Formaat "Alle" against every formaat filter and its count', async () => {
+    mockCollections({
+      kunstwerken: [
+        ...KUNSTWERKEN,
+        {
+          id: 'kw-alle',
+          foto: 'https://example.com/kw-alle.jpg',
+          segmentIds: ['seg-hotel'],
+          materiaalIds: ['mat-1'],
+          maatIds: [],
+          formaat: 'alle',
+          prijzen: [],
+          prijsPerM2: 65,
+          stijlIds: [],
+          onderwerpIds: [],
+          omschrijvingNl: 'Op maat, elk formaat',
+          omschrijvingFr: '',
+          omschrijvingDe: '',
+          omschrijvingEn: '',
+        },
+      ],
+    });
+    renderProductsGrid();
+    expect(await screen.findAllByTestId('product-card')).toHaveLength(4);
+
+    expect(screen.getByTestId('facet-formaat-option-staand')).toHaveTextContent('2'); // kw-1 + kw-alle
+    expect(screen.getByTestId('facet-formaat-option-liggend')).toHaveTextContent('2'); // kw-2 + kw-alle
+    expect(screen.getByTestId('facet-formaat-option-vierkant')).toHaveTextContent('2'); // kw-3 + kw-alle
+
+    fireEvent.click(screen.getByTestId('facet-formaat-option-staand'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(2); // kw-1 and kw-alle both match
+
+    fireEvent.click(screen.getByTestId('facet-formaat-option-staand'));
+    fireEvent.click(screen.getByTestId('facet-formaat-option-vierkant'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(2); // kw-3 and kw-alle both match
+  });
 });
