@@ -472,6 +472,54 @@ describe('bestelheaders routes', () => {
     expect(body.error).toBe('materiaal-niet-beschikbaar');
   });
 
+  it('rejects a maatId that is a real maat but not one of the kunstwerk\'s own maatIds', async () => {
+    const { cookie } = await klant('badmaat@example.com');
+    const maatIdA = await maakMaat(51, 71);
+    const maatIdB = await maakMaat(52, 72);
+    const materiaalId = await maakMateriaal();
+    const kunstwerkId = await maakGeprijsdKunstwerk(maatIdA, materiaalId, 100);
+    // Seed a matrix price for the other maat/materiaal combo too, so if the check were
+    // missing the order would otherwise price and succeed (via the "op-aanvraag" fallback
+    // that's meant only for the legitimate custom-size case).
+    await getPool().query('INSERT INTO prijsmatrix (id, maatId, materiaalId, prijs) VALUES (UUID(), ?, ?, ?)', [
+      maatIdB,
+      materiaalId,
+      100,
+    ]);
+
+    const response = await createHeader(
+      postRequest(
+        { lines: [{ kunstwerkId, maatId: maatIdB, materiaalId, prijs: 100, quantity: 1 }] },
+        cookie
+      )
+    );
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe('maat-niet-beschikbaar');
+  });
+
+  it('rejects a custom-size line (maatId: \'\') with no breedte/hoogte sent', async () => {
+    const { cookie } = await klant('geenafmeting@example.com');
+    const maatId = await maakMaat(53, 73);
+    const materiaalId = await maakMateriaal();
+    const kunstwerk = await insertRow<{ id: string }>(
+      'kunstwerken',
+      { naam: 'Eigen maat zonder afmeting', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
+      ['materiaalIds', 'maatIds']
+    );
+    createdKunstwerkIds.push(kunstwerk.id);
+
+    const response = await createHeader(
+      postRequest(
+        { lines: [{ kunstwerkId: kunstwerk.id, maatId: '', materiaalId, prijs: 1, quantity: 1 }] },
+        cookie
+      )
+    );
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe('afmeting-vereist');
+  });
+
   it('rejects a line with a non-positive quantity', async () => {
     const { cookie } = await klant('e@example.com');
     const maatId = await maakMaat(48, 68);

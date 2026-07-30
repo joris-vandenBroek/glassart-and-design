@@ -17,11 +17,32 @@ import { hashPassword } from '@/lib/server/password';
 // DELETEd an arbitrary real segment instead. Always resolve the id from the POST
 // response instead of list ordering.
 const createdSegmentIds: string[] = [];
+// Tracked so the deletion-guard tests' cleanup lives in afterEach and survives an assertion
+// throw -- previously this cleanup ran inline right after the assertion, which would
+// permanently orphan the klant/bestelheader/bestellijn/maat rows in the shared staging
+// database if the assertion ever failed.
+const createdBestellijnGuardKlantEmails: string[] = [];
+const createdBestellijnGuardHeaderIds: string[] = [];
+const createdBestellijnGuardMaatIds: string[] = [];
 
 afterEach(async () => {
   if (createdSegmentIds.length > 0) {
     await getPool().query('DELETE FROM segmenten WHERE id IN (?)', [createdSegmentIds]);
     createdSegmentIds.length = 0;
+  }
+  if (createdBestellijnGuardHeaderIds.length > 0) {
+    // Cascades to bestellines (ON DELETE CASCADE), and must run before deleting the klant
+    // since bestelheaders.klantId has a plain (non-cascading) FK to klanten.
+    await getPool().query('DELETE FROM bestelheaders WHERE id IN (?)', [createdBestellijnGuardHeaderIds]);
+    createdBestellijnGuardHeaderIds.length = 0;
+  }
+  if (createdBestellijnGuardKlantEmails.length > 0) {
+    await getPool().query('DELETE FROM klanten WHERE email IN (?)', [createdBestellijnGuardKlantEmails]);
+    createdBestellijnGuardKlantEmails.length = 0;
+  }
+  if (createdBestellijnGuardMaatIds.length > 0) {
+    await getPool().query('DELETE FROM maten WHERE id IN (?)', [createdBestellijnGuardMaatIds]);
+    createdBestellijnGuardMaatIds.length = 0;
   }
 });
 
@@ -179,16 +200,15 @@ describe('generic lookup-resource routes', () => {
       params: { resource: 'maten' },
     });
     const created = await createResponse.json();
+    createdBestellijnGuardMaatIds.push(created.id);
     const { headerId, klantEmail } = await maakBestellijnVoorMaat(created.id);
+    createdBestellijnGuardHeaderIds.push(headerId);
+    createdBestellijnGuardKlantEmails.push(klantEmail);
 
     const deleteResponse = await deleteResource(jsonRequest('DELETE', undefined, cookie), {
       params: { resource: 'maten', id: created.id },
     });
     expect(deleteResponse.status).toBe(409);
-
-    await getPool().query('DELETE FROM bestelheaders WHERE id = ?', [headerId]);
-    await getPool().query('DELETE FROM klanten WHERE email = ?', [klantEmail]);
-    await getPool().query('DELETE FROM maten WHERE id = ?', [created.id]);
   });
 
   it('allows deleting a maat that has never been used in a bestellijn', async () => {
@@ -197,6 +217,9 @@ describe('generic lookup-resource routes', () => {
       params: { resource: 'maten' },
     });
     const created = await createResponse.json();
+    // If the assertion below fails and the maat is never actually deleted, this afterEach
+    // cleanup still catches it; if the DELETE did succeed, this is a harmless no-op.
+    createdBestellijnGuardMaatIds.push(created.id);
 
     const deleteResponse = await deleteResource(jsonRequest('DELETE', undefined, cookie), {
       params: { resource: 'maten', id: created.id },

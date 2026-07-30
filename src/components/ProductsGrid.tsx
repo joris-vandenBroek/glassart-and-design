@@ -45,7 +45,7 @@ export function ProductsGrid() {
   const kunstenaars = useApiCollection<Kunstenaar>('kunstenaars');
   const stijlen = useApiCollection<Stijl>('stijlen');
   const onderwerpen = useApiCollection<Onderwerp>('onderwerpen');
-  const prijzenPerKunstwerk = usePrijzenPerKunstwerk();
+  const { prijzenPerKunstwerk } = usePrijzenPerKunstwerk();
 
   if (segmenten.items === null || kunstwerken.items === null) {
     return null;

@@ -1,6 +1,7 @@
 import { describe, expect, it, afterEach } from 'vitest';
 import { getPool } from '@/lib/server/db';
 import { insertRow } from '@/lib/server/crud';
+import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { GET as getKunstwerkPrijzen } from '@/app/api/kunstwerken/prijzen/route';
 
 const createdMaatIds: string[] = [];
@@ -46,6 +47,11 @@ async function maakMateriaal() {
   return materiaal.id;
 }
 
+async function medewerkerCookie(): Promise<string> {
+  const sessionId = await createSession('medewerker', 'staff-1');
+  return `${SESSION_COOKIE_NAME}=${sessionId}`;
+}
+
 describe('GET /api/kunstwerken/prijzen', () => {
   it('bulk mode: returns computed prijzen keyed by kunstwerkId, without needing auth', async () => {
     const maatId = await maakMaat(41, 61);
@@ -76,20 +82,34 @@ describe('GET /api/kunstwerken/prijzen', () => {
       materiaalId,
       175,
     ]);
+    const cookie = await medewerkerCookie();
 
     const response = await getKunstwerkPrijzen(
-      new Request(`http://localhost/api/kunstwerken/prijzen?materiaalIds=${materiaalId}&maatIds=${maatId}`)
+      new Request(`http://localhost/api/kunstwerken/prijzen?materiaalIds=${materiaalId}&maatIds=${maatId}`, {
+        headers: { cookie },
+      })
     );
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.prijzen).toEqual([{ maatId, materiaalId, prijs: 175 }]);
   });
 
-  it('ad-hoc mode: triggers with only materiaalIds param, maatIds absent, returns empty prijzen array', async () => {
+  it('ad-hoc mode: rejects a request without a medewerker session', async () => {
+    const maatId = await maakMaat(44, 64);
     const materiaalId = await maakMateriaal();
 
     const response = await getKunstwerkPrijzen(
-      new Request(`http://localhost/api/kunstwerken/prijzen?materiaalIds=${materiaalId}`)
+      new Request(`http://localhost/api/kunstwerken/prijzen?materiaalIds=${materiaalId}&maatIds=${maatId}`)
+    );
+    expect(response.status).toBe(401);
+  });
+
+  it('ad-hoc mode: triggers with only materiaalIds param, maatIds absent, returns empty prijzen array', async () => {
+    const materiaalId = await maakMateriaal();
+    const cookie = await medewerkerCookie();
+
+    const response = await getKunstwerkPrijzen(
+      new Request(`http://localhost/api/kunstwerken/prijzen?materiaalIds=${materiaalId}`, { headers: { cookie } })
     );
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -98,9 +118,10 @@ describe('GET /api/kunstwerken/prijzen', () => {
 
   it('ad-hoc mode: triggers with only maatIds param, materiaalIds absent, returns empty prijzen array', async () => {
     const maatId = await maakMaat(43, 63);
+    const cookie = await medewerkerCookie();
 
     const response = await getKunstwerkPrijzen(
-      new Request(`http://localhost/api/kunstwerken/prijzen?maatIds=${maatId}`)
+      new Request(`http://localhost/api/kunstwerken/prijzen?maatIds=${maatId}`, { headers: { cookie } })
     );
     expect(response.status).toBe(200);
     const body = await response.json();

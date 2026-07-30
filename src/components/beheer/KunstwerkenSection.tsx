@@ -200,11 +200,21 @@ export function KunstwerkenSection({
       ...(kunstenaarId ? { kunstenaarId } : {}),
     });
     fetch(`/api/kunstwerken/prijzen?${params.toString()}`)
-      .then((response) => (response.ok ? response.json() : { prijzen: [] }))
+      .then((response) => {
+        if (!response.ok) {
+          // Falls back to an empty preview, same as a genuinely priceless combinatie --
+          // logged here so a real fetch failure (e.g. session expired, server error) is at
+          // least visible in the console instead of silently looking like "no prijs set".
+          console.warn(`Kunstwerken-prijzen preview fetch failed with status ${response.status}`);
+          return { prijzen: [] };
+        }
+        return response.json();
+      })
       .then((body) => {
         if (!cancelled) setPreviewPrijzen(body.prijzen ?? []);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.warn('Kunstwerken-prijzen preview fetch threw', err);
         if (!cancelled) setPreviewPrijzen([]);
       });
     return () => {

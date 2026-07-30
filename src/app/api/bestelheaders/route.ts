@@ -130,6 +130,27 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'materiaal-niet-beschikbaar' }, { status: 400 });
       }
 
+      // An empty maatId is the genuine custom-size ("eigen maat") path -- it always requires
+      // real afmetingen, since prijsmodule.ts's berekenBestellijnPrijs uses breedte/hoogte
+      // (via prijsPerM2) to price it, or leaves it null for staff to price later. Any other
+      // maatId must be a real member of this kunstwerk's own maatIds -- otherwise
+      // berekenBestellijnPrijs would treat an unrelated-but-real maatId as "op-aanvraag"
+      // (meant only for the legitimate custom-size case), silently letting the order through.
+      if (line.maatId === '') {
+        if (
+          !Number.isInteger(line.breedte) ||
+          (line.breedte as number) <= 0 ||
+          !Number.isInteger(line.hoogte) ||
+          (line.hoogte as number) <= 0
+        ) {
+          await connection.rollback();
+          return NextResponse.json({ error: 'afmeting-vereist' }, { status: 400 });
+        }
+      } else if (maatIds.length > 0 && !maatIds.includes(line.maatId)) {
+        await connection.rollback();
+        return NextResponse.json({ error: 'maat-niet-beschikbaar' }, { status: 400 });
+      }
+
       const resultaat = await berekenBestellijnPrijs(
         connection,
         {
