@@ -51,7 +51,7 @@ const DRUKKERS: Drukker[] = [
 ];
 
 const KUNSTWERKEN: Kunstwerk[] = [
-  { id: 'kw-1', foto: '', naam: 'Hotel paneel', kunstenaarId: null, segmentIds: [], materiaalIds: ['mat-1'], maatIds: ['maat-1'], prijzen: [], omschrijvingNl: 'Hotel paneel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'kw-1', foto: '', naam: 'Hotel paneel', kunstenaarId: null, segmentIds: [], materiaalIds: ['mat-1'], maatIds: ['maat-1'], omschrijvingNl: 'Hotel paneel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const MATERIALEN: Materiaal[] = [{ id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 6, omschrijving: 'Helder' }];
 const MATEN: Maat[] = [{ id: 'maat-1', breedte: 40, hoogte: 60 }];

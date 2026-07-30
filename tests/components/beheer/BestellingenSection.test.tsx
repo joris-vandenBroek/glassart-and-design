@@ -31,7 +31,6 @@ const KUNSTWERKEN: Kunstwerk[] = [
     segmentIds: [],
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
-    prijzen: [],
     omschrijvingNl: 'Hotel paneel',
     omschrijvingFr: '',
     omschrijvingDe: '',

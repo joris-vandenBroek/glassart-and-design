@@ -19,7 +19,7 @@ export const LOOKUP_RESOURCES: Record<string, LookupResourceConfig> = {
   // gate reads too, same as drukkers.
   prijsgroepen: { jsonColumns: [], readAuthRequired: 'medewerker', writeAuthRequired: 'medewerker' },
   kunstwerken: {
-    jsonColumns: ['segmentIds', 'materiaalIds', 'maatIds', 'stijlIds', 'onderwerpIds', 'prijzen'],
+    jsonColumns: ['segmentIds', 'materiaalIds', 'maatIds', 'stijlIds', 'onderwerpIds'],
     writeAuthRequired: 'medewerker',
   },
   drukkers: { jsonColumns: [], readAuthRequired: 'medewerker', writeAuthRequired: 'medewerker' },
