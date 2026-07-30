@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { useApiCollection } from '@/lib/useApiCollection';
+import { usePrijzenPerKunstwerk } from '@/lib/usePrijzenPerKunstwerk';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
@@ -44,6 +45,7 @@ export function ProductsGrid() {
   const kunstenaars = useApiCollection<Kunstenaar>('kunstenaars');
   const stijlen = useApiCollection<Stijl>('stijlen');
   const onderwerpen = useApiCollection<Onderwerp>('onderwerpen');
+  const { prijzenPerKunstwerk } = usePrijzenPerKunstwerk();
 
   if (segmenten.items === null || kunstwerken.items === null) {
     return null;
@@ -425,6 +427,7 @@ export function ProductsGrid() {
 
       <ProductModal
         kunstwerk={selectedKunstwerk}
+        prijzen={(selectedKunstwerk && prijzenPerKunstwerk?.[selectedKunstwerk.id]) ?? []}
         materialen={materialen.items}
         maten={maten.items}
         materiaalsoorten={materiaalsoorten.items}

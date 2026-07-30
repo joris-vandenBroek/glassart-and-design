@@ -66,39 +66,27 @@ Alle drie de schema-wijzigingen worden ook doorgevoerd in `db/schema.sql` (de so
 
 ## 2. Prijsmodule (server-side)
 
-Nieuw bestand: `src/lib/server/prijsmodule.ts`.
+Nieuw bestand: `src/lib/server/prijsmodule.ts`. Gebouwd als een set functies rond dezelfde matrix+opslag-logica, in plaats van één generieke `berekenPrijs(...)`:
 
-Eén functie die de eindprijs berekent voor een kunstwerk + maat + materiaal:
+- `combineerPrijs(basisPrijs, opslag)` — rondt `basisPrijs + opslag` af op 2 decimalen; de ene plek waar matrixprijs en kunstenaar-opslag worden samengevoegd.
+- `prijsopslagVoorKunstenaar(db, kunstenaarId)` — leest `kunstenaarAfspraken.prijsopslag` op, `0` als er geen kunstenaar/rij is.
+- `berekenPrijzenVoorCombinaties(db, kunstenaarId, materiaalIds, maatIds)` — prijzen voor een arbitraire set maat×materiaal-combinaties (ad-hoc, kunstwerk hoeft nog niet opgeslagen te zijn). Gebruikt door de beheer-preview.
+- `berekenPrijzenVoorAlleKunstwerken(db)` — prijzen voor ieder bestaand kunstwerk in één keer, gegroepeerd per `kunstwerkId`. Gebruikt door de storefront.
+- `berekenBestellijnPrijs(db, kunstwerk, line)` — de prijs voor één bestellijn (kunstwerk + gekozen maat/materiaal, of maatloos met `breedte`/`hoogte`). Gebruikt door `POST /api/bestelheaders`; retourneert `{status: 'vast', prijs}`, `{status: 'op-aanvraag'}` (geen vaste maat/custom-size) of `{status: 'onbekend'}` (geen matrixprijs of ontbrekende afmetingen).
 
-```ts
-interface BerekenPrijsInput {
-  kunstwerk: { kunstenaarId: string | null; maatIds: string[]; materiaalIds: string[]; prijsPerM2: number | null };
-  maatId: string | null;       // null bij maatloos/custom-size
-  materiaalId: string;
-  customBreedteCm?: number;    // alleen relevant bij maatloos
-  customHoogteCm?: number;
-}
-
-interface BerekenPrijsResult {
-  prijs: number | null;        // null = prijs op aanvraag
-  isMaatloos: boolean;
-}
-
-async function berekenPrijs(input: BerekenPrijsInput): Promise<BerekenPrijsResult>
-```
-
-Logica:
-- **Maatloos** (`kunstwerk.maatIds.length === 0`): zelfde formule als vandaag — `round((breedteCm/100) × (hoogteCm/100) × prijsPerM2, 2)`, of `null` als afmetingen ontbreken/`prijsPerM2` niet gezet is. De matrix speelt hier geen rol.
-- **Met maat**: `prijsmatrix`-rij opzoeken voor `(maatId, materiaalId)`. Geen rij of `prijs IS NULL` → `null` (prijs op aanvraag). Anders: matrixprijs + `kunstenaarAfspraken.prijsopslag` van `kunstwerk.kunstenaarId` (0 als geen kunstenaar gekoppeld of geen `kunstenaarAfspraken`-rij bestaat).
+Logica (gedeeld door alle vier de functies):
+- **Maatloos** (`kunstwerk.maatIds.length === 0`): zelfde formule als vandaag — `round((breedteCm/100) × (hoogteCm/100) × prijsPerM2, 2)`, of onbekend als afmetingen ontbreken/`prijsPerM2` niet gezet is. De matrix speelt hier geen rol.
+- **Met maat**: `prijsmatrix`-rij opzoeken voor `(maatId, materiaalId)`. Geen rij of `prijs IS NULL` → onbekend/prijs op aanvraag. Anders: matrixprijs + `kunstenaarAfspraken.prijsopslag` van `kunstwerk.kunstenaarId` (0 als geen kunstenaar gekoppeld of geen `kunstenaarAfspraken`-rij bestaat).
 - Custom-size-met-materiaal-maar-niet-maatloos (bestaand geval: materiaal staat eigen maat toe, kunstwerk heeft wél reguliere maten) blijft ongewijzigd "prijs op aanvraag" tonen — geen matrix-lookup mogelijk zonder vaste maat.
 
-Deze functie is de **enige plek** die matrixprijs en kunstenaar-opslag combineert. Alle drie de aanroeppunten (storefront-endpoint, beheer-preview, bestelheaders) gebruiken 'm.
+Alle drie de aanroeppunten (storefront-endpoint, beheer-preview, bestelheaders) gebruiken deze module, nooit een eigen berekening.
 
-### Nieuw endpoint: prijs opvragen
+### Gebouwd endpoint: prijzen opvragen
 
-`GET /api/kunstwerken/[id]/prijs?maatId=&materiaalId=&breedte=&hoogte=`
+Er is geen `GET /api/kunstwerken/[id]/prijs` gebouwd. In plaats daarvan: `GET /api/kunstwerken/prijzen` (`src/app/api/kunstwerken/prijzen/route.ts`), query-param-gestuurd, met twee modi:
 
-Retourneert uitsluitend `{ prijs: number | null }` — nooit de matrixprijs en opslag los, zodat de opslag niet af te leiden is uit de API-response. Geen auth-gate nodig (publiek zoals de huidige prijsweergave).
+- **Bulk-modus** (geen query-params): retourneert `Record<kunstwerkId, {maatId, materiaalId, prijs}[]>` voor alle kunstwerken tegelijk, via `berekenPrijzenVoorAlleKunstwerken` — alleen combinaties met een ingevulde matrixprijs, prijs is al matrix + kunstenaar-opslag gecombineerd. Gebruikt door de storefront (`usePrijzenPerKunstwerk`). Publiek, geen auth — retourneert nooit een losse matrixprijs of opslag, dus niets om uit af te leiden.
+- **Ad-hoc-modus** (`materiaalIds`- en/of `maatIds`-query-param aanwezig, komma-gescheiden, optioneel `kunstenaarId`): retourneert `{prijzen: {maatId, materiaalId, prijs}[]}` voor de opgegeven combinaties via `berekenPrijzenVoorCombinaties`, voor de beheer-preview in `KunstwerkenSection.tsx` terwijl een kunstwerk nog niet is opgeslagen (dus nog geen eigen `kunstwerkId` heeft). **Staff-only** (`requireMedewerker`): omdat een arbitraire `kunstenaarId` de aanroeper toestaat dezelfde combinatie twee keer op te vragen (met/zonder `kunstenaarId`) en zo die kunstenaar's exacte `prijsopslag` af te leiden — dezelfde vertrouwelijkheidsklasse als `prijsafspraken`.
 
 ### Nieuw endpoint: matrix beheren
 

@@ -62,6 +62,7 @@ const TYPE_LABEL_KEYS: Record<ActiviteitType, string> = {
   prijsgroep_toegevoegd: 'activiteitTypePrijsgroepToegevoegd',
   prijsgroep_gewijzigd: 'activiteitTypePrijsgroepGewijzigd',
   prijsgroep_verwijderd: 'activiteitTypePrijsgroepVerwijderd',
+  prijsmatrix_gewijzigd: 'activiteitTypePrijsmatrixGewijzigd',
   bedrijfsgegevens_gewijzigd: 'activiteitTypeBedrijfsgegevensGewijzigd',
   kunstenaar_toegevoegd: 'activiteitTypeKunstenaarToegevoegd',
   kunstenaar_gewijzigd: 'activiteitTypeKunstenaarGewijzigd',

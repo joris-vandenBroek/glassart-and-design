@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   SEGMENTEN_SEED,
   MATEN_SEED,
-  berekenVoorbeeldprijs,
   buildKunstwerkenSeed,
 } from '@/data/kunstwerkenSeed';
 import type { Segment, Materiaal, Maat } from '@/components/beheer/materiaalTypes';
@@ -38,21 +37,6 @@ describe('MATEN_SEED', () => {
   });
 });
 
-describe('berekenVoorbeeldprijs', () => {
-  it('computes a price from surface area (cm² -> m²) plus a dikte surcharge', () => {
-    // oppervlakte = (40*60)/10000 = 0.24 m²; 0.24 * 120 = 28.8; diktetoeslag = 4*5 = 20; totaal 48.8
-    expect(berekenVoorbeeldprijs(4, 40, 60)).toBe(48.8);
-  });
-
-  it('is deterministic for the same inputs', () => {
-    expect(berekenVoorbeeldprijs(3, 80, 120)).toBe(berekenVoorbeeldprijs(3, 80, 120));
-  });
-
-  it('produces a higher price for a larger maat', () => {
-    expect(berekenVoorbeeldprijs(3, 80, 120)).toBeGreaterThan(berekenVoorbeeldprijs(3, 40, 60));
-  });
-});
-
 describe('buildKunstwerkenSeed', () => {
   const SEGMENTEN: Segment[] = [
     { id: 'seg-hotel', omschrijving: 'Hotel' },
@@ -85,14 +69,7 @@ describe('buildKunstwerkenSeed', () => {
     result.forEach((kunstwerk) => {
       expect(kunstwerk.materiaalIds).toEqual(['mat-a', 'mat-b']);
       expect(kunstwerk.maatIds).toEqual(['maat-x', 'maat-y']);
-      expect(kunstwerk.prijzen.length).toBe(4);
     });
-  });
-
-  it('computes each prijzen entry via berekenVoorbeeldprijs for its materiaal/maat combination', () => {
-    const result = buildKunstwerkenSeed(SEGMENTEN, MATERIALEN, MATEN);
-    const eersteRegel = result[0].prijzen.find((p) => p.materiaalId === 'mat-a' && p.maatId === 'maat-x');
-    expect(eersteRegel?.prijs).toBe(berekenVoorbeeldprijs(4, 40, 60));
   });
 
   it('gives each kunstwerk a Dutch placeholder description numbered within its segment, and empty fr/de/en', () => {

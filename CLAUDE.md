@@ -30,7 +30,7 @@ Vitest is **not** mocking the database — `tests/setup.ts` loads `.env.local` a
 
 ### Data layer
 
-- `db/schema.sql` is the source of truth for the MySQL schema (21 tables: `klanten`, `medewerkers`, `sessions`, `passwordResetTokens`, catalog lookup tables `segmenten`/`stijlen`/`onderwerpen`/`materiaalsoorten`/`materialen`/`maten`/`prijsgroepen`, `kunstenaars`/`kunstenaarAfspraken`, `drukkers`/`drukkerZendingen`, `kunstwerken`, `instellingen`, `counters`, `bestelheaders`/`bestellines`, `activiteitenlog`).
+- `db/schema.sql` is the source of truth for the MySQL schema (22 tables: `klanten`, `medewerkers`, `sessions`, `passwordResetTokens`, catalog lookup tables `segmenten`/`stijlen`/`onderwerpen`/`materiaalsoorten`/`materialen`/`maten`/`prijsgroepen`/`prijsmatrix`, `kunstenaars`/`kunstenaarAfspraken`, `drukkers`/`drukkerZendingen`, `kunstwerken`, `instellingen`, `counters`, `bestelheaders`/`bestellines`, `activiteitenlog`).
 - `src/lib/server/db.ts` exposes a single lazily-created `getPool()` connection pool, driven by `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME` env vars (see `.env.local.example`).
 - `src/lib/server/crud.ts` provides generic `listRows`/`getRow`/`insertRow`/`updateRow`/`deleteRow` helpers (with JSON-column encode/decode support) used by most API routes.
 - `src/lib/server/session.ts` / `password.ts` implement cookie-based sessions and `crypto.scrypt` password hashing — no external auth library.

@@ -26,7 +26,7 @@ let autoIdCounter = 0;
 // empty companion record.
 let afsprakenGetImpl: (id: string) => Promise<{ ok: boolean; json: () => Promise<unknown> }> = async () => ({
   ok: true,
-  json: async () => ({ prijsafspraken: null }),
+  json: async () => ({ prijsafspraken: null, prijsopslag: 0 }),
 });
 let kunstenaarPostShouldFail = false;
 let afsprakenPutShouldFail = false;
@@ -184,7 +184,7 @@ beforeEach(() => {
   mockUploading = false;
   mockUploadError = null;
   logActiviteitMock.mockReset();
-  afsprakenGetImpl = async () => ({ ok: true, json: async () => ({ prijsafspraken: null }) });
+  afsprakenGetImpl = async () => ({ ok: true, json: async () => ({ prijsafspraken: null, prijsopslag: 0 }) });
   kunstenaarPostShouldFail = false;
   afsprakenPutShouldFail = false;
   fetchMock.mockReset();
@@ -251,7 +251,7 @@ describe('KunstenaarsSection', () => {
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
         '/api/kunstenaarAfspraken/nieuwe-ka-id-1',
-        expect.objectContaining({ method: 'PUT', body: JSON.stringify({ prijsafspraken: '30% commissie' }) })
+        expect.objectContaining({ method: 'PUT', body: JSON.stringify({ prijsafspraken: '30% commissie', prijsopslag: 0 }) })
       )
     );
     expect(onRefetch).toHaveBeenCalled();
@@ -348,7 +348,7 @@ describe('KunstenaarsSection', () => {
   });
 
   it('pre-fills the prijsafspraken textarea from the kunstenaarAfspraken companion record', async () => {
-    afsprakenGetImpl = async () => ({ ok: true, json: async () => ({ prijsafspraken: '20% commissie' }) });
+    afsprakenGetImpl = async () => ({ ok: true, json: async () => ({ prijsafspraken: '20% commissie', prijsopslag: 0 }) });
     renderSection();
     fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
 
@@ -364,6 +364,35 @@ describe('KunstenaarsSection', () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/kunstenaarAfspraken/ka-1'));
     expect(screen.getByTestId('kunstenaar-modal-prijsafspraken')).toHaveValue('');
+  });
+
+  it('loads and pre-fills the existing prijsopslag when opening a kunstenaar for editing', async () => {
+    afsprakenGetImpl = async () => ({ ok: true, json: async () => ({ prijsafspraken: '', prijsopslag: 45 }) });
+    renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('kunstenaar-modal-prijsopslag')).toHaveValue(45)
+    );
+    expect(fetchMock).toHaveBeenCalledWith('/api/kunstenaarAfspraken/ka-1');
+  });
+
+  it('saves prijsopslag together with prijsafspraken', async () => {
+    afsprakenGetImpl = async () => ({ ok: true, json: async () => ({ prijsafspraken: '', prijsopslag: 0 }) });
+    renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+    await screen.findByTestId('kunstenaar-modal-prijsopslag');
+    fireEvent.change(screen.getByTestId('kunstenaar-modal-prijsopslag'), { target: { value: '60' } });
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/kunstenaarAfspraken/ka-1',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ prijsafspraken: '', prijsopslag: 60 }),
+        })
+      )
+    );
   });
 
   it('opens a row for editing pre-filled and updates it, keeping its exclusieveKlantIds', async () => {
@@ -394,7 +423,7 @@ describe('KunstenaarsSection', () => {
     );
     expect(afsprakenPutCalls()).toContainEqual([
       '/api/kunstenaarAfspraken/ka-1',
-      expect.objectContaining({ body: JSON.stringify({ prijsafspraken: '20% commissie' }) }),
+      expect.objectContaining({ body: JSON.stringify({ prijsafspraken: '20% commissie', prijsopslag: 0 }) }),
     ]);
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'kunstenaar_gewijzigd',
@@ -441,7 +470,7 @@ describe('KunstenaarsSection', () => {
   });
 
   it('disables Opslaan until the prijsafspraken fetch has settled', async () => {
-    let resolveFetch: (body: { prijsafspraken: string | null }) => void = () => {};
+    let resolveFetch: (body: { prijsafspraken: string | null; prijsopslag: number }) => void = () => {};
     afsprakenGetImpl = () =>
       new Promise((resolve) => {
         resolveFetch = (body) => resolve({ ok: true, json: async () => body });
@@ -452,20 +481,20 @@ describe('KunstenaarsSection', () => {
     // naam/omschrijving are prefilled synchronously, so without the loading guard
     // Opslaan would already be clickable here and would save an empty afspraak.
     expect(screen.getByTestId('kunstenaar-modal-opslaan')).toBeDisabled();
-    resolveFetch({ prijsafspraken: '20% commissie' });
+    resolveFetch({ prijsafspraken: '20% commissie', prijsopslag: 0 });
     await waitFor(() => expect(screen.getByTestId('kunstenaar-modal-opslaan')).not.toBeDisabled());
     expect(screen.getByTestId('kunstenaar-modal-prijsafspraken')).toHaveValue('20% commissie');
   });
 
   it('does not let a slow fetch for one kunstenaar overwrite the form of another', async () => {
-    let resolveEerste: (body: { prijsafspraken: string | null }) => void = () => {};
+    let resolveEerste: (body: { prijsafspraken: string | null; prijsopslag: number }) => void = () => {};
     afsprakenGetImpl = (id) => {
       if (id === 'ka-1') {
         return new Promise((resolve) => {
           resolveEerste = (body) => resolve({ ok: true, json: async () => body });
         });
       }
-      return Promise.resolve({ ok: true, json: async () => ({ prijsafspraken: 'afspraken van ka-2' }) });
+      return Promise.resolve({ ok: true, json: async () => ({ prijsafspraken: 'afspraken van ka-2', prijsopslag: 0 }) });
     };
     renderSection({
       kunstenaars: [KUNSTENAARS[0], { ...KUNSTENAARS[0], id: 'ka-2', naam: 'Bram Steen' }],
@@ -479,7 +508,7 @@ describe('KunstenaarsSection', () => {
     );
 
     // The stale fetch for ka-1 resolves last and must be ignored.
-    resolveEerste({ prijsafspraken: 'afspraken van ka-1' });
+    resolveEerste({ prijsafspraken: 'afspraken van ka-1', prijsopslag: 0 });
     await waitFor(() => expect(screen.getByTestId('kunstenaar-modal-naam')).toHaveValue('Bram Steen'));
     expect(screen.getByTestId('kunstenaar-modal-prijsafspraken')).toHaveValue('afspraken van ka-2');
   });
