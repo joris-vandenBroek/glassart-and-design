@@ -415,7 +415,7 @@ export function ProductModal({
         {(isCustomSize || isMaatloos) && (
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
-              <label className="flex flex-1 flex-col gap-1 text-[0.65rem] uppercase tracking-wide text-white/60">
+              <label className="flex min-w-0 flex-1 flex-col gap-1 text-[0.65rem] uppercase tracking-wide text-white/60">
                 {t('customWidthLabel')}
                 <input
                   type="number"
@@ -425,7 +425,7 @@ export function ProductModal({
                   className="rounded-sm bg-black/40 px-2 py-1.5 text-sm text-white"
                 />
               </label>
-              <label className="flex flex-1 flex-col gap-1 text-[0.65rem] uppercase tracking-wide text-white/60">
+              <label className="flex min-w-0 flex-1 flex-col gap-1 text-[0.65rem] uppercase tracking-wide text-white/60">
                 {t('customHeightLabel')}
                 <input
                   type="number"

@@ -622,6 +622,16 @@ describe('ProductModal', () => {
     expect(screen.getByTestId('product-modal-confirm')).not.toBeDisabled();
   });
 
+  it('gives the custom breedte and hoogte inputs matching min-w-0 flex-1 wrappers so they split the row evenly', () => {
+    renderModal(() => {}, MATERIAALLOOS_KUNSTWERK);
+    const breedteWrapper = screen.getByTestId('product-modal-maat-custom-breedte').closest('label');
+    const hoogteWrapper = screen.getByTestId('product-modal-maat-custom-hoogte').closest('label');
+    expect(breedteWrapper?.className).toMatch(/(^|\s)min-w-0(\s|$)/);
+    expect(breedteWrapper?.className).toMatch(/(^|\s)flex-1(\s|$)/);
+    expect(hoogteWrapper?.className).toMatch(/(^|\s)min-w-0(\s|$)/);
+    expect(hoogteWrapper?.className).toMatch(/(^|\s)flex-1(\s|$)/);
+  });
+
   it('shows a max-size error and disables confirm for an oversized custom Acryl size', () => {
     render(
       <NextIntlClientProvider locale="nl" messages={messages}>
