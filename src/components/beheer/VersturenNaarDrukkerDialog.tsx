@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Modal } from '@/components/Modal';
+import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import { buildDrukkerMail } from '@/lib/buildDrukkerMail';
@@ -175,7 +176,10 @@ export function VersturenNaarDrukkerDialog({
     >
       <div className="flex flex-col gap-3 text-sm text-white/80">
         <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-          {t('drukkerVersturenLabelDrukker')}
+          <span>
+            {t('drukkerVersturenLabelDrukker')}
+            <RequiredMark />
+          </span>
           <select
             value={drukkerId}
             onChange={(event) => setDrukkerId(event.target.value)}
@@ -189,6 +193,8 @@ export function VersturenNaarDrukkerDialog({
             ))}
           </select>
         </label>
+
+        <RequiredLegend testId="drukker-versturen-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
 
         <div className="flex flex-col gap-1">
           <span className="text-xs uppercase tracking-wide text-white/60">{t('drukkerVersturenLabelPreview')}</span>

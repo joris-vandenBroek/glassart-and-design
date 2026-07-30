@@ -294,4 +294,9 @@ describe('VersturenNaarDrukkerDialog', () => {
     fireEvent.click(screen.getByTestId('drukker-versturen-annuleren'));
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it('shows the required-field legend', () => {
+    renderDialog();
+    expect(screen.getByTestId('drukker-versturen-verplicht-legende')).toHaveTextContent('* verplicht veld');
+  });
 });
