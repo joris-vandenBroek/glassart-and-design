@@ -25,10 +25,9 @@ beforeEach(() => {
 });
 
 describe('AccountNav', () => {
-  it('renders all 3 section buttons plus a logout button', () => {
+  it('renders all 2 section buttons plus a logout button', () => {
     renderNav();
     expect(screen.getByTestId('account-nav-orders')).toBeInTheDocument();
-    expect(screen.getByTestId('account-nav-conversations')).toBeInTheDocument();
     expect(screen.getByTestId('account-nav-settings')).toBeInTheDocument();
     expect(screen.getByTestId('account-nav-logout')).toBeInTheDocument();
   });

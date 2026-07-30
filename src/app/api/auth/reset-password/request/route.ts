@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { getPool } from '@/lib/server/db';
 import { randomUUID } from 'crypto';
 import { sendResetEmail } from '@/lib/server/sendResetEmail';
+import { withApiErrorHandling } from '@/lib/server/apiRoute';
 
-export async function POST(request: Request) {
+export const POST = withApiErrorHandling('POST /api/auth/reset-password/request', async (request: Request) => {
   const { email, userType } = (await request.json()) as {
     email: string;
     userType: 'klant' | 'medewerker';
@@ -23,4 +24,4 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ ok: true });
-}
+});

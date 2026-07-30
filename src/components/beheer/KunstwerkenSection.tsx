@@ -4,11 +4,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
+import { ModalTabs } from '@/components/ModalTabs';
 import { ProductModal } from '@/components/ProductModal';
 import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
-import type { Kunstwerk, Segment, Materiaal, Materiaalsoort, Maat, PrijsRegel, KunstwerkFormaat, Stijl, Onderwerp } from './materiaalTypes';
+import type { Kunstwerk, Segment, Materiaal, Materiaalsoort, Maat, KunstwerkFormaat, Stijl, Onderwerp } from './materiaalTypes';
 import { isVierkanteMaat } from './materiaalTypes';
 import type { Kunstenaar } from './kunstenaarTypes';
 import { detectFormaatFromFile, detectFormaatFromImageUrl } from '@/lib/detectKunstwerkFormaat';
@@ -26,17 +27,14 @@ interface KunstwerkenSectionProps {
   onAdd: (data: Omit<Kunstwerk, 'id'>) => Promise<boolean>;
   onUpdate: (id: string, data: Omit<Kunstwerk, 'id'>) => Promise<boolean>;
   onRemove: (id: string) => Promise<boolean>;
+  onAddSegment: (data: Omit<Segment, 'id'>) => Promise<boolean>;
   onAddStijl: (data: Omit<Stijl, 'id'>) => Promise<boolean>;
   onAddOnderwerp: (data: Omit<Onderwerp, 'id'>) => Promise<boolean>;
 }
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; kunstwerk: Kunstwerk } | null;
-type PrijzenState = Record<string, string>;
+type TabId = 'algemeen' | 'kenmerken' | 'prijzen' | 'omschrijvingen';
 type KunstwerkRow = Kunstwerk & { segmentNamen: string; kunstenaarNaam: string };
-
-function prijsKey(materiaalId: string, maatId: string) {
-  return `${materiaalId}:${maatId}`;
-}
 
 function toggle(list: string[], id: string): string[] {
   return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
@@ -53,7 +51,6 @@ const LEGE_FORM = {
   stijlIds: [] as string[],
   onderwerpIds: [] as string[],
   aiGegenereerd: false,
-  prijzen: {} as PrijzenState,
   prijsPerM2: '',
   omschrijvingNl: '',
   omschrijvingFr: '',
@@ -74,6 +71,7 @@ export function KunstwerkenSection({
   onAdd,
   onUpdate,
   onRemove,
+  onAddSegment,
   onAddStijl,
   onAddOnderwerp,
 }: KunstwerkenSectionProps) {
@@ -91,13 +89,15 @@ export function KunstwerkenSection({
   const [stijlIds, setStijlIds] = useState<string[]>(LEGE_FORM.stijlIds);
   const [onderwerpIds, setOnderwerpIds] = useState<string[]>(LEGE_FORM.onderwerpIds);
   const [aiGegenereerd, setAiGegenereerd] = useState<boolean>(LEGE_FORM.aiGegenereerd);
+  const [nieuweSegmentNaam, setNieuweSegmentNaam] = useState('');
+  const [pendingNieuweSegmentNaam, setPendingNieuweSegmentNaam] = useState<string | null>(null);
+  const [segmentToevoegenError, setSegmentToevoegenError] = useState<string | null>(null);
   const [nieuweStijlNaam, setNieuweStijlNaam] = useState('');
   const [nieuweOnderwerpNaam, setNieuweOnderwerpNaam] = useState('');
   const [pendingNieuweStijlNaam, setPendingNieuweStijlNaam] = useState<string | null>(null);
   const [pendingNieuweOnderwerpNaam, setPendingNieuweOnderwerpNaam] = useState<string | null>(null);
   const [stijlToevoegenError, setStijlToevoegenError] = useState<string | null>(null);
   const [onderwerpToevoegenError, setOnderwerpToevoegenError] = useState<string | null>(null);
-  const [prijzen, setPrijzen] = useState<PrijzenState>(LEGE_FORM.prijzen);
   const [prijsPerM2, setPrijsPerM2] = useState(LEGE_FORM.prijsPerM2);
   const [omschrijvingNl, setOmschrijvingNl] = useState(LEGE_FORM.omschrijvingNl);
   const [omschrijvingFr, setOmschrijvingFr] = useState(LEGE_FORM.omschrijvingFr);
@@ -107,6 +107,18 @@ export function KunstwerkenSection({
   const [isDraggingFoto, setIsDraggingFoto] = useState(false);
   const [backfillBezig, setBackfillBezig] = useState(false);
   const formaatSessionRef = useRef(0);
+
+  const [activeTab, setActiveTab] = useState<TabId>('algemeen');
+
+  useEffect(() => {
+    if (!pendingNieuweSegmentNaam) return;
+    const gevonden = (segmenten ?? []).find((segment) => segment.omschrijving === pendingNieuweSegmentNaam);
+    if (gevonden) {
+      setSegmentIds((current) => (current.includes(gevonden.id) ? current : [...current, gevonden.id]));
+      setPendingNieuweSegmentNaam(null);
+      setNieuweSegmentNaam('');
+    }
+  }, [segmenten, pendingNieuweSegmentNaam]);
 
   useEffect(() => {
     if (!pendingNieuweStijlNaam) return;
@@ -127,6 +139,28 @@ export function KunstwerkenSection({
       setNieuweOnderwerpNaam('');
     }
   }, [onderwerpen, pendingNieuweOnderwerpNaam]);
+
+  async function handleAddNieuweSegment() {
+    const naam = nieuweSegmentNaam.trim();
+    if (!naam) return;
+    setSegmentToevoegenError(null);
+    const bestaande = (segmenten ?? []).find(
+      (segment) => segment.omschrijving.toLowerCase() === naam.toLowerCase()
+    );
+    if (bestaande) {
+      setSegmentIds((current) => (current.includes(bestaande.id) ? current : [...current, bestaande.id]));
+      setNieuweSegmentNaam('');
+      return;
+    }
+    setPendingNieuweSegmentNaam(naam);
+    const success = await onAddSegment({ omschrijving: naam });
+    if (success) {
+      void logActiviteit('segment_toegevoegd', actorFromMedewerker(user), naam);
+    } else {
+      setPendingNieuweSegmentNaam(null);
+      setSegmentToevoegenError(t('kunstwerkenNieuweSegmentError'));
+    }
+  }
 
   async function handleAddNieuweStijl() {
     const naam = nieuweStijlNaam.trim();
@@ -189,9 +223,45 @@ export function KunstwerkenSection({
   }, [kunstenaars]);
 
   const isMateriaalloos = materiaalIds.length === 0;
-  const prijsCombinaties = materiaalIds.flatMap((materiaalId) =>
-    maatIds.map((maatId) => ({ materiaalId, maatId }))
-  );
+  // Superset of isMateriaalloos: also true when a materiaal is chosen but every maat is
+  // deliberately unchecked (e.g. "4mm veiligheidsglas, custom size, priced per m²").
+  const isMaatloos = isMateriaalloos || maatIds.length === 0;
+
+  const [previewPrijzen, setPreviewPrijzen] = useState<{ materiaalId: string; maatId: string; prijs: number }[]>([]);
+
+  useEffect(() => {
+    if (isMaatloos || materiaalIds.length === 0 || maatIds.length === 0) {
+      setPreviewPrijzen([]);
+      return;
+    }
+    let cancelled = false;
+    const params = new URLSearchParams({
+      materiaalIds: materiaalIds.join(','),
+      maatIds: maatIds.join(','),
+      ...(kunstenaarId ? { kunstenaarId } : {}),
+    });
+    fetch(`/api/kunstwerken/prijzen?${params.toString()}`)
+      .then((response) => {
+        if (!response.ok) {
+          // Falls back to an empty preview, same as a genuinely priceless combinatie --
+          // logged here so a real fetch failure (e.g. session expired, server error) is at
+          // least visible in the console instead of silently looking like "no prijs set".
+          console.warn(`Kunstwerken-prijzen preview fetch failed with status ${response.status}`);
+          return { prijzen: [] };
+        }
+        return response.json();
+      })
+      .then((body) => {
+        if (!cancelled) setPreviewPrijzen(body.prijzen ?? []);
+      })
+      .catch((err) => {
+        console.warn('Kunstwerken-prijzen preview fetch threw', err);
+        if (!cancelled) setPreviewPrijzen([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [materiaalIds, maatIds, kunstenaarId, isMaatloos]);
 
   function buildKunstwerkData(): Omit<Kunstwerk, 'id'> {
     const basis = {
@@ -201,23 +271,16 @@ export function KunstwerkenSection({
       formaat,
       segmentIds,
       materiaalIds,
-      maatIds: isMateriaalloos ? [] : maatIds,
+      maatIds: isMaatloos ? [] : maatIds,
       stijlIds,
       onderwerpIds,
       aiGegenereerd,
-      prijzen: isMateriaalloos
-        ? []
-        : prijsCombinaties.map(({ materiaalId, maatId }) => ({
-            materiaalId,
-            maatId,
-            prijs: Number(prijzen[prijsKey(materiaalId, maatId)]),
-          })),
       omschrijvingNl,
       omschrijvingFr,
       omschrijvingDe,
       omschrijvingEn,
     };
-    return isMateriaalloos ? { ...basis, prijsPerM2: Number(prijsPerM2) } : basis;
+    return isMaatloos ? { ...basis, prijsPerM2: Number(prijsPerM2) } : basis;
   }
 
   const previewKunstwerk: Kunstwerk = useMemo(
@@ -237,7 +300,6 @@ export function KunstwerkenSection({
       stijlIds,
       onderwerpIds,
       aiGegenereerd,
-      prijzen,
       prijsPerM2,
       omschrijvingNl,
       omschrijvingFr,
@@ -252,15 +314,27 @@ export function KunstwerkenSection({
     return `${materiaal.materiaaldikte}mm — ${soortNaam}`;
   }
 
-  function setFormaat(optie: KunstwerkFormaat) {
+  // `preserveMaatloos`: when the admin explicitly picks a Formaat radio, every compatible maat
+  // should always be (re-)selected — that's a deliberate, fresh choice. But formaat is also set
+  // automatically in the background by photo auto-detection (handleFotoFile, and openEdit's
+  // detection for legacy rows without a stored formaat); that's a suggestion, not an explicit
+  // admin action, so it must not clobber a deliberately-empty maatIds the same way it must not
+  // clobber a deliberately-empty materiaalIds below. Auto-detect call sites pass `true`.
+  function setFormaat(optie: KunstwerkFormaat, preserveMaatloos = false) {
     setFormaatState(optie);
-    setMaatIds((current) =>
-      current.filter((id) => {
-        const maat = (maten ?? []).find((m) => m.id === id);
-        if (!maat) return true;
-        return optie === 'vierkant' ? isVierkanteMaat(maat) : !isVierkanteMaat(maat);
-      })
-    );
+    setMaatIds((current) => {
+      if (preserveMaatloos && current.length === 0) return current;
+      return (maten ?? [])
+        .filter((maat) => {
+          if (optie === 'alle') return true;
+          return optie === 'vierkant' ? isVierkanteMaat(maat) : !isVierkanteMaat(maat);
+        })
+        .map((maat) => maat.id);
+    });
+    // A kunstwerk with every materiaal unchecked is deliberately materiaalloos (priced per
+    // m² instead), not "hasn't picked yet" — resetForm() always starts non-empty, so an
+    // empty selection here only ever means the admin chose that. Leave it alone.
+    setMateriaalIds((current) => (current.length === 0 ? current : (materialen ?? []).map((materiaal) => materiaal.id)));
   }
 
   if (loadError) {
@@ -287,6 +361,9 @@ export function KunstwerkenSection({
     setKunstenaarId(LEGE_FORM.kunstenaarId);
     setFormaatState(LEGE_FORM.formaat);
     setSegmentIds(LEGE_FORM.segmentIds);
+    setNieuweSegmentNaam('');
+    setPendingNieuweSegmentNaam(null);
+    setSegmentToevoegenError(null);
     setMateriaalIds((materialen ?? []).map((materiaal) => materiaal.id));
     setMaatIds((maten ?? []).map((maat) => maat.id));
     setStijlIds(LEGE_FORM.stijlIds);
@@ -298,7 +375,6 @@ export function KunstwerkenSection({
     setPendingNieuweOnderwerpNaam(null);
     setStijlToevoegenError(null);
     setOnderwerpToevoegenError(null);
-    setPrijzen(LEGE_FORM.prijzen);
     setPrijsPerM2(LEGE_FORM.prijsPerM2);
     setOmschrijvingNl(LEGE_FORM.omschrijvingNl);
     setOmschrijvingFr(LEGE_FORM.omschrijvingFr);
@@ -309,12 +385,14 @@ export function KunstwerkenSection({
 
   function openAdd() {
     formaatSessionRef.current += 1;
+    setActiveTab('algemeen');
     resetForm();
     setModalState({ mode: 'add' });
   }
 
   function openEdit(kunstwerk: Kunstwerk) {
     formaatSessionRef.current += 1;
+    setActiveTab('algemeen');
     const session = formaatSessionRef.current;
     setFoto(kunstwerk.foto);
     setNaam(kunstwerk.naam ?? '');
@@ -325,11 +403,6 @@ export function KunstwerkenSection({
     setStijlIds(kunstwerk.stijlIds ?? []);
     setOnderwerpIds(kunstwerk.onderwerpIds ?? []);
     setAiGegenereerd(kunstwerk.aiGegenereerd ?? false);
-    const prijzenMap: PrijzenState = {};
-    kunstwerk.prijzen.forEach((regel) => {
-      prijzenMap[prijsKey(regel.materiaalId, regel.maatId)] = String(regel.prijs);
-    });
-    setPrijzen(prijzenMap);
     setPrijsPerM2(kunstwerk.prijsPerM2 != null ? String(kunstwerk.prijsPerM2) : '');
     setOmschrijvingNl(kunstwerk.omschrijvingNl);
     setOmschrijvingFr(kunstwerk.omschrijvingFr);
@@ -347,7 +420,7 @@ export function KunstwerkenSection({
           return gedetecteerd === 'vierkant' ? !isVierkanteMaat(maat) : isVierkanteMaat(maat);
         });
         if (!conflicteertMetOpgeslagenMaten) {
-          setFormaat(gedetecteerd);
+          setFormaat(gedetecteerd, true);
         }
       });
     }
@@ -366,7 +439,7 @@ export function KunstwerkenSection({
       setFoto(url);
       const gedetecteerd = await detectFormaatFromFile(file);
       if (gedetecteerd && formaatSessionRef.current === session) {
-        setFormaat(gedetecteerd);
+        setFormaat(gedetecteerd, true);
       }
     }
   }
@@ -395,18 +468,19 @@ export function KunstwerkenSection({
     await handleFotoFile(file);
   }
 
-  const allePrijzenIngevuld = prijsCombinaties.every(
-    ({ materiaalId, maatId }) => (prijzen[prijsKey(materiaalId, maatId)] ?? '') !== ''
-  );
+  const algemeenHeeftFout = !foto || !naam || formaat === null;
+  const kenmerkenHeeftFout = segmentIds.length === 0;
+  // Prices are computed automatically (Prijsmatrix + kunstenaar-opslag), nothing for the
+  // admin to fill in here anymore, so this tab has no error state outside the maatloos case.
+  const prijzenHeeftFout = isMaatloos ? !prijsPerM2 || Number(prijsPerM2) <= 0 : false;
+  const omschrijvingenHeeftFout = !omschrijvingNl;
   const opslaanDisabled =
     !foto ||
     formaat === null ||
     uploading ||
     !naam ||
     segmentIds.length === 0 ||
-    (isMateriaalloos
-      ? !prijsPerM2 || Number(prijsPerM2) <= 0
-      : maatIds.length === 0 || !allePrijzenIngevuld) ||
+    (isMaatloos && (!prijsPerM2 || Number(prijsPerM2) <= 0)) ||
     !omschrijvingNl;
 
   async function handleSave() {
@@ -456,6 +530,7 @@ export function KunstwerkenSection({
   const kunstwerkenZonderAlleMaterialenMaten = kunstwerken.filter(
     (kunstwerk) =>
       kunstwerk.materiaalIds.length > 0 &&
+      kunstwerk.maatIds.length > 0 &&
       (alleMateriaalIds.some((id) => !kunstwerk.materiaalIds.includes(id)) ||
         alleMaatIds.some((id) => !kunstwerk.maatIds.includes(id)))
   );
@@ -527,12 +602,55 @@ export function KunstwerkenSection({
         emptyLabel={t('kunstwerkenEmpty')}
         searchPlaceholder={t('dataTableSearchPlaceholder')}
       />
-      <Modal isOpen={modalState !== null} onClose={closeModal} closeLabel={t('modalClose')} wide>
+      <Modal
+        isOpen={modalState !== null}
+        onClose={closeModal}
+        closeLabel={t('modalClose')}
+        title={modalState?.mode === 'edit' ? t('kunstwerkenModalTitelBewerken') : t('kunstwerkenModalTitelToevoegen')}
+        wide
+        footerActions={
+          <>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={opslaanDisabled}
+              data-testid="kunstwerk-modal-opslaan"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+            >
+              {t('kunstwerkenOpslaan')}
+            </button>
+            {modalState?.mode === 'edit' && (
+              <button
+                type="button"
+                onClick={handleRemove}
+                data-testid="kunstwerk-modal-verwijderen"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+              >
+                {t('kunstwerkenVerwijderen')}
+              </button>
+            )}
+          </>
+        }
+      >
         <div
           data-testid="kunstwerk-modal"
           className="grid grid-cols-1 gap-6 text-sm text-white/80 lg:grid-cols-[minmax(0,1fr)_320px] min-[1432px]:grid-cols-[minmax(0,1fr)_560px]"
         >
+          <div className="sticky top-0 z-10 col-span-full bg-charcoal pb-2">
+            <ModalTabs
+              tabs={[
+                { id: 'algemeen', label: t('kunstwerkenTabAlgemeen'), hasError: algemeenHeeftFout },
+                { id: 'kenmerken', label: t('kunstwerkenTabKenmerken'), hasError: kenmerkenHeeftFout },
+                { id: 'prijzen', label: t('kunstwerkenTabPrijzen'), hasError: prijzenHeeftFout },
+                { id: 'omschrijvingen', label: t('kunstwerkenTabOmschrijvingen'), hasError: omschrijvingenHeeftFout },
+              ]}
+              activeTabId={activeTab}
+              onTabChange={setActiveTab}
+              testIdPrefix="kunstwerk-modal"
+            />
+          </div>
           <div className="flex flex-col gap-3">
+              <div className={activeTab === 'algemeen' ? 'flex flex-col gap-3' : 'hidden'}>
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
             {t('kunstwerkenLabelFoto')}
             <span
@@ -541,7 +659,7 @@ export function KunstwerkenSection({
               onDrop={handleFotoDrop}
               data-testid="kunstwerk-modal-foto-dropzone"
               className={`flex flex-col items-center gap-2 rounded-sm border border-dashed px-3 py-4 text-center transition-colors ${
-                isDraggingFoto ? 'border-silver bg-white/10' : 'border-white/20'
+                isDraggingFoto ? 'border-silver bg-white/10' : foto ? 'border-white/20' : 'border-red-500/70'
               }`}
             >
               <span className="text-xs normal-case tracking-normal text-white/60">
@@ -556,6 +674,11 @@ export function KunstwerkenSection({
               />
             </span>
           </label>
+          {!foto && (
+            <p data-testid="kunstwerk-modal-foto-hint" className="text-xs text-red-400">
+              {t('kunstwerkenFotoVerplicht')}
+            </p>
+          )}
           {uploading && (
             <p data-testid="kunstwerk-modal-foto-uploading" className="text-xs text-white/60">
               {t('kunstwerkenFotoUploading')}
@@ -574,8 +697,15 @@ export function KunstwerkenSection({
               value={naam}
               onChange={(event) => setNaam(event.target.value)}
               data-testid="kunstwerk-modal-naam"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+              className={`rounded-sm border bg-black/40 px-3 py-2 text-sm text-white ${
+                naam ? 'border-transparent' : 'border-red-500/70'
+              }`}
             />
+            {!naam && (
+              <span data-testid="kunstwerk-modal-naam-hint" className="normal-case tracking-normal text-red-400">
+                {t('kunstwerkenNaamVerplicht')}
+              </span>
+            )}
           </label>
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
             {t('kunstwerkenLabelKunstenaar')}
@@ -594,12 +724,16 @@ export function KunstwerkenSection({
             </select>
           </label>
 
-          <fieldset className="flex flex-col gap-1">
+          <fieldset
+            className={`flex flex-col gap-1 rounded-sm border px-2 py-1.5 ${
+              formaat === null ? 'border-red-500/70' : 'border-transparent'
+            }`}
+          >
             <legend className="text-xs uppercase tracking-wide text-white/60">
               {t('kunstwerkenLabelFormaat')}
             </legend>
             <div className="flex gap-4">
-              {(['vierkant', 'liggend', 'staand'] as const).map((optie) => (
+              {(['vierkant', 'liggend', 'staand', 'alle'] as const).map((optie) => (
                 <label key={optie} className="flex items-center gap-2 text-sm text-white/80">
                   <input
                     type="radio"
@@ -613,7 +747,7 @@ export function KunstwerkenSection({
               ))}
             </div>
             {formaat === null && (
-              <span data-testid="kunstwerk-modal-formaat-hint" className="text-xs text-white/50">
+              <span data-testid="kunstwerk-modal-formaat-hint" className="text-xs text-red-400">
                 {t('kunstwerkenFormaatVerplicht')}
               </span>
             )}
@@ -627,8 +761,14 @@ export function KunstwerkenSection({
               className="h-24 w-24 rounded object-cover"
             />
           )}
+              </div>
 
-          <fieldset className="flex flex-col gap-1">
+              <div className={activeTab === 'kenmerken' ? 'flex flex-col gap-3' : 'hidden'}>
+          <fieldset
+            className={`flex flex-col gap-1 rounded-sm border px-2 py-1.5 ${
+              segmentIds.length === 0 ? 'border-red-500/70' : 'border-transparent'
+            }`}
+          >
             <legend className="text-xs uppercase tracking-wide text-white/60">
               {t('kunstwerkenLabelSegmenten')}
             </legend>
@@ -643,6 +783,35 @@ export function KunstwerkenSection({
                 {segment.omschrijving}
               </label>
             ))}
+            <div className="mt-1 flex gap-2">
+              <input
+                type="text"
+                value={nieuweSegmentNaam}
+                onChange={(event) => setNieuweSegmentNaam(event.target.value)}
+                placeholder={t('kunstwerkenNieuweSegmentPlaceholder')}
+                data-testid="kunstwerk-modal-nieuwe-segment-naam"
+                className="flex-1 rounded-sm bg-black/40 px-3 py-1.5 text-sm text-white"
+              />
+              <button
+                type="button"
+                onClick={handleAddNieuweSegment}
+                disabled={!nieuweSegmentNaam.trim()}
+                data-testid="kunstwerk-modal-nieuwe-segment-toevoegen"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-3 py-1.5 text-xs text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
+              >
+                {t('kunstwerkenNieuweSegmentToevoegen')}
+              </button>
+            </div>
+            {segmentToevoegenError && (
+              <span data-testid="kunstwerk-modal-nieuwe-segment-error" className="text-xs text-red-400">
+                {segmentToevoegenError}
+              </span>
+            )}
+            {segmentIds.length === 0 && (
+              <span data-testid="kunstwerk-modal-segmenten-hint" className="text-xs text-red-400">
+                {t('kunstwerkenSegmentenVerplicht')}
+              </span>
+            )}
           </fieldset>
 
           <details className="flex flex-col gap-3 rounded-sm border border-white/10 px-3 py-2">
@@ -673,7 +842,9 @@ export function KunstwerkenSection({
               <legend className="text-xs uppercase tracking-wide text-white/60">{t('kunstwerkenLabelMaten')}</legend>
               {(maten ?? []).map((maat) => {
                 const incompatibel =
-                  formaat !== null && (formaat === 'vierkant' ? !isVierkanteMaat(maat) : isVierkanteMaat(maat));
+                  formaat !== null &&
+                  formaat !== 'alle' &&
+                  (formaat === 'vierkant' ? !isVierkanteMaat(maat) : isVierkanteMaat(maat));
                 return (
                   <label
                     key={maat.id}
@@ -784,7 +955,9 @@ export function KunstwerkenSection({
             />
             {t('kunstwerkenLabelAiGegenereerd')}
           </label>
+              </div>
 
+              <div className={activeTab === 'prijzen' ? 'flex flex-col gap-3' : 'hidden'}>
           {materiaalIds.length > 0 && maatIds.length > 0 && (
             <div className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wide text-white/60">{t('kunstwerkenLabelPrijzen')}</span>
@@ -812,21 +985,16 @@ export function KunstwerkenSection({
                         {(maten ?? [])
                           .filter((maat) => maatIds.includes(maat.id))
                           .map((maat) => {
-                            const key = prijsKey(materiaal.id, maat.id);
+                            const regel = previewPrijzen.find(
+                              (p) => p.materiaalId === materiaal.id && p.maatId === maat.id
+                            );
                             return (
-                              <td key={maat.id} className="border border-white/10 px-2 py-1">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-xs text-white/50">€</span>
-                                  <input
-                                    type="number"
-                                    value={prijzen[key] ?? ''}
-                                    onChange={(event) =>
-                                      setPrijzen((current) => ({ ...current, [key]: event.target.value }))
-                                    }
-                                    data-testid={`kunstwerk-modal-prijs-${materiaal.id}-${maat.id}`}
-                                    className="w-20 rounded-sm bg-black/40 px-2 py-1 text-sm text-white"
-                                  />
-                                </div>
+                              <td
+                                key={maat.id}
+                                data-testid={`kunstwerk-modal-prijs-preview-${materiaal.id}-${maat.id}`}
+                                className="border border-white/10 px-2 py-1 text-xs"
+                              >
+                                {regel ? `€ ${regel.prijs.toFixed(2).replace('.', ',')}` : '—'}
                               </td>
                             );
                           })}
@@ -834,10 +1002,13 @@ export function KunstwerkenSection({
                     ))}
                 </tbody>
               </table>
+              <span className="text-xs normal-case tracking-normal text-white/50">
+                {t('kunstwerkenPrijzenHint')}
+              </span>
             </div>
           )}
 
-          {isMateriaalloos && (
+          {isMaatloos && (
             <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
               {t('kunstwerkenLabelPrijsPerM2')}
               <div className="flex items-center gap-1">
@@ -847,20 +1018,36 @@ export function KunstwerkenSection({
                   value={prijsPerM2}
                   onChange={(event) => setPrijsPerM2(event.target.value)}
                   data-testid="kunstwerk-modal-prijs-per-m2"
-                  className="w-24 rounded-sm bg-black/40 px-2 py-1 text-sm text-white"
+                  className={`w-24 rounded-sm border bg-black/40 px-2 py-1 text-sm text-white ${
+                    !prijsPerM2 || Number(prijsPerM2) <= 0 ? 'border-red-500/70' : 'border-transparent'
+                  }`}
                 />
               </div>
+              {(!prijsPerM2 || Number(prijsPerM2) <= 0) && (
+                <span data-testid="kunstwerk-modal-prijs-per-m2-hint" className="normal-case tracking-normal text-red-400">
+                  {t('kunstwerkenPrijsPerM2Verplicht')}
+                </span>
+              )}
             </label>
           )}
+              </div>
 
+              <div className={activeTab === 'omschrijvingen' ? 'flex flex-col gap-3' : 'hidden'}>
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
             {t('kunstwerkenLabelOmschrijvingNl')}
             <textarea
               value={omschrijvingNl}
               onChange={(event) => setOmschrijvingNl(event.target.value)}
               data-testid="kunstwerk-modal-omschrijving-nl"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+              className={`rounded-sm border bg-black/40 px-3 py-2 text-sm text-white ${
+                omschrijvingNl ? 'border-transparent' : 'border-red-500/70'
+              }`}
             />
+            {!omschrijvingNl && (
+              <span data-testid="kunstwerk-modal-omschrijving-nl-hint" className="normal-case tracking-normal text-red-400">
+                {t('kunstwerkenOmschrijvingNlVerplicht')}
+              </span>
+            )}
           </label>
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
             {t('kunstwerkenLabelOmschrijvingFr')}
@@ -889,35 +1076,14 @@ export function KunstwerkenSection({
               className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
             />
           </label>
+              </div>
 
-          {actionError && (
-            <p data-testid="kunstwerk-modal-error" className="text-xs text-red-400">
-              {actionError}
-            </p>
-          )}
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={opslaanDisabled}
-              data-testid="kunstwerk-modal-opslaan"
-              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
-            >
-              {t('kunstwerkenOpslaan')}
-            </button>
-            {modalState?.mode === 'edit' && (
-              <button
-                type="button"
-                onClick={handleRemove}
-                data-testid="kunstwerk-modal-verwijderen"
-                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
-              >
-                {t('kunstwerkenVerwijderen')}
-              </button>
-            )}
-          </div>
-          </div>
+              {actionError && (
+                <p data-testid="kunstwerk-modal-error" className="text-xs text-red-400">
+                  {actionError}
+                </p>
+              )}
+            </div>
 
           <div className="lg:sticky lg:top-0 lg:pt-10">
             <div className="flex flex-col gap-1">
@@ -925,6 +1091,7 @@ export function KunstwerkenSection({
               <ProductModal
                 variant="preview"
                 kunstwerk={previewKunstwerk}
+                prijzen={previewPrijzen}
                 materialen={materialen}
                 maten={maten}
                 materiaalsoorten={materiaalsoorten}

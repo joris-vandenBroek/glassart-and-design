@@ -105,10 +105,10 @@
     "priceOnRequest": "Price on request",
     "customSizeNote": "{count, plural, one {+ # item, price to follow after quote} other {+ # items, price to follow after quote}}",
     "orderBlockedExclusive": "This artwork is exclusively reserved for another customer.",
-    "orderBlockedArtistOnly": "This artwork can only be ordered by the artist themselves.",
     "orderBlockedUnavailable": "This artwork cannot be ordered right now. Please try again later.",
     "placeOrderBlockedItem": "Can't place the order: \"{omschrijving}\" is no longer available to you. Remove this item from your cart and try again.",
-    "minimumQuantityError": "Minimum {minimum} pieces"
+    "minimumQuantityError": "Minimum {minimum} pieces",
+    "priceLabel": "Price"
   },
   "contactPage": {
     "title": "Contact",
@@ -236,7 +236,6 @@
     "navInvoicesDue": "Invoices due",
     "navInvoicesPaid": "Paid invoices",
     "navReturns": "Returns",
-    "navConversations": "Conversation history",
     "navSettings": "Settings",
     "logout": "Log out",
     "orders": {
@@ -247,6 +246,7 @@
       "modalClose": "Close",
       "modalLineUnknown": "Unknown item",
       "modalLinePriceOnRequest": "Price on request",
+      "modalTitel": "Order {id}",
       "loadError": "Couldn't load your orders. Please try again later."
     },
     "invoices": {
@@ -276,15 +276,6 @@
       "existingReturnsTitle": "Previously registered returns",
       "statusRegistered": "Return registered"
     },
-    "conversations": {
-      "empty": "No conversations found.",
-      "items": {
-        "conversation1": { "topic": "Question about delivery time" },
-        "conversation2": { "topic": "Hotel project quote" },
-        "conversation3": { "topic": "Question about mounting" },
-        "conversation4": { "topic": "Delivery address change" }
-      }
-    },
     "settings": {
       "labelCompanyName": "Company name",
       "labelContactPerson": "Contact person",
@@ -301,8 +292,10 @@
       "labelPassword": "Password",
       "labelPasswordConfirm": "Confirm password",
       "passwordMismatch": "Passwords do not match.",
+      "passwordTooShort": "The password must be at least 8 characters long.",
       "save": "Save",
       "saved": "Saved!",
+      "saveError": "Saving failed. Please try again.",
       "deleteAccountTitle": "Delete account",
       "deleteAccountLabelPassword": "Password (to confirm)",
       "deleteAccountSubmit": "Permanently delete",
@@ -312,5 +305,9 @@
   },
   "modal": {
     "closeTooltip": "Close this screen, any changes will not be saved!"
+  },
+  "password": {
+    "show": "Show password",
+    "hide": "Hide password"
   }
 }

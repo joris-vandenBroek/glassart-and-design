@@ -23,15 +23,6 @@ export const MATEN_SEED: Omit<Maat, 'id'>[] = [
   { breedte: 100, hoogte: 150 },
 ];
 
-const BASISPRIJS_PER_M2 = 120;
-const DIKTETOESLAG_PER_MM = 5;
-
-export function berekenVoorbeeldprijs(materiaaldikte: number, breedte: number, hoogte: number): number {
-  const oppervlakteM2 = (breedte * hoogte) / 10000;
-  const prijs = oppervlakteM2 * BASISPRIJS_PER_M2 + materiaaldikte * DIKTETOESLAG_PER_MM;
-  return Math.round(prijs * 100) / 100;
-}
-
 const KUNSTWERKEN_FOTOS_PER_SEGMENT: Record<string, string[]> = {
   Hotel: [
     'https://images.unsplash.com/photo-1625244724120-1fd1d34d00f6?q=80&w=1200&auto=format&fit=crop',
@@ -95,13 +86,6 @@ export function buildKunstwerkenSeed(
   const gekozenMaten = [...maten].sort((a, b) => a.id.localeCompare(b.id)).slice(0, 2);
   const materiaalIds = gekozenMaterialen.map((m) => m.id);
   const maatIds = gekozenMaten.map((m) => m.id);
-  const prijzen = gekozenMaterialen.flatMap((materiaal) =>
-    gekozenMaten.map((maat) => ({
-      materiaalId: materiaal.id,
-      maatId: maat.id,
-      prijs: berekenVoorbeeldprijs(materiaal.materiaaldikte, maat.breedte, maat.hoogte),
-    }))
-  );
 
   return segmenten.flatMap((segment) => {
     const fotos = KUNSTWERKEN_FOTOS_PER_SEGMENT[segment.omschrijving];
@@ -115,7 +99,6 @@ export function buildKunstwerkenSeed(
       segmentIds: [segment.id],
       materiaalIds,
       maatIds,
-      prijzen,
       omschrijvingNl: `${segment.omschrijving} paneel ${index + 1}`,
       omschrijvingFr: '',
       omschrijvingDe: '',

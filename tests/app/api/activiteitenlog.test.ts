@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { getPool } from '@/lib/server/db';
+import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { POST, GET } from '@/app/api/activiteitenlog/route';
+
+async function medewerkerCookie(): Promise<string> {
+  const sessionId = await createSession('medewerker', 'staff-1');
+  return `${SESSION_COOKIE_NAME}=${sessionId}`;
+}
 
 // This route's GET has no per-test filter (it lists the whole table, newest 500),
 // and POST doesn't echo back the inserted row's id -- so instead of a table-wide
@@ -22,13 +28,20 @@ describe('activiteitenlog route', () => {
         }),
       })
     );
-    const response = await GET();
+    const response = await GET(
+      new Request('http://localhost/api', { headers: { cookie: await medewerkerCookie() } })
+    );
     const body = await response.json();
     const found = body.find((row: { omschrijving: string }) => row.omschrijving === marker);
     expect(found).toBeDefined();
     expect(found.type).toBe('bestelling_geplaatst');
 
     await getPool().query('DELETE FROM activiteitenlog WHERE omschrijving = ?', [marker]);
+  });
+
+  it('rejects reading the log without a medewerker session', async () => {
+    const response = await GET(new Request('http://localhost/api'));
+    expect(response.status).toBe(401);
   });
 
   it('rejects an unknown activiteit type', async () => {

@@ -84,7 +84,36 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
   }
 
   return (
-    <Modal isOpen={state !== null} onClose={onClose} closeLabel={t('modalClose')} title={t('drukkersModalTitel')}>
+    <Modal
+      isOpen={state !== null}
+      onClose={onClose}
+      closeLabel={t('modalClose')}
+      title={t('drukkersModalTitel')}
+      footerActions={
+        <>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={!fields.naam || !fields.email}
+            data-testid="drukker-modal-opslaan"
+            className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+          >
+            {t('drukkersOpslaan')}
+          </button>
+          {state?.mode === 'edit' && (
+            <button
+              type="button"
+              onClick={handleRemove}
+              disabled={zendingen === null}
+              data-testid="drukker-modal-verwijderen"
+              className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+            >
+              {t('drukkersVerwijderen')}
+            </button>
+          )}
+        </>
+      }
+    >
       <div data-testid="drukker-modal" className="flex flex-col gap-2 text-sm text-white/80">
         <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
           {t('drukkersLabelNaam')}
@@ -155,29 +184,6 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
           </p>
         )}
 
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={!fields.naam || !fields.email}
-            data-testid="drukker-modal-opslaan"
-            className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
-          >
-            {t('drukkersOpslaan')}
-          </button>
-          {state?.mode === 'edit' && (
-            <button
-              type="button"
-              onClick={handleRemove}
-              disabled={zendingen === null}
-              data-testid="drukker-modal-verwijderen"
-              className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
-            >
-              {t('drukkersVerwijderen')}
-            </button>
-          )}
-        </div>
-
         {state?.mode === 'edit' && (
           <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
             <span className="text-xs uppercase tracking-wide text-white/60">{t('drukkersZendingenTitel')}</span>
@@ -190,7 +196,7 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
                 {t('drukkersZendingenLeeg')}
               </p>
             ) : (
-              <ul className="flex flex-col gap-2">
+              <ul className="flex max-h-64 flex-col gap-2 overflow-y-auto">
                 {zendingen.map((zending) => (
                   <li key={zending.id} data-testid={`drukker-zending-${zending.id}`} className="rounded-sm bg-black/30 p-2 text-xs">
                     <div className="flex items-center justify-between gap-2">

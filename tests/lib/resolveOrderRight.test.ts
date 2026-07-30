@@ -11,9 +11,7 @@ function kunstenaar(overrides: Partial<Kunstenaar> = {}): Kunstenaar {
     omschrijvingFr: '',
     omschrijvingDe: '',
     omschrijvingEn: '',
-    verkooprecht: 'open',
-    klantId: null,
-    exclusiefVoorKlantId: null,
+    exclusieveKlantIds: [],
     ...overrides,
   };
 }
@@ -25,9 +23,6 @@ describe('resolveOrderRight', () => {
   });
 
   it('treats a kunstwerk document without a kunstenaarId field at all as having no kunstenaar', () => {
-    // Documenten van vóór deze feature hebben het veld niet; useFirestoreCollection spreidt de
-    // ruwe documentdata, dus dat leest als `undefined` in plaats van `null`. firestore.rules
-    // doet hetzelfde via `!('kunstenaarId' in kw) || kw.kunstenaarId == null`.
     expect(resolveOrderRight(undefined as unknown as null, [kunstenaar()], 'uid-1')).toEqual({
       canOrder: true,
       blockedReason: null,
@@ -45,14 +40,10 @@ describe('resolveOrderRight', () => {
     });
   });
 
-  it('fails closed for a kunstenaar with an unexpected verkooprecht value', () => {
+  it('treats a missing exclusieveKlantIds field defensively as open', () => {
     expect(
-      resolveOrderRight(
-        'ka-1',
-        [kunstenaar({ verkooprecht: 'iets-nieuws' as Kunstenaar['verkooprecht'] })],
-        'uid-1'
-      )
-    ).toEqual({ canOrder: false, blockedReason: 'artistOnly' });
+      resolveOrderRight('ka-1', [kunstenaar({ exclusieveKlantIds: undefined as unknown as string[] })], 'uid-1')
+    ).toEqual({ canOrder: true, blockedReason: null });
   });
 
   it('fails closed while the kunstenaars collection has not loaded yet', () => {
@@ -69,49 +60,42 @@ describe('resolveOrderRight', () => {
     });
   });
 
-  it('allows ordering an open kunstenaar without exclusivity', () => {
+  it('allows ordering a kunstenaar with an empty exclusieveKlantIds list', () => {
     expect(resolveOrderRight('ka-1', [kunstenaar()], 'uid-1')).toEqual({
       canOrder: true,
       blockedReason: null,
     });
   });
 
-  it('blocks a kunstenaar that is exclusive to another klant', () => {
+  it('blocks a kunstenaar exclusive to one other klant', () => {
     expect(
-      resolveOrderRight('ka-1', [kunstenaar({ exclusiefVoorKlantId: 'ander-uid' })], 'uid-1')
+      resolveOrderRight('ka-1', [kunstenaar({ exclusieveKlantIds: ['ander-uid'] })], 'uid-1')
+    ).toEqual({ canOrder: false, blockedReason: 'exclusive' });
+    // Also blocked for an anonymous visitor with no uid at all.
+    expect(
+      resolveOrderRight('ka-1', [kunstenaar({ exclusieveKlantIds: ['ander-uid'] })], undefined)
     ).toEqual({ canOrder: false, blockedReason: 'exclusive' });
   });
 
-  it('allows the klant who holds the exclusivity', () => {
-    expect(resolveOrderRight('ka-1', [kunstenaar({ exclusiefVoorKlantId: 'uid-1' })], 'uid-1')).toEqual({
+  it('allows the single klant listed in exclusieveKlantIds', () => {
+    expect(resolveOrderRight('ka-1', [kunstenaar({ exclusieveKlantIds: ['uid-1'] })], 'uid-1')).toEqual({
       canOrder: true,
       blockedReason: null,
     });
   });
 
-  it('blocks an alleen-kunstenaar work for anyone other than the linked klant', () => {
-    expect(
-      resolveOrderRight('ka-1', [kunstenaar({ verkooprecht: 'alleen-kunstenaar', klantId: 'kunstenaar-uid' })], 'uid-1')
-    ).toEqual({ canOrder: false, blockedReason: 'artistOnly' });
-    // Also blocked for an anonymous visitor with no uid at all.
-    expect(
-      resolveOrderRight('ka-1', [kunstenaar({ verkooprecht: 'alleen-kunstenaar', klantId: null })], undefined)
-    ).toEqual({ canOrder: false, blockedReason: 'artistOnly' });
+  it('allows both klanten when exclusieveKlantIds has 2 entries, blocks a third klant', () => {
+    const withTwo = kunstenaar({ exclusieveKlantIds: ['uid-1', 'uid-2'] });
+    expect(resolveOrderRight('ka-1', [withTwo], 'uid-1')).toEqual({ canOrder: true, blockedReason: null });
+    expect(resolveOrderRight('ka-1', [withTwo], 'uid-2')).toEqual({ canOrder: true, blockedReason: null });
+    expect(resolveOrderRight('ka-1', [withTwo], 'uid-3')).toEqual({ canOrder: false, blockedReason: 'exclusive' });
   });
 
-  it('allows the kunstenaar to order their own work, even when it is exclusive to someone else', () => {
+  it('blocks the kunstenaar\'s own klant from ordering when exclusieveKlantIds names only someone else', () => {
+    // No automatic "artist can always order their own work" bypass: if the artist's
+    // klant-id is not in the list, they are blocked just like any other klant.
     expect(
-      resolveOrderRight(
-        'ka-1',
-        [
-          kunstenaar({
-            verkooprecht: 'alleen-kunstenaar',
-            klantId: 'uid-1',
-            exclusiefVoorKlantId: 'ander-uid',
-          }),
-        ],
-        'uid-1'
-      )
-    ).toEqual({ canOrder: true, blockedReason: null });
+      resolveOrderRight('ka-1', [kunstenaar({ exclusieveKlantIds: ['ander-uid'] })], 'kunstenaar-uid')
+    ).toEqual({ canOrder: false, blockedReason: 'exclusive' });
   });
 });

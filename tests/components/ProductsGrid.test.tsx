@@ -38,7 +38,6 @@ const KUNSTWERKEN = [
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
     formaat: 'staand',
-    prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 150 }],
     kunstenaarId: 'ka-1',
     stijlIds: ['stijl-abstract'],
     onderwerpIds: ['onderwerp-bloemen'],
@@ -55,7 +54,6 @@ const KUNSTWERKEN = [
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
     formaat: 'liggend',
-    prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 200 }],
     stijlIds: ['stijl-minimalistisch'],
     onderwerpIds: ['onderwerp-dieren'],
     aiGegenereerd: true,
@@ -72,7 +70,6 @@ const KUNSTWERKEN = [
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
     formaat: 'vierkant',
-    prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 175 }],
     stijlIds: ['stijl-abstract', 'stijl-minimalistisch'],
     onderwerpIds: [],
     omschrijvingNl: 'Kunstwerk in beide segmenten',
@@ -81,6 +78,13 @@ const KUNSTWERKEN = [
     omschrijvingEn: '',
   },
 ];
+const KUNSTWERKEN_PRIJZEN: Record<string, Array<{ materiaalId: string; maatId: string; prijs: number }>> = {
+  'kw-1': [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 150 }],
+  'kw-2': [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 200 }],
+  'kw-3': [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 175 }],
+  'kw-4': [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 220 }],
+  'kw-alle': [],
+};
 const MATERIALEN = [
   { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Veiligheidsglas' },
 ];
@@ -95,9 +99,7 @@ const KUNSTENAARS = [
     omschrijvingFr: '',
     omschrijvingDe: '',
     omschrijvingEn: '',
-    verkooprecht: 'open',
-    klantId: null,
-    exclusiefVoorKlantId: null,
+    exclusieveKlantIds: [],
   },
 ];
 const STIJLEN = [
@@ -150,6 +152,9 @@ beforeEach(() => {
     }
     if (url === '/api/instellingen/bestelinstellingen') {
       return { ok: true, json: async () => null };
+    }
+    if (url === '/api/kunstwerken/prijzen') {
+      return { ok: true, json: async () => KUNSTWERKEN_PRIJZEN };
     }
     const resource = url.replace(/^\/api\//, '');
     return { ok: true, json: async () => collections[resource] ?? [] };
@@ -413,7 +418,6 @@ describe('ProductsGrid', () => {
           segmentIds: ['seg-hotel'],
           materiaalIds: ['mat-1'],
           maatIds: ['maat-1'],
-          prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 220 }],
           stijlIds: [],
           onderwerpIds: [],
           omschrijvingNl: 'Kunstwerk zonder formaat',
@@ -429,5 +433,41 @@ describe('ProductsGrid', () => {
     fireEvent.click(screen.getByTestId('facet-formaat-option-staand'));
     const filtered = screen.getAllByTestId('product-card');
     expect(filtered).toHaveLength(1); // only kw-1, kw-4 has no formaat so never matches
+  });
+
+  it('matches a kunstwerk with Formaat "Alle" against every formaat filter and its count', async () => {
+    mockCollections({
+      kunstwerken: [
+        ...KUNSTWERKEN,
+        {
+          id: 'kw-alle',
+          foto: 'https://example.com/kw-alle.jpg',
+          segmentIds: ['seg-hotel'],
+          materiaalIds: ['mat-1'],
+          maatIds: [],
+          formaat: 'alle',
+          prijsPerM2: 65,
+          stijlIds: [],
+          onderwerpIds: [],
+          omschrijvingNl: 'Op maat, elk formaat',
+          omschrijvingFr: '',
+          omschrijvingDe: '',
+          omschrijvingEn: '',
+        },
+      ],
+    });
+    renderProductsGrid();
+    expect(await screen.findAllByTestId('product-card')).toHaveLength(4);
+
+    expect(screen.getByTestId('facet-formaat-option-staand')).toHaveTextContent('2'); // kw-1 + kw-alle
+    expect(screen.getByTestId('facet-formaat-option-liggend')).toHaveTextContent('2'); // kw-2 + kw-alle
+    expect(screen.getByTestId('facet-formaat-option-vierkant')).toHaveTextContent('2'); // kw-3 + kw-alle
+
+    fireEvent.click(screen.getByTestId('facet-formaat-option-staand'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(2); // kw-1 and kw-alle both match
+
+    fireEvent.click(screen.getByTestId('facet-formaat-option-staand'));
+    fireEvent.click(screen.getByTestId('facet-formaat-option-vierkant'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(2); // kw-3 and kw-alle both match
   });
 });

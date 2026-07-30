@@ -10,9 +10,7 @@ const BASE_KUNSTENAAR: Kunstenaar = {
   omschrijvingFr: 'Texte français',
   omschrijvingDe: 'Deutscher Text',
   omschrijvingEn: 'English text',
-  verkooprecht: 'open',
-  klantId: null,
-  exclusiefVoorKlantId: null,
+  exclusieveKlantIds: [],
 };
 
 describe('resolveKunstenaarOmschrijving', () => {

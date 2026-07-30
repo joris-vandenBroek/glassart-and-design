@@ -2,7 +2,6 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { CustomerAuthProvider } from '@/lib/useCustomerAuth';
-import { MockProfileProvider } from '@/lib/useMockProfile';
 import { AccountDashboard } from '@/components/account/AccountDashboard';
 import messages from '../../../messages/nl.json';
 
@@ -32,9 +31,7 @@ function renderDashboard() {
   return render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <CustomerAuthProvider>
-        <MockProfileProvider>
-          <AccountDashboard />
-        </MockProfileProvider>
+        <AccountDashboard />
       </CustomerAuthProvider>
     </NextIntlClientProvider>
   );
@@ -75,6 +72,7 @@ describe('AccountDashboard', () => {
     fireEvent.click(screen.getByTestId('account-nav-settings'));
     expect(screen.getByTestId('settings-section')).toBeInTheDocument();
     expect(screen.queryByTestId('orders-section')).not.toBeInTheDocument();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/klanten/me'));
   });
 
   it('logs account_bezocht exactly once with the logged-in klant', async () => {

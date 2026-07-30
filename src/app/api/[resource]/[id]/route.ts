@@ -1,55 +1,65 @@
 import { NextResponse } from 'next/server';
 import { getRow, updateRow, deleteRow } from '@/lib/server/crud';
+import { getPool } from '@/lib/server/db';
 import { LOOKUP_RESOURCES } from '@/lib/server/lookupResources';
 import { requireMedewerker } from '@/lib/server/requireAuth';
+import { withApiErrorHandling } from '@/lib/server/apiRoute';
 
-export async function GET(
-  request: Request,
-  { params }: { params: { resource: string; id: string } }
-) {
-  const config = LOOKUP_RESOURCES[params.resource];
-  if (!config) {
-    return NextResponse.json({ error: 'not-found' }, { status: 404 });
-  }
-  if (config.authRequired && !(await requireMedewerker(request))) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  }
-  const row = await getRow(params.resource, params.id, config.jsonColumns);
-  if (!row) return NextResponse.json({ error: 'not-found' }, { status: 404 });
-  return NextResponse.json(row);
-}
+const BESTELLING_REFERENCE_COLUMN: Record<string, string> = {
+  maten: 'maatId',
+  materialen: 'materiaalId',
+};
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: { resource: string; id: string } }
-) {
-  const config = LOOKUP_RESOURCES[params.resource];
-  if (!config) {
-    return NextResponse.json({ error: 'not-found' }, { status: 404 });
+export const GET = withApiErrorHandling(
+  'GET /api/[resource]/[id]',
+  async (request: Request, { params }: { params: { resource: string; id: string } }) => {
+    const config = LOOKUP_RESOURCES[params.resource];
+    if (!config) {
+      return NextResponse.json({ error: 'not-found' }, { status: 404 });
+    }
+    if (config.readAuthRequired && !(await requireMedewerker(request))) {
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    }
+    const row = await getRow(params.resource, params.id, config.jsonColumns);
+    if (!row) return NextResponse.json({ error: 'not-found' }, { status: 404 });
+    return NextResponse.json(row);
   }
-  if (config.authRequired && !(await requireMedewerker(request))) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  }
-  try {
+);
+
+export const PATCH = withApiErrorHandling(
+  'PATCH /api/[resource]/[id]',
+  async (request: Request, { params }: { params: { resource: string; id: string } }) => {
+    const config = LOOKUP_RESOURCES[params.resource];
+    if (!config) {
+      return NextResponse.json({ error: 'not-found' }, { status: 404 });
+    }
+    if (config.writeAuthRequired && !(await requireMedewerker(request))) {
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    }
     const data = await request.json();
     await updateRow(params.resource, params.id, data, config.jsonColumns);
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: 'server-error' }, { status: 500 });
   }
-}
+);
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { resource: string; id: string } }
-) {
-  const config = LOOKUP_RESOURCES[params.resource];
-  if (!config) {
-    return NextResponse.json({ error: 'not-found' }, { status: 404 });
+export const DELETE = withApiErrorHandling(
+  'DELETE /api/[resource]/[id]',
+  async (request: Request, { params }: { params: { resource: string; id: string } }) => {
+    const config = LOOKUP_RESOURCES[params.resource];
+    if (!config) {
+      return NextResponse.json({ error: 'not-found' }, { status: 404 });
+    }
+    if (config.writeAuthRequired && !(await requireMedewerker(request))) {
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    }
+    const column = BESTELLING_REFERENCE_COLUMN[params.resource];
+    if (column) {
+      const [rows] = await getPool().query(`SELECT 1 FROM bestellines WHERE ${column} = ? LIMIT 1`, [params.id]);
+      if ((rows as unknown[]).length > 0) {
+        return NextResponse.json({ error: 'in-use-bestelling' }, { status: 409 });
+      }
+    }
+    await deleteRow(params.resource, params.id);
+    return NextResponse.json({ ok: true });
   }
-  if (config.authRequired && !(await requireMedewerker(request))) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  }
-  await deleteRow(params.resource, params.id);
-  return NextResponse.json({ ok: true });
-}
+);

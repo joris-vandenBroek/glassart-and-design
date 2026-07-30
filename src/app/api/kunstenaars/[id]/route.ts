@@ -2,8 +2,10 @@ import { NextResponse } from 'next/server';
 import { getRow, updateRow, deleteRow } from '@/lib/server/crud';
 import { requireMedewerker } from '@/lib/server/requireAuth';
 
+const KUNSTENAARS_JSON_COLUMNS = ['exclusieveKlantIds'];
+
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
-  const row = await getRow('kunstenaars', params.id);
+  const row = await getRow('kunstenaars', params.id, KUNSTENAARS_JSON_COLUMNS);
   if (!row) return NextResponse.json({ error: 'not-found' }, { status: 404 });
   return NextResponse.json(row);
 }
@@ -14,7 +16,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
   try {
     const data = await request.json();
-    await updateRow('kunstenaars', params.id, data);
+    await updateRow('kunstenaars', params.id, data, KUNSTENAARS_JSON_COLUMNS);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: 'server-error' }, { status: 500 });

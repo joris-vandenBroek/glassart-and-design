@@ -19,6 +19,7 @@ import { DrukkersSection } from './DrukkersSection';
 import { ActiviteitSection, type Activiteit } from './ActiviteitSection';
 import { GlassartDesignSection } from './GlassartDesignSection';
 import { InstellingenSection } from './InstellingenSection';
+import { PrijsmatrixSection } from './PrijsmatrixSection';
 import type { Materiaalsoort, Materiaal, Maat, Segment, Stijl, Onderwerp, Kunstwerk, Prijsgroep, Drukker } from './materiaalTypes';
 import type { Kunstenaar } from './kunstenaarTypes';
 import type { Bedrijfsgegevens } from './bedrijfsgegevensTypes';
@@ -38,6 +39,12 @@ interface BeheerShellProps {
 
 type RawBestelling = Omit<Bestelling, 'companyName'>;
 
+interface PrijsmatrixRegel {
+  maatId: string;
+  materiaalId: string;
+  prijs: number | null;
+}
+
 export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   const t = useTranslations('beheer');
   const [activeSection, setActiveSection] = useState<BeheerSection>('klanten');
@@ -47,6 +54,8 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   const [bestellingenLoadError, setBestellingenLoadError] = useState<string | null>(null);
   const [activiteiten, setActiviteiten] = useState<Activiteit[] | null>(null);
   const [activiteitenLoadError, setActiviteitenLoadError] = useState<string | null>(null);
+  const [prijsmatrix, setPrijsmatrix] = useState<PrijsmatrixRegel[] | null>(null);
+  const [prijsmatrixLoadError, setPrijsmatrixLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -151,6 +160,37 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
     };
   }, [t]);
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadPrijsmatrix() {
+      try {
+        const response = await fetch('/api/prijsmatrix');
+        if (!response.ok) throw new Error('load failed');
+        const body = (await response.json()) as { prijzen: PrijsmatrixRegel[] };
+        if (!cancelled) {
+          setPrijsmatrix(body.prijzen);
+          setPrijsmatrixLoadError(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setPrijsmatrixLoadError(t('prijsmatrixLoadError'));
+        }
+      }
+    }
+    loadPrijsmatrix();
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
+
+  function handlePrijsmatrixRegelUpdated(maatId: string, materiaalId: string, prijs: number | null) {
+    setPrijsmatrix((current) =>
+      (current ?? []).map((regel) =>
+        regel.maatId === maatId && regel.materiaalId === materiaalId ? { ...regel, prijs } : regel
+      )
+    );
+  }
+
   function handleKlantUpdated(updated: Klant) {
     setKlanten((current) => (current ?? []).map((klant) => (klant.id === updated.id ? updated : klant)));
   }
@@ -217,13 +257,6 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   });
   const prijsgroepen = useApiCollection<Prijsgroep>('prijsgroepen');
   const kunstenaars = useApiCollection<Kunstenaar>('kunstenaars');
-
-  async function updateKunstenaarVeilig(
-    id: string,
-    data: Partial<Omit<Kunstenaar, 'id'>>
-  ): Promise<boolean> {
-    return kunstenaars.update(id, data);
-  }
   const drukkers = useApiCollection<Drukker>('drukkers');
   const bedrijfsgegevens = useApiRecord<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens', {
     seed: BEDRIJFSGEGEVENS_SEED,
@@ -245,6 +278,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   const kunstenaarsCount = (kunstenaars.items ?? []).length;
   const drukkersCount = (drukkers.items ?? []).length;
   const activiteitCount = (activiteiten ?? []).length;
+  const prijsmatrixCount = (prijsmatrix ?? []).filter((regel) => regel.prijs == null).length;
 
   return (
     <div
@@ -270,6 +304,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
           kunstwerkenCount={kunstwerkenCount}
           kunstenaarsCount={kunstenaarsCount}
           prijsgroepenCount={prijsgroepenCount}
+          prijsmatrixCount={prijsmatrixCount}
           drukkersCount={drukkersCount}
           activiteitCount={activiteitCount}
         />
@@ -282,7 +317,6 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             kunstenaars={kunstenaars.items}
             loadError={loadError}
             onKlantUpdated={handleKlantUpdated}
-            onKunstenaarUpdated={updateKunstenaarVeilig}
           />
         ) : activeSection === 'bestellingen' ? (
           <BestellingenSection
@@ -368,6 +402,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             onAdd={kunstwerken.add}
             onUpdate={kunstwerken.update}
             onRemove={kunstwerken.remove}
+            onAddSegment={segmenten.add}
             onAddStijl={stijlen.add}
             onAddOnderwerp={onderwerpen.add}
           />
@@ -377,7 +412,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             klanten={klanten}
             kunstwerken={kunstwerken.items}
             loadError={kunstenaars.error === 'load' ? t('kunstenaarsLoadError') : null}
-            onUpdate={updateKunstenaarVeilig}
+            onUpdate={kunstenaars.update}
             onRemove={kunstenaars.remove}
             onRefetch={kunstenaars.refetch}
           />
@@ -389,6 +424,15 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             onAdd={prijsgroepen.add}
             onUpdate={prijsgroepen.update}
             onRemove={prijsgroepen.remove}
+          />
+        ) : activeSection === 'prijsmatrix' ? (
+          <PrijsmatrixSection
+            prijsmatrix={prijsmatrix}
+            maten={maten.items}
+            materialen={materialen.items}
+            materiaalsoorten={materiaalsoorten.items}
+            loadError={prijsmatrixLoadError}
+            onRegelUpdated={handlePrijsmatrixRegelUpdated}
           />
         ) : activeSection === 'drukkers' ? (
           <DrukkersSection

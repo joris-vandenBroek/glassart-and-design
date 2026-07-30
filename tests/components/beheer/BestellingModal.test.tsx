@@ -32,7 +32,6 @@ const KUNSTWERKEN: Kunstwerk[] = [
     segmentIds: [],
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
-    prijzen: [],
     omschrijvingNl: 'Hotel paneel',
     omschrijvingFr: '',
     omschrijvingDe: '',
@@ -89,6 +88,13 @@ beforeEach(() => {
 });
 
 describe('BestellingModal', () => {
+  it('caps the bestelregels list height so it scrolls independently of the modal frame', () => {
+    renderModal(BESTELLING);
+    const list = screen.getByTestId('bestelling-modal-line-line-1').closest('ul');
+    expect(list?.className).toMatch(/max-h-80/);
+    expect(list?.className).toMatch(/overflow-y-auto/);
+  });
+
   it('renders nothing when bestelling is null', () => {
     renderModal(null);
     expect(screen.queryByTestId('bestelling-modal')).not.toBeInTheDocument();

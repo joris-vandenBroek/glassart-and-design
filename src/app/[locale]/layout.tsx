@@ -7,7 +7,6 @@ import { StagingBanner } from '@/components/StagingBanner';
 import { CustomerAuthProvider } from '@/lib/useCustomerAuth';
 import { AdminAuthProvider } from '@/lib/useAdminAuth';
 import { CartProvider } from '@/lib/useCart';
-import { MockProfileProvider } from '@/lib/useMockProfile';
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -33,10 +32,8 @@ export default async function LocaleLayout({
       <AdminAuthProvider>
         <CustomerAuthProvider>
           <CartProvider>
-            <MockProfileProvider>
-              <NavBar />
-              {children}
-            </MockProfileProvider>
+            <NavBar />
+            {children}
           </CartProvider>
         </CustomerAuthProvider>
       </AdminAuthProvider>

@@ -28,7 +28,6 @@ const KUNSTWERKEN: Kunstwerk[] = [
     segmentIds: [],
     materiaalIds: [],
     maatIds: ['maat-1'],
-    prijzen: [],
     omschrijvingNl: 'Hotel paneel',
     omschrijvingFr: '',
     omschrijvingDe: '',
@@ -204,5 +203,14 @@ describe('MatenSection', () => {
     fireEvent.click(screen.getByTestId('maat-modal-verwijderen'));
     await screen.findByTestId('maat-modal-error');
     expect(logActiviteitMock).not.toHaveBeenCalled();
+  });
+
+  it('shows the toevoegen title when adding and the bewerken title when editing', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('maten-add'));
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Maat toevoegen');
+    fireEvent.click(screen.getByTestId('modal-close'));
+    fireEvent.click(screen.getByTestId('data-table-row-maat-2'));
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Maat bewerken');
   });
 });

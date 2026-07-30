@@ -12,7 +12,6 @@ npm run lint             # next lint
 npm test                 # vitest run (all tests, single run — not watch mode)
 npx vitest run tests/app/api/klanten.test.ts   # run a single test file
 npx vitest run -t "some test name"             # run tests matching a name
-npm run migrate:firebase-data                  # one-off Firebase -> MySQL data migration script (scripts/migrate-firebase-data.ts)
 ```
 
 **Production builds for mijn.host must set `MIJNHOST_BUILD=true`** (PowerShell: `$env:MIJNHOST_BUILD='true'; npm run build`). `src/config/pageAvailability.ts` reads this flag to gate `collecties`/`word-klant`/`inloggen`/`account`/`contact` behind the Under Construction page; `beheer` is always live. A plain `npm run build` leaves those routes fully public.
@@ -31,7 +30,7 @@ Vitest is **not** mocking the database — `tests/setup.ts` loads `.env.local` a
 
 ### Data layer
 
-- `db/schema.sql` is the source of truth for the MySQL schema (21 tables: `klanten`, `medewerkers`, `sessions`, `passwordResetTokens`, catalog lookup tables `segmenten`/`stijlen`/`onderwerpen`/`materiaalsoorten`/`materialen`/`maten`/`prijsgroepen`, `kunstenaars`/`kunstenaarAfspraken`, `drukkers`/`drukkerZendingen`, `kunstwerken`, `instellingen`, `counters`, `bestelheaders`/`bestellines`, `activiteitenlog`).
+- `db/schema.sql` is the source of truth for the MySQL schema (22 tables: `klanten`, `medewerkers`, `sessions`, `passwordResetTokens`, catalog lookup tables `segmenten`/`stijlen`/`onderwerpen`/`materiaalsoorten`/`materialen`/`maten`/`prijsgroepen`/`prijsmatrix`, `kunstenaars`/`kunstenaarAfspraken`, `drukkers`/`drukkerZendingen`, `kunstwerken`, `instellingen`, `counters`, `bestelheaders`/`bestellines`, `activiteitenlog`).
 - `src/lib/server/db.ts` exposes a single lazily-created `getPool()` connection pool, driven by `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME` env vars (see `.env.local.example`).
 - `src/lib/server/crud.ts` provides generic `listRows`/`getRow`/`insertRow`/`updateRow`/`deleteRow` helpers (with JSON-column encode/decode support) used by most API routes.
 - `src/lib/server/session.ts` / `password.ts` implement cookie-based sessions and `crypto.scrypt` password hashing — no external auth library.
@@ -67,3 +66,9 @@ Vitest is **not** mocking the database — `tests/setup.ts` loads `.env.local` a
   - `deploy-naar-production.yml` — only runs when dispatched against `refs/heads/master`. Resolves which commit to deploy from an optional `version` input (e.g. `v9`); left blank, it promotes the highest existing `vN` tag — i.e. the latest version that was sent to staging. Builds that exact commit in server mode with `MIJNHOST_BUILD=true` and the same `NEXT_PUBLIC_APP_VERSION` staging showed, then SFTP-deploys to the production Node.js app. Passing an explicit `version` redeploys that tag directly — the rollback path, no new staging round required. Fails loudly (no silent fallback to `master` HEAD) if no tag can be resolved — in particular, no `vN` tags exist until at least one staging run has completed successfully, so a production dispatch before that correctly fails with "no vN tags found," which is expected on a fresh setup, not a bug. The rollback path only rolls back application code — there's no database migration rollback tooling, so check whether `db/schema.sql` changed between the current and target version before rolling back across a schema change.
 - Both workflows target dedicated DirectAdmin Node.js Selector apps (Passenger-style, `app.js` as the startup file, not `next start`) — see `docs/superpowers/plans/2026-07-23-firebase-to-mysql-migration.md` (Task 25) and `docs/superpowers/specs/2026-07-29-staging-to-production-version-promotion-design.md` for the full history and design behind this setup.
 - DirectAdmin's Node.js Selector has no API for restart/npm-install, only UI buttons — every deploy run ends with a `::warning::` and a job-summary reminder to manually click **Run NPM Install** (only if `package.json`/`package-lock.json` changed) and **RESTART** in DirectAdmin. A successful workflow run does NOT mean the new build is live yet.
+
+### Production database access
+
+Claude has working, verified credentials for the production MySQL database (`dv137864_productie` on `h64.mijn.host`, same host as staging), stored in `.env.production.local` (gitignored via the existing `.env*.local` pattern, same convention as `.env.local` for staging) — schema/data changes can be run directly instead of asking the user to run SQL by hand.
+
+**Hard rule: always ask the user for explicit permission before making any change to the production database, every time — a past approval never carries forward to a later change.** Before asking, check whether the currently-deployed production app code is actually compatible with the planned change (e.g. would it still query a column about to be dropped?) and say so explicitly if not — don't silently create a code/schema mismatch the way staging's DB was migrated ahead of staging's deployed code on 2026-07-30.

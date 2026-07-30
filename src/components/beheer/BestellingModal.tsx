@@ -195,6 +195,29 @@ export function BestellingModal({
       closeLabel={t('modalClose')}
       title={t('bestellingenModalTitel')}
       subtitle={bestelling ? `${bestelling.companyName} · ${bestelling.besteldatum}` : undefined}
+      footerActions={
+        bestelling ? (
+          <>
+            <button
+              type="button"
+              onClick={handleGoedkeuren}
+              disabled={heeftOngeprijsdeRegel}
+              data-testid="bestelling-modal-goedkeuren"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+            >
+              {t('bestellingenGoedkeuren')}
+            </button>
+            <button
+              type="button"
+              onClick={handleAfwijzen}
+              data-testid="bestelling-modal-afwijzen"
+              className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+            >
+              {t('bestellingenAfwijzen')}
+            </button>
+          </>
+        ) : null
+      }
     >
       {bestelling && (
         <div data-testid="bestelling-modal" className="flex flex-col gap-3 text-sm text-white/80">
@@ -205,7 +228,7 @@ export function BestellingModal({
             {bestelling.status}
           </span>
 
-          <ul className="flex flex-col gap-3 text-xs">
+          <ul className="flex max-h-80 flex-col gap-3 overflow-y-auto text-xs">
             {bestelling.lines.map((line) => {
               const kunstwerk = (kunstwerken ?? []).find((k) => k.id === line.kunstwerkId) ?? null;
               const materiaal = (materialen ?? []).find((m) => m.id === line.materiaalId);
@@ -429,32 +452,11 @@ export function BestellingModal({
             </p>
           )}
 
-          <div className="flex flex-col gap-2">
-            {heeftOngeprijsdeRegel && (
-              <p data-testid="bestelling-modal-goedkeuren-blocked" className="text-xs text-amber-400">
-                {t('bestellingenGoedkeurenBlocked')}
-              </p>
-            )}
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleGoedkeuren}
-                disabled={heeftOngeprijsdeRegel}
-                data-testid="bestelling-modal-goedkeuren"
-                className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
-              >
-                {t('bestellingenGoedkeuren')}
-              </button>
-              <button
-                type="button"
-                onClick={handleAfwijzen}
-                data-testid="bestelling-modal-afwijzen"
-                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
-              >
-                {t('bestellingenAfwijzen')}
-              </button>
-            </div>
-          </div>
+          {heeftOngeprijsdeRegel && (
+            <p data-testid="bestelling-modal-goedkeuren-blocked" className="text-xs text-amber-400">
+              {t('bestellingenGoedkeurenBlocked')}
+            </p>
+          )}
         </div>
       )}
     </Modal>

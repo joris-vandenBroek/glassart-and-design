@@ -41,6 +41,7 @@ describe('medewerker login route', () => {
     );
     const body = await meResponse.json();
     expect(body.user.email).toBe(TEST_EMAIL);
+    expect(body.user.wachtwoordHash).toBeUndefined();
   });
 
   it('rejects an unknown email', async () => {

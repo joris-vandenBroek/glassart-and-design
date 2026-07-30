@@ -160,4 +160,13 @@ describe('SegmentenSection', () => {
     await screen.findByTestId('segment-modal-error');
     expect(logActiviteitMock).not.toHaveBeenCalled();
   });
+
+  it('shows the toevoegen title when adding and the bewerken title when editing', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('segmenten-add'));
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Segment toevoegen');
+    fireEvent.click(screen.getByTestId('modal-close'));
+    fireEvent.click(screen.getByTestId('data-table-row-seg-2'));
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Segment bewerken');
+  });
 });

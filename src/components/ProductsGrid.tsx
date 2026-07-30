@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { useApiCollection } from '@/lib/useApiCollection';
+import { usePrijzenPerKunstwerk } from '@/lib/usePrijzenPerKunstwerk';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
@@ -25,7 +26,7 @@ export function ProductsGrid() {
   const segmentParam = searchParams.get('segment');
   const [activeFilter, setActiveFilter] = useState(segmentParam ?? ALL_FILTER);
   const [kunstenaarFilter, setKunstenaarFilter] = useState<string | null>(null);
-  const [formaatFilters, setFormaatFilters] = useState<Set<KunstwerkFormaat>>(new Set());
+  const [formaatFilters, setFormaatFilters] = useState<Set<Exclude<KunstwerkFormaat, 'alle'>>>(new Set());
   const [stijlFilters, setStijlFilters] = useState<Set<string>>(new Set());
   const [onderwerpFilters, setOnderwerpFilters] = useState<Set<string>>(new Set());
   const [aiGegenereerdFilter, setAiGegenereerdFilter] = useState(false);
@@ -44,6 +45,7 @@ export function ProductsGrid() {
   const kunstenaars = useApiCollection<Kunstenaar>('kunstenaars');
   const stijlen = useApiCollection<Stijl>('stijlen');
   const onderwerpen = useApiCollection<Onderwerp>('onderwerpen');
+  const { prijzenPerKunstwerk } = usePrijzenPerKunstwerk();
 
   if (segmenten.items === null || kunstwerken.items === null) {
     return null;
@@ -55,7 +57,11 @@ export function ProductsGrid() {
     return activeFilter === ALL_FILTER || kunstwerk.segmentIds.includes(activeFilter);
   }
   function matchesFormaat(kunstwerk: Kunstwerk) {
-    return formaatFilters.size === 0 || (kunstwerk.formaat != null && formaatFilters.has(kunstwerk.formaat));
+    return (
+      formaatFilters.size === 0 ||
+      kunstwerk.formaat === 'alle' ||
+      (kunstwerk.formaat != null && formaatFilters.has(kunstwerk.formaat))
+    );
   }
   function matchesStijl(kunstwerk: Kunstwerk) {
     return stijlFilters.size === 0 || (kunstwerk.stijlIds ?? []).some((id) => stijlFilters.has(id));
@@ -114,7 +120,7 @@ export function ProductsGrid() {
     }
   }
 
-  function toggleFormaat(formaat: KunstwerkFormaat) {
+  function toggleFormaat(formaat: Exclude<KunstwerkFormaat, 'alle'>) {
     setFormaatFilters((current) => {
       const next = new Set(current);
       if (next.has(formaat)) {
@@ -150,8 +156,8 @@ export function ProductsGrid() {
     });
   }
 
-  const FORMAAT_OPTIES: KunstwerkFormaat[] = ['staand', 'liggend', 'vierkant'];
-  const formaatLabels: Record<KunstwerkFormaat, string> = {
+  const FORMAAT_OPTIES: Exclude<KunstwerkFormaat, 'alle'>[] = ['staand', 'liggend', 'vierkant'];
+  const formaatLabels: Record<Exclude<KunstwerkFormaat, 'alle'>, string> = {
     staand: tCollections('formaatStaand'),
     liggend: tCollections('formaatLiggend'),
     vierkant: tCollections('formaatVierkant'),
@@ -253,7 +259,9 @@ export function ProductsGrid() {
           <FilterSection title={tCollections('formaatFacetTitle')} testId="formaat">
             {FORMAAT_OPTIES.map((formaat) => {
               const isChecked = formaatFilters.has(formaat);
-              const count = formaatCountBase.filter((kunstwerk) => kunstwerk.formaat === formaat).length;
+              const count = formaatCountBase.filter(
+                (kunstwerk) => kunstwerk.formaat === formaat || kunstwerk.formaat === 'alle'
+              ).length;
               return (
                 <label
                   key={formaat}
@@ -419,6 +427,7 @@ export function ProductsGrid() {
 
       <ProductModal
         kunstwerk={selectedKunstwerk}
+        prijzen={(selectedKunstwerk && prijzenPerKunstwerk?.[selectedKunstwerk.id]) ?? []}
         materialen={materialen.items}
         maten={maten.items}
         materiaalsoorten={materiaalsoorten.items}

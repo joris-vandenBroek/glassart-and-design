@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getRow } from '@/lib/server/crud';
 import { validateSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
+import { withApiErrorHandling } from '@/lib/server/apiRoute';
 
-export async function GET(request: Request) {
+export const GET = withApiErrorHandling('GET /api/auth/me', async (request: Request) => {
   const url = new URL(request.url);
   const type = url.searchParams.get('type') ?? 'klant';
   const cookie = request.headers.get('cookie') ?? '';
@@ -15,6 +16,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ user: null });
   }
   const table = type === 'klant' ? 'klanten' : 'medewerkers';
-  const user = await getRow(table, session.userId);
-  return NextResponse.json({ user });
-}
+  const user = await getRow<Record<string, unknown>>(table, session.userId);
+  if (!user) {
+    return NextResponse.json({ user: null });
+  }
+  const { wachtwoordHash: _wachtwoordHash, ...safeUser } = user;
+  return NextResponse.json({ user: safeUser });
+});

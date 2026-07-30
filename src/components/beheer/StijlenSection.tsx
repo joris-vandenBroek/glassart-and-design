@@ -98,26 +98,13 @@ export function StijlenSection({ stijlen, loadError, onAdd, onUpdate, onRemove }
         emptyLabel={t('stijlenEmpty')}
         searchPlaceholder={t('dataTableSearchPlaceholder')}
       />
-      <Modal isOpen={modalState !== null} onClose={closeModal} closeLabel={t('modalClose')}>
-        <div data-testid="stijl-modal" className="flex flex-col gap-2 text-sm text-white/80">
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('stijlenLabelOmschrijving')}
-            <input
-              type="text"
-              value={omschrijving}
-              onChange={(event) => setOmschrijving(event.target.value)}
-              data-testid="stijl-modal-omschrijving"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-            />
-          </label>
-
-          {actionError && (
-            <p data-testid="stijl-modal-error" className="text-xs text-red-400">
-              {actionError}
-            </p>
-          )}
-
-          <div className="flex gap-2">
+      <Modal
+        isOpen={modalState !== null}
+        onClose={closeModal}
+        closeLabel={t('modalClose')}
+        title={modalState?.mode === 'edit' ? t('stijlenModalTitelBewerken') : t('stijlenModalTitelToevoegen')}
+        footerActions={
+          <>
             <button
               type="button"
               onClick={handleSave}
@@ -137,7 +124,26 @@ export function StijlenSection({ stijlen, loadError, onAdd, onUpdate, onRemove }
                 {t('stijlenVerwijderen')}
               </button>
             )}
-          </div>
+          </>
+        }
+      >
+        <div data-testid="stijl-modal" className="flex flex-col gap-2 text-sm text-white/80">
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+            {t('stijlenLabelOmschrijving')}
+            <input
+              type="text"
+              value={omschrijving}
+              onChange={(event) => setOmschrijving(event.target.value)}
+              data-testid="stijl-modal-omschrijving"
+              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+            />
+          </label>
+
+          {actionError && (
+            <p data-testid="stijl-modal-error" className="text-xs text-red-400">
+              {actionError}
+            </p>
+          )}
         </div>
       </Modal>
     </div>

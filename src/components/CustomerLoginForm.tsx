@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
+import { PasswordInput } from '@/components/PasswordInput';
 
 export function CustomerLoginForm() {
   const t = useTranslations('loginPage');
@@ -58,8 +59,7 @@ export function CustomerLoginForm() {
 
       <label className={labelClassName}>
         {t('labelPassword')}
-        <input
-          type="password"
+        <PasswordInput
           required
           value={password}
           onChange={(event) => setPassword(event.target.value)}

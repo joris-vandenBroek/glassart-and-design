@@ -1,6 +1,12 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { getPool } from '@/lib/server/db';
+import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { GET, PATCH } from '@/app/api/instellingen/[id]/route';
+
+async function medewerkerCookie(): Promise<string> {
+  const sessionId = await createSession('medewerker', 'staff-1');
+  return `${SESSION_COOKIE_NAME}=${sessionId}`;
+}
 
 // A fixture-only id, never 'bedrijfsgegevens'/'bestelinstellingen' -- the real ids used
 // by the deployed app. Scoping cleanup to this one row (instead of the previous blanket
@@ -24,7 +30,10 @@ describe('instellingen route', () => {
     const patchResponse = await PATCH(
       new Request('http://localhost/api', {
         method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          cookie: await medewerkerCookie(),
+        },
         body: JSON.stringify({ bezoekadres: 'Den Heuvel 21, 5688 EM Oirschot' }),
       }),
       { params: { id: TEST_ID } }
@@ -36,5 +45,17 @@ describe('instellingen route', () => {
     });
     const body = await getResponse.json();
     expect(body.bezoekadres).toBe('Den Heuvel 21, 5688 EM Oirschot');
+  });
+
+  it('rejects a PATCH without a medewerker session', async () => {
+    const response = await PATCH(
+      new Request('http://localhost/api', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ bezoekadres: 'Hack' }),
+      }),
+      { params: { id: TEST_ID } }
+    );
+    expect(response.status).toBe(401);
   });
 });
