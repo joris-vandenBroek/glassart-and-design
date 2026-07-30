@@ -318,8 +318,8 @@ describe('BeheerShell', () => {
   it('shows the prijsgroepen count and switches to the Prijsgroepen section', async () => {
     mockCollections({
       prijsgroepen: [
-        { id: 'pg-1', naam: 'Standaard', kortingspercentage: 0 },
-        { id: 'pg-2', naam: 'Wholesale', kortingspercentage: 15 },
+        { id: 'pg-1', naam: 'Standaard', kortingspercentage: 0, opslagpercentage: null },
+        { id: 'pg-2', naam: 'Wholesale', kortingspercentage: 15, opslagpercentage: null },
       ],
     });
     renderShell();
