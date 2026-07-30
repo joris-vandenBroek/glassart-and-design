@@ -946,4 +946,42 @@ describe('KunstwerkenSection', () => {
       expect(screen.getByTestId('product-modal-omschrijving')).toHaveTextContent('Hotel paneel 1');
     });
   });
+
+  it('shows the toevoegen title when adding and the bewerken title when editing', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Kunstwerk toevoegen');
+    fireEvent.click(screen.getByTestId('modal-close'));
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Kunstwerk bewerken');
+  });
+
+  it('starts on the Algemeen tab and switches tab content when a tab is clicked', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    expect(screen.getByTestId('kunstwerk-modal-tab-algemeen')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('kunstwerk-modal-tab-omschrijvingen')).toHaveAttribute('aria-selected', 'false');
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-tab-omschrijvingen'));
+    expect(screen.getByTestId('kunstwerk-modal-tab-omschrijvingen')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('kunstwerk-modal-tab-algemeen')).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('shows an error dot on the Algemeen tab when naam is empty, and on the Omschrijvingen tab when omschrijvingNl is empty', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    expect(screen.getByTestId('kunstwerk-modal-tab-algemeen-error-dot')).toBeInTheDocument();
+    expect(screen.getByTestId('kunstwerk-modal-tab-omschrijvingen-error-dot')).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Nieuw kunstwerk' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Omschrijving' } });
+    expect(screen.queryByTestId('kunstwerk-modal-tab-omschrijvingen-error-dot')).not.toBeInTheDocument();
+  });
+
+  it('resets to the Algemeen tab each time the modal is reopened', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-tab-omschrijvingen'));
+    fireEvent.click(screen.getByTestId('modal-close'));
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    expect(screen.getByTestId('kunstwerk-modal-tab-algemeen')).toHaveAttribute('aria-selected', 'true');
+  });
 });

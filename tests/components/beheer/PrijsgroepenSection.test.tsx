@@ -151,4 +151,13 @@ describe('PrijsgroepenSection', () => {
     fireEvent.click(screen.getByTestId('prijsgroep-modal-verwijderen'));
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith('pg-1'));
   });
+
+  it('shows the toevoegen title when adding and the bewerken title when editing', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('prijsgroepen-add'));
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Prijsgroep toevoegen');
+    fireEvent.click(screen.getByTestId('modal-close'));
+    fireEvent.click(screen.getByTestId('data-table-row-pg-2'));
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Prijsgroep bewerken');
+  });
 });

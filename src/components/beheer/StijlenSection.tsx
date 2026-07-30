@@ -102,6 +102,7 @@ export function StijlenSection({ stijlen, loadError, onAdd, onUpdate, onRemove }
         isOpen={modalState !== null}
         onClose={closeModal}
         closeLabel={t('modalClose')}
+        title={modalState?.mode === 'edit' ? t('stijlenModalTitelBewerken') : t('stijlenModalTitelToevoegen')}
         footerActions={
           <>
             <button

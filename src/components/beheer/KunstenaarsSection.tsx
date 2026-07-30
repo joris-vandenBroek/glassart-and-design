@@ -321,6 +321,7 @@ export function KunstenaarsSection({
         isOpen={modalState !== null}
         onClose={closeModal}
         closeLabel={t('modalClose')}
+        title={modalState?.mode === 'edit' ? t('kunstenaarsModalTitelBewerken') : t('kunstenaarsModalTitelToevoegen')}
         footerActions={
           <>
             <button
