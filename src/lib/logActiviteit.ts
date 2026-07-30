@@ -36,7 +36,7 @@ export const ACTIVITEIT_TYPES = [
   'kunstenaar_toegevoegd',
   'kunstenaar_gewijzigd',
   'kunstenaar_verwijderd',
-  'klant_exclusiviteit_gewijzigd',
+  'klant_kunstenaarkoppeling_gewijzigd',
   'drukker_toegevoegd',
   'drukker_gewijzigd',
   'drukker_verwijderd',

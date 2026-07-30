@@ -37,7 +37,7 @@ const KLANT_DATA = {
   invoiceCity: '',
   status: 'Beoordelen',
   prijsgroepId: null,
-  exclusieveKunstenaarIds: [],
+  kunstenaarId: null,
   minimaleAfname: null,
 };
 
@@ -303,7 +303,7 @@ describe('BeheerShell', () => {
   it('shows the count and switches to the Kunstenaars section', async () => {
     mockCollections({
       kunstenaars: [
-        { id: 'ka-1', naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', verkooprecht: 'open', klantId: null, exclusiefVoorKlantId: null },
+        { id: 'ka-1', naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', exclusieveKlantIds: [] },
       ],
     });
     renderShell();
@@ -311,33 +311,6 @@ describe('BeheerShell', () => {
     screen.getByTestId('beheer-nav-kunstenaars').click();
     expect(await screen.findByTestId('kunstenaars-section')).toBeInTheDocument();
     expect(screen.getByTestId('data-table-row-ka-1')).toHaveTextContent('Sabrina Glasser');
-  });
-
-  // updateKunstenaarVeilig is the single write path to kunstenaars/{id} passed to both
-  // KunstenaarsSection and KlantModal. Now that the field-level split (public data vs.
-  // internal prijsafspraken) is structural — two separate MySQL tables, never one row
-  // with a field to strip — this is a thin pass-through to the useApiCollection update.
-  it('updateKunstenaarVeilig PATCHes /api/kunstenaars/{id} via the Klanten exclusiviteit flow', async () => {
-    mockCollections({
-      klanten: [{ id: 'uid-1', ...KLANT_DATA }],
-      kunstenaars: [
-        { id: 'ka-1', naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', verkooprecht: 'open', klantId: null, exclusiefVoorKlantId: null },
-      ],
-    });
-    renderShell();
-    fireEvent.click(await screen.findByTestId('data-table-row-uid-1'));
-    fireEvent.click(await screen.findByTestId('klant-modal-exclusief-ka-1'));
-    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
-
-    await waitFor(() =>
-      expect(fetchMock).toHaveBeenCalledWith(
-        '/api/kunstenaars/ka-1',
-        expect.objectContaining({
-          method: 'PATCH',
-          body: JSON.stringify({ exclusiefVoorKlantId: 'uid-1' }),
-        })
-      )
-    );
   });
 
   it('shows the drukkers count and switches to the Drukkers section', async () => {
