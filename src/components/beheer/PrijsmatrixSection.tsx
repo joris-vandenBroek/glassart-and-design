@@ -40,6 +40,18 @@ export function PrijsmatrixSection({
     return map;
   }, [materiaalsoorten]);
 
+  const gesorteerdeMaten = useMemo(() => {
+    return [...(maten ?? [])].sort((a, b) => a.breedte - b.breedte || a.hoogte - b.hoogte);
+  }, [maten]);
+
+  const gesorteerdeMaterialen = useMemo(() => {
+    return [...(materialen ?? [])].sort((a, b) => {
+      const soortA = soortNaamById.get(a.materiaalsoortId) ?? a.materiaalsoortId;
+      const soortB = soortNaamById.get(b.materiaalsoortId) ?? b.materiaalsoortId;
+      return soortA.localeCompare(soortB) || a.materiaaldikte - b.materiaaldikte;
+    });
+  }, [materialen, soortNaamById]);
+
   if (loadError) {
     return (
       <p data-testid="prijsmatrix-error" className="text-xs text-red-400">
@@ -94,7 +106,7 @@ export function PrijsmatrixSection({
         <thead>
           <tr>
             <th className="border border-white/10 px-2 py-1"></th>
-            {materialen.map((materiaal) => (
+            {gesorteerdeMaterialen.map((materiaal) => (
               <th key={materiaal.id} className="border border-white/10 px-2 py-1 text-xs font-semibold">
                 {`${materiaal.materiaaldikte}mm ${soortNaamById.get(materiaal.materiaalsoortId) ?? ''}`}
               </th>
@@ -102,12 +114,12 @@ export function PrijsmatrixSection({
           </tr>
         </thead>
         <tbody>
-          {maten.map((maat) => (
+          {gesorteerdeMaten.map((maat) => (
             <tr key={maat.id}>
               <td className="border border-white/10 px-2 py-1 text-xs whitespace-nowrap">
                 {`${maat.breedte}×${maat.hoogte}`}
               </td>
-              {materialen.map((materiaal) => (
+              {gesorteerdeMaterialen.map((materiaal) => (
                 <td key={materiaal.id} className="border border-white/10 px-2 py-1">
                   <div className="flex items-center gap-1">
                     <span className="text-xs text-white/50">€</span>

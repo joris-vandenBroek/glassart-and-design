@@ -61,4 +61,57 @@ describe('PrijsmatrixSection', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/prijsmatrix', expect.objectContaining({ method: 'PUT' })));
     expect(onRegelUpdated).toHaveBeenCalledWith('maat-1', 'mat-1', 175);
   });
+
+  it('renders maten rows sorted by breedte then hoogte ascending', () => {
+    const unsortedMaten = [
+      { id: 'maat-large', breedte: 100, hoogte: 100 },
+      { id: 'maat-small', breedte: 40, hoogte: 60 },
+      { id: 'maat-medium', breedte: 60, hoogte: 60 },
+    ];
+    const prijsmatrix = unsortedMaten.map((maat) => ({
+      maatId: maat.id,
+      materiaalId: 'mat-1',
+      prijs: null,
+    }));
+    renderSection({ maten: unsortedMaten, prijsmatrix });
+
+    // Get all row label cells (skipping the header row)
+    const rows = screen.getAllByRole('row');
+    const rowLabels = rows.slice(1).map((row) => row.querySelector('td')?.textContent);
+
+    expect(rowLabels).toEqual(['40×60', '60×60', '100×100']);
+  });
+
+  it('renders materialen columns grouped by materiaalsoort then sorted by dikte ascending', () => {
+    const materiaalsoorten = [
+      { id: 'soort-A', omschrijving: 'Acryl' },
+      { id: 'soort-B', omschrijving: 'Glas' },
+    ];
+    const unsortedMaterialen = [
+      { id: 'mat-glas-5', materiaalsoortId: 'soort-B', materiaaldikte: 5, omschrijving: 'Glas 5mm' },
+      { id: 'mat-acryl-3', materiaalsoortId: 'soort-A', materiaaldikte: 3, omschrijving: 'Acryl 3mm' },
+      { id: 'mat-glas-3', materiaalsoortId: 'soort-B', materiaaldikte: 3, omschrijving: 'Glas 3mm' },
+      { id: 'mat-acryl-5', materiaalsoortId: 'soort-A', materiaaldikte: 5, omschrijving: 'Acryl 5mm' },
+    ];
+    const prijsmatrix = unsortedMaterialen.map((mat) => ({
+      maatId: 'maat-1',
+      materiaalId: mat.id,
+      prijs: null,
+    }));
+
+    renderSection({
+      maten: [{ id: 'maat-1', breedte: 40, hoogte: 60 }],
+      materiaalsoorten,
+      materialen: unsortedMaterialen,
+      prijsmatrix,
+    });
+
+    // Get the header row's column headers (skipping the first empty cell)
+    const headerRow = screen.getAllByRole('row')[0];
+    const headers = Array.from(headerRow.querySelectorAll('th')).slice(1);
+    const headerTexts = headers.map((h) => h.textContent);
+
+    // Acryl should come before Glas (alphabetically), and within each soort, dikte should be ascending
+    expect(headerTexts).toEqual(['3mm Acryl', '5mm Acryl', '3mm Glas', '5mm Glas']);
+  });
 });
