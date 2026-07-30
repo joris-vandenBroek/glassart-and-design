@@ -207,6 +207,11 @@ jobs:
       - name: Compute next version number
         id: version
         run: |
+          if [ "${{ github.ref }}" != "refs/heads/master" ]; then
+            echo "tag=" >> "$GITHUB_OUTPUT"
+            echo "Not master -- feature-branch staging deploys aren't versioned (no promotable vN, no beheer version label)."
+            exit 0
+          fi
           latest=$(git tag -l 'v[0-9]*' | sed 's/^v//' | sort -n | tail -1)
           if [ -z "$latest" ]; then
             next=1
@@ -218,6 +223,9 @@ jobs:
         # Only computes the candidate number -- the actual git tag is created and pushed
         # in "Tag staged version" below, and ONLY after the smoke check passes. A failed
         # build/deploy/smoke-check simply skips that number; gaps are expected/harmless.
+        # Non-master runs deliberately get an empty tag: NEXT_PUBLIC_APP_VERSION ends up
+        # unset, so AppVersionLabel shows nothing (same as local dev) instead of a version
+        # number that could collide with -- or be confused for -- a real promotable build.
 
       - name: Build (server mode)
         run: npm run build
@@ -346,15 +354,21 @@ jobs:
           fi
 
       - name: Tag staged version
+        if: github.ref == 'refs/heads/master'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag "${{ steps.version.outputs.tag }}" "${{ github.sha }}"
           git push origin "${{ steps.version.outputs.tag }}"
           echo "Tagged and pushed ${{ steps.version.outputs.tag }} -- production can now promote this exact commit."
-        # Placed after the smoke check on purpose: this step only runs if every step
-        # above it succeeded (GitHub Actions' default job behavior), so a failed build,
-        # deploy, or smoke check never tags broken code as a promotable version.
+        # Master-only: staging itself can be dispatched from any branch for review, but
+        # only a master commit is allowed to become a promotable vN version -- this is
+        # what makes production's own master-ref guard meaningful instead of trivially
+        # true. Also placed after the smoke check, so this only runs once build, deploy,
+        # and smoke check have all succeeded -- but that means the tag says "built and
+        # uploaded successfully", not "a human reviewed this version on staging". Actually
+        # verifying the new version (after the manual RESTART above) is still the
+        # developer's job before ever promoting it to production.
 ```
 
 - [ ] **Step 2: Validate YAML syntax**
@@ -405,10 +419,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Production only ever deploys a commit that was already tagged by a staging run --
-    # staging exists precisely so unreviewed code gets tested before it reaches real
-    # customers. Dispatching this workflow against any ref other than master skips the
-    # job instead of deploying it.
+    # Only checks which ref this workflow itself was dispatched against -- the real
+    # guarantee that a vN tag always points at a master commit comes from staging's
+    # "Tag staged version" step being master-gated too (see deploy-naar-staging.yml).
     if: github.ref == 'refs/heads/master'
     steps:
       - name: Checkout
@@ -419,8 +432,10 @@ jobs:
 
       - name: Resolve version to deploy
         id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          input_version="${{ inputs.version }}"
+          input_version="$INPUT_VERSION"
           if [ -n "$input_version" ]; then
             tag="$input_version"
             if ! git rev-parse "refs/tags/$tag" >/dev/null 2>&1; then
@@ -435,11 +450,23 @@ jobs:
             fi
             tag="v$latest"
           fi
+          if ! echo "$tag" | grep -Eq '^v[0-9]+$'; then
+            echo "::error::Resolved tag '$tag' does not match the required ^v[0-9]+\$ format -- refusing to use it."
+            exit 1
+          fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "Deploying version: $tag"
         # Default behavior (blank input) promotes the latest version that was staged and
         # tagged by deploy-naar-staging.yml. An explicit input value redeploys that exact
         # tagged commit instead -- this is the rollback path, no new staging round needed.
+        # INPUT_VERSION is read via env: rather than interpolated straight into the script
+        # body, and the resolved tag (either branch) is validated against ^v[0-9]+$ before
+        # use -- workflow_dispatch inputs are attacker-controlled text substituted before
+        # bash ever parses the script, so a raw ${{ inputs.version }} here would let a
+        # crafted dispatch value inject arbitrary shell into a runner holding production
+        # secrets. Once this output is guaranteed to be v-plus-digits, every later
+        # steps.version.outputs.tag reference in this file is inherently safe to
+        # interpolate.
 
       - name: Checkout resolved version
         run: git checkout "${{ steps.version.outputs.tag }}"
@@ -480,43 +507,48 @@ jobs:
           cp -r .next public messages src deploy_payload/
           rm -rf deploy_payload/.next/cache
           cp app.js next.config.mjs package.json package-lock.json deploy_payload/
-        # Same shape as deploy-naar-staging.yml's payload -- node_modules deliberately
-        # excluded (managed via DirectAdmin's "Run NPM Install" button, see the manual
-        # restart reminder below).
+        # Same shape as the equivalent step in deploy-naar-staging.yml -- node_modules
+        # deliberately excluded (managed via DirectAdmin's "Run NPM Install" button, see
+        # the manual restart reminder below).
 
       - name: Upload build to production Node.js app via SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.6
         with:
-          server: ${{ vars.PRODUCTION_FTP_HOST }}
+          server: ${{ vars.PRODUCTION_SFTP_HOST }}
           port: 22
-          username: ${{ secrets.PRODUCTION_FTP_USERNAME }}
-          password: ${{ secrets.PRODUCTION_FTP_PASSWORD }}
+          username: ${{ secrets.PRODUCTION_SFTP_USERNAME }}
+          password: ${{ secrets.PRODUCTION_SFTP_PASSWORD }}
           sftp_only: true
           local_path: './deploy_payload/*'
           remote_path: '/'
           sftpArgs: '-o ConnectionAttempts=5 -o ConnectTimeout=15'
-        # KNOWN UNKNOWN: PRODUCTION_FTP_USERNAME/PASSWORD/HOST currently belong to the OLD
-        # static-export FTP account (which uploaded straight into public_html/, alongside
-        # mail-server/ and upload-server/). The production Node.js app has its own
+        # KNOWN UNKNOWN: PRODUCTION_SFTP_HOST/USERNAME/PASSWORD are intentionally NEW
+        # secret/variable names, not yet created -- deliberately distinct from the OLD
+        # PRODUCTION_FTP_HOST/USERNAME/PASSWORD ones, which belong to the old
+        # static-export FTP account (uploads straight into public_html/, alongside
+        # mail-server/ and upload-server/) and are left untouched/unused here in case
+        # anything else still needs them. The production Node.js app has its own
         # separate, isolated "Application root" folder -- same shape as staging's, see
-        # above -- with no overlap with public_html or the PHP endpoints. These
-        # credentials will very likely need to be replaced with a dedicated SFTP account
-        # for that app root, the way staging needed its own distinct SFTP account. Expect
-        # this first production dispatch to need the same kind of iteration
-        # deploy-naar-staging.yml went through (wrong host/path/protocol) before it lands
-        # correctly -- check DirectAdmin's Node.js app screen for the real Application
-        # root and create/adjust an SFTP-capable account for it if this step fails or
-        # uploads to the wrong place. Unlike the old workflow, no `exclude` for
-        # mail-server/upload-server is needed here: the Node.js app root is entirely
-        # separate from public_html by construction, there's nothing to accidentally wipe.
+        # above -- with no overlap with public_html or the PHP endpoints, so reusing the
+        # old FTP account's credentials here (if it happens to also have SFTP access)
+        # would risk silently uploading to the wrong directory while still reporting a
+        # green run. Using brand-new names means the SFTP steps fail loudly with a
+        # missing/empty credential error on the first dispatch instead -- create
+        # PRODUCTION_SFTP_HOST/USERNAME/PASSWORD (`gh variable set` / `gh secret set`)
+        # pointing at a dedicated SFTP-capable DirectAdmin account for the production
+        # Node.js app's actual Application root -- mirroring how staging needed its own
+        # distinct SFTP account -- BEFORE the first dispatch of this workflow. Unlike the
+        # old workflow, no `exclude` for mail-server/upload-server is needed here: the
+        # Node.js app root is entirely separate from public_html by construction, there's
+        # nothing to accidentally wipe.
 
       - name: Upload .next build via SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.6
         with:
-          server: ${{ vars.PRODUCTION_FTP_HOST }}
+          server: ${{ vars.PRODUCTION_SFTP_HOST }}
           port: 22
-          username: ${{ secrets.PRODUCTION_FTP_USERNAME }}
-          password: ${{ secrets.PRODUCTION_FTP_PASSWORD }}
+          username: ${{ secrets.PRODUCTION_SFTP_USERNAME }}
+          password: ${{ secrets.PRODUCTION_SFTP_PASSWORD }}
           sftp_only: true
           local_path: './deploy_payload/.next/*'
           remote_path: '/.next'
@@ -537,6 +569,7 @@ jobs:
 
       - name: Smoke check
         run: |
+          sleep 5
           attempt=1
           max_attempts=3
           status=""
@@ -620,7 +653,7 @@ This can't be automated or verified without actually running the workflows again
 
 - [ ] **Step 2: Dispatch production with a blank `version` input** (`gh workflow run deploy-naar-production.yml`) and confirm:
   - It resolves and deploys the same `vN` tag staging just produced (check the run log for "Deploying version: vN").
-  - **Expect to need to fix the SFTP target** (see the "KNOWN UNKNOWN" comment in Task 4) — check DirectAdmin's Node.js app screen for the production app's real Application root, and update `PRODUCTION_FTP_HOST`/`PRODUCTION_FTP_USERNAME`/`PRODUCTION_FTP_PASSWORD` (`gh secret set` / `gh variable set`) if the upload fails or lands in the wrong place, the same way staging's did.
+  - **`PRODUCTION_SFTP_HOST`/`PRODUCTION_SFTP_USERNAME`/`PRODUCTION_SFTP_PASSWORD` must be created before this first dispatch**, not just adjusted if wrong (see the "KNOWN UNKNOWN" comment in Task 4) — check DirectAdmin's Node.js app screen for the production app's real Application root, create a dedicated SFTP-capable account for it, and set the three new secrets/variables (`gh secret set` / `gh variable set`) accordingly, the same way staging needed its own distinct SFTP account.
   - After manually clicking Run NPM Install (if needed) + RESTART, `https://glassartanddesign.com/nl/beheer` shows the identical `vN`.
 
 - [ ] **Step 3: Verify the rollback path** — dispatch production again with an explicit older `version` input (e.g. the tag from before Step 1, if one exists) and confirm the deployed commit and the beheer header's version both match that older tag, not the latest one.

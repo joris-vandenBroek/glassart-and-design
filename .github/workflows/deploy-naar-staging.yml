@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: "staging"
@@ -16,6 +16,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Full history + tags needed so "Compute next version number" below can see
+          # every existing vN tag, not just what a shallow clone would include.
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -26,10 +30,34 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Compute next version number
+        id: version
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/master" ]; then
+            echo "tag=" >> "$GITHUB_OUTPUT"
+            echo "Not master -- feature-branch staging deploys aren't versioned (no promotable vN, no beheer version label)."
+            exit 0
+          fi
+          latest=$(git tag -l 'v[0-9]*' | sed 's/^v//' | sort -n | tail -1)
+          if [ -z "$latest" ]; then
+            next=1
+          else
+            next=$((latest + 1))
+          fi
+          echo "tag=v$next" >> "$GITHUB_OUTPUT"
+          echo "Next version: v$next"
+        # Only computes the candidate number -- the actual git tag is created and pushed
+        # in "Tag staged version" below, and ONLY after the smoke check passes. A failed
+        # build/deploy/smoke-check simply skips that number; gaps are expected/harmless.
+        # Non-master runs deliberately get an empty tag: NEXT_PUBLIC_APP_VERSION ends up
+        # unset, so AppVersionLabel shows nothing (same as local dev) instead of a version
+        # number that could collide with -- or be confused for -- a real promotable build.
+
       - name: Build (server mode)
         run: npm run build
         env:
           NEXT_PUBLIC_ENVIRONMENT_LABEL: 'staging'
+          NEXT_PUBLIC_APP_VERSION: ${{ steps.version.outputs.tag }}
           NEXT_PUBLIC_MAIL_ENDPOINT_URL: ${{ vars.NEXT_PUBLIC_MAIL_ENDPOINT_URL }}
           NEXT_PUBLIC_MAIL_SECRET: ${{ secrets.NEXT_PUBLIC_MAIL_SECRET }}
           NEXT_PUBLIC_UPLOAD_ENDPOINT_URL: ${{ vars.NEXT_PUBLIC_UPLOAD_ENDPOINT_URL }}
@@ -150,3 +178,20 @@ jobs:
             echo "Staging did not respond with 200 after $max_attempts attempts (last status: $status)"
             exit 1
           fi
+
+      - name: Tag staged version
+        if: github.ref == 'refs/heads/master'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.version.outputs.tag }}" "${{ github.sha }}"
+          git push origin "${{ steps.version.outputs.tag }}"
+          echo "Tagged and pushed ${{ steps.version.outputs.tag }} -- production can now promote this exact commit."
+        # Master-only: staging itself can be dispatched from any branch for review, but
+        # only a master commit is allowed to become a promotable vN version -- this is
+        # what makes production's own master-ref guard meaningful instead of trivially
+        # true. Also placed after the smoke check, so this only runs once build, deploy,
+        # and smoke check have all succeeded -- but that means the tag says "built and
+        # uploaded successfully", not "a human reviewed this version on staging". Actually
+        # verifying the new version (after the manual RESTART above) is still the
+        # developer's job before ever promoting it to production.

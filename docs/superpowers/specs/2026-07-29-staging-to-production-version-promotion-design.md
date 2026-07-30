@@ -108,7 +108,12 @@ account, the way staging did — discovering the right host/path/protocol took s
 iterations for staging (see commit history on `deploy-naar-staging.yml`: switching FTP
 to SFTP, correcting the application root, excluding `node_modules`, retry logic). The
 same trial-and-error should be expected here and will require DirectAdmin access from
-the user during the first real dispatch.
+the user during the first real dispatch. Decision: rather than reusing the old
+`PRODUCTION_FTP_*` names (which risk silently succeeding against the wrong directory if
+that old account also happens to have SFTP access), the workflow references new,
+distinct `PRODUCTION_SFTP_*` secret/variable names from the start, so a misconfigured or
+not-yet-created target fails loudly instead of silently succeeding against the wrong
+directory.
 
 ## Error handling / edge cases
 
