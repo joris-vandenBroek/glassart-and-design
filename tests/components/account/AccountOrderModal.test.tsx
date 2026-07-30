@@ -69,4 +69,28 @@ describe('AccountOrderModal', () => {
     expect(line).toHaveTextContent('90×140 cm');
     expect(line).toHaveTextContent('Prijs op aanvraag');
   });
+
+  it('shows the order id in the modal header', () => {
+    renderModal({
+      id: 'GD-00001',
+      date: '1-7-2026',
+      time: '14:30',
+      description: '',
+      lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
+    });
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('GD-00001');
+  });
+
+  it('caps the order-lines list height so it scrolls independently of the modal frame', () => {
+    renderModal({
+      id: 'GD-00001',
+      date: '1-7-2026',
+      time: '14:30',
+      description: '',
+      lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
+    });
+    const list = screen.getByTestId('account-order-modal-line-line-1').closest('ul');
+    expect(list?.className).toMatch(/max-h-72/);
+    expect(list?.className).toMatch(/overflow-y-auto/);
+  });
 });

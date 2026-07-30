@@ -244,6 +244,7 @@
       "modalClose": "Schließen",
       "modalLineUnknown": "Unbekannter Artikel",
       "modalLinePriceOnRequest": "Preis auf Anfrage",
+      "modalTitel": "Bestellung {id}",
       "loadError": "Bestellungen konnten nicht geladen werden. Bitte versuchen Sie es später erneut."
     },
     "settings": {

@@ -244,6 +244,7 @@
       "modalClose": "Sluiten",
       "modalLineUnknown": "Onbekend artikel",
       "modalLinePriceOnRequest": "Prijs op aanvraag",
+      "modalTitel": "Bestelling {id}",
       "loadError": "Bestellingen konden niet worden geladen. Probeer het later opnieuw."
     },
     "settings": {

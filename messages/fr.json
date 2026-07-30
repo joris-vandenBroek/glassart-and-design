@@ -244,6 +244,7 @@
       "modalClose": "Fermer",
       "modalLineUnknown": "Article inconnu",
       "modalLinePriceOnRequest": "Prix sur demande",
+      "modalTitel": "Commande {id}",
       "loadError": "Impossible de charger vos commandes. Veuillez réessayer plus tard."
     },
     "settings": {

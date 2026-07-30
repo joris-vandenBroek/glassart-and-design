@@ -247,6 +247,7 @@
       "modalClose": "Close",
       "modalLineUnknown": "Unknown item",
       "modalLinePriceOnRequest": "Price on request",
+      "modalTitel": "Order {id}",
       "loadError": "Couldn't load your orders. Please try again later."
     },
     "invoices": {
