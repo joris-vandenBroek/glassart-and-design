@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { Link } from '@/i18n/navigation';
 import { PasswordInput } from '@/components/PasswordInput';
+import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 
 export function ResetPasswordForm() {
   const t = useTranslations('resetPasswordPage');
@@ -67,7 +68,10 @@ export function ResetPasswordForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-sm text-white/80">
       <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-        {t('labelNewPassword')}
+        <span>
+          {t('labelNewPassword')}
+          <RequiredMark />
+        </span>
         <PasswordInput
           required
           value={newPassword}
@@ -77,7 +81,10 @@ export function ResetPasswordForm() {
         />
       </label>
       <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-        {t('labelConfirmPassword')}
+        <span>
+          {t('labelConfirmPassword')}
+          <RequiredMark />
+        </span>
         <PasswordInput
           required
           value={confirmPassword}
@@ -86,6 +93,8 @@ export function ResetPasswordForm() {
           className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
         />
       </label>
+
+      <RequiredLegend testId="reset-password-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
 
       {error && (
         <p data-testid="reset-password-error" className="text-xs text-red-400">

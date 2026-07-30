@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Modal } from '@/components/Modal';
+import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { Combobox } from '@/components/Combobox';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
@@ -420,7 +421,10 @@ export function KlantModal({
 
           <div className="flex items-end gap-2">
             <label className="flex flex-1 flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-              {t('klantenLabelPrijsgroep')}
+              <span>
+                {t('klantenLabelPrijsgroep')}
+                <RequiredMark />
+              </span>
               <select
                 value={prijsgroepId}
                 onChange={(event) => setPrijsgroepId(event.target.value)}
@@ -485,6 +489,8 @@ export function KlantModal({
               />
             </label>
           </div>
+
+          <RequiredLegend testId="klant-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
 
           {error && (
             <p data-testid="klant-modal-error" className="text-xs text-red-400">

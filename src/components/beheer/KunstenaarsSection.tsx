@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
+import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
@@ -427,7 +428,10 @@ export function KunstenaarsSection({
           )}
 
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('kunstenaarsLabelNaam')}
+            <span>
+              {t('kunstenaarsLabelNaam')}
+              <RequiredMark />
+            </span>
             <input
               type="text"
               value={naam}
@@ -438,7 +442,10 @@ export function KunstenaarsSection({
           </label>
 
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('kunstenaarsLabelOmschrijvingNl')}
+            <span>
+              {t('kunstenaarsLabelOmschrijvingNl')}
+              <RequiredMark />
+            </span>
             <textarea
               value={omschrijvingNl}
               onChange={(event) => setOmschrijvingNl(event.target.value)}
@@ -517,6 +524,8 @@ export function KunstenaarsSection({
               );
             })}
           </fieldset>
+
+          <RequiredLegend testId="kunstenaar-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
 
           {actionError && (
             <p data-testid="kunstenaar-modal-error" className="text-xs text-red-400">

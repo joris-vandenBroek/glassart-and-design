@@ -137,7 +137,8 @@
     "subjectOther": "Other",
     "formMessage": "Message",
     "formSubmit": "Send",
-    "formSubmitted": "Sent!"
+    "formSubmitted": "Sent!",
+    "verplichtVeldLegende": "* required field"
   },
   "registrationPage": {
     "title": "Become a client",
@@ -170,7 +171,8 @@
     "confirmationMessage": "We'll get in touch within 2 business days.",
     "emailInUseError": "This email address is already registered.",
     "weakPasswordError": "Password must be at least 6 characters.",
-    "submitError": "Something went wrong, please try again."
+    "submitError": "Something went wrong, please try again.",
+    "verplichtVeldLegende": "* required field"
   },
   "loginPage": {
     "title": "Log in",
@@ -180,7 +182,8 @@
     "loginError": "Email address or password is incorrect.",
     "pendingMessage": "Your application is still being reviewed.",
     "rejectedMessage": "Unfortunately, your application has been rejected.",
-    "accountIncompleteMessage": "Something went wrong with your previous application. Please contact us."
+    "accountIncompleteMessage": "Something went wrong with your previous application. Please contact us.",
+    "verplichtVeldLegende": "* required field"
   },
   "resetPasswordPage": {
     "title": "Reset password",
@@ -193,7 +196,8 @@
     "genericError": "Something went wrong. Please try again.",
     "missingToken": "This link is invalid. Request a new one from the login page.",
     "successMessage": "Your password has been updated. You can now log in.",
-    "loginLink": "Go to login"
+    "loginLink": "Go to login",
+    "verplichtVeldLegende": "* required field"
   },
   "whyUs": {
     "title": "Why Glassart & Design",
@@ -300,7 +304,8 @@
       "deleteAccountLabelPassword": "Password (to confirm)",
       "deleteAccountSubmit": "Permanently delete",
       "deleteAccountError": "Incorrect password, account not deleted.",
-      "deleteAccountPartialError": "Your data has been deleted, but something went wrong completing account deletion. Please contact us."
+      "deleteAccountPartialError": "Your data has been deleted, but something went wrong completing account deletion. Please contact us.",
+      "verplichtVeldLegende": "* required field"
     }
   },
   "modal": {

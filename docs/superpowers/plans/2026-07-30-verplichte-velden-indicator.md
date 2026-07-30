@@ -17,6 +17,7 @@
 - The `beheer` translation namespace exists only in `messages/nl.json`; `registrationPage`, `contactPage`, `loginPage`, `resetPasswordPage`, `accountPage.settings` exist in `nl`/`en`/`de`/`fr`.
 - New translation key name: `verplichtVeldLegende`, value `"* verplicht veld"` (`en`: `"* required field"`, `de`: `"* Pflichtfeld"`, `fr`: `"* champ obligatoire"`).
 - Existing tests assert on `data-testid` and use `toHaveTextContent` (substring match) — never exact-text — so an added asterisk never breaks an existing assertion; don't introduce exact-match assertions on label text either.
+- **Correction found during Task 2 review, binding on every remaining task:** almost every label in this codebase is `<label className="flex flex-col ...">` (or `flex flex-1 flex-col`) with the caption text as a bare text node and the `<input>`/`<select>` as its sibling — that is a flex container, so each in-flow child (including the bare text node) becomes its own flex item and lands on its own row. Inserting `<RequiredMark />` as a **third** bare sibling (`{t('xLabel')}` then `<RequiredMark />` then `<input>`) puts the asterisk on its own row between the caption and the field, not inline after the caption. The fix: wrap the caption text and the mark together in a plain (non-flex) `<span>` so they form a single flex item — `<span>{t('xLabel')}<RequiredMark /></span>` — as the flex-col label's first child, in place of the bare `{t('xLabel')}` text node. This applies to every `<label className="flex ... flex-col ...">` insertion in this plan (Tasks 2-4, 6-14, and the Foto/Naam/Prijs-per-m²/Omschrijving-NL labels in Task 5). It does **not** apply to `<legend>` or plain `<span>` insertions that carry no `flex` class themselves (the Formaat/Segmenten/Prijzen insertions in Task 5) — those already flow inline correctly as originally written.
 
 ---
 
@@ -163,11 +164,13 @@ Change the Prijsgroep label (line 447) from:
               {t('klantenLabelPrijsgroep')}
 ```
 
-to:
+to (the label is `flex flex-1 flex-col` — wrap text + mark in a `<span>` so they share one flex item instead of the mark landing on its own row; see Global Constraints):
 
 ```tsx
-              {t('klantenLabelPrijsgroep')}
-              <RequiredMark />
+              <span>
+                {t('klantenLabelPrijsgroep')}
+                <RequiredMark />
+              </span>
 ```
 
 Add the legend right before the existing error block (line 497), i.e. change:
@@ -239,6 +242,8 @@ import { Modal } from '@/components/Modal';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 ```
 
+Both labels below are `flex flex-col` — per Global Constraints, wrap the caption text and `<RequiredMark />` in a shared `<span>` instead of adding the mark as a bare third sibling, or the asterisk renders on its own row.
+
 Change the Naam label (line 119):
 
 ```tsx
@@ -246,8 +251,10 @@ Change the Naam label (line 119):
 ```
 to
 ```tsx
-          {t('drukkersLabelNaam')}
-          <RequiredMark />
+          <span>
+            {t('drukkersLabelNaam')}
+            <RequiredMark />
+          </span>
 ```
 
 Change the E-mailadres label (line 161):
@@ -257,8 +264,10 @@ Change the E-mailadres label (line 161):
 ```
 to
 ```tsx
-          {t('drukkersLabelEmail')}
-          <RequiredMark />
+          <span>
+            {t('drukkersLabelEmail')}
+            <RequiredMark />
+          </span>
 ```
 
 Add the legend right after the Prijsafspraken field and before the error block. Change (lines 178-182):
@@ -328,6 +337,8 @@ import { Modal } from '@/components/Modal';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 ```
 
+Both labels below are `flex flex-col` — per Global Constraints, wrap the caption text and `<RequiredMark />` in a shared `<span>` instead of adding the mark as a bare third sibling, or the asterisk renders on its own row.
+
 Change the Naam label (line 392):
 
 ```tsx
@@ -335,8 +346,10 @@ Change the Naam label (line 392):
 ```
 to
 ```tsx
-            {t('kunstenaarsLabelNaam')}
-            <RequiredMark />
+            <span>
+              {t('kunstenaarsLabelNaam')}
+              <RequiredMark />
+            </span>
 ```
 
 Change the Omschrijving-NL label (line 403):
@@ -346,8 +359,10 @@ Change the Omschrijving-NL label (line 403):
 ```
 to
 ```tsx
-            {t('kunstenaarsLabelOmschrijvingNl')}
-            <RequiredMark />
+            <span>
+              {t('kunstenaarsLabelOmschrijvingNl')}
+              <RequiredMark />
+            </span>
 ```
 
 Add the legend right before the error block. Change (lines 473-476):
@@ -418,14 +433,18 @@ import { Modal } from '@/components/Modal';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 ```
 
+Foto and Naam are both `flex flex-col` labels — per Global Constraints, wrap the caption text and `<RequiredMark />` in a shared `<span>` instead of adding the mark as a bare sibling, or the asterisk renders on its own row. (Formaat/Segmenten below are `<legend>`, not `flex`, so no wrap needed there — only for `<label>` insertions.)
+
 Foto label (line 579):
 ```tsx
             {t('kunstwerkenLabelFoto')}
 ```
 →
 ```tsx
-            {t('kunstwerkenLabelFoto')}
-            <RequiredMark />
+            <span>
+              {t('kunstwerkenLabelFoto')}
+              <RequiredMark />
+            </span>
 ```
 
 Naam label (line 618):
@@ -434,8 +453,10 @@ Naam label (line 618):
 ```
 →
 ```tsx
-            {t('kunstwerkenLabelNaam')}
-            <RequiredMark />
+            <span>
+              {t('kunstwerkenLabelNaam')}
+              <RequiredMark />
+            </span>
 ```
 
 Formaat legend (line 656-658):
@@ -478,14 +499,18 @@ Prijzen header (line 859):
               </span>
 ```
 
+Prijs-per-m² and Omschrijving-NL are also both `flex flex-col` labels — same span-wrap treatment.
+
 Prijs-per-m² label (line 918):
 ```tsx
               {t('kunstwerkenLabelPrijsPerM2')}
 ```
 →
 ```tsx
-              {t('kunstwerkenLabelPrijsPerM2')}
-              <RequiredMark />
+              <span>
+                {t('kunstwerkenLabelPrijsPerM2')}
+                <RequiredMark />
+              </span>
 ```
 
 Omschrijving-NL label (line 940):
@@ -494,8 +519,10 @@ Omschrijving-NL label (line 940):
 ```
 →
 ```tsx
-            {t('kunstwerkenLabelOmschrijvingNl')}
-            <RequiredMark />
+            <span>
+              {t('kunstwerkenLabelOmschrijvingNl')}
+              <RequiredMark />
+            </span>
 ```
 
 Legend placement — change (lines 981-984):
@@ -543,6 +570,7 @@ git commit -m "feat: mark required fields in KunstwerkenSection with RequiredMar
 
 **Interfaces:**
 - Consumes: `RequiredMark`, `RequiredLegend`, `t('verplichtVeldLegende')`. Identical pattern in all five files: one text field (`omschrijving` or `naam`) is the sole required field, and the field's own `<label>` wraps both the marker and, one line below the `<input>`, the legend.
+- All five labels are `flex flex-col` — per Global Constraints, wrap the caption text and `<RequiredMark />` in a shared `<span>` (not a bare third sibling) or the asterisk renders on its own row instead of inline.
 
 This task edits five near-identical files. Do the same five sub-steps for each one before moving to the next file's sub-steps — each file gets its own test run and commit so a reviewer can bisect if one breaks.
 
@@ -573,8 +601,10 @@ Change the Omschrijving label (line 171):
 ```
 →
 ```tsx
-            {t('materiaalsoortenLabelOmschrijving')}
-            <RequiredMark />
+            <span>
+              {t('materiaalsoortenLabelOmschrijving')}
+              <RequiredMark />
+            </span>
 ```
 
 Change (lines 179-182):
@@ -628,8 +658,10 @@ Change label (line 136):
 ```
 →
 ```tsx
-            {t('onderwerpenLabelOmschrijving')}
-            <RequiredMark />
+            <span>
+              {t('onderwerpenLabelOmschrijving')}
+              <RequiredMark />
+            </span>
 ```
 
 Change (lines 144-147):
@@ -683,8 +715,10 @@ Change the Naam label (line 156):
 ```
 →
 ```tsx
-            {t('prijsgroepenLabelNaam')}
-            <RequiredMark />
+            <span>
+              {t('prijsgroepenLabelNaam')}
+              <RequiredMark />
+            </span>
 ```
 
 (`prijsgroepenLabelKortingspercentage`, line 166, stays unchanged — it is not part of the `disabled={!naam}` condition.)
@@ -740,8 +774,10 @@ Change label (line 137):
 ```
 →
 ```tsx
-            {t('segmentenLabelOmschrijving')}
-            <RequiredMark />
+            <span>
+              {t('segmentenLabelOmschrijving')}
+              <RequiredMark />
+            </span>
 ```
 
 Change (lines 145-148):
@@ -795,8 +831,10 @@ Change label (line 131):
 ```
 →
 ```tsx
-            {t('stijlenLabelOmschrijving')}
-            <RequiredMark />
+            <span>
+              {t('stijlenLabelOmschrijving')}
+              <RequiredMark />
+            </span>
 ```
 
 Change (lines 139-142):
@@ -858,14 +896,18 @@ import { Modal } from '@/components/Modal';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 ```
 
+All three labels below are `flex flex-col` — per Global Constraints, wrap the caption text and `<RequiredMark />` in a shared `<span>` instead of a bare sibling.
+
 Materiaalsoort label (line 175):
 ```tsx
             {t('materialenLabelMateriaalsoort')}
 ```
 →
 ```tsx
-            {t('materialenLabelMateriaalsoort')}
-            <RequiredMark />
+            <span>
+              {t('materialenLabelMateriaalsoort')}
+              <RequiredMark />
+            </span>
 ```
 
 Dikte label (line 190):
@@ -874,8 +916,10 @@ Dikte label (line 190):
 ```
 →
 ```tsx
-            {t('materialenLabelDikte')}
-            <RequiredMark />
+            <span>
+              {t('materialenLabelDikte')}
+              <RequiredMark />
+            </span>
 ```
 
 Omschrijving label (line 200):
@@ -884,8 +928,10 @@ Omschrijving label (line 200):
 ```
 →
 ```tsx
-            {t('materialenLabelOmschrijving')}
-            <RequiredMark />
+            <span>
+              {t('materialenLabelOmschrijving')}
+              <RequiredMark />
+            </span>
 ```
 
 Legend placement — change (lines 208-211):
@@ -950,14 +996,18 @@ import { Modal } from '@/components/Modal';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 ```
 
+Both labels below are `flex flex-col` — wrap the caption text and `<RequiredMark />` in a shared `<span>` per Global Constraints.
+
 Breedte label (line 151):
 ```tsx
             {t('matenLabelBreedte')}
 ```
 →
 ```tsx
-            {t('matenLabelBreedte')}
-            <RequiredMark />
+            <span>
+              {t('matenLabelBreedte')}
+              <RequiredMark />
+            </span>
 ```
 
 Hoogte label (line 161):
@@ -966,8 +1016,10 @@ Hoogte label (line 161):
 ```
 →
 ```tsx
-            {t('matenLabelHoogte')}
-            <RequiredMark />
+            <span>
+              {t('matenLabelHoogte')}
+              <RequiredMark />
+            </span>
 ```
 
 Legend placement — change (lines 169-172):
@@ -1033,14 +1085,16 @@ import { Modal } from '@/components/Modal';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 ```
 
-Change the label (line 178):
+Change the label (line 178) — it's a `flex flex-col` label, so wrap the caption text and `<RequiredMark />` in a shared `<span>` per Global Constraints:
 ```tsx
           {t('drukkerVersturenLabelDrukker')}
 ```
 →
 ```tsx
-          {t('drukkerVersturenLabelDrukker')}
-          <RequiredMark />
+          <span>
+            {t('drukkerVersturenLabelDrukker')}
+            <RequiredMark />
+          </span>
 ```
 
 Add the legend right after the label closes (line 191), before the preview block. Change:
@@ -1153,20 +1207,20 @@ import { PasswordInput } from '@/components/PasswordInput';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 ```
 
-For each of the following labels, insert `<RequiredMark />` as a new line directly after the `{t(...)}` line (leave the `required` input itself untouched):
+`labelClassName` is `'flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60'` — a flex-col container. Per Global Constraints, do NOT insert `<RequiredMark />` as a bare third sibling after the `{t(...)}` text node (it would render on its own row, between the caption and the field); instead wrap the caption text and the mark in a shared `<span>`, replacing the bare text node, for each of the following labels:
 
-| Line | Before | After |
-|---|---|---|
-| 88 | `{t('labelCompanyName')}` | `{t('labelCompanyName')}`↵`<RequiredMark />` |
-| 99 | `{t('labelKvk')}` | `{t('labelKvk')}`↵`<RequiredMark />` |
-| 104 | `{t('labelContactPerson')}` | `{t('labelContactPerson')}`↵`<RequiredMark />` |
-| 115 | `{t('labelEmail')}` | `{t('labelEmail')}`↵`<RequiredMark />` |
-| 120 | `{t('labelPhone')}` | `{t('labelPhone')}`↵`<RequiredMark />` |
-| 142 | `{t('labelPassword')}` | `{t('labelPassword')}`↵`<RequiredMark />` |
-| 152 | `{t('labelPasswordConfirm')}` | `{t('labelPasswordConfirm')}`↵`<RequiredMark />` |
-| 168 | `{t('labelAddress')}` | `{t('labelAddress')}`↵`<RequiredMark />` |
-| 173 | `{t('labelPostcode')}` | `{t('labelPostcode')}`↵`<RequiredMark />` |
-| 184 | `{t('labelCity')}` | `{t('labelCity')}`↵`<RequiredMark />` |
+| Line | Field |
+|---|---|
+| 88 | `labelCompanyName` |
+| 99 | `labelKvk` |
+| 104 | `labelContactPerson` |
+| 115 | `labelEmail` |
+| 120 | `labelPhone` |
+| 142 | `labelPassword` |
+| 152 | `labelPasswordConfirm` |
+| 168 | `labelAddress` |
+| 173 | `labelPostcode` |
+| 184 | `labelCity` |
 
 Concretely, e.g. line 88 changes from:
 ```tsx
@@ -1177,11 +1231,13 @@ Concretely, e.g. line 88 changes from:
 to:
 ```tsx
       <label className={labelClassName}>
-        {t('labelCompanyName')}
-        <RequiredMark />
+        <span>
+          {t('labelCompanyName')}
+          <RequiredMark />
+        </span>
         <input
 ```
-Apply the same shape (label text line immediately followed by `<RequiredMark />`, before the `<input>`/`<select>`/`<PasswordInput>` line) at each of the other nine locations listed above.
+Apply the same shape (bare `{t(...)}` text node replaced by `<span>{t(...)}<RequiredMark /></span>`, immediately before the `<input>`/`<select>`/`<PasswordInput>` line) at each of the other nine locations listed above.
 
 Add the legend right before the final `submitError` block. Change (lines 274-277):
 ```tsx
@@ -1287,14 +1343,18 @@ import { useTranslations } from 'next-intl';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 ```
 
+All four labels below are `flex flex-col` — per Global Constraints, wrap the caption text and `<RequiredMark />` in a shared `<span>` instead of a bare sibling.
+
 Naam label (line 29):
 ```tsx
         {t('formName')}
 ```
 →
 ```tsx
-        {t('formName')}
-        <RequiredMark />
+        <span>
+          {t('formName')}
+          <RequiredMark />
+        </span>
 ```
 
 E-mailadres label (line 50):
@@ -1303,8 +1363,10 @@ E-mailadres label (line 50):
 ```
 →
 ```tsx
-        {t('formEmail')}
-        <RequiredMark />
+        <span>
+          {t('formEmail')}
+          <RequiredMark />
+        </span>
 ```
 
 Onderwerp label (line 71):
@@ -1313,8 +1375,10 @@ Onderwerp label (line 71):
 ```
 →
 ```tsx
-        {t('formSubject')}
-        <RequiredMark />
+        <span>
+          {t('formSubject')}
+          <RequiredMark />
+        </span>
 ```
 
 Bericht label (line 89):
@@ -1323,8 +1387,10 @@ Bericht label (line 89):
 ```
 →
 ```tsx
-        {t('formMessage')}
-        <RequiredMark />
+        <span>
+          {t('formMessage')}
+          <RequiredMark />
+        </span>
 ```
 
 Legend placement — change (lines 97-99):
@@ -1430,14 +1496,18 @@ import { PasswordInput } from '@/components/PasswordInput';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 ```
 
+Both labels below are `flex flex-col` — wrap the caption text and `<RequiredMark />` in a shared `<span>` per Global Constraints.
+
 E-mailadres label (line 49):
 ```tsx
         {t('labelEmail')}
 ```
 →
 ```tsx
-        {t('labelEmail')}
-        <RequiredMark />
+        <span>
+          {t('labelEmail')}
+          <RequiredMark />
+        </span>
 ```
 
 Wachtwoord label (line 61):
@@ -1446,8 +1516,10 @@ Wachtwoord label (line 61):
 ```
 →
 ```tsx
-        {t('labelPassword')}
-        <RequiredMark />
+        <span>
+          {t('labelPassword')}
+          <RequiredMark />
+        </span>
 ```
 
 Legend placement — change (lines 69-71):
@@ -1555,14 +1627,18 @@ import { PasswordInput } from '@/components/PasswordInput';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 ```
 
+Both labels below are `flex flex-col` — wrap the caption text and `<RequiredMark />` in a shared `<span>` per Global Constraints.
+
 Nieuw-wachtwoord label (line 70):
 ```tsx
         {t('labelNewPassword')}
 ```
 →
 ```tsx
-        {t('labelNewPassword')}
-        <RequiredMark />
+        <span>
+          {t('labelNewPassword')}
+          <RequiredMark />
+        </span>
 ```
 
 Bevestig-wachtwoord label (line 80):
@@ -1571,8 +1647,10 @@ Bevestig-wachtwoord label (line 80):
 ```
 →
 ```tsx
-        {t('labelConfirmPassword')}
-        <RequiredMark />
+        <span>
+          {t('labelConfirmPassword')}
+          <RequiredMark />
+        </span>
 ```
 
 Legend placement — change (lines 88-90):
@@ -1696,7 +1774,7 @@ import { PasswordInput } from '@/components/PasswordInput';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 ```
 
-For each of the seven profile fields, add `<RequiredMark />` after the label text and `required` on the `<input>`. Company name (lines 156-164) changes from:
+`labelClassName` is `'flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60'` — a flex-col container. Per Global Constraints, do NOT add `<RequiredMark />` as a bare third sibling after the `{t(...)}` text node (it would render on its own row); instead wrap the caption text and the mark in a shared `<span>`, replacing the bare text node. Also add `required` on the `<input>`. Company name (lines 156-164) changes from:
 ```tsx
       <label className={labelClassName}>
         {t('labelCompanyName')}
@@ -1712,8 +1790,10 @@ For each of the seven profile fields, add `<RequiredMark />` after the label tex
 to:
 ```tsx
       <label className={labelClassName}>
-        {t('labelCompanyName')}
-        <RequiredMark />
+        <span>
+          {t('labelCompanyName')}
+          <RequiredMark />
+        </span>
         <input
           type="text"
           required
@@ -1725,7 +1805,7 @@ to:
       </label>
 ```
 
-Apply the identical shape (label text → `<RequiredMark />` → `required` added to the `<input>`, right after its `type="..."` line) to the remaining six fields:
+Apply the identical shape (bare `{t(...)}` text node replaced by `<span>{t(...)}<RequiredMark /></span>`, and `required` added to the `<input>` right after its `type="..."` line) to the remaining six fields:
 
 - Contact person (lines 166-175, `data-testid="settings-contact-person"`)
 - Email (lines 176-185, `data-testid="settings-email"`, `type="email"`)

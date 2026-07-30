@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { PasswordInput } from '@/components/PasswordInput';
+import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 
 export function CustomerLoginForm() {
   const t = useTranslations('loginPage');
@@ -46,7 +47,10 @@ export function CustomerLoginForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-sm text-white/80">
       <label className={labelClassName}>
-        {t('labelEmail')}
+        <span>
+          {t('labelEmail')}
+          <RequiredMark />
+        </span>
         <input
           type="email"
           required
@@ -58,7 +62,10 @@ export function CustomerLoginForm() {
       </label>
 
       <label className={labelClassName}>
-        {t('labelPassword')}
+        <span>
+          {t('labelPassword')}
+          <RequiredMark />
+        </span>
         <PasswordInput
           required
           value={password}
@@ -67,6 +74,8 @@ export function CustomerLoginForm() {
           className={fieldClassName}
         />
       </label>
+
+      <RequiredLegend testId="login-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
 
       {error && (
         <p data-testid="login-error" className="text-xs text-red-400">

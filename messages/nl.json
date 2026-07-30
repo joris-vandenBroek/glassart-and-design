@@ -137,7 +137,8 @@
     "subjectOther": "Overig",
     "formMessage": "Bericht",
     "formSubmit": "Versturen",
-    "formSubmitted": "Verzonden!"
+    "formSubmitted": "Verzonden!",
+    "verplichtVeldLegende": "* verplicht veld"
   },
   "registrationPage": {
     "title": "Word klant",
@@ -170,7 +171,8 @@
     "confirmationMessage": "We nemen binnen 2 werkdagen contact met u op.",
     "emailInUseError": "Dit e-mailadres is al geregistreerd.",
     "weakPasswordError": "Wachtwoord moet minimaal 6 tekens bevatten.",
-    "submitError": "Er is iets misgegaan, probeer het opnieuw."
+    "submitError": "Er is iets misgegaan, probeer het opnieuw.",
+    "verplichtVeldLegende": "* verplicht veld"
   },
   "loginPage": {
     "title": "Inloggen",
@@ -180,7 +182,8 @@
     "loginError": "E-mailadres of wachtwoord onjuist.",
     "pendingMessage": "Uw aanvraag wordt nog beoordeeld.",
     "rejectedMessage": "Uw aanvraag is helaas afgewezen.",
-    "accountIncompleteMessage": "Er ging iets mis bij uw eerdere aanvraag. Neem contact met ons op."
+    "accountIncompleteMessage": "Er ging iets mis bij uw eerdere aanvraag. Neem contact met ons op.",
+    "verplichtVeldLegende": "* verplicht veld"
   },
   "resetPasswordPage": {
     "title": "Wachtwoord opnieuw instellen",
@@ -193,7 +196,8 @@
     "genericError": "Er is iets misgegaan. Probeer het opnieuw.",
     "missingToken": "Deze link is ongeldig. Vraag een nieuwe aan via de inlogpagina.",
     "successMessage": "Uw wachtwoord is bijgewerkt. U kunt nu inloggen.",
-    "loginLink": "Naar inloggen"
+    "loginLink": "Naar inloggen",
+    "verplichtVeldLegende": "* verplicht veld"
   },
   "whyUs": {
     "title": "Waarom Glassart & Design",
@@ -270,11 +274,13 @@
       "deleteAccountLabelPassword": "Wachtwoord (ter bevestiging)",
       "deleteAccountSubmit": "Definitief verwijderen",
       "deleteAccountError": "Wachtwoord onjuist, account niet verwijderd.",
-      "deleteAccountPartialError": "Uw gegevens zijn verwijderd, maar er ging iets mis bij het volledig verwijderen van uw account. Neem contact met ons op."
+      "deleteAccountPartialError": "Uw gegevens zijn verwijderd, maar er ging iets mis bij het volledig verwijderen van uw account. Neem contact met ons op.",
+      "verplichtVeldLegende": "* verplicht veld"
     }
   },
   "beheer": {
     "title": "Beheer",
+    "verplichtVeldLegende": "* verplicht veld",
     "naarWebsiteLink": "Naar de website",
     "labelEmail": "E-mailadres",
     "labelPassword": "Wachtwoord",

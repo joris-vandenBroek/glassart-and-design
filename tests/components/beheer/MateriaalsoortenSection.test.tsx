@@ -253,4 +253,10 @@ describe('MateriaalsoortenSection', () => {
     fireEvent.click(screen.getByTestId('data-table-row-soort-2'));
     expect(screen.getByTestId('modal-header')).toHaveTextContent('Materiaalsoort bewerken');
   });
+
+  it('shows the required-field legend', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('materiaalsoorten-add'));
+    expect(screen.getByTestId('materiaalsoort-modal-verplicht-legende')).toHaveTextContent('* verplicht veld');
+  });
 });

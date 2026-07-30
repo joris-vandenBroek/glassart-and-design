@@ -189,4 +189,10 @@ describe('PrijsgroepenSection', () => {
     fireEvent.click(screen.getByTestId('data-table-row-pg-2'));
     expect(screen.getByTestId('modal-header')).toHaveTextContent('Prijsgroep bewerken');
   });
+
+  it('shows the required-field legend', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('prijsgroepen-add'));
+    expect(screen.getByTestId('prijsgroep-modal-verplicht-legende')).toHaveTextContent('* verplicht veld');
+  });
 });

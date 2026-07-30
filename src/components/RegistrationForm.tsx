@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { logActiviteit, ONBEKENDE_ACTOR } from '@/lib/logActiviteit';
 import { PasswordInput } from '@/components/PasswordInput';
+import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 
 export function RegistrationForm() {
   const t = useTranslations('registrationPage');
@@ -85,7 +86,10 @@ export function RegistrationForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-sm text-white/80">
       <label className={labelClassName}>
-        {t('labelCompanyName')}
+        <span>
+          {t('labelCompanyName')}
+          <RequiredMark />
+        </span>
         <input
           type="text"
           name="companyName"
@@ -96,12 +100,18 @@ export function RegistrationForm() {
       </label>
 
       <label className={labelClassName}>
-        {t('labelKvk')}
+        <span>
+          {t('labelKvk')}
+          <RequiredMark />
+        </span>
         <input type="text" name="kvk" required data-testid="word-klant-kvk" className={fieldClassName} />
       </label>
 
       <label className={labelClassName}>
-        {t('labelContactPerson')}
+        <span>
+          {t('labelContactPerson')}
+          <RequiredMark />
+        </span>
         <input
           type="text"
           name="contactPerson"
@@ -112,12 +122,18 @@ export function RegistrationForm() {
       </label>
 
       <label className={labelClassName}>
-        {t('labelEmail')}
+        <span>
+          {t('labelEmail')}
+          <RequiredMark />
+        </span>
         <input type="email" name="email" required data-testid="word-klant-email" className={fieldClassName} />
       </label>
 
       <label className={labelClassName}>
-        {t('labelPhone')}
+        <span>
+          {t('labelPhone')}
+          <RequiredMark />
+        </span>
         <input type="tel" name="phone" required data-testid="word-klant-phone" className={fieldClassName} />
       </label>
 
@@ -139,7 +155,10 @@ export function RegistrationForm() {
       </label>
 
       <label className={labelClassName}>
-        {t('labelPassword')}
+        <span>
+          {t('labelPassword')}
+          <RequiredMark />
+        </span>
         <PasswordInput
           name="password"
           required
@@ -149,7 +168,10 @@ export function RegistrationForm() {
       </label>
 
       <label className={labelClassName}>
-        {t('labelPasswordConfirm')}
+        <span>
+          {t('labelPasswordConfirm')}
+          <RequiredMark />
+        </span>
         <PasswordInput
           name="passwordConfirm"
           required
@@ -165,12 +187,18 @@ export function RegistrationForm() {
       )}
 
       <label className={labelClassName}>
-        {t('labelAddress')}
+        <span>
+          {t('labelAddress')}
+          <RequiredMark />
+        </span>
         <input type="text" name="address" required data-testid="word-klant-address" className={fieldClassName} />
       </label>
 
       <label className={labelClassName}>
-        {t('labelPostcode')}
+        <span>
+          {t('labelPostcode')}
+          <RequiredMark />
+        </span>
         <input
           type="text"
           name="postcode"
@@ -181,7 +209,10 @@ export function RegistrationForm() {
       </label>
 
       <label className={labelClassName}>
-        {t('labelCity')}
+        <span>
+          {t('labelCity')}
+          <RequiredMark />
+        </span>
         <input type="text" name="city" required data-testid="word-klant-city" className={fieldClassName} />
       </label>
 
@@ -272,6 +303,8 @@ export function RegistrationForm() {
           </label>
         </>
       )}
+
+      <RequiredLegend testId="word-klant-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
 
       {submitError && (
         <p data-testid="word-klant-submit-error" className="text-xs text-red-400">

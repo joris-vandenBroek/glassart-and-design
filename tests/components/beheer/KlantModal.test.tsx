@@ -126,6 +126,11 @@ describe('KlantModal', () => {
     expect(screen.getByTestId('klant-modal-prijsgroep')).toHaveValue('pg-1');
   });
 
+  it('shows the required-field legend', () => {
+    renderModal(KLANT);
+    expect(screen.getByTestId('klant-modal-verplicht-legende')).toHaveTextContent('* verplicht veld');
+  });
+
   it('disables Goedkeuren until a prijsgroep is selected', () => {
     renderModal(KLANT);
     expect(screen.getByTestId('klant-modal-goedkeuren')).toBeDisabled();

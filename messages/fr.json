@@ -137,7 +137,8 @@
     "subjectOther": "Autre",
     "formMessage": "Message",
     "formSubmit": "Envoyer",
-    "formSubmitted": "Envoyé !"
+    "formSubmitted": "Envoyé !",
+    "verplichtVeldLegende": "* champ obligatoire"
   },
   "registrationPage": {
     "title": "Devenir client",
@@ -170,7 +171,8 @@
     "confirmationMessage": "Nous vous contacterons sous 2 jours ouvrés.",
     "emailInUseError": "Cette adresse e-mail est déjà utilisée.",
     "weakPasswordError": "Le mot de passe doit contenir au moins 6 caractères.",
-    "submitError": "Une erreur s'est produite, veuillez réessayer."
+    "submitError": "Une erreur s'est produite, veuillez réessayer.",
+    "verplichtVeldLegende": "* champ obligatoire"
   },
   "loginPage": {
     "title": "Connexion",
@@ -180,7 +182,8 @@
     "loginError": "Adresse e-mail ou mot de passe incorrect.",
     "pendingMessage": "Votre demande est en cours d'examen.",
     "rejectedMessage": "Malheureusement, votre demande a été refusée.",
-    "accountIncompleteMessage": "Un problème est survenu avec votre demande précédente. Veuillez nous contacter."
+    "accountIncompleteMessage": "Un problème est survenu avec votre demande précédente. Veuillez nous contacter.",
+    "verplichtVeldLegende": "* champ obligatoire"
   },
   "resetPasswordPage": {
     "title": "Réinitialiser le mot de passe",
@@ -193,7 +196,8 @@
     "genericError": "Une erreur s'est produite. Veuillez réessayer.",
     "missingToken": "Ce lien est invalide. Demandez-en un nouveau depuis la page de connexion.",
     "successMessage": "Votre mot de passe a été mis à jour. Vous pouvez maintenant vous connecter.",
-    "loginLink": "Aller à la connexion"
+    "loginLink": "Aller à la connexion",
+    "verplichtVeldLegende": "* champ obligatoire"
   },
   "whyUs": {
     "title": "Pourquoi Glassart & Design",
@@ -270,7 +274,8 @@
       "deleteAccountLabelPassword": "Mot de passe (pour confirmer)",
       "deleteAccountSubmit": "Supprimer définitivement",
       "deleteAccountError": "Mot de passe incorrect, compte non supprimé.",
-      "deleteAccountPartialError": "Vos données ont été supprimées, mais un problème est survenu lors de la suppression complète de votre compte. Veuillez nous contacter."
+      "deleteAccountPartialError": "Vos données ont été supprimées, mais un problème est survenu lors de la suppression complète de votre compte. Veuillez nous contacter.",
+      "verplichtVeldLegende": "* champ obligatoire"
     }
   },
   "modal": {

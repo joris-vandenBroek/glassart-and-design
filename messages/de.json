@@ -137,7 +137,8 @@
     "subjectOther": "Sonstiges",
     "formMessage": "Nachricht",
     "formSubmit": "Senden",
-    "formSubmitted": "Gesendet!"
+    "formSubmitted": "Gesendet!",
+    "verplichtVeldLegende": "* Pflichtfeld"
   },
   "registrationPage": {
     "title": "Kunde werden",
@@ -170,7 +171,8 @@
     "confirmationMessage": "Wir melden uns innerhalb von 2 Werktagen bei Ihnen.",
     "emailInUseError": "Diese E-Mail-Adresse ist bereits registriert.",
     "weakPasswordError": "Das Passwort muss mindestens 6 Zeichen enthalten.",
-    "submitError": "Etwas ist schiefgelaufen, bitte versuchen Sie es erneut."
+    "submitError": "Etwas ist schiefgelaufen, bitte versuchen Sie es erneut.",
+    "verplichtVeldLegende": "* Pflichtfeld"
   },
   "loginPage": {
     "title": "Anmelden",
@@ -180,7 +182,8 @@
     "loginError": "E-Mail-Adresse oder Passwort falsch.",
     "pendingMessage": "Ihre Anfrage wird noch geprüft.",
     "rejectedMessage": "Ihre Anfrage wurde leider abgelehnt.",
-    "accountIncompleteMessage": "Bei Ihrer vorherigen Anfrage ist etwas schiefgelaufen. Bitte kontaktieren Sie uns."
+    "accountIncompleteMessage": "Bei Ihrer vorherigen Anfrage ist etwas schiefgelaufen. Bitte kontaktieren Sie uns.",
+    "verplichtVeldLegende": "* Pflichtfeld"
   },
   "resetPasswordPage": {
     "title": "Passwort zurücksetzen",
@@ -193,7 +196,8 @@
     "genericError": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
     "missingToken": "Dieser Link ist ungültig. Fordern Sie über die Anmeldeseite einen neuen an.",
     "successMessage": "Ihr Passwort wurde aktualisiert. Sie können sich jetzt anmelden.",
-    "loginLink": "Zur Anmeldung"
+    "loginLink": "Zur Anmeldung",
+    "verplichtVeldLegende": "* Pflichtfeld"
   },
   "whyUs": {
     "title": "Warum Glassart & Design",
@@ -270,7 +274,8 @@
       "deleteAccountLabelPassword": "Passwort (zur Bestätigung)",
       "deleteAccountSubmit": "Endgültig löschen",
       "deleteAccountError": "Falsches Passwort, Konto wurde nicht gelöscht.",
-      "deleteAccountPartialError": "Ihre Daten wurden gelöscht, aber beim vollständigen Löschen Ihres Kontos ist etwas schiefgelaufen. Bitte kontaktieren Sie uns."
+      "deleteAccountPartialError": "Ihre Daten wurden gelöscht, aber beim vollständigen Löschen Ihres Kontos ist etwas schiefgelaufen. Bitte kontaktieren Sie uns.",
+      "verplichtVeldLegende": "* Pflichtfeld"
     }
   },
   "modal": {

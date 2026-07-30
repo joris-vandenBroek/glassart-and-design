@@ -232,4 +232,10 @@ describe('MaterialenSection', () => {
     fireEvent.click(screen.getByTestId('data-table-row-mat-2'));
     expect(screen.getByTestId('modal-header')).toHaveTextContent('Materiaal bewerken');
   });
+
+  it('shows the required-field legend', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('materialen-add'));
+    expect(screen.getByTestId('materiaal-modal-verplicht-legende')).toHaveTextContent('* verplicht veld');
+  });
 });
