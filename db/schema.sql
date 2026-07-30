@@ -19,7 +19,7 @@ CREATE TABLE klanten (
   invoiceCity VARCHAR(255),
   status VARCHAR(50) NOT NULL DEFAULT 'Beoordelen',
   prijsgroepId CHAR(36),
-  exclusieveKunstenaarIds JSON,
+  kunstenaarId CHAR(36),
   minimaleAfname INT,
   createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -100,9 +100,7 @@ CREATE TABLE kunstenaars (
   omschrijvingFr TEXT,
   omschrijvingDe TEXT,
   omschrijvingEn TEXT,
-  verkooprecht VARCHAR(20) NOT NULL DEFAULT 'open',
-  klantId CHAR(36),
-  exclusiefVoorKlantId CHAR(36)
+  exclusieveKlantIds JSON
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE kunstenaarAfspraken (
