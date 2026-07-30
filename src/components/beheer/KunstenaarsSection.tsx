@@ -33,6 +33,7 @@ const LEGE_FORM = {
   omschrijvingDe: '',
   omschrijvingEn: '',
   prijsafspraken: '',
+  prijsopslag: 0 as number,
   verkooprecht: 'open' as Kunstenaar['verkooprecht'],
   klantId: null as string | null,
 };
@@ -57,6 +58,7 @@ export function KunstenaarsSection({
   const [omschrijvingDe, setOmschrijvingDe] = useState(LEGE_FORM.omschrijvingDe);
   const [omschrijvingEn, setOmschrijvingEn] = useState(LEGE_FORM.omschrijvingEn);
   const [prijsafspraken, setPrijsafspraken] = useState(LEGE_FORM.prijsafspraken);
+  const [prijsopslag, setPrijsopslag] = useState(LEGE_FORM.prijsopslag);
   const [verkooprecht, setVerkooprecht] = useState<Kunstenaar['verkooprecht']>(LEGE_FORM.verkooprecht);
   const [klantId, setKlantId] = useState<string | null>(LEGE_FORM.klantId);
   const [prijsafsprakenLaden, setPrijsafsprakenLaden] = useState(false);
@@ -105,6 +107,7 @@ export function KunstenaarsSection({
     setOmschrijvingDe(LEGE_FORM.omschrijvingDe);
     setOmschrijvingEn(LEGE_FORM.omschrijvingEn);
     setPrijsafspraken(LEGE_FORM.prijsafspraken);
+    setPrijsopslag(LEGE_FORM.prijsopslag);
     setVerkooprecht(LEGE_FORM.verkooprecht);
     setKlantId(LEGE_FORM.klantId);
     setPrijsafsprakenLaden(false);
@@ -126,6 +129,7 @@ export function KunstenaarsSection({
     setOmschrijvingDe(kunstenaar.omschrijvingDe);
     setOmschrijvingEn(kunstenaar.omschrijvingEn);
     setPrijsafspraken(LEGE_FORM.prijsafspraken);
+    setPrijsopslag(LEGE_FORM.prijsopslag);
     setVerkooprecht(kunstenaar.verkooprecht);
     setKlantId(kunstenaar.klantId);
     setActionError(null);
@@ -139,9 +143,10 @@ export function KunstenaarsSection({
     try {
       const response = await fetch(`/api/kunstenaarAfspraken/${kunstenaar.id}`);
       if (!response.ok) throw new Error('load failed');
-      const body = (await response.json()) as { prijsafspraken: string | null };
+      const body = (await response.json()) as { prijsafspraken: string | null; prijsopslag: number };
       if (geopendeKunstenaarIdRef.current !== kunstenaar.id) return;
       setPrijsafspraken(body.prijsafspraken ?? '');
+      setPrijsopslag(body.prijsopslag ?? 0);
       setPrijsafsprakenLaden(false);
     } catch {
       if (geopendeKunstenaarIdRef.current !== kunstenaar.id) return;
@@ -228,7 +233,7 @@ export function KunstenaarsSection({
         const afsprakenResponse = await fetch(`/api/kunstenaarAfspraken/${kunstenaarId}`, {
           method: 'PUT',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ prijsafspraken }),
+          body: JSON.stringify({ prijsafspraken, prijsopslag }),
         });
         if (!afsprakenResponse.ok) throw new Error('afspraken create failed');
         // Beide schrijfacties zijn geslaagd en dus duurzaam. Een mislukte refetch is
@@ -242,7 +247,7 @@ export function KunstenaarsSection({
         const afsprakenResponse = await fetch(`/api/kunstenaarAfspraken/${modalState.kunstenaar.id}`, {
           method: 'PUT',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ prijsafspraken }),
+          body: JSON.stringify({ prijsafspraken, prijsopslag }),
         });
         if (!afsprakenResponse.ok) throw new Error('afspraken update failed');
         success = await onUpdate(modalState.kunstenaar.id, data);
@@ -442,6 +447,17 @@ export function KunstenaarsSection({
               value={prijsafspraken}
               onChange={(event) => setPrijsafspraken(event.target.value)}
               data-testid="kunstenaar-modal-prijsafspraken"
+              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+            {t('kunstenaarsLabelPrijsopslag')}
+            <input
+              type="number"
+              value={prijsopslag}
+              onChange={(event) => setPrijsopslag(Number(event.target.value))}
+              data-testid="kunstenaar-modal-prijsopslag"
               className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
             />
           </label>
