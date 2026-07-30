@@ -111,6 +111,27 @@ const KLANTEN: Klant[] = [
     prijsgroepId: null,
     kunstenaarId: 'ka-1',
   },
+  {
+    id: 'klant-3',
+    companyName: 'Kunsthandel Noord',
+    kvk: '11223344',
+    contactPerson: 'Tom Noord',
+    email: 'tom@kunsthandelnoord.nl',
+    phone: '0612349999',
+    contactPreference: 'email',
+    address: 'Noordweg 3',
+    postcode: '9012 EF',
+    city: 'Noordstad',
+    deliveryAddress: '',
+    deliveryPostcode: '',
+    deliveryCity: '',
+    invoiceAddress: '',
+    invoicePostcode: '',
+    invoiceCity: '',
+    status: 'Goedgekeurd',
+    prijsgroepId: null,
+    kunstenaarId: null,
+  },
 ];
 
 const KUNSTENAARS: Kunstenaar[] = [
@@ -269,6 +290,48 @@ describe('KunstenaarsSection', () => {
         expect.objectContaining({ exclusieveKlantIds: ['klant-1', 'klant-2'] })
       )
     );
+  });
+
+  it('blocks picking two klanten that are both not the kunstenaar\'s own linked klant, even in edit mode', async () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+    await waitFor(() => expect(screen.getByTestId('kunstenaar-modal-opslaan')).not.toBeDisabled());
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-klant-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-klant-3'));
+    expect(screen.getByTestId('kunstenaar-modal-error')).toHaveTextContent(
+      'Bij 2 klanten moet één daarvan het klantaccount van deze kunstenaar zelf zijn.'
+    );
+    expect(screen.getByTestId('kunstenaar-modal-klant-klant-3')).not.toBeChecked();
+  });
+
+  it('disables a third klant checkbox once two are already checked', async () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+    await waitFor(() => expect(screen.getByTestId('kunstenaar-modal-opslaan')).not.toBeDisabled());
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-klant-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-klant-2'));
+    expect(screen.queryByTestId('kunstenaar-modal-error')).not.toBeInTheDocument();
+    expect(screen.getByTestId('kunstenaar-modal-klant-klant-3')).toBeDisabled();
+  });
+
+  it('re-validates exclusieveKlantIds at save time, blocking a save when the list became invalid outside this session', async () => {
+    // Simulates staff having reassigned/cleared the own-klant link on the Klant screen
+    // after this 2-entry list was originally saved as valid: neither klant-1 nor klant-3
+    // has kunstenaarId 'ka-1', so this list is invalid even though no checkbox was ever
+    // toggled in this render.
+    const { onUpdate } = renderSection({
+      kunstenaars: [{ ...KUNSTENAARS[0], exclusieveKlantIds: ['klant-1', 'klant-3'] }],
+    });
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+    await waitFor(() => expect(screen.getByTestId('kunstenaar-modal-opslaan')).not.toBeDisabled());
+
+    fireEvent.change(screen.getByTestId('kunstenaar-modal-naam'), { target: { value: 'Sabrina G.' } });
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
+
+    expect(screen.getByTestId('kunstenaar-modal-error')).toHaveTextContent(
+      'Bij 2 klanten moet één daarvan het klantaccount van deze kunstenaar zelf zijn.'
+    );
+    expect(onUpdate).not.toHaveBeenCalled();
   });
 
   it('never writes prijsafspraken onto the publicly readable kunstenaars record', async () => {

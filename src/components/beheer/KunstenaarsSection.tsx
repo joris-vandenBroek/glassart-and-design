@@ -215,6 +215,20 @@ export function KunstenaarsSection({
 
   async function handleSave() {
     if (!modalState) return;
+    // Defensieve herhaling van de check die toggleExclusieveKlant al bij het aanvinken
+    // uitvoert: een klant kan tussentijds via het Klant-scherm ontkoppeld zijn (of aan
+    // een andere kunstenaar gekoppeld), waardoor een eerder geldige 2-klantenlijst
+    // ongeldig wordt zonder dat deze modal daar iets van meekrijgt. Zonder deze check
+    // zou opslaan van een niet-gerelateerd veld die ongeldige lijst stilzwijgend
+    // verbatim wegschrijven.
+    if (exclusieveKlantIds.length === 2) {
+      const huidigeKunstenaarId = modalState.mode === 'edit' ? modalState.kunstenaar.id : null;
+      const eigenId = eigenKlantId(huidigeKunstenaarId);
+      if (eigenId === null || !exclusieveKlantIds.includes(eigenId)) {
+        setActionError(t('kunstenaarsExclusiviteitOngeldig'));
+        return;
+      }
+    }
     const data = {
       foto,
       naam,
