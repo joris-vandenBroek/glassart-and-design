@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { getPool } from '@/lib/server/db';
 import { requireKlant, requireMedewerker } from '@/lib/server/requireAuth';
+import { berekenBestellijnPrijs } from '@/lib/server/prijsmodule';
 import type { PoolConnection } from 'mysql2/promise';
 
 const BESTELNR_PADDING = 5;
@@ -20,14 +21,21 @@ function validateLine(line: LineInput): string | null {
   if (!Number.isInteger(line.quantity) || line.quantity <= 0) {
     return 'invalid-quantity';
   }
-  if (line.prijs !== null && (typeof line.prijs !== 'number' || line.prijs <= 0)) {
-    return 'invalid-prijs';
-  }
   return null;
 }
 
 // Mirrors src/lib/resolveOrderRight.ts, which is now a client-side UI hint only —
 // this is the real enforcement, since there is no rules-based enforcement layer anymore.
+//
+// NOTE (Task 10): the `kunstenaars` schema used to have `verkooprecht`/`klantId`/
+// `exclusiefVoorKlantId` columns, which this function originally queried. The shared
+// staging database this worktree connects to has already been migrated (by the
+// not-yet-merged-to-master kunstenaar-exclusiviteit-herontwerp work) to a single
+// `exclusieveKlantIds` JSON column, dropping the old three entirely -- querying the
+// old column names now throws "Unknown column" against the real DB. This function is
+// updated here to match the live schema (ported verbatim from that worktree's
+// route.ts) so Task 10's price-recompute logic has a working checkOrderRight to sit
+// behind; the artist-only ("alleen-kunstenaar") concept no longer exists.
 async function checkOrderRight(
   connection: PoolConnection,
   kunstwerkId: string,
@@ -41,21 +49,18 @@ async function checkOrderRight(
   if (!kunstenaarId) return true;
 
   const [kunstenaarRows] = await connection.query(
-    'SELECT verkooprecht, klantId, exclusiefVoorKlantId FROM kunstenaars WHERE id = ?',
+    'SELECT exclusieveKlantIds FROM kunstenaars WHERE id = ?',
     [kunstenaarId]
   );
-  const kunstenaar = (
-    kunstenaarRows as Array<{ verkooprecht: string; klantId: string | null; exclusiefVoorKlantId: string | null }>
-  )[0];
+  const kunstenaar = (kunstenaarRows as Array<{ exclusieveKlantIds: string | string[] | null }>)[0];
   if (!kunstenaar) return false;
 
-  const isOwnArtwork = kunstenaar.klantId != null && kunstenaar.klantId === klantId;
-  if (isOwnArtwork) return true;
-  const isExclusiveToOther =
-    kunstenaar.exclusiefVoorKlantId != null && kunstenaar.exclusiefVoorKlantId !== klantId;
-  if (isExclusiveToOther) return false;
-  const isArtistOnlyForOthers = kunstenaar.verkooprecht !== 'open';
-  return !isArtistOnlyForOthers;
+  const exclusieveKlantIds: string[] =
+    typeof kunstenaar.exclusieveKlantIds === 'string'
+      ? JSON.parse(kunstenaar.exclusieveKlantIds)
+      : kunstenaar.exclusieveKlantIds ?? [];
+  if (exclusieveKlantIds.length === 0) return true;
+  return exclusieveKlantIds.includes(klantId);
 }
 
 export async function POST(request: Request) {
@@ -86,6 +91,46 @@ export async function POST(request: Request) {
       }
     }
 
+    const resolvedLines: Array<LineInput & { resolvedPrijs: number | null }> = [];
+    for (const line of lines) {
+      const [kunstwerkRows] = await connection.query(
+        'SELECT kunstenaarId, maatIds, prijsPerM2 FROM kunstwerken WHERE id = ?',
+        [line.kunstwerkId]
+      );
+      const kunstwerkRow = (
+        kunstwerkRows as Array<{
+          kunstenaarId: string | null;
+          maatIds: string | string[] | null;
+          prijsPerM2: string | null;
+        }>
+      )[0];
+      if (!kunstwerkRow) {
+        await connection.rollback();
+        return NextResponse.json({ error: 'kunstwerk-not-found' }, { status: 400 });
+      }
+      const resultaat = await berekenBestellijnPrijs(
+        connection,
+        {
+          kunstenaarId: kunstwerkRow.kunstenaarId,
+          // mysql2 auto-parses a native JSON column to an array/object on a plain
+          // pool/connection.query() (confirmed during Task 3's review) -- only JSON.parse
+          // it when it actually comes back as a string, same guard as prijsmodule.ts's
+          // berekenPrijzenVoorAlleKunstwerken and crud.ts's deserializeRow.
+          maatIds:
+            typeof kunstwerkRow.maatIds === 'string'
+              ? JSON.parse(kunstwerkRow.maatIds)
+              : kunstwerkRow.maatIds ?? [],
+          prijsPerM2: kunstwerkRow.prijsPerM2 != null ? Number(kunstwerkRow.prijsPerM2) : null,
+        },
+        line
+      );
+      if (resultaat.status === 'onbekend') {
+        await connection.rollback();
+        return NextResponse.json({ error: 'prijs-onbekend' }, { status: 400 });
+      }
+      resolvedLines.push({ ...line, resolvedPrijs: resultaat.status === 'vast' ? resultaat.prijs : null });
+    }
+
     const [counterRows] = await connection.query(
       'UPDATE counters SET value = value + 1 WHERE id = ?',
       ['bestelnummer']
@@ -103,7 +148,7 @@ export async function POST(request: Request) {
       [headerId, klantId, bestelnr, 'Te beoordelen']
     );
 
-    for (const line of lines) {
+    for (const line of resolvedLines) {
       await connection.query(
         'INSERT INTO bestellines (id, bestelheaderId, kunstwerkId, maatId, materiaalId, prijs, quantity, breedte, hoogte) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [
@@ -112,7 +157,7 @@ export async function POST(request: Request) {
           line.kunstwerkId,
           line.maatId,
           line.materiaalId,
-          line.prijs,
+          line.resolvedPrijs,
           line.quantity,
           line.breedte ?? null,
           line.hoogte ?? null,
