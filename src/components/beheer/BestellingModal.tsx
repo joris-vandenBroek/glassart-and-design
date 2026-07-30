@@ -228,7 +228,7 @@ export function BestellingModal({
             {bestelling.status}
           </span>
 
-          <ul className="flex flex-col gap-3 text-xs">
+          <ul className="flex max-h-80 flex-col gap-3 overflow-y-auto text-xs">
             {bestelling.lines.map((line) => {
               const kunstwerk = (kunstwerken ?? []).find((k) => k.id === line.kunstwerkId) ?? null;
               const materiaal = (materialen ?? []).find((m) => m.id === line.materiaalId);
