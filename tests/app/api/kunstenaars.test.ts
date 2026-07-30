@@ -41,12 +41,13 @@ function req(method: string, body?: unknown, cookie?: string) {
 
 describe('kunstenaars + kunstenaarAfspraken routes', () => {
   it('lists kunstenaars publicly, without ever exposing prijsafspraken', async () => {
-    const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
-      naam: 'Anna',
-      verkooprecht: 'open',
-    } as never);
+    const kunstenaar = await insertRow<{ id: string }>(
+      'kunstenaars',
+      { naam: 'Anna', exclusieveKlantIds: [] } as never,
+      ['exclusieveKlantIds']
+    );
     createdKunstenaarIds.push(kunstenaar.id);
-    const response = await listKunstenaars(req('GET'));
+    const response = await listKunstenaars();
     const body = await response.json();
     const found = body.find((row: { id: string }) => row.id === kunstenaar.id);
     expect(found.naam).toBe('Anna');
@@ -54,7 +55,7 @@ describe('kunstenaars + kunstenaarAfspraken routes', () => {
   });
 
   it('rejects creating a kunstenaar without a medewerker session', async () => {
-    const response = await createKunstenaar(req('POST', { naam: 'Bram', verkooprecht: 'open' }));
+    const response = await createKunstenaar(req('POST', { naam: 'Bram', exclusieveKlantIds: [] }));
     expect(response.status).toBe(401);
   });
 
@@ -63,7 +64,7 @@ describe('kunstenaars + kunstenaarAfspraken routes', () => {
     const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
 
     const createResponse = await createKunstenaar(
-      req('POST', { naam: 'Chris', verkooprecht: 'open' }, cookie)
+      req('POST', { naam: 'Chris', exclusieveKlantIds: [] }, cookie)
     );
     expect(createResponse.status).toBe(201);
     const created = await createResponse.json();
@@ -79,17 +80,31 @@ describe('kunstenaars + kunstenaarAfspraken routes', () => {
     expect(afterDelete.status).toBe(404);
   });
 
-  it('stores and retrieves prijsafspraken only for staff, keyed by the kunstenaar id', async () => {
-    const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
-      naam: 'Dana',
-      verkooprecht: 'open',
-    } as never);
+  it('round-trips exclusieveKlantIds as a JSON array, not a string', async () => {
+    const sessionId = await createSession('medewerker', 'staff-1');
+    const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
+    const created = await createKunstenaar(
+      req('POST', { naam: 'Eva', exclusieveKlantIds: ['klant-a', 'klant-b'] }, cookie)
+    );
+    const body = await created.json();
+    createdKunstenaarIds.push(body.id);
+
+    const getResponse = await getKunstenaar(req('GET'), { params: { id: body.id } });
+    expect((await getResponse.json()).exclusieveKlantIds).toEqual(['klant-a', 'klant-b']);
+  });
+
+  it('stores and retrieves prijsafspraken and prijsopslag only for staff, keyed by the kunstenaar id', async () => {
+    const kunstenaar = await insertRow<{ id: string }>(
+      'kunstenaars',
+      { naam: 'Dana', exclusieveKlantIds: [] } as never,
+      ['exclusieveKlantIds']
+    );
     createdKunstenaarIds.push(kunstenaar.id);
     const sessionId = await createSession('medewerker', 'staff-1');
     const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
 
     const putResponse = await putAfspraken(
-      req('PUT', { prijsafspraken: '50/50 split' }, cookie),
+      req('PUT', { prijsafspraken: '50/50 split', prijsopslag: 35 }, cookie),
       { params: { id: kunstenaar.id } }
     );
     expect(putResponse.status).toBe(200);
@@ -97,9 +112,24 @@ describe('kunstenaars + kunstenaarAfspraken routes', () => {
     const getResponse = await getAfspraken(req('GET', undefined, cookie), {
       params: { id: kunstenaar.id },
     });
-    expect((await getResponse.json()).prijsafspraken).toBe('50/50 split');
+    const body = await getResponse.json();
+    expect(body.prijsafspraken).toBe('50/50 split');
+    expect(body.prijsopslag).toBe(35);
 
     const unauthenticated = await getAfspraken(req('GET'), { params: { id: kunstenaar.id } });
     expect(unauthenticated.status).toBe(401);
+  });
+
+  it('defaults prijsopslag to 0 for a kunstenaar with no kunstenaarAfspraken row yet', async () => {
+    const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+      naam: 'Erik',
+    } as never);
+    createdKunstenaarIds.push(kunstenaar.id);
+    const sessionId = await createSession('medewerker', 'staff-1');
+    const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
+
+    const response = await getAfspraken(req('GET', undefined, cookie), { params: { id: kunstenaar.id } });
+    const body = await response.json();
+    expect(body.prijsopslag).toBe(0);
   });
 });

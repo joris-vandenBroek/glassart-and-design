@@ -10,11 +10,14 @@ export const GET = withApiErrorHandling(
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
     const [rows] = await getPool().query(
-      'SELECT prijsafspraken FROM kunstenaarAfspraken WHERE id = ?',
+      'SELECT prijsafspraken, prijsopslag FROM kunstenaarAfspraken WHERE id = ?',
       [params.id]
     );
-    const row = (rows as Array<{ prijsafspraken: string | null }>)[0];
-    return NextResponse.json({ prijsafspraken: row?.prijsafspraken ?? null });
+    const row = (rows as Array<{ prijsafspraken: string | null; prijsopslag: string | null }>)[0];
+    return NextResponse.json({
+      prijsafspraken: row?.prijsafspraken ?? null,
+      prijsopslag: row?.prijsopslag != null ? Number(row.prijsopslag) : 0,
+    });
   }
 );
 
@@ -24,10 +27,13 @@ export const PUT = withApiErrorHandling(
     if (!(await requireMedewerker(request))) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
-    const { prijsafspraken } = (await request.json()) as { prijsafspraken: string };
+    const { prijsafspraken, prijsopslag } = (await request.json()) as {
+      prijsafspraken: string;
+      prijsopslag: number;
+    };
     await getPool().query(
-      'INSERT INTO kunstenaarAfspraken (id, prijsafspraken) VALUES (?, ?) ON DUPLICATE KEY UPDATE prijsafspraken = VALUES(prijsafspraken)',
-      [params.id, prijsafspraken]
+      'INSERT INTO kunstenaarAfspraken (id, prijsafspraken, prijsopslag) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE prijsafspraken = VALUES(prijsafspraken), prijsopslag = VALUES(prijsopslag)',
+      [params.id, prijsafspraken, prijsopslag]
     );
     return NextResponse.json({ ok: true });
   }

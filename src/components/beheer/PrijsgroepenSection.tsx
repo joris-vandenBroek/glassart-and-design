@@ -20,6 +20,7 @@ interface PrijsgroepenSectionProps {
 }
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; prijsgroep: Prijsgroep } | null;
+type PrijsgroepType = 'korting' | 'opslag';
 
 export function PrijsgroepenSection({
   prijsgroepen,
@@ -33,7 +34,8 @@ export function PrijsgroepenSection({
   const { user } = useAdminAuth();
   const [modalState, setModalState] = useState<ModalState>(null);
   const [naam, setNaam] = useState('');
-  const [kortingspercentage, setKortingspercentage] = useState('');
+  const [type, setType] = useState<PrijsgroepType>('korting');
+  const [percentage, setPercentage] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
 
   if (loadError) {
@@ -50,14 +52,21 @@ export function PrijsgroepenSection({
 
   function openAdd() {
     setNaam('');
-    setKortingspercentage('');
+    setType('korting');
+    setPercentage('');
     setActionError(null);
     setModalState({ mode: 'add' });
   }
 
   function openEdit(prijsgroep: Prijsgroep) {
     setNaam(prijsgroep.naam);
-    setKortingspercentage(String(prijsgroep.kortingspercentage));
+    if (prijsgroep.kortingspercentage != null) {
+      setType('korting');
+      setPercentage(String(prijsgroep.kortingspercentage));
+    } else {
+      setType('opslag');
+      setPercentage(String(prijsgroep.opslagpercentage ?? ''));
+    }
     setActionError(null);
     setModalState({ mode: 'edit', prijsgroep });
   }
@@ -68,7 +77,10 @@ export function PrijsgroepenSection({
 
   async function handleSave() {
     if (!modalState) return;
-    const data = { naam, kortingspercentage: Number(kortingspercentage) };
+    const data =
+      type === 'korting'
+        ? { naam, kortingspercentage: Number(percentage), opslagpercentage: null }
+        : { naam, kortingspercentage: null, opslagpercentage: Number(percentage) };
     const success =
       modalState.mode === 'add' ? await onAdd(data) : await onUpdate(modalState.prijsgroep.id, data);
     if (success) {
@@ -101,7 +113,18 @@ export function PrijsgroepenSection({
 
   const columns: Column<Prijsgroep>[] = [
     { key: 'naam', label: t('prijsgroepenColNaam') },
-    { key: 'kortingspercentage', label: t('prijsgroepenColKortingspercentage') },
+    {
+      key: 'kortingspercentage',
+      label: t('prijsgroepenColType'),
+      sortable: false,
+      render: (row) => (row.kortingspercentage != null ? t('prijsgroepenTypeKorting') : t('prijsgroepenTypeOpslag')),
+    },
+    {
+      key: 'opslagpercentage',
+      label: t('prijsgroepenColPercentage'),
+      sortable: false,
+      render: (row) => `${Number(row.kortingspercentage ?? row.opslagpercentage)}%`,
+    },
   ];
 
   return (
@@ -134,7 +157,7 @@ export function PrijsgroepenSection({
             <button
               type="button"
               onClick={handleSave}
-              disabled={!naam}
+              disabled={!naam || !percentage}
               data-testid="prijsgroep-modal-opslaan"
               className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
             >
@@ -168,12 +191,24 @@ export function PrijsgroepenSection({
             />
           </label>
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('prijsgroepenLabelKortingspercentage')}
+            {t('prijsgroepenLabelType')}
+            <select
+              value={type}
+              onChange={(event) => setType(event.target.value as PrijsgroepType)}
+              data-testid="prijsgroep-modal-type"
+              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+            >
+              <option value="korting">{t('prijsgroepenTypeKorting')}</option>
+              <option value="opslag">{t('prijsgroepenTypeOpslag')}</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+            {t('prijsgroepenLabelPercentage')}
             <input
               type="number"
-              value={kortingspercentage}
-              onChange={(event) => setKortingspercentage(event.target.value)}
-              data-testid="prijsgroep-modal-kortingspercentage"
+              value={percentage}
+              onChange={(event) => setPercentage(event.target.value)}
+              data-testid="prijsgroep-modal-percentage"
               className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
             />
           </label>

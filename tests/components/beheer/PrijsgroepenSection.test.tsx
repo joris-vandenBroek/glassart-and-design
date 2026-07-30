@@ -20,8 +20,9 @@ vi.mock('@/lib/logActiviteit', () => ({
 }));
 
 const PRIJSGROEPEN: Prijsgroep[] = [
-  { id: 'pg-1', naam: 'Standaard', kortingspercentage: 0 },
-  { id: 'pg-2', naam: 'Wholesale', kortingspercentage: 15 },
+  { id: 'pg-1', naam: 'Standaard', kortingspercentage: 0, opslagpercentage: null },
+  { id: 'pg-2', naam: 'Wholesale', kortingspercentage: '15.00' as unknown as number, opslagpercentage: null },
+  { id: 'pg-3', naam: 'Duur', kortingspercentage: null, opslagpercentage: 8 },
 ];
 
 function renderSection(overrides: Partial<React.ComponentProps<typeof PrijsgroepenSection>> = {}) {
@@ -60,20 +61,27 @@ describe('PrijsgroepenSection', () => {
     expect(screen.queryByTestId('prijsgroepen-section')).not.toBeInTheDocument();
   });
 
-  it('lists the prijsgroepen in the table', () => {
+  it('lists the prijsgroepen with their type and percentage in the table', () => {
     renderSection();
     expect(screen.getByTestId('data-table-row-pg-1')).toHaveTextContent('Standaard');
     expect(screen.getByTestId('data-table-row-pg-2')).toHaveTextContent('Wholesale');
-    expect(screen.getByTestId('data-table-row-pg-2')).toHaveTextContent('15');
+    expect(screen.getByTestId('data-table-row-pg-2')).toHaveTextContent('Korting');
+    expect(screen.getByTestId('data-table-row-pg-2')).toHaveTextContent('15%');
+    expect(screen.getByTestId('data-table-row-pg-2')).not.toHaveTextContent('15.00%');
+    expect(screen.getByTestId('data-table-row-pg-3')).toHaveTextContent('Duur');
+    expect(screen.getByTestId('data-table-row-pg-3')).toHaveTextContent('Opslag');
+    expect(screen.getByTestId('data-table-row-pg-3')).toHaveTextContent('8%');
   });
 
-  it('adds a new prijsgroep, closes the modal, and logs prijsgroep_toegevoegd', async () => {
+  it('adds a new prijsgroep with kortingspercentage, closes the modal, and logs prijsgroep_toegevoegd', async () => {
     const { onAdd } = renderSection();
     fireEvent.click(screen.getByTestId('prijsgroepen-add'));
     fireEvent.change(screen.getByTestId('prijsgroep-modal-naam'), { target: { value: 'VIP' } });
-    fireEvent.change(screen.getByTestId('prijsgroep-modal-kortingspercentage'), { target: { value: '25' } });
+    fireEvent.change(screen.getByTestId('prijsgroep-modal-percentage'), { target: { value: '25' } });
     fireEvent.click(screen.getByTestId('prijsgroep-modal-opslaan'));
-    await waitFor(() => expect(onAdd).toHaveBeenCalledWith({ naam: 'VIP', kortingspercentage: 25 }));
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith({ naam: 'VIP', kortingspercentage: 25, opslagpercentage: null })
+    );
     await waitFor(() => expect(screen.queryByTestId('prijsgroep-modal')).not.toBeInTheDocument());
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'prijsgroep_toegevoegd',
@@ -82,23 +90,42 @@ describe('PrijsgroepenSection', () => {
     );
   });
 
-  it('disables Opslaan until naam is filled in', () => {
+  it('adds a new prijsgroep with opslagpercentage when Opslag is selected as type', async () => {
+    const { onAdd } = renderSection();
+    fireEvent.click(screen.getByTestId('prijsgroepen-add'));
+    fireEvent.change(screen.getByTestId('prijsgroep-modal-naam'), { target: { value: 'Groothandel' } });
+    fireEvent.change(screen.getByTestId('prijsgroep-modal-type'), { target: { value: 'opslag' } });
+    fireEvent.change(screen.getByTestId('prijsgroep-modal-percentage'), { target: { value: '5' } });
+    fireEvent.click(screen.getByTestId('prijsgroep-modal-opslaan'));
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith({ naam: 'Groothandel', kortingspercentage: null, opslagpercentage: 5 })
+    );
+  });
+
+  it('disables Opslaan until naam and percentage are both filled in', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('prijsgroepen-add'));
     expect(screen.getByTestId('prijsgroep-modal-opslaan')).toBeDisabled();
     fireEvent.change(screen.getByTestId('prijsgroep-modal-naam'), { target: { value: 'X' } });
+    expect(screen.getByTestId('prijsgroep-modal-opslaan')).toBeDisabled();
+    fireEvent.change(screen.getByTestId('prijsgroep-modal-percentage'), { target: { value: '10' } });
     expect(screen.getByTestId('prijsgroep-modal-opslaan')).not.toBeDisabled();
   });
 
-  it('opens a row for editing pre-filled, updates it, and logs prijsgroep_gewijzigd', async () => {
+  it('opens a kortingspercentage row for editing pre-filled, updates it, and logs prijsgroep_gewijzigd', async () => {
     const { onUpdate } = renderSection();
     fireEvent.click(screen.getByTestId('data-table-row-pg-2'));
     expect(screen.getByTestId('prijsgroep-modal-naam')).toHaveValue('Wholesale');
-    expect(screen.getByTestId('prijsgroep-modal-kortingspercentage')).toHaveValue(15);
-    fireEvent.change(screen.getByTestId('prijsgroep-modal-kortingspercentage'), { target: { value: '20' } });
+    expect(screen.getByTestId('prijsgroep-modal-type')).toHaveValue('korting');
+    expect(screen.getByTestId('prijsgroep-modal-percentage')).toHaveValue(15);
+    fireEvent.change(screen.getByTestId('prijsgroep-modal-percentage'), { target: { value: '20' } });
     fireEvent.click(screen.getByTestId('prijsgroep-modal-opslaan'));
     await waitFor(() =>
-      expect(onUpdate).toHaveBeenCalledWith('pg-2', { naam: 'Wholesale', kortingspercentage: 20 })
+      expect(onUpdate).toHaveBeenCalledWith('pg-2', {
+        naam: 'Wholesale',
+        kortingspercentage: 20,
+        opslagpercentage: null,
+      })
     );
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'prijsgroep_gewijzigd',
@@ -107,16 +134,12 @@ describe('PrijsgroepenSection', () => {
     );
   });
 
-  it('deletes a prijsgroep and logs prijsgroep_verwijderd', async () => {
-    const { onRemove } = renderSection();
-    fireEvent.click(screen.getByTestId('data-table-row-pg-1'));
-    fireEvent.click(screen.getByTestId('prijsgroep-modal-verwijderen'));
-    await waitFor(() => expect(onRemove).toHaveBeenCalledWith('pg-1'));
-    expect(logActiviteitMock).toHaveBeenCalledWith(
-      'prijsgroep_verwijderd',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
-      'Standaard'
-    );
+  it('opens an opslagpercentage row for editing pre-filled with type opslag', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-pg-3'));
+    expect(screen.getByTestId('prijsgroep-modal-naam')).toHaveValue('Duur');
+    expect(screen.getByTestId('prijsgroep-modal-type')).toHaveValue('opslag');
+    expect(screen.getByTestId('prijsgroep-modal-percentage')).toHaveValue(8);
   });
 
   it('shows an action error and does not log when adding fails', async () => {
@@ -124,6 +147,7 @@ describe('PrijsgroepenSection', () => {
     renderSection({ onAdd });
     fireEvent.click(screen.getByTestId('prijsgroepen-add'));
     fireEvent.change(screen.getByTestId('prijsgroep-modal-naam'), { target: { value: 'VIP' } });
+    fireEvent.change(screen.getByTestId('prijsgroep-modal-percentage'), { target: { value: '10' } });
     fireEvent.click(screen.getByTestId('prijsgroep-modal-opslaan'));
     expect(await screen.findByTestId('prijsgroep-modal-error')).toHaveTextContent(
       'Er is iets misgegaan. Probeer het opnieuw.'
@@ -143,13 +167,18 @@ describe('PrijsgroepenSection', () => {
     expect(onRemove).not.toHaveBeenCalled();
   });
 
-  it('deletes a prijsgroep no klant has assigned', async () => {
+  it('deletes a prijsgroep no klant has assigned, and logs prijsgroep_verwijderd', async () => {
     const { onRemove } = renderSection({
       klanten: [{ id: 'uid-1', prijsgroepId: 'pg-2' } as never],
     });
     fireEvent.click(screen.getByTestId('data-table-row-pg-1'));
     fireEvent.click(screen.getByTestId('prijsgroep-modal-verwijderen'));
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith('pg-1'));
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'prijsgroep_verwijderd',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'Standaard'
+    );
   });
 
   it('shows the toevoegen title when adding and the bewerken title when editing', () => {

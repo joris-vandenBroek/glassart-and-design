@@ -41,12 +41,6 @@ export interface Onderwerp {
   omschrijving: string;
 }
 
-export interface PrijsRegel {
-  materiaalId: string;
-  maatId: string;
-  prijs: number;
-}
-
 export interface Kunstwerk {
   id: string;
   foto: string;
@@ -59,7 +53,6 @@ export interface Kunstwerk {
   stijlIds?: string[];
   onderwerpIds?: string[];
   aiGegenereerd?: boolean;
-  prijzen: PrijsRegel[];
   prijsPerM2?: number;
   omschrijvingNl: string;
   omschrijvingFr: string;
@@ -70,7 +63,8 @@ export interface Kunstwerk {
 export interface Prijsgroep {
   id: string;
   naam: string;
-  kortingspercentage: number;
+  kortingspercentage: number | null;
+  opslagpercentage: number | null;
 }
 
 export interface Drukker {

@@ -40,7 +40,7 @@ const KLANTEN: Klant[] = [
     invoiceCity: '',
     status: 'Beoordelen',
     prijsgroepId: null,
-    exclusieveKunstenaarIds: [],
+    kunstenaarId: null,
   },
   {
     id: 'uid-2',
@@ -61,18 +61,17 @@ const KLANTEN: Klant[] = [
     invoiceCity: '',
     status: 'Goedgekeurd',
     prijsgroepId: 'pg-1',
-    exclusieveKunstenaarIds: [],
+    kunstenaarId: null,
   },
 ];
 
 const PRIJSGROEPEN: Prijsgroep[] = [
-  { id: 'pg-1', naam: 'Standaard', kortingspercentage: 0 },
-  { id: 'pg-2', naam: 'Premium', kortingspercentage: 10 },
+  { id: 'pg-1', naam: 'Standaard', kortingspercentage: 0, opslagpercentage: null },
+  { id: 'pg-2', naam: 'Premium', kortingspercentage: 10, opslagpercentage: null },
 ];
 
 function renderSection(overrides: Partial<React.ComponentProps<typeof KlantenSection>> = {}) {
   const onKlantUpdated = vi.fn();
-  const onKunstenaarUpdated = vi.fn().mockResolvedValue(true);
   render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <KlantenSection
@@ -81,12 +80,11 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof KlantenSec
         kunstenaars={[]}
         loadError={null}
         onKlantUpdated={onKlantUpdated}
-        onKunstenaarUpdated={onKunstenaarUpdated}
         {...overrides}
       />
     </NextIntlClientProvider>
   );
-  return { onKlantUpdated, onKunstenaarUpdated };
+  return { onKlantUpdated };
 }
 
 beforeEach(() => {

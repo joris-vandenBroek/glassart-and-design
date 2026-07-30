@@ -14,7 +14,6 @@ function makeKunstwerk(id: string) {
     segmentIds: ['seg-1'],
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
-    prijzen: [{ materiaalId: 'mat-1', maatId: 'maat-1', prijs: 150 }],
     omschrijvingNl: `Kunstwerk ${id}`,
     omschrijvingFr: '',
     omschrijvingDe: '',

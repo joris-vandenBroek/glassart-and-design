@@ -31,7 +31,6 @@ const KUNSTWERKEN: Kunstwerk[] = [
     segmentIds: [],
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
-    prijzen: [],
     omschrijvingNl: 'Hotel paneel',
     omschrijvingFr: '',
     omschrijvingDe: '',
@@ -64,7 +63,7 @@ const KLANTEN: Klant[] = [
     invoiceCity: '',
     status: 'Goedgekeurd',
     prijsgroepId: 'pg-1',
-    exclusieveKunstenaarIds: [],
+    kunstenaarId: null,
   },
 ];
 

@@ -10,7 +10,7 @@ import { ProductModal } from '@/components/ProductModal';
 import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
-import type { Kunstwerk, Segment, Materiaal, Materiaalsoort, Maat, PrijsRegel, KunstwerkFormaat, Stijl, Onderwerp } from './materiaalTypes';
+import type { Kunstwerk, Segment, Materiaal, Materiaalsoort, Maat, KunstwerkFormaat, Stijl, Onderwerp } from './materiaalTypes';
 import { isVierkanteMaat } from './materiaalTypes';
 import type { Kunstenaar } from './kunstenaarTypes';
 import { detectFormaatFromFile, detectFormaatFromImageUrl } from '@/lib/detectKunstwerkFormaat';
@@ -28,18 +28,14 @@ interface KunstwerkenSectionProps {
   onAdd: (data: Omit<Kunstwerk, 'id'>) => Promise<boolean>;
   onUpdate: (id: string, data: Omit<Kunstwerk, 'id'>) => Promise<boolean>;
   onRemove: (id: string) => Promise<boolean>;
+  onAddSegment: (data: Omit<Segment, 'id'>) => Promise<boolean>;
   onAddStijl: (data: Omit<Stijl, 'id'>) => Promise<boolean>;
   onAddOnderwerp: (data: Omit<Onderwerp, 'id'>) => Promise<boolean>;
 }
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; kunstwerk: Kunstwerk } | null;
-type PrijzenState = Record<string, string>;
 type TabId = 'algemeen' | 'kenmerken' | 'prijzen' | 'omschrijvingen';
 type KunstwerkRow = Kunstwerk & { segmentNamen: string; kunstenaarNaam: string };
-
-function prijsKey(materiaalId: string, maatId: string) {
-  return `${materiaalId}:${maatId}`;
-}
 
 function toggle(list: string[], id: string): string[] {
   return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
@@ -56,7 +52,6 @@ const LEGE_FORM = {
   stijlIds: [] as string[],
   onderwerpIds: [] as string[],
   aiGegenereerd: false,
-  prijzen: {} as PrijzenState,
   prijsPerM2: '',
   omschrijvingNl: '',
   omschrijvingFr: '',
@@ -77,6 +72,7 @@ export function KunstwerkenSection({
   onAdd,
   onUpdate,
   onRemove,
+  onAddSegment,
   onAddStijl,
   onAddOnderwerp,
 }: KunstwerkenSectionProps) {
@@ -94,13 +90,15 @@ export function KunstwerkenSection({
   const [stijlIds, setStijlIds] = useState<string[]>(LEGE_FORM.stijlIds);
   const [onderwerpIds, setOnderwerpIds] = useState<string[]>(LEGE_FORM.onderwerpIds);
   const [aiGegenereerd, setAiGegenereerd] = useState<boolean>(LEGE_FORM.aiGegenereerd);
+  const [nieuweSegmentNaam, setNieuweSegmentNaam] = useState('');
+  const [pendingNieuweSegmentNaam, setPendingNieuweSegmentNaam] = useState<string | null>(null);
+  const [segmentToevoegenError, setSegmentToevoegenError] = useState<string | null>(null);
   const [nieuweStijlNaam, setNieuweStijlNaam] = useState('');
   const [nieuweOnderwerpNaam, setNieuweOnderwerpNaam] = useState('');
   const [pendingNieuweStijlNaam, setPendingNieuweStijlNaam] = useState<string | null>(null);
   const [pendingNieuweOnderwerpNaam, setPendingNieuweOnderwerpNaam] = useState<string | null>(null);
   const [stijlToevoegenError, setStijlToevoegenError] = useState<string | null>(null);
   const [onderwerpToevoegenError, setOnderwerpToevoegenError] = useState<string | null>(null);
-  const [prijzen, setPrijzen] = useState<PrijzenState>(LEGE_FORM.prijzen);
   const [prijsPerM2, setPrijsPerM2] = useState(LEGE_FORM.prijsPerM2);
   const [omschrijvingNl, setOmschrijvingNl] = useState(LEGE_FORM.omschrijvingNl);
   const [omschrijvingFr, setOmschrijvingFr] = useState(LEGE_FORM.omschrijvingFr);
@@ -112,6 +110,16 @@ export function KunstwerkenSection({
   const formaatSessionRef = useRef(0);
 
   const [activeTab, setActiveTab] = useState<TabId>('algemeen');
+
+  useEffect(() => {
+    if (!pendingNieuweSegmentNaam) return;
+    const gevonden = (segmenten ?? []).find((segment) => segment.omschrijving === pendingNieuweSegmentNaam);
+    if (gevonden) {
+      setSegmentIds((current) => (current.includes(gevonden.id) ? current : [...current, gevonden.id]));
+      setPendingNieuweSegmentNaam(null);
+      setNieuweSegmentNaam('');
+    }
+  }, [segmenten, pendingNieuweSegmentNaam]);
 
   useEffect(() => {
     if (!pendingNieuweStijlNaam) return;
@@ -132,6 +140,28 @@ export function KunstwerkenSection({
       setNieuweOnderwerpNaam('');
     }
   }, [onderwerpen, pendingNieuweOnderwerpNaam]);
+
+  async function handleAddNieuweSegment() {
+    const naam = nieuweSegmentNaam.trim();
+    if (!naam) return;
+    setSegmentToevoegenError(null);
+    const bestaande = (segmenten ?? []).find(
+      (segment) => segment.omschrijving.toLowerCase() === naam.toLowerCase()
+    );
+    if (bestaande) {
+      setSegmentIds((current) => (current.includes(bestaande.id) ? current : [...current, bestaande.id]));
+      setNieuweSegmentNaam('');
+      return;
+    }
+    setPendingNieuweSegmentNaam(naam);
+    const success = await onAddSegment({ omschrijving: naam });
+    if (success) {
+      void logActiviteit('segment_toegevoegd', actorFromMedewerker(user), naam);
+    } else {
+      setPendingNieuweSegmentNaam(null);
+      setSegmentToevoegenError(t('kunstwerkenNieuweSegmentError'));
+    }
+  }
 
   async function handleAddNieuweStijl() {
     const naam = nieuweStijlNaam.trim();
@@ -197,9 +227,42 @@ export function KunstwerkenSection({
   // Superset of isMateriaalloos: also true when a materiaal is chosen but every maat is
   // deliberately unchecked (e.g. "4mm veiligheidsglas, custom size, priced per m²").
   const isMaatloos = isMateriaalloos || maatIds.length === 0;
-  const prijsCombinaties = materiaalIds.flatMap((materiaalId) =>
-    maatIds.map((maatId) => ({ materiaalId, maatId }))
-  );
+
+  const [previewPrijzen, setPreviewPrijzen] = useState<{ materiaalId: string; maatId: string; prijs: number }[]>([]);
+
+  useEffect(() => {
+    if (isMaatloos || materiaalIds.length === 0 || maatIds.length === 0) {
+      setPreviewPrijzen([]);
+      return;
+    }
+    let cancelled = false;
+    const params = new URLSearchParams({
+      materiaalIds: materiaalIds.join(','),
+      maatIds: maatIds.join(','),
+      ...(kunstenaarId ? { kunstenaarId } : {}),
+    });
+    fetch(`/api/kunstwerken/prijzen?${params.toString()}`)
+      .then((response) => {
+        if (!response.ok) {
+          // Falls back to an empty preview, same as a genuinely priceless combinatie --
+          // logged here so a real fetch failure (e.g. session expired, server error) is at
+          // least visible in the console instead of silently looking like "no prijs set".
+          console.warn(`Kunstwerken-prijzen preview fetch failed with status ${response.status}`);
+          return { prijzen: [] };
+        }
+        return response.json();
+      })
+      .then((body) => {
+        if (!cancelled) setPreviewPrijzen(body.prijzen ?? []);
+      })
+      .catch((err) => {
+        console.warn('Kunstwerken-prijzen preview fetch threw', err);
+        if (!cancelled) setPreviewPrijzen([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [materiaalIds, maatIds, kunstenaarId, isMaatloos]);
 
   function buildKunstwerkData(): Omit<Kunstwerk, 'id'> {
     const basis = {
@@ -213,13 +276,6 @@ export function KunstwerkenSection({
       stijlIds,
       onderwerpIds,
       aiGegenereerd,
-      prijzen: isMaatloos
-        ? []
-        : prijsCombinaties.map(({ materiaalId, maatId }) => ({
-            materiaalId,
-            maatId,
-            prijs: Number(prijzen[prijsKey(materiaalId, maatId)]),
-          })),
       omschrijvingNl,
       omschrijvingFr,
       omschrijvingDe,
@@ -245,7 +301,6 @@ export function KunstwerkenSection({
       stijlIds,
       onderwerpIds,
       aiGegenereerd,
-      prijzen,
       prijsPerM2,
       omschrijvingNl,
       omschrijvingFr,
@@ -307,6 +362,9 @@ export function KunstwerkenSection({
     setKunstenaarId(LEGE_FORM.kunstenaarId);
     setFormaatState(LEGE_FORM.formaat);
     setSegmentIds(LEGE_FORM.segmentIds);
+    setNieuweSegmentNaam('');
+    setPendingNieuweSegmentNaam(null);
+    setSegmentToevoegenError(null);
     setMateriaalIds((materialen ?? []).map((materiaal) => materiaal.id));
     setMaatIds((maten ?? []).map((maat) => maat.id));
     setStijlIds(LEGE_FORM.stijlIds);
@@ -318,7 +376,6 @@ export function KunstwerkenSection({
     setPendingNieuweOnderwerpNaam(null);
     setStijlToevoegenError(null);
     setOnderwerpToevoegenError(null);
-    setPrijzen(LEGE_FORM.prijzen);
     setPrijsPerM2(LEGE_FORM.prijsPerM2);
     setOmschrijvingNl(LEGE_FORM.omschrijvingNl);
     setOmschrijvingFr(LEGE_FORM.omschrijvingFr);
@@ -347,11 +404,6 @@ export function KunstwerkenSection({
     setStijlIds(kunstwerk.stijlIds ?? []);
     setOnderwerpIds(kunstwerk.onderwerpIds ?? []);
     setAiGegenereerd(kunstwerk.aiGegenereerd ?? false);
-    const prijzenMap: PrijzenState = {};
-    kunstwerk.prijzen.forEach((regel) => {
-      prijzenMap[prijsKey(regel.materiaalId, regel.maatId)] = String(regel.prijs);
-    });
-    setPrijzen(prijzenMap);
     setPrijsPerM2(kunstwerk.prijsPerM2 != null ? String(kunstwerk.prijsPerM2) : '');
     setOmschrijvingNl(kunstwerk.omschrijvingNl);
     setOmschrijvingFr(kunstwerk.omschrijvingFr);
@@ -417,12 +469,11 @@ export function KunstwerkenSection({
     await handleFotoFile(file);
   }
 
-  const allePrijzenIngevuld = prijsCombinaties.every(
-    ({ materiaalId, maatId }) => (prijzen[prijsKey(materiaalId, maatId)] ?? '') !== ''
-  );
   const algemeenHeeftFout = !foto || !naam || formaat === null;
   const kenmerkenHeeftFout = segmentIds.length === 0;
-  const prijzenHeeftFout = isMaatloos ? !prijsPerM2 || Number(prijsPerM2) <= 0 : !allePrijzenIngevuld;
+  // Prices are computed automatically (Prijsmatrix + kunstenaar-opslag), nothing for the
+  // admin to fill in here anymore, so this tab has no error state outside the maatloos case.
+  const prijzenHeeftFout = isMaatloos ? !prijsPerM2 || Number(prijsPerM2) <= 0 : false;
   const omschrijvingenHeeftFout = !omschrijvingNl;
   const opslaanDisabled =
     !foto ||
@@ -430,7 +481,7 @@ export function KunstwerkenSection({
     uploading ||
     !naam ||
     segmentIds.length === 0 ||
-    (isMaatloos ? !prijsPerM2 || Number(prijsPerM2) <= 0 : !allePrijzenIngevuld) ||
+    (isMaatloos && (!prijsPerM2 || Number(prijsPerM2) <= 0)) ||
     !omschrijvingNl;
 
   async function handleSave() {
@@ -741,6 +792,30 @@ export function KunstwerkenSection({
                 {segment.omschrijving}
               </label>
             ))}
+            <div className="mt-1 flex gap-2">
+              <input
+                type="text"
+                value={nieuweSegmentNaam}
+                onChange={(event) => setNieuweSegmentNaam(event.target.value)}
+                placeholder={t('kunstwerkenNieuweSegmentPlaceholder')}
+                data-testid="kunstwerk-modal-nieuwe-segment-naam"
+                className="flex-1 rounded-sm bg-black/40 px-3 py-1.5 text-sm text-white"
+              />
+              <button
+                type="button"
+                onClick={handleAddNieuweSegment}
+                disabled={!nieuweSegmentNaam.trim()}
+                data-testid="kunstwerk-modal-nieuwe-segment-toevoegen"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-3 py-1.5 text-xs text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
+              >
+                {t('kunstwerkenNieuweSegmentToevoegen')}
+              </button>
+            </div>
+            {segmentToevoegenError && (
+              <span data-testid="kunstwerk-modal-nieuwe-segment-error" className="text-xs text-red-400">
+                {segmentToevoegenError}
+              </span>
+            )}
             {segmentIds.length === 0 && (
               <span data-testid="kunstwerk-modal-segmenten-hint" className="text-xs text-red-400">
                 {t('kunstwerkenSegmentenVerplicht')}
@@ -922,23 +997,16 @@ export function KunstwerkenSection({
                         {(maten ?? [])
                           .filter((maat) => maatIds.includes(maat.id))
                           .map((maat) => {
-                            const key = prijsKey(materiaal.id, maat.id);
+                            const regel = previewPrijzen.find(
+                              (p) => p.materiaalId === materiaal.id && p.maatId === maat.id
+                            );
                             return (
-                              <td key={maat.id} className="border border-white/10 px-2 py-1">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-xs text-white/50">€</span>
-                                  <input
-                                    type="number"
-                                    value={prijzen[key] ?? ''}
-                                    onChange={(event) =>
-                                      setPrijzen((current) => ({ ...current, [key]: event.target.value }))
-                                    }
-                                    data-testid={`kunstwerk-modal-prijs-${materiaal.id}-${maat.id}`}
-                                    className={`w-20 rounded-sm border bg-black/40 px-2 py-1 text-sm text-white ${
-                                      (prijzen[key] ?? '') === '' ? 'border-red-500/70' : 'border-transparent'
-                                    }`}
-                                  />
-                                </div>
+                              <td
+                                key={maat.id}
+                                data-testid={`kunstwerk-modal-prijs-preview-${materiaal.id}-${maat.id}`}
+                                className="border border-white/10 px-2 py-1 text-xs"
+                              >
+                                {regel ? `€ ${regel.prijs.toFixed(2).replace('.', ',')}` : '—'}
                               </td>
                             );
                           })}
@@ -946,11 +1014,9 @@ export function KunstwerkenSection({
                     ))}
                 </tbody>
               </table>
-              {!allePrijzenIngevuld && (
-                <span data-testid="kunstwerk-modal-prijzen-hint" className="text-xs text-red-400">
-                  {t('kunstwerkenPrijzenVerplicht')}
-                </span>
-              )}
+              <span className="text-xs normal-case tracking-normal text-white/50">
+                {t('kunstwerkenPrijzenHint')}
+              </span>
             </div>
           )}
 
@@ -1045,6 +1111,7 @@ export function KunstwerkenSection({
               <ProductModal
                 variant="preview"
                 kunstwerk={previewKunstwerk}
+                prijzen={previewPrijzen}
                 materialen={materialen}
                 maten={maten}
                 materiaalsoorten={materiaalsoorten}

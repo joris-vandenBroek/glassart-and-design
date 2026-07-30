@@ -69,14 +69,14 @@ describe('generic CRUD helpers (against segmenten table)', () => {
     const created = await insertRow<{ id: string; naam: string; segmentIds: string[] }>(
       'kunstwerken',
       { naam: 'Test', segmentIds: ['a', 'b'] } as never,
-      ['segmentIds', 'materiaalIds', 'maatIds', 'prijzen']
+      ['segmentIds', 'materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(created.id);
     expect(created.segmentIds).toEqual(['a', 'b']);
     const found = await getRow<{ id: string; segmentIds: string[] }>(
       'kunstwerken',
       created.id,
-      ['segmentIds', 'materiaalIds', 'maatIds', 'prijzen']
+      ['segmentIds', 'materiaalIds', 'maatIds']
     );
     expect(found?.segmentIds).toEqual(['a', 'b']);
   });
@@ -85,14 +85,14 @@ describe('generic CRUD helpers (against segmenten table)', () => {
     const created = await insertRow<{ id: string; naam: string }>(
       'kunstwerken',
       { naam: 'Zonder materialen' } as never,
-      ['segmentIds', 'materiaalIds', 'maatIds', 'prijzen']
+      ['segmentIds', 'materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(created.id);
 
     const found = await getRow<{ id: string; materiaalIds: string[] }>(
       'kunstwerken',
       created.id,
-      ['segmentIds', 'materiaalIds', 'maatIds', 'prijzen']
+      ['segmentIds', 'materiaalIds', 'maatIds']
     );
     expect(found?.materiaalIds).toEqual([]);
 
@@ -100,7 +100,6 @@ describe('generic CRUD helpers (against segmenten table)', () => {
       'segmentIds',
       'materiaalIds',
       'maatIds',
-      'prijzen',
     ]);
     expect(rows.find((row) => row.id === created.id)?.materiaalIds).toEqual([]);
   });

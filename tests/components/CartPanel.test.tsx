@@ -250,7 +250,7 @@ describe('CartPanel', () => {
     mockCollections({
       kunstwerken: [{ id: 'kw-1', kunstenaarId: 'ka-1' }],
       kunstenaars: [
-        { id: 'ka-1', naam: 'Solo Artiest', verkooprecht: 'alleen-kunstenaar', klantId: 'andere-uid', exclusiefVoorKlantId: null },
+        { id: 'ka-1', naam: 'Solo Artiest', exclusieveKlantIds: ['andere-uid'] },
       ],
     });
     renderCartPanel();
@@ -271,7 +271,7 @@ describe('CartPanel', () => {
   it('places the order normally when the cart item is linked to an open kunstenaar', async () => {
     mockCollections({
       kunstwerken: [{ id: 'kw-1', kunstenaarId: 'ka-1' }],
-      kunstenaars: [{ id: 'ka-1', naam: 'Open Artiest', verkooprecht: 'open', klantId: null, exclusiefVoorKlantId: null }],
+      kunstenaars: [{ id: 'ka-1', naam: 'Open Artiest', exclusieveKlantIds: [] }],
     });
     renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));

@@ -19,6 +19,12 @@ import type { Bestelinstellingen } from './beheer/bestelinstellingenTypes';
 const CONFIRM_FEEDBACK_MS = 600;
 const CUSTOM_MAAT_VALUE = '__eigen_maat__';
 
+interface PrijsRegel {
+  materiaalId: string;
+  maatId: string;
+  prijs: number;
+}
+
 export function materiaalLabel(materiaal: Materiaal, materiaalsoortNaam: string): string {
   return `${materiaal.materiaaldikte}mm ${materiaalsoortNaam}`;
 }
@@ -38,6 +44,7 @@ function withinMax(breedte: number, hoogte: number, soort: Materiaalsoort | unde
 
 interface ProductModalProps {
   kunstwerk: Kunstwerk | null;
+  prijzen: PrijsRegel[];
   materialen: Materiaal[] | null;
   maten: Maat[] | null;
   materiaalsoorten: Materiaalsoort[] | null;
@@ -51,6 +58,7 @@ interface ProductModalProps {
 
 export function ProductModal({
   kunstwerk,
+  prijzen,
   materialen,
   maten,
   materiaalsoorten,
@@ -150,7 +158,7 @@ export function ProductModal({
   // "materiaal wel gekozen, maar 0 maten" (e.g. custom-size glass priced per m²).
   const isMaatloos = isMateriaalloos || kunstwerk.maatIds.length === 0;
   const prijsRegel = !isCustomSize
-    ? kunstwerk.prijzen.find((regel) => regel.materiaalId === materiaalId && regel.maatId === maatId)
+    ? prijzen.find((regel) => regel.materiaalId === materiaalId && regel.maatId === maatId)
     : undefined;
   const omschrijving = resolveKunstwerkOmschrijving(kunstwerk, locale);
 
@@ -187,7 +195,7 @@ export function ProductModal({
       ? t('priceOnRequest')
       : prijsRegel
         ? formatCurrency(prijsRegel.prijs)
-        : null;
+        : t('priceOnRequest');
 
   const quantityNum = Number(quantityInput);
   const quantityValid =
@@ -500,11 +508,7 @@ export function ProductModal({
         </div>
         {variant === 'dialog' && blockedReason && (
           <p data-testid="product-modal-order-blocked" className="text-xs text-amber-400">
-            {blockedReason === 'exclusive'
-              ? t('orderBlockedExclusive')
-              : blockedReason === 'artistOnly'
-              ? t('orderBlockedArtistOnly')
-              : t('orderBlockedUnavailable')}
+            {blockedReason === 'exclusive' ? t('orderBlockedExclusive') : t('orderBlockedUnavailable')}
           </p>
         )}
         <button
