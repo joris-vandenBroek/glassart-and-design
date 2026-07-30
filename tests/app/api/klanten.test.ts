@@ -139,20 +139,19 @@ describe('klanten admin routes', () => {
     expect((rows as unknown[]).length).toBe(1);
   });
 
-  it('round-trips exclusieveKunstenaarIds as a real JSON array (not "[object Object]")', async () => {
+  it('round-trips kunstenaarId as a plain scalar', async () => {
     const klant = await insertRow<{ id: string }>('klanten', {
       email: 'd@example.com',
       wachtwoordHash: await hashPassword('x'),
       status: 'Goedgekeurd',
     } as never);
     createdKlantIds.push(klant.id);
-    await patchKlant(
-      req('PATCH', { exclusieveKunstenaarIds: ['kunstenaar-1', 'kunstenaar-2'] }, await medewerkerCookie()),
-      { params: { id: klant.id } }
-    );
+    await patchKlant(req('PATCH', { kunstenaarId: 'kunstenaar-1' }, await medewerkerCookie()), {
+      params: { id: klant.id },
+    });
     const response = await listKlanten(req('GET', undefined, await medewerkerCookie()));
     const body = await response.json();
     const updated = body.find((row: { id: string }) => row.id === klant.id);
-    expect(updated.exclusieveKunstenaarIds).toEqual(['kunstenaar-1', 'kunstenaar-2']);
+    expect(updated.kunstenaarId).toBe('kunstenaar-1');
   });
 });
