@@ -75,6 +75,21 @@ const MATERIAALLOOS_KUNSTWERK: Kunstwerk = {
   omschrijvingDe: '',
   omschrijvingEn: '',
 };
+const MAATLOOS_MET_MATERIAAL_KUNSTWERK: Kunstwerk = {
+  id: 'kw-veiligheidsglas-per-m2',
+  foto: 'https://example.com/veiligheidsglas.jpg',
+  naam: '4mm veiligheidsglas per m2',
+  kunstenaarId: null,
+  segmentIds: [],
+  materiaalIds: ['mat-1'],
+  maatIds: [],
+  prijzen: [],
+  prijsPerM2: 65,
+  omschrijvingNl: 'Op maat gezaagd 4mm veiligheidsglas.',
+  omschrijvingFr: '',
+  omschrijvingDe: '',
+  omschrijvingEn: '',
+};
 const KUNSTENAARS: Kunstenaar[] = [
   {
     id: 'ka-open',
@@ -790,6 +805,101 @@ describe('ProductModal', () => {
       email: 'Onbekend',
       naam: 'Onbekend',
     });
+  });
+
+  it('shows the materiaal select but hides the maat select for a maatloos kunstwerk that still has a materiaal, showing free-size inputs', () => {
+    renderModal(() => {}, MAATLOOS_MET_MATERIAAL_KUNSTWERK);
+    expect(screen.getByTestId('product-modal-materiaal')).toBeInTheDocument();
+    expect(screen.queryByTestId('product-modal-maat')).not.toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-maat-custom-breedte')).toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-maat-custom-hoogte')).toBeInTheDocument();
+  });
+
+  it('computes and shows a live price for a maatloos-met-materiaal kunstwerk based on the entered size and prijsPerM2', () => {
+    renderModal(() => {}, MAATLOOS_MET_MATERIAAL_KUNSTWERK);
+    expect(screen.queryByTestId('product-modal-prijs')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('product-modal-maat-custom-breedte'), { target: { value: '100' } });
+    fireEvent.change(screen.getByTestId('product-modal-maat-custom-hoogte'), { target: { value: '200' } });
+    expect(screen.getByTestId('product-modal-prijs')).toHaveTextContent('€ 130,00');
+  });
+
+  it('adds a maatloos-met-materiaal item to the cart with the chosen materiaal, computed price and entered size', async () => {
+    vi.useRealTimers();
+    function Probe() {
+      const { items } = useCart();
+      return <div data-testid="probe">{JSON.stringify(items)}</div>;
+    }
+    render(
+      <NextIntlClientProvider locale="nl" messages={messages}>
+        <CustomerAuthProvider>
+          <CartProvider>
+            <ProductModal
+              kunstwerk={MAATLOOS_MET_MATERIAAL_KUNSTWERK}
+              materialen={MATERIALEN}
+              maten={MATEN}
+              materiaalsoorten={MATERIAALSOORTEN}
+              kunstenaars={KUNSTENAARS}
+              segmenten={SEGMENTEN}
+              stijlen={STIJLEN}
+              onderwerpen={ONDERWERPEN}
+              onClose={() => {}}
+            />
+            <Probe />
+          </CartProvider>
+        </CustomerAuthProvider>
+      </NextIntlClientProvider>
+    );
+    fireEvent.change(screen.getByTestId('product-modal-maat-custom-breedte'), { target: { value: '100' } });
+    fireEvent.change(screen.getByTestId('product-modal-maat-custom-hoogte'), { target: { value: '200' } });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    fireEvent.click(screen.getByTestId('product-modal-confirm'));
+
+    const items = JSON.parse(screen.getByTestId('probe').textContent ?? '[]');
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      kunstwerkId: 'kw-veiligheidsglas-per-m2',
+      materiaalId: 'mat-1',
+      materiaalLabel: '4mm Veiligheidsglas',
+      maatId: '',
+      breedte: 100,
+      hoogte: 200,
+      maatLabel: '100×200 cm (eigen maat)',
+      prijs: 130,
+      quantity: 1,
+    });
+  });
+
+  it('labels the shown price with "Prijs" for a normal kunstwerk with a chosen materiaal/maat', () => {
+    renderModal();
+    expect(screen.getByText('Prijs')).toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-prijs')).toHaveTextContent('€ 150,00');
+  });
+
+  it('labels "Prijs op aanvraag" with the same "Prijs" heading for an eigen-maat kunstwerk', () => {
+    render(
+      <NextIntlClientProvider locale="nl" messages={messages}>
+        <CustomerAuthProvider>
+          <CartProvider>
+            <ProductModal
+              kunstwerk={KUNSTWERK}
+              materialen={MATERIALEN}
+              maten={MATEN}
+              materiaalsoorten={MATERIAALSOORTEN_MET_EIGEN_MAAT}
+              kunstenaars={KUNSTENAARS}
+              segmenten={SEGMENTEN}
+              stijlen={STIJLEN}
+              onderwerpen={ONDERWERPEN}
+              onClose={() => {}}
+            />
+          </CartProvider>
+        </CustomerAuthProvider>
+      </NextIntlClientProvider>
+    );
+    fireEvent.change(screen.getByTestId('product-modal-maat'), { target: { value: '__eigen_maat__' } });
+    expect(screen.getByText('Prijs')).toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-prijs')).toHaveTextContent('Prijs op aanvraag');
   });
 
   async function flushMicrotasks() {

@@ -108,7 +108,8 @@
     "orderBlockedArtistOnly": "Dit kunstwerk kan alleen door de kunstenaar zelf besteld worden.",
     "orderBlockedUnavailable": "Dit kunstwerk kan op dit moment niet besteld worden. Probeer het later opnieuw.",
     "placeOrderBlockedItem": "Kan de bestelling niet plaatsen: \"{omschrijving}\" is niet (meer) beschikbaar voor jou. Verwijder dit artikel uit je mandje en probeer opnieuw.",
-    "minimumQuantityError": "Minimaal {minimum} stuks"
+    "minimumQuantityError": "Minimaal {minimum} stuks",
+    "priceLabel": "Prijs"
   },
   "contactPage": {
     "title": "Contact",
