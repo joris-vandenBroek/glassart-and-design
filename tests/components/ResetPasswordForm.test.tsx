@@ -107,4 +107,9 @@ describe('ResetPasswordForm', () => {
       'Er is iets misgegaan. Probeer het opnieuw.'
     );
   });
+
+  it('shows the required-field legend', () => {
+    renderForm();
+    expect(screen.getByTestId('reset-password-verplicht-legende')).toHaveTextContent('* verplicht veld');
+  });
 });

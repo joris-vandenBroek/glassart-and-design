@@ -197,7 +197,8 @@
     "genericError": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
     "missingToken": "Dieser Link ist ungültig. Fordern Sie über die Anmeldeseite einen neuen an.",
     "successMessage": "Ihr Passwort wurde aktualisiert. Sie können sich jetzt anmelden.",
-    "loginLink": "Zur Anmeldung"
+    "loginLink": "Zur Anmeldung",
+    "verplichtVeldLegende": "* Pflichtfeld"
   },
   "whyUs": {
     "title": "Warum Glassart & Design",

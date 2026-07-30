@@ -197,7 +197,8 @@
     "genericError": "Er is iets misgegaan. Probeer het opnieuw.",
     "missingToken": "Deze link is ongeldig. Vraag een nieuwe aan via de inlogpagina.",
     "successMessage": "Uw wachtwoord is bijgewerkt. U kunt nu inloggen.",
-    "loginLink": "Naar inloggen"
+    "loginLink": "Naar inloggen",
+    "verplichtVeldLegende": "* verplicht veld"
   },
   "whyUs": {
     "title": "Waarom Glassart & Design",

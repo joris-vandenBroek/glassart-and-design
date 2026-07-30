@@ -197,7 +197,8 @@
     "genericError": "Something went wrong. Please try again.",
     "missingToken": "This link is invalid. Request a new one from the login page.",
     "successMessage": "Your password has been updated. You can now log in.",
-    "loginLink": "Go to login"
+    "loginLink": "Go to login",
+    "verplichtVeldLegende": "* required field"
   },
   "whyUs": {
     "title": "Why Glassart & Design",
