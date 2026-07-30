@@ -20,7 +20,7 @@ export interface Maat {
   hoogte: number;
 }
 
-export type KunstwerkFormaat = 'vierkant' | 'liggend' | 'staand';
+export type KunstwerkFormaat = 'vierkant' | 'liggend' | 'staand' | 'alle';
 
 export function isVierkanteMaat(maat: Maat): boolean {
   return maat.breedte === maat.hoogte;

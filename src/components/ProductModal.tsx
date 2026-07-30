@@ -145,6 +145,10 @@ export function ProductModal({
   );
   const isCustomSize = maatId === CUSTOM_MAAT_VALUE;
   const isMateriaalloos = kunstwerk.materiaalIds.length === 0;
+  // A materiaalloos kunstwerk is always persisted with maatIds: [] (see buildKunstwerkData
+  // in KunstwerkenSection.tsx), so isMaatloos is a superset of isMateriaalloos: it also covers
+  // "materiaal wel gekozen, maar 0 maten" (e.g. custom-size glass priced per m²).
+  const isMaatloos = isMateriaalloos || kunstwerk.maatIds.length === 0;
   const prijsRegel = !isCustomSize
     ? kunstwerk.prijzen.find((regel) => regel.materiaalId === materiaalId && regel.maatId === maatId)
     : undefined;
@@ -171,17 +175,26 @@ export function ProductModal({
     customBreedte !== '' && customHoogte !== '' && customBreedteNum > 0 && customHoogteNum > 0;
   const customSizeExceedsMax = customSizeFilledIn && !withinMax(customBreedteNum, customHoogteNum, geselecteerdSoort);
   const customSizeValid = customSizeFilledIn && !customSizeExceedsMax;
-  const materiaalloosPrijs =
-    isMateriaalloos && customSizeValid && kunstwerk.prijsPerM2
+  const prijsPerM2Prijs =
+    isMaatloos && customSizeValid && kunstwerk.prijsPerM2
       ? Math.round((customBreedteNum / 100) * (customHoogteNum / 100) * kunstwerk.prijsPerM2 * 100) / 100
       : null;
+  const prijsWeergave: string | null = isMaatloos
+    ? prijsPerM2Prijs !== null
+      ? formatCurrency(prijsPerM2Prijs)
+      : null
+    : isCustomSize
+      ? t('priceOnRequest')
+      : prijsRegel
+        ? formatCurrency(prijsRegel.prijs)
+        : null;
 
   const quantityNum = Number(quantityInput);
   const quantityValid =
     quantityInput.trim() !== '' && Number.isInteger(quantityNum) && quantityNum >= effectiveMinimum;
 
   const canConfirm =
-    (isMateriaalloos
+    (isMaatloos
       ? customSizeValid && Boolean(kunstwerk.prijsPerM2) && (kunstwerk.prijsPerM2 ?? 0) > 0
       : isCustomSize
         ? customSizeValid
@@ -200,20 +213,40 @@ export function ProductModal({
     if (isConfirmed || !canConfirm || !kunstwerk) {
       return;
     }
-    if (isMateriaalloos) {
-      addItem({
-        kunstwerkId: kunstwerk.id,
-        foto: kunstwerk.foto,
-        omschrijving,
-        materiaalId: '',
-        materiaalLabel: MATERIAALLOOS_LABEL,
-        maatId: '',
-        maatLabel: `${customBreedteNum}×${customHoogteNum} cm${t('customSizeSuffix')}`,
-        breedte: customBreedteNum,
-        hoogte: customHoogteNum,
-        prijs: materiaalloosPrijs,
-        quantity: quantityNum,
-      });
+    if (isMaatloos) {
+      if (isMateriaalloos) {
+        addItem({
+          kunstwerkId: kunstwerk.id,
+          foto: kunstwerk.foto,
+          omschrijving,
+          materiaalId: '',
+          materiaalLabel: MATERIAALLOOS_LABEL,
+          maatId: '',
+          maatLabel: `${customBreedteNum}×${customHoogteNum} cm${t('customSizeSuffix')}`,
+          breedte: customBreedteNum,
+          hoogte: customHoogteNum,
+          prijs: prijsPerM2Prijs,
+          quantity: quantityNum,
+        });
+      } else {
+        const gekozenMateriaal = beschikbareMaterialen.find((materiaal) => materiaal.id === materiaalId);
+        if (!gekozenMateriaal) {
+          return;
+        }
+        addItem({
+          kunstwerkId: kunstwerk.id,
+          foto: kunstwerk.foto,
+          omschrijving,
+          materiaalId,
+          materiaalLabel: resolvedMateriaalLabel(gekozenMateriaal),
+          maatId: '',
+          maatLabel: `${customBreedteNum}×${customHoogteNum} cm${t('customSizeSuffix')}`,
+          breedte: customBreedteNum,
+          hoogte: customHoogteNum,
+          prijs: prijsPerM2Prijs,
+          quantity: quantityNum,
+        });
+      }
       void logActiviteit('mandje_toegevoegd', actorFromCustomer(user));
       setIsConfirmed(true);
       closeTimeoutRef.current = setTimeout(() => {
@@ -359,7 +392,7 @@ export function ProductModal({
             )}
           </label>
         )}
-        {!isMateriaalloos && (
+        {!isMateriaalloos && !isMaatloos && (
           <label className="flex flex-col gap-1 text-[0.65rem] uppercase tracking-wide text-white/60">
             {t('size')}
             <select
@@ -379,10 +412,10 @@ export function ProductModal({
             </select>
           </label>
         )}
-        {(isCustomSize || isMateriaalloos) && (
+        {(isCustomSize || isMaatloos) && (
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
-              <label className="flex flex-1 flex-col gap-1 text-[0.65rem] uppercase tracking-wide text-white/60">
+              <label className="flex min-w-0 flex-1 flex-col gap-1 text-[0.65rem] uppercase tracking-wide text-white/60">
                 {t('customWidthLabel')}
                 <input
                   type="number"
@@ -392,7 +425,7 @@ export function ProductModal({
                   className="rounded-sm bg-black/40 px-2 py-1.5 text-sm text-white"
                 />
               </label>
-              <label className="flex flex-1 flex-col gap-1 text-[0.65rem] uppercase tracking-wide text-white/60">
+              <label className="flex min-w-0 flex-1 flex-col gap-1 text-[0.65rem] uppercase tracking-wide text-white/60">
                 {t('customHeightLabel')}
                 <input
                   type="number"
@@ -418,22 +451,13 @@ export function ProductModal({
             )}
           </div>
         )}
-        {isMateriaalloos ? (
-          materiaalloosPrijs !== null && (
+        {prijsWeergave !== null && (
+          <div className="flex flex-col gap-1">
+            <span className="text-[0.65rem] uppercase tracking-wide text-white/60">{t('priceLabel')}</span>
             <p data-testid="product-modal-prijs" className="text-sm text-white/80">
-              {formatCurrency(materiaalloosPrijs)}
+              {prijsWeergave}
             </p>
-          )
-        ) : isCustomSize ? (
-          <p data-testid="product-modal-prijs" className="text-sm text-white/80">
-            {t('priceOnRequest')}
-          </p>
-        ) : (
-          prijsRegel && (
-            <p data-testid="product-modal-prijs" className="text-sm text-white/80">
-              {formatCurrency(prijsRegel.prijs)}
-            </p>
-          )
+          </div>
         )}
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between gap-2 text-sm text-white/80">

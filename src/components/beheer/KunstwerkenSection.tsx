@@ -189,6 +189,9 @@ export function KunstwerkenSection({
   }, [kunstenaars]);
 
   const isMateriaalloos = materiaalIds.length === 0;
+  // Superset of isMateriaalloos: also true when a materiaal is chosen but every maat is
+  // deliberately unchecked (e.g. "4mm veiligheidsglas, custom size, priced per m²").
+  const isMaatloos = isMateriaalloos || maatIds.length === 0;
   const prijsCombinaties = materiaalIds.flatMap((materiaalId) =>
     maatIds.map((maatId) => ({ materiaalId, maatId }))
   );
@@ -201,11 +204,11 @@ export function KunstwerkenSection({
       formaat,
       segmentIds,
       materiaalIds,
-      maatIds: isMateriaalloos ? [] : maatIds,
+      maatIds: isMaatloos ? [] : maatIds,
       stijlIds,
       onderwerpIds,
       aiGegenereerd,
-      prijzen: isMateriaalloos
+      prijzen: isMaatloos
         ? []
         : prijsCombinaties.map(({ materiaalId, maatId }) => ({
             materiaalId,
@@ -217,7 +220,7 @@ export function KunstwerkenSection({
       omschrijvingDe,
       omschrijvingEn,
     };
-    return isMateriaalloos ? { ...basis, prijsPerM2: Number(prijsPerM2) } : basis;
+    return isMaatloos ? { ...basis, prijsPerM2: Number(prijsPerM2) } : basis;
   }
 
   const previewKunstwerk: Kunstwerk = useMemo(
@@ -252,13 +255,23 @@ export function KunstwerkenSection({
     return `${materiaal.materiaaldikte}mm — ${soortNaam}`;
   }
 
-  function setFormaat(optie: KunstwerkFormaat) {
+  // `preserveMaatloos`: when the admin explicitly picks a Formaat radio, every compatible maat
+  // should always be (re-)selected — that's a deliberate, fresh choice. But formaat is also set
+  // automatically in the background by photo auto-detection (handleFotoFile, and openEdit's
+  // detection for legacy rows without a stored formaat); that's a suggestion, not an explicit
+  // admin action, so it must not clobber a deliberately-empty maatIds the same way it must not
+  // clobber a deliberately-empty materiaalIds below. Auto-detect call sites pass `true`.
+  function setFormaat(optie: KunstwerkFormaat, preserveMaatloos = false) {
     setFormaatState(optie);
-    setMaatIds(
-      (maten ?? [])
-        .filter((maat) => (optie === 'vierkant' ? isVierkanteMaat(maat) : !isVierkanteMaat(maat)))
-        .map((maat) => maat.id)
-    );
+    setMaatIds((current) => {
+      if (preserveMaatloos && current.length === 0) return current;
+      return (maten ?? [])
+        .filter((maat) => {
+          if (optie === 'alle') return true;
+          return optie === 'vierkant' ? isVierkanteMaat(maat) : !isVierkanteMaat(maat);
+        })
+        .map((maat) => maat.id);
+    });
     // A kunstwerk with every materiaal unchecked is deliberately materiaalloos (priced per
     // m² instead), not "hasn't picked yet" — resetForm() always starts non-empty, so an
     // empty selection here only ever means the admin chose that. Leave it alone.
@@ -349,7 +362,7 @@ export function KunstwerkenSection({
           return gedetecteerd === 'vierkant' ? !isVierkanteMaat(maat) : isVierkanteMaat(maat);
         });
         if (!conflicteertMetOpgeslagenMaten) {
-          setFormaat(gedetecteerd);
+          setFormaat(gedetecteerd, true);
         }
       });
     }
@@ -368,7 +381,7 @@ export function KunstwerkenSection({
       setFoto(url);
       const gedetecteerd = await detectFormaatFromFile(file);
       if (gedetecteerd && formaatSessionRef.current === session) {
-        setFormaat(gedetecteerd);
+        setFormaat(gedetecteerd, true);
       }
     }
   }
@@ -406,9 +419,7 @@ export function KunstwerkenSection({
     uploading ||
     !naam ||
     segmentIds.length === 0 ||
-    (isMateriaalloos
-      ? !prijsPerM2 || Number(prijsPerM2) <= 0
-      : maatIds.length === 0 || !allePrijzenIngevuld) ||
+    (isMaatloos ? !prijsPerM2 || Number(prijsPerM2) <= 0 : !allePrijzenIngevuld) ||
     !omschrijvingNl;
 
   async function handleSave() {
@@ -458,6 +469,7 @@ export function KunstwerkenSection({
   const kunstwerkenZonderAlleMaterialenMaten = kunstwerken.filter(
     (kunstwerk) =>
       kunstwerk.materiaalIds.length > 0 &&
+      kunstwerk.maatIds.length > 0 &&
       (alleMateriaalIds.some((id) => !kunstwerk.materiaalIds.includes(id)) ||
         alleMaatIds.some((id) => !kunstwerk.maatIds.includes(id)))
   );
@@ -645,7 +657,7 @@ export function KunstwerkenSection({
               {t('kunstwerkenLabelFormaat')}
             </legend>
             <div className="flex gap-4">
-              {(['vierkant', 'liggend', 'staand'] as const).map((optie) => (
+              {(['vierkant', 'liggend', 'staand', 'alle'] as const).map((optie) => (
                 <label key={optie} className="flex items-center gap-2 text-sm text-white/80">
                   <input
                     type="radio"
@@ -700,11 +712,7 @@ export function KunstwerkenSection({
             )}
           </fieldset>
 
-          <details
-            className={`flex flex-col gap-3 rounded-sm border px-3 py-2 ${
-              !isMateriaalloos && maatIds.length === 0 ? 'border-red-500/70' : 'border-white/10'
-            }`}
-          >
+          <details className="flex flex-col gap-3 rounded-sm border border-white/10 px-3 py-2">
             <summary
               data-testid="kunstwerk-modal-materialen-maten-toggle"
               className="cursor-pointer text-xs uppercase tracking-wide text-white/60"
@@ -732,7 +740,9 @@ export function KunstwerkenSection({
               <legend className="text-xs uppercase tracking-wide text-white/60">{t('kunstwerkenLabelMaten')}</legend>
               {(maten ?? []).map((maat) => {
                 const incompatibel =
-                  formaat !== null && (formaat === 'vierkant' ? !isVierkanteMaat(maat) : isVierkanteMaat(maat));
+                  formaat !== null &&
+                  formaat !== 'alle' &&
+                  (formaat === 'vierkant' ? !isVierkanteMaat(maat) : isVierkanteMaat(maat));
                 return (
                   <label
                     key={maat.id}
@@ -749,11 +759,6 @@ export function KunstwerkenSection({
                   </label>
                 );
               })}
-              {!isMateriaalloos && maatIds.length === 0 && (
-                <span data-testid="kunstwerk-modal-maten-hint" className="text-xs text-red-400">
-                  {t('kunstwerkenMatenVerplicht')}
-                </span>
-              )}
             </fieldset>
           </details>
 
@@ -908,7 +913,7 @@ export function KunstwerkenSection({
             </div>
           )}
 
-          {isMateriaalloos && (
+          {isMaatloos && (
             <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
               {t('kunstwerkenLabelPrijsPerM2')}
               <div className="flex items-center gap-1">

@@ -108,7 +108,8 @@
     "orderBlockedArtistOnly": "This artwork can only be ordered by the artist themselves.",
     "orderBlockedUnavailable": "This artwork cannot be ordered right now. Please try again later.",
     "placeOrderBlockedItem": "Can't place the order: \"{omschrijving}\" is no longer available to you. Remove this item from your cart and try again.",
-    "minimumQuantityError": "Minimum {minimum} pieces"
+    "minimumQuantityError": "Minimum {minimum} pieces",
+    "priceLabel": "Price"
   },
   "contactPage": {
     "title": "Contact",

@@ -539,6 +539,82 @@ describe('KunstwerkenSection', () => {
     );
   });
 
+  it('shows a "Prijs per m²" field and allows opslaan when a materiaal is chosen but every maat is unchecked, regardless of formaat', async () => {
+    uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
+    const { onAdd } = renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-vierkant'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materialen-maten-toggle'));
+    // 'vierkant' auto-selects only the square maat (maat-3); unchecking it leaves 0 maten
+    // while mat-1/mat-2 stay checked, so this is "materiaal wel, maat niet" — not materiaalloos.
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-3'));
+
+    expect(screen.queryByTestId('kunstwerk-modal-prijzen')).not.toBeInTheDocument();
+    expect(screen.getByTestId('kunstwerk-modal-prijs-per-m2')).toBeInTheDocument();
+
+    const file = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: '4mm veiligheidsglas per m2' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Op maat gezaagd.' } });
+    expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled();
+
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-per-m2'), { target: { value: '65' } });
+    expect(screen.getByTestId('kunstwerk-modal-opslaan')).not.toBeDisabled();
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
+
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith(
+        expect.objectContaining({
+          formaat: 'vierkant',
+          materiaalIds: ['mat-1', 'mat-2'],
+          maatIds: [],
+          prijzen: [],
+          prijsPerM2: 65,
+        })
+      )
+    );
+  });
+
+  it('does not show the "kies minimaal één maat" hint once a materiaal is chosen but every maat is unchecked', async () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-vierkant'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materialen-maten-toggle'));
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).toBeChecked());
+
+    // 'vierkant' auto-selects only the square maat (maat-3); unchecking it leaves 0 maten
+    // while mat-1/mat-2 stay checked — a deliberate, valid "maatloos-met-materiaal" state,
+    // not an incomplete/error one, so no "kies minimaal één maat" warning should appear.
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-3'));
+
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).not.toBeChecked());
+    expect(screen.getByTestId('kunstwerk-modal-materiaal-mat-1')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-materiaal-mat-2')).toBeChecked();
+    expect(screen.queryByTestId('kunstwerk-modal-maten-hint')).not.toBeInTheDocument();
+  });
+
+  it('never targets a maatloos-met-materiaal kunstwerk (0 maten, materiaal wel gekozen) with the "Materialen/maten aanvullen" backfill', async () => {
+    const maatloosMetMateriaal: Kunstwerk = {
+      ...KUNSTWERKEN[0],
+      id: 'kw-veiligheidsglas-per-m2',
+      materiaalIds: ['mat-1'],
+      maatIds: [],
+      prijzen: [],
+      prijsPerM2: 65,
+    };
+    const onUpdate = vi.fn().mockResolvedValue(true);
+    renderSection({ kunstwerken: [KUNSTWERKEN[0], maatloosMetMateriaal], onUpdate });
+
+    const button = screen.getByTestId('kunstwerken-backfill-materialen-maten');
+    expect(button).toHaveTextContent('1'); // only kw-1 should be counted
+    fireEvent.click(button);
+
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledWith('kw-1', expect.anything()));
+    expect(onUpdate).not.toHaveBeenCalledWith('kw-veiligheidsglas-per-m2', expect.anything());
+  });
+
   it('shows a hint that a formaat must be chosen, and hides it once one is picked', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('kunstwerken-add'));
@@ -563,6 +639,30 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).not.toBeChecked();
     expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).toBeDisabled();
     expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).not.toBeDisabled();
+  });
+
+  it('selects every maat and disables none when Formaat "Alle" is chosen', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-alle'));
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-2')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).not.toBeDisabled();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).not.toBeDisabled();
+  });
+
+  it('re-enables and re-checks every maat when switching from a narrower formaat to Alle', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1')); // kw-1: formaat 'staand', maatIds ['maat-1']
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-vierkant'));
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).toBeDisabled();
+
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-alle'));
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).not.toBeDisabled();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).not.toBeDisabled();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).toBeChecked();
   });
 
   it('re-checks every materiaal and every compatible maat when the formaat changes, even if the admin had narrowed the selection first', () => {
@@ -622,6 +722,33 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-formaat-staand')).not.toBeChecked();
   });
 
+  it('keeps a maatloos-met-materiaal kunstwerk maatloos when a replacement photo triggers formaat auto-detection', async () => {
+    uploadMock.mockResolvedValue('https://storage.example.com/vervangen.jpg');
+    detectFormaatFromFileMock.mockResolvedValue('staand');
+    const maatloosKunstwerk: Kunstwerk = {
+      ...KUNSTWERKEN[0],
+      id: 'kw-maatloos',
+      materiaalIds: ['mat-1'],
+      maatIds: [],
+      prijzen: [],
+      prijsPerM2: 120,
+    };
+    renderSection({ kunstwerken: [...KUNSTWERKEN, maatloosKunstwerk] });
+
+    fireEvent.click(screen.getByTestId('data-table-row-kw-maatloos'));
+    expect(screen.getByTestId('kunstwerk-modal-prijs-per-m2')).toBeInTheDocument();
+
+    const file = new File(['x'], 'nieuwe-foto.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
+
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-formaat-staand')).toBeChecked());
+
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).not.toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-2')).not.toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-prijs-per-m2')).toBeInTheDocument();
+    expect(screen.getByTestId('kunstwerk-modal-opslaan')).not.toBeDisabled();
+  });
+
   it('detects formaat from the existing photo when opening a kunstwerk that has none set yet', async () => {
     detectFormaatFromImageUrlMock.mockResolvedValue('staand');
     const zonderFormaat: Kunstwerk = { ...KUNSTWERKEN[0], id: 'kw-3', formaat: undefined };
@@ -650,6 +777,28 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-formaat-vierkant')).not.toBeChecked();
     expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).toBeChecked();
     expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).toBeChecked();
+  });
+
+  it('keeps a maatloos-met-materiaal kunstwerk maatloos when opening it auto-detects a formaat', async () => {
+    detectFormaatFromImageUrlMock.mockResolvedValue('vierkant');
+    const maatloosZonderFormaat: Kunstwerk = {
+      ...KUNSTWERKEN[0],
+      id: 'kw-maatloos-zonder-formaat',
+      formaat: undefined,
+      materiaalIds: ['mat-1'],
+      maatIds: [],
+      prijzen: [],
+      prijsPerM2: 120,
+    };
+    renderSection({ kunstwerken: [...KUNSTWERKEN, maatloosZonderFormaat] });
+
+    fireEvent.click(screen.getByTestId('data-table-row-kw-maatloos-zonder-formaat'));
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-formaat-vierkant')).toBeChecked());
+
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).not.toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).not.toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-prijs-per-m2')).toBeInTheDocument();
+    expect(screen.getByTestId('kunstwerk-modal-opslaan')).not.toBeDisabled();
   });
 
   it('does not call the detector when opening a kunstwerk that already has a formaat', () => {
