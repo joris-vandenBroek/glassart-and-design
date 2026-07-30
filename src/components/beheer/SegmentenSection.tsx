@@ -108,6 +108,7 @@ export function SegmentenSection({ segmenten, loadError, onAdd, onUpdate, onRemo
         isOpen={modalState !== null}
         onClose={closeModal}
         closeLabel={t('modalClose')}
+        title={modalState?.mode === 'edit' ? t('segmentenModalTitelBewerken') : t('segmentenModalTitelToevoegen')}
         footerActions={
           <>
             <button

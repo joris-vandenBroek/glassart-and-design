@@ -142,6 +142,7 @@ export function MateriaalsoortenSection({
         isOpen={modalState !== null}
         onClose={closeModal}
         closeLabel={t('modalClose')}
+        title={modalState?.mode === 'edit' ? t('materiaalsoortenModalTitelBewerken') : t('materiaalsoortenModalTitelToevoegen')}
         footerActions={
           <>
             <button

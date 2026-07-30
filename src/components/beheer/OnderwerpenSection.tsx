@@ -107,6 +107,7 @@ export function OnderwerpenSection({ onderwerpen, loadError, onAdd, onUpdate, on
         isOpen={modalState !== null}
         onClose={closeModal}
         closeLabel={t('modalClose')}
+        title={modalState?.mode === 'edit' ? t('onderwerpenModalTitelBewerken') : t('onderwerpenModalTitelToevoegen')}
         footerActions={
           <>
             <button
