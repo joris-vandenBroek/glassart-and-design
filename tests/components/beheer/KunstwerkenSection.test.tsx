@@ -167,6 +167,12 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-maat-maat-2')).toBeChecked();
   });
 
+  it('shows the required-field legend when the modal is open', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    expect(screen.getByTestId('kunstwerk-modal-verplicht-legende')).toHaveTextContent('* verplicht veld');
+  });
+
   it('keeps Opslaan disabled until a photo is uploaded, then enables once all required fields are filled', async () => {
     uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
     renderSection();

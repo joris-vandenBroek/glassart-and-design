@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
+import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { ModalTabs } from '@/components/ModalTabs';
 import { ProductModal } from '@/components/ProductModal';
 import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
@@ -601,7 +602,10 @@ export function KunstwerkenSection({
           <div className="flex flex-col gap-3">
               <div className={activeTab === 'algemeen' ? 'flex flex-col gap-3' : 'hidden'}>
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('kunstwerkenLabelFoto')}
+            <span>
+              {t('kunstwerkenLabelFoto')}
+              <RequiredMark />
+            </span>
             <span
               onDragOver={handleFotoDragOver}
               onDragLeave={handleFotoDragLeave}
@@ -640,7 +644,10 @@ export function KunstwerkenSection({
           )}
 
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('kunstwerkenLabelNaam')}
+            <span>
+              {t('kunstwerkenLabelNaam')}
+              <RequiredMark />
+            </span>
             <input
               type="text"
               value={naam}
@@ -680,6 +687,7 @@ export function KunstwerkenSection({
           >
             <legend className="text-xs uppercase tracking-wide text-white/60">
               {t('kunstwerkenLabelFormaat')}
+              <RequiredMark />
             </legend>
             <div className="flex gap-4">
               {(['vierkant', 'liggend', 'staand', 'alle'] as const).map((optie) => (
@@ -720,6 +728,7 @@ export function KunstwerkenSection({
           >
             <legend className="text-xs uppercase tracking-wide text-white/60">
               {t('kunstwerkenLabelSegmenten')}
+              <RequiredMark />
             </legend>
             {(segmenten ?? []).map((segment) => (
               <label key={segment.id} className="flex items-center gap-2 text-sm text-white/80">
@@ -885,7 +894,10 @@ export function KunstwerkenSection({
               <div className={activeTab === 'prijzen' ? 'flex flex-col gap-3' : 'hidden'}>
           {materiaalIds.length > 0 && maatIds.length > 0 && (
             <div className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-white/60">{t('kunstwerkenLabelPrijzen')}</span>
+              <span className="text-xs uppercase tracking-wide text-white/60">
+                {t('kunstwerkenLabelPrijzen')}
+                <RequiredMark />
+              </span>
               <table data-testid="kunstwerk-modal-prijzen" className="border-collapse text-sm text-white/80">
                 <thead>
                   <tr>
@@ -944,7 +956,10 @@ export function KunstwerkenSection({
 
           {isMaatloos && (
             <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-              {t('kunstwerkenLabelPrijsPerM2')}
+              <span>
+                {t('kunstwerkenLabelPrijsPerM2')}
+                <RequiredMark />
+              </span>
               <div className="flex items-center gap-1">
                 <span className="text-xs text-white/50">€</span>
                 <input
@@ -968,7 +983,10 @@ export function KunstwerkenSection({
 
               <div className={activeTab === 'omschrijvingen' ? 'flex flex-col gap-3' : 'hidden'}>
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('kunstwerkenLabelOmschrijvingNl')}
+            <span>
+              {t('kunstwerkenLabelOmschrijvingNl')}
+              <RequiredMark />
+            </span>
             <textarea
               value={omschrijvingNl}
               onChange={(event) => setOmschrijvingNl(event.target.value)}
@@ -1011,6 +1029,8 @@ export function KunstwerkenSection({
             />
           </label>
               </div>
+
+              <RequiredLegend testId="kunstwerk-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
 
               {actionError && (
                 <p data-testid="kunstwerk-modal-error" className="text-xs text-red-400">
