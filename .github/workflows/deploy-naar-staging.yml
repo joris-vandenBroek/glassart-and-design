@@ -164,7 +164,7 @@ jobs:
           max_attempts=3
           status=""
           while [ "$attempt" -le "$max_attempts" ]; do
-            status=$(curl -s -o /dev/null -w "%{http_code}" -u "glassart:$BASIC_AUTH_PASSWORD" "https://staging.glassartanddesign.com/nl/")
+            status=$(curl -s -o /dev/null -w "%{http_code}" -u "glassart:$BASIC_AUTH_PASSWORD" "https://staging.glassartanddesign.com/nl")
             if [ "$status" = "200" ]; then
               break
             fi
