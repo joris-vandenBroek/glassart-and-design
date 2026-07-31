@@ -173,7 +173,7 @@ jobs:
           max_attempts=3
           status=""
           while [ "$attempt" -le "$max_attempts" ]; do
-            status=$(curl -s -o /dev/null -w "%{http_code}" "https://glassartanddesign.com/nl/")
+            status=$(curl -s -o /dev/null -w "%{http_code}" "https://glassartanddesign.com/nl")
             if [ "$status" = "200" ]; then
               break
             fi
@@ -188,7 +188,7 @@ jobs:
             exit 1
           fi
 
-          gate_body=$(curl -s "https://glassartanddesign.com/nl/collecties/")
+          gate_body=$(curl -s "https://glassartanddesign.com/nl/collecties")
           if ! echo "$gate_body" | grep -q "We zijn met iets moois bezig"; then
             echo "::error::Under Construction-gate lijkt niet actief op /nl/collecties/ -- controleer of MIJNHOST_BUILD=true echt is meegegeven aan de build."
             exit 1
