@@ -166,17 +166,23 @@ jobs:
           SFTP_PASSWORD: ${{ secrets.STAGING_FTP_PASSWORD }}
           BASIC_AUTH_PASSWORD: ${{ secrets.STAGING_BASIC_AUTH_PASSWORD }}
         run: |
-          curl -s -u "$SFTP_USER:$SFTP_PASSWORD" -T /dev/null "sftp://$SFTP_HOST/tmp/restart.txt"
+          : > /tmp/restart.txt
+          sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no -o ConnectTimeout=15 -o ConnectionAttempts=5 "$SFTP_USER@$SFTP_HOST" <<< $'put /tmp/restart.txt /tmp/restart.txt'
           curl -s -o /dev/null -u "glassart:$BASIC_AUTH_PASSWORD" "https://staging.glassartanddesign.com/nl" || true
         # Phusion Passenger (this host's Node.js runtime) restarts the app the next time a
         # request reaches it after tmp/restart.txt's mtime changes -- confirmed working
         # 2026-08-01 once pointed at the real Application root (an earlier "doesn't work"
         # finding was actually a misdirected-account bug, not a real Passenger limitation
-        # -- see project memory). `-T /dev/null` overwrites restart.txt with a zero-byte
-        # file; only the mtime bump matters, content is irrelevant. The warm-up curl right
-        # after is what makes the restart happen now instead of waiting for the next real
-        # visitor -- it needs Basic Auth like the smoke check below, since an
-        # unauthenticated request never reaches the Node process at all.
+        # -- see project memory). Uses sshpass + the system sftp client (same underlying
+        # tool the SFTP upload steps above already rely on via SFTP-Deploy-Action) rather
+        # than curl's sftp:// handler -- curl failed here with exit 60 (SSH host key not
+        # trusted) on the GitHub Actions runner even though the identical command works
+        # fine locally, so this sidesteps that instead of debugging curl's SSH backend.
+        # The local /tmp/restart.txt is a fresh empty file; only the remote mtime bump
+        # matters, content is irrelevant. The warm-up curl right after is what makes the
+        # restart happen now instead of waiting for the next real visitor -- it needs
+        # Basic Auth like the smoke check below, since an unauthenticated request never
+        # reaches the Node process at all.
 
       - name: npm install reminder
         run: |
