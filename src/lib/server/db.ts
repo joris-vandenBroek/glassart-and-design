@@ -15,6 +15,10 @@ export function getPool(): mysql.Pool {
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
+      // Without this, mysql2 returns DECIMAL columns (materiaaldikte, prijs, etc.) as
+      // strings, silently breaking every `=== <number>` comparison against them even
+      // though every DECIMAL column is typed as `number` in materiaalTypes.ts.
+      decimalNumbers: true,
       waitForConnections: true,
       // Overridable per environment (DB_CONNECTION_LIMIT) since staging/production get
       // different max_user_connections grants from the host and may need different tuning
