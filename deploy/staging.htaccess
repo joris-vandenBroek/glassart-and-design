@@ -1,9 +1,0 @@
-# deploy/staging.htaccess
-AuthType Basic
-AuthName "Glassart & Design - staging"
-AuthUserFile /home/USERNAME/domains/staging.glassartanddesign.com/public_html/.htpasswd
-Require valid-user
-
-<Files ".htpasswd">
-  Require all denied
-</Files>

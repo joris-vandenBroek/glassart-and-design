@@ -159,16 +159,30 @@ jobs:
         # comment above). remote_path /.next already exists (from the original manual
         # deploy), so this only needs to write/overwrite files inside it, not create it.
 
+      - name: Remove leftover Basic Auth files
+        env:
+          SFTP_HOST: ${{ vars.STAGING_FTP_HOST }}
+          SFTP_USER: ${{ secrets.STAGING_FTP_USERNAME }}
+          SFTP_PASSWORD: ${{ secrets.STAGING_FTP_PASSWORD }}
+        run: |
+          sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no -o ConnectTimeout=15 -o ConnectionAttempts=5 "$SFTP_USER@$SFTP_HOST" <<< $'rm .htaccess\nrm .htpasswd' || true
+        # One-time cleanup: staging used to sit behind HTTP Basic Auth (a leftover .htaccess/
+        # .htpasswd pair on the server from the old static-export setup), which this workflow
+        # itself never generated but still had to work around (see the removed curl -u calls
+        # below). The `|| true` on the whole sftp invocation makes this a no-op on every run
+        # after the first -- sftp's batch mode aborts the session on the first failing `rm`
+        # (e.g. .htaccess already gone), so a second `rm .htpasswd` in the same session isn't
+        # guaranteed to run either; that's fine once both files are actually gone.
+
       - name: Trigger Passenger restart (tmp/restart.txt)
         env:
           SFTP_HOST: ${{ vars.STAGING_FTP_HOST }}
           SFTP_USER: ${{ secrets.STAGING_FTP_USERNAME }}
           SFTP_PASSWORD: ${{ secrets.STAGING_FTP_PASSWORD }}
-          BASIC_AUTH_PASSWORD: ${{ secrets.STAGING_BASIC_AUTH_PASSWORD }}
         run: |
           : > /tmp/restart.txt
           sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no -o ConnectTimeout=15 -o ConnectionAttempts=5 "$SFTP_USER@$SFTP_HOST" <<< $'put /tmp/restart.txt /tmp/restart.txt'
-          curl -s -o /dev/null -u "glassart:$BASIC_AUTH_PASSWORD" "https://staging.glassartanddesign.com/nl" || true
+          curl -s -o /dev/null "https://staging.glassartanddesign.com/nl" || true
         # Phusion Passenger (this host's Node.js runtime) restarts the app the next time a
         # request reaches it after tmp/restart.txt's mtime changes -- confirmed working
         # 2026-08-01 once pointed at the real Application root (an earlier "doesn't work"
@@ -180,24 +194,20 @@ jobs:
         # fine locally, so this sidesteps that instead of debugging curl's SSH backend.
         # The local /tmp/restart.txt is a fresh empty file; only the remote mtime bump
         # matters, content is irrelevant. The warm-up curl right after is what makes the
-        # restart happen now instead of waiting for the next real visitor -- it needs
-        # Basic Auth like the smoke check below, since an unauthenticated request never
-        # reaches the Node process at all.
+        # restart happen now instead of waiting for the next real visitor.
 
       - name: npm install reminder
         run: |
           echo '::notice::If package.json/package-lock.json changed in this deploy, DirectAdmin still needs a manual "Run NPM Install" click for staging -- node_modules is a symlink into a DirectAdmin-managed location this workflow cannot upload to. The restart above is automatic either way.'
 
       - name: Smoke check
-        env:
-          BASIC_AUTH_PASSWORD: ${{ secrets.STAGING_BASIC_AUTH_PASSWORD }}
         run: |
           sleep 5
           attempt=1
           max_attempts=3
           status=""
           while [ "$attempt" -le "$max_attempts" ]; do
-            status=$(curl -s -o /dev/null -w "%{http_code}" -u "glassart:$BASIC_AUTH_PASSWORD" "https://staging.glassartanddesign.com/nl")
+            status=$(curl -s -o /dev/null -w "%{http_code}" "https://staging.glassartanddesign.com/nl")
             if [ "$status" = "200" ]; then
               break
             fi
