@@ -29,6 +29,10 @@ export const PUT = withApiErrorHandling('PUT /api/prijsmatrix', async (request: 
     regels: Array<{ maatId: string; materiaalId: string; prijs: number | null }>;
   };
 
+  if (!Array.isArray(regels)) {
+    return NextResponse.json({ error: 'invalid-body' }, { status: 400 });
+  }
+
   const pool = getPool();
   const connection = await pool.getConnection();
   try {
@@ -41,7 +45,8 @@ export const PUT = withApiErrorHandling('PUT /api/prijsmatrix', async (request: 
     }
     await connection.commit();
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (err) {
+    console.error('PUT /api/prijsmatrix failed', err);
     await connection.rollback();
     return NextResponse.json({ error: 'server-error' }, { status: 500 });
   } finally {

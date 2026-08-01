@@ -602,7 +602,7 @@
     "prijsmatrixLoadError": "Kon de prijsmatrix niet laden. Probeer de pagina te verversen.",
     "prijsmatrixActionError": "Er is iets misgegaan. Probeer het opnieuw.",
     "prijsmatrixTitle": "Prijs per maat en materiaal",
-    "prijsmatrixHint": "Vul een prijs in voor elke combinatie. Een lege cel toont \"prijs op aanvraag\" in de webshop.",
+    "prijsmatrixHint": "Vul een prijs in voor elke combinatie. Een lege cel toont \"prijs op aanvraag\" in de webshop. Klik op Opslaan om je wijzigingen te bewaren.",
     "prijsmatrixOpgeslagen": "Opgeslagen",
     "prijsmatrixGewijzigd": "Nog niet opgeslagen",
     "prijsmatrixOpslaan": "Opslaan",

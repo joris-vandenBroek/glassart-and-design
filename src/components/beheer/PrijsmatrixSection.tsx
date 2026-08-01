@@ -104,6 +104,7 @@ export function PrijsmatrixSection({
   }
 
   async function handleOpslaan() {
+    if (isSaving) return;
     const gewijzigd = Object.entries(gewijzigdeCellen);
     if (gewijzigd.length === 0) return;
 
@@ -139,7 +140,13 @@ export function PrijsmatrixSection({
         });
         return next;
       });
-      setGewijzigdeCellen({});
+      setGewijzigdeCellen((current) => {
+        const next = { ...current };
+        gewijzigd.forEach(([cellKey]) => {
+          delete next[cellKey];
+        });
+        return next;
+      });
       setActionError(null);
     } catch {
       setActionError(t('prijsmatrixActionError'));
@@ -176,6 +183,7 @@ export function PrijsmatrixSection({
                       type="number"
                       value={huidigeWaarde(maat.id, materiaal.id)}
                       onChange={(event) => handleChange(maat.id, materiaal.id, event.target.value)}
+                      disabled={isSaving}
                       data-testid={`prijsmatrix-cel-${maat.id}-${materiaal.id}`}
                       className="w-20 rounded-sm border border-transparent bg-black/40 px-2 py-1 text-sm text-white [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />

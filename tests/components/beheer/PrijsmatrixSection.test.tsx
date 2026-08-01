@@ -131,6 +131,43 @@ describe('PrijsmatrixSection', () => {
     expect(screen.queryByTestId('prijsmatrix-saved-maat-1-mat-1')).not.toBeInTheDocument();
   });
 
+  it('disables inputs during an in-flight save so a mid-save edit cannot be discarded', async () => {
+    const materialen = [
+      { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 3, omschrijving: 'Acryl 3mm' },
+      { id: 'mat-2', materiaalsoortId: 'soort-1', materiaaldikte: 5, omschrijving: 'Acryl 5mm' },
+    ];
+    const prijsmatrix = [
+      { maatId: 'maat-1', materiaalId: 'mat-1', prijs: null },
+      { maatId: 'maat-1', materiaalId: 'mat-2', prijs: null },
+    ];
+
+    let resolveFetch: (value: { ok: boolean; json: () => Promise<unknown> }) => void = () => {};
+    const deferred = new Promise<{ ok: boolean; json: () => Promise<unknown> }>((resolve) => {
+      resolveFetch = resolve;
+    });
+    fetchMock.mockReturnValue(deferred);
+
+    renderSection({ materialen, prijsmatrix });
+
+    const cellA = screen.getByTestId('prijsmatrix-cel-maat-1-mat-1');
+    const cellB = screen.getByTestId('prijsmatrix-cel-maat-1-mat-2');
+
+    fireEvent.change(cellA, { target: { value: '175' } });
+    fireEvent.click(screen.getByTestId('prijsmatrix-opslaan'));
+
+    // Save is in flight now: inputs must be disabled so a mid-save edit is impossible.
+    await waitFor(() => expect(cellA).toBeDisabled());
+    expect(cellB).toBeDisabled();
+
+    resolveFetch({ ok: true, json: async () => ({ ok: true }) });
+
+    await waitFor(() => expect(screen.getByTestId('prijsmatrix-saved-maat-1-mat-1')).toBeInTheDocument());
+    expect(screen.queryByTestId('prijsmatrix-gewijzigd-maat-1-mat-1')).not.toBeInTheDocument();
+    expect(cellA).toBeEnabled();
+    expect(cellB).toBeEnabled();
+    expect(screen.queryByTestId('prijsmatrix-gewijzigd-maat-1-mat-2')).not.toBeInTheDocument();
+  });
+
   it('renders maten rows sorted by breedte then hoogte ascending', () => {
     const unsortedMaten = [
       { id: 'maat-large', breedte: 100, hoogte: 100 },
