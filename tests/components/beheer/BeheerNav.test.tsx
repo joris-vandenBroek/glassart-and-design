@@ -22,7 +22,6 @@ function renderNav(
     kunstwerkenCount: 36,
     kunstenaarsCount: 8,
     prijsgroepenCount: 9,
-    prijsmatrixCount: 2,
     drukkersCount: 7,
     activiteitCount: 12,
   };
@@ -44,7 +43,6 @@ function renderNav(
         kunstwerkenCount={counts.kunstwerkenCount}
         kunstenaarsCount={counts.kunstenaarsCount}
         prijsgroepenCount={counts.prijsgroepenCount}
-        prijsmatrixCount={counts.prijsmatrixCount}
         drukkersCount={counts.drukkersCount}
         activiteitCount={counts.activiteitCount}
       />
@@ -76,7 +74,6 @@ describe('BeheerNav', () => {
     expect(screen.getByTestId('beheer-nav-prijsgroepen')).toHaveTextContent('Prijsgroepen');
     expect(screen.getByTestId('beheer-nav-prijsgroepen')).toHaveTextContent('9');
     expect(screen.getByTestId('beheer-nav-prijsmatrix')).toHaveTextContent('Prijsmatrix');
-    expect(screen.getByTestId('beheer-nav-prijsmatrix')).toHaveTextContent('2');
     expect(screen.getByTestId('beheer-nav-drukkers')).toHaveTextContent('Drukkers');
     expect(screen.getByTestId('beheer-nav-drukkers')).toHaveTextContent('7');
     expect(screen.getByTestId('beheer-nav-activiteit')).toHaveTextContent('Activiteitenlog');
@@ -96,6 +93,12 @@ describe('BeheerNav', () => {
   it('does not show a count badge on the Instellingen item', () => {
     renderNav();
     const item = screen.getByTestId('beheer-nav-instellingen');
+    expect(item.querySelectorAll('span')).toHaveLength(1);
+  });
+
+  it('does not show a count badge on the Prijsmatrix item', () => {
+    renderNav();
+    const item = screen.getByTestId('beheer-nav-prijsmatrix');
     expect(item.querySelectorAll('span')).toHaveLength(1);
   });
 

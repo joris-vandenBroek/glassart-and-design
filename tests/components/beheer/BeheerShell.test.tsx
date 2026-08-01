@@ -159,7 +159,7 @@ describe('BeheerShell', () => {
     expect(onLogout).toHaveBeenCalled();
   });
 
-  it('shows the count of "Beoordelen" klanten on the Klanten nav item', async () => {
+  it('shows the total number of klanten on the Klanten nav item, regardless of status', async () => {
     mockCollections({
       klanten: [
         { id: 'uid-1', ...KLANT_DATA },
@@ -167,7 +167,7 @@ describe('BeheerShell', () => {
       ],
     });
     renderShell();
-    await waitFor(() => expect(screen.getByTestId('beheer-nav-klanten')).toHaveTextContent('1'));
+    await waitFor(() => expect(screen.getByTestId('beheer-nav-klanten')).toHaveTextContent('2'));
   });
 
   it('shows a load error on the Klanten section when the klanten fetch fails', async () => {
@@ -238,7 +238,7 @@ describe('BeheerShell', () => {
     expect(screen.getByTestId('data-table-row-maat-1')).toHaveTextContent('40');
   });
 
-  it('shows the bestellingen count and switches to the Bestellingen section', async () => {
+  it('shows the total number of bestellingen on the nav item, regardless of status, and switches to the Bestellingen section', async () => {
     mockCollections({
       klanten: [{ id: 'uid-1', ...KLANT_DATA }],
       bestelheaders: [
@@ -250,10 +250,18 @@ describe('BeheerShell', () => {
           status: 'Te beoordelen',
           lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 3 }],
         },
+        {
+          id: 'header-2',
+          klantId: 'uid-1',
+          bestelnr: 'GD-00002',
+          besteldatum: '2026-07-02T00:00:00',
+          status: 'Afgewezen',
+          lines: [{ id: 'line-2', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
+        },
       ],
     });
     renderShell();
-    await waitFor(() => expect(screen.getByTestId('beheer-nav-bestellingen')).toHaveTextContent('1'));
+    await waitFor(() => expect(screen.getByTestId('beheer-nav-bestellingen')).toHaveTextContent('2'));
     screen.getByTestId('beheer-nav-bestellingen').click();
     expect(await screen.findByTestId('bestellingen-section')).toBeInTheDocument();
     expect(screen.getByTestId('data-table-row-header-1')).toHaveTextContent('Testbedrijf BV');

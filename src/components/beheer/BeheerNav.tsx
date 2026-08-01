@@ -35,7 +35,6 @@ interface BeheerNavProps {
   kunstwerkenCount: number;
   kunstenaarsCount: number;
   prijsgroepenCount: number;
-  prijsmatrixCount: number;
   drukkersCount: number;
   activiteitCount: number;
 }
@@ -76,7 +75,6 @@ export function BeheerNav({
   kunstwerkenCount,
   kunstenaarsCount,
   prijsgroepenCount,
-  prijsmatrixCount,
   drukkersCount,
   activiteitCount,
 }: BeheerNavProps) {
@@ -93,7 +91,6 @@ export function BeheerNav({
     kunstwerken: kunstwerkenCount,
     kunstenaars: kunstenaarsCount,
     prijsgroepen: prijsgroepenCount,
-    prijsmatrix: prijsmatrixCount,
     drukkers: drukkersCount,
     activiteit: activiteitCount,
   };

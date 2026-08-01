@@ -265,8 +265,8 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
     seed: BESTELINSTELLINGEN_SEED,
   });
 
-  const klantenCount = (klanten ?? []).filter((klant) => klant.status === 'Beoordelen').length;
-  const bestellingenCount = (bestellingen ?? []).filter((b) => b.status === 'Te beoordelen').length;
+  const klantenCount = (klanten ?? []).length;
+  const bestellingenCount = (bestellingen ?? []).length;
   const materiaalsoortenCount = (materiaalsoorten.items ?? []).length;
   const materialenCount = (materialen.items ?? []).length;
   const matenCount = (maten.items ?? []).length;
@@ -278,7 +278,6 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   const kunstenaarsCount = (kunstenaars.items ?? []).length;
   const drukkersCount = (drukkers.items ?? []).length;
   const activiteitCount = (activiteiten ?? []).length;
-  const prijsmatrixCount = (prijsmatrix ?? []).filter((regel) => regel.prijs == null).length;
 
   return (
     <div
@@ -304,7 +303,6 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
           kunstwerkenCount={kunstwerkenCount}
           kunstenaarsCount={kunstenaarsCount}
           prijsgroepenCount={prijsgroepenCount}
-          prijsmatrixCount={prijsmatrixCount}
           drukkersCount={drukkersCount}
           activiteitCount={activiteitCount}
         />
