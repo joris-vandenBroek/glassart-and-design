@@ -6,6 +6,11 @@ import { PrijsmatrixSection } from '@/components/beheer/PrijsmatrixSection';
 import { AdminAuthProvider } from '@/lib/useAdminAuth';
 import messages from '../../../messages/nl.json';
 
+vi.mock('@/lib/useAdminAuth', () => ({
+  useAdminAuth: () => ({ user: { email: 'test@example.com' } }),
+  AdminAuthProvider: ({ children }: any) => children,
+}));
+
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
 
@@ -53,40 +58,76 @@ describe('PrijsmatrixSection', () => {
     expect(screen.getByTestId('prijsmatrix-cel-maat-1-mat-1')).toHaveValue(150);
   });
 
-  it('saves a prijs on blur and calls onRegelUpdated', async () => {
-    const onRegelUpdated = vi.fn();
-    renderSection({ onRegelUpdated });
+  it('marks a cell as gewijzigd when edited, without saving yet', () => {
+    renderSection();
     fireEvent.change(screen.getByTestId('prijsmatrix-cel-maat-1-mat-1'), { target: { value: '175' } });
-    fireEvent.blur(screen.getByTestId('prijsmatrix-cel-maat-1-mat-1'));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/prijsmatrix', expect.objectContaining({ method: 'PUT' })));
-    expect(onRegelUpdated).toHaveBeenCalledWith('maat-1', 'mat-1', 175);
+    expect(screen.getByTestId('prijsmatrix-gewijzigd-maat-1-mat-1')).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('shows a saved confirmation next to a cell after it saves successfully', async () => {
-    renderSection();
-    expect(screen.queryByTestId('prijsmatrix-saved-maat-1-mat-1')).not.toBeInTheDocument();
-    fireEvent.change(screen.getByTestId('prijsmatrix-cel-maat-1-mat-1'), { target: { value: '175' } });
-    fireEvent.blur(screen.getByTestId('prijsmatrix-cel-maat-1-mat-1'));
-    await waitFor(() => expect(screen.getByTestId('prijsmatrix-saved-maat-1-mat-1')).toBeInTheDocument());
-  });
-
-  it('hides the saved confirmation again once the cell is edited', async () => {
-    renderSection();
+  it('unmarks a cell as gewijzigd when its value is edited back to the saved prijs', () => {
+    renderSection({ prijsmatrix: [{ maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150 }] });
     const input = screen.getByTestId('prijsmatrix-cel-maat-1-mat-1');
     fireEvent.change(input, { target: { value: '175' } });
-    fireEvent.blur(input);
-    await waitFor(() => expect(screen.getByTestId('prijsmatrix-saved-maat-1-mat-1')).toBeInTheDocument());
-    fireEvent.change(input, { target: { value: '180' } });
-    expect(screen.queryByTestId('prijsmatrix-saved-maat-1-mat-1')).not.toBeInTheDocument();
+    expect(screen.getByTestId('prijsmatrix-gewijzigd-maat-1-mat-1')).toBeInTheDocument();
+    fireEvent.change(input, { target: { value: '150' } });
+    expect(screen.queryByTestId('prijsmatrix-gewijzigd-maat-1-mat-1')).not.toBeInTheDocument();
   });
 
-  it('does not show a saved confirmation when the save fails', async () => {
+  it('disables the Opslaan button until a cell is edited', () => {
+    renderSection();
+    expect(screen.getByTestId('prijsmatrix-opslaan')).toBeDisabled();
+    fireEvent.change(screen.getByTestId('prijsmatrix-cel-maat-1-mat-1'), { target: { value: '175' } });
+    expect(screen.getByTestId('prijsmatrix-opslaan')).toBeEnabled();
+  });
+
+  it('saves all gewijzigde cellen in one bulk PUT call when Opslaan is clicked', async () => {
+    const onRegelUpdated = vi.fn();
+    const materialen = [
+      { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 3, omschrijving: 'Acryl 3mm' },
+      { id: 'mat-2', materiaalsoortId: 'soort-1', materiaaldikte: 5, omschrijving: 'Acryl 5mm' },
+    ];
+    const prijsmatrix = [
+      { maatId: 'maat-1', materiaalId: 'mat-1', prijs: null },
+      { maatId: 'maat-1', materiaalId: 'mat-2', prijs: null },
+    ];
+    renderSection({ onRegelUpdated, materialen, prijsmatrix });
+
+    fireEvent.change(screen.getByTestId('prijsmatrix-cel-maat-1-mat-1'), { target: { value: '175' } });
+    fireEvent.change(screen.getByTestId('prijsmatrix-cel-maat-1-mat-2'), { target: { value: '225' } });
+    fireEvent.click(screen.getByTestId('prijsmatrix-opslaan'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/prijsmatrix',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({
+            regels: [
+              { maatId: 'maat-1', materiaalId: 'mat-1', prijs: 175 },
+              { maatId: 'maat-1', materiaalId: 'mat-2', prijs: 225 },
+            ],
+          }),
+        })
+      )
+    );
+    await waitFor(() => expect(screen.getByTestId('prijsmatrix-saved-maat-1-mat-1')).toBeInTheDocument());
+    expect(screen.getByTestId('prijsmatrix-saved-maat-1-mat-2')).toBeInTheDocument();
+    expect(screen.queryByTestId('prijsmatrix-gewijzigd-maat-1-mat-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('prijsmatrix-gewijzigd-maat-1-mat-2')).not.toBeInTheDocument();
+    expect(onRegelUpdated).toHaveBeenCalledWith('maat-1', 'mat-1', 175);
+    expect(onRegelUpdated).toHaveBeenCalledWith('maat-1', 'mat-2', 225);
+  });
+
+  it('keeps cells marked as gewijzigd and shows an error when the bulk save fails', async () => {
     fetchMock.mockResolvedValue({ ok: false, json: async () => ({ ok: false }) });
     renderSection();
     const input = screen.getByTestId('prijsmatrix-cel-maat-1-mat-1');
     fireEvent.change(input, { target: { value: '175' } });
-    fireEvent.blur(input);
+    fireEvent.click(screen.getByTestId('prijsmatrix-opslaan'));
+
     await waitFor(() => expect(screen.getByTestId('prijsmatrix-action-error')).toBeInTheDocument());
+    expect(screen.getByTestId('prijsmatrix-gewijzigd-maat-1-mat-1')).toBeInTheDocument();
     expect(screen.queryByTestId('prijsmatrix-saved-maat-1-mat-1')).not.toBeInTheDocument();
   });
 
@@ -103,7 +144,6 @@ describe('PrijsmatrixSection', () => {
     }));
     renderSection({ maten: unsortedMaten, prijsmatrix });
 
-    // Get all row label cells (skipping the header row)
     const rows = screen.getAllByRole('row');
     const rowLabels = rows.slice(1).map((row) => row.querySelector('td')?.textContent);
 
@@ -134,12 +174,10 @@ describe('PrijsmatrixSection', () => {
       prijsmatrix,
     });
 
-    // Get the header row's column headers (skipping the first empty cell)
     const headerRow = screen.getAllByRole('row')[0];
     const headers = Array.from(headerRow.querySelectorAll('th')).slice(1);
     const headerTexts = headers.map((h) => h.textContent);
 
-    // Acryl should come before Glas (alphabetically), and within each soort, dikte should be ascending
     expect(headerTexts).toEqual(['3mm Acryl', '5mm Acryl', '3mm Glas', '5mm Glas']);
   });
 });

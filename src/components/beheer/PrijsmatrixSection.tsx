@@ -34,6 +34,10 @@ export function PrijsmatrixSection({
   const [inputWaarden, setInputWaarden] = useState<Record<string, string>>({});
   const [actionError, setActionError] = useState<string | null>(null);
   const [opgeslagenCellen, setOpgeslagenCellen] = useState<Record<string, boolean>>({});
+  const [gewijzigdeCellen, setGewijzigdeCellen] = useState<Record<string, { maatId: string; materiaalId: string }>>(
+    {}
+  );
+  const [isSaving, setIsSaving] = useState(false);
 
   const soortNaamById = useMemo(() => {
     const map = new Map<string, string>();
@@ -69,45 +73,79 @@ export function PrijsmatrixSection({
     return `${maatId}:${materiaalId}`;
   }
 
-  function huidigeWaarde(maatId: string, materiaalId: string): string {
-    const bewerkt = inputWaarden[key(maatId, materiaalId)];
-    if (bewerkt !== undefined) return bewerkt;
+  function opgeslagenWaarde(maatId: string, materiaalId: string): string {
     const regel = prijsmatrix!.find((r) => r.maatId === maatId && r.materiaalId === materiaalId);
     return regel?.prijs != null ? String(regel.prijs) : '';
   }
 
-  async function handleBlur(maatId: string, materiaalId: string) {
-    const raw = huidigeWaarde(maatId, materiaalId);
-    const prijs = raw === '' ? null : Number(raw);
+  function huidigeWaarde(maatId: string, materiaalId: string): string {
+    const bewerkt = inputWaarden[key(maatId, materiaalId)];
+    if (bewerkt !== undefined) return bewerkt;
+    return opgeslagenWaarde(maatId, materiaalId);
+  }
+
+  function handleChange(maatId: string, materiaalId: string, value: string) {
+    const cellKey = key(maatId, materiaalId);
+    setInputWaarden((current) => ({ ...current, [cellKey]: value }));
+    setOpgeslagenCellen((current) => {
+      if (!current[cellKey]) return current;
+      const { [cellKey]: _verwijderd, ...rest } = current;
+      return rest;
+    });
+    setGewijzigdeCellen((current) => {
+      const isGewijzigd = value !== opgeslagenWaarde(maatId, materiaalId);
+      if (isGewijzigd) {
+        return { ...current, [cellKey]: { maatId, materiaalId } };
+      }
+      if (!current[cellKey]) return current;
+      const { [cellKey]: _verwijderd, ...rest } = current;
+      return rest;
+    });
+  }
+
+  async function handleOpslaan() {
+    const gewijzigd = Object.entries(gewijzigdeCellen);
+    if (gewijzigd.length === 0) return;
+
+    setIsSaving(true);
+    const regels = gewijzigd.map(([, { maatId, materiaalId }]) => {
+      const raw = huidigeWaarde(maatId, materiaalId);
+      return { maatId, materiaalId, prijs: raw === '' ? null : Number(raw) };
+    });
+
     try {
       const response = await fetch('/api/prijsmatrix', {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ maatId, materiaalId, prijs }),
+        body: JSON.stringify({ regels }),
       });
       if (!response.ok) throw new Error('save failed');
-      onRegelUpdated(maatId, materiaalId, prijs);
-      const materiaalNaam = materialen!.find((m) => m.id === materiaalId)?.omschrijving ?? materiaalId;
-      const maat = maten!.find((m) => m.id === maatId);
-      void logActiviteit(
-        'prijsmatrix_gewijzigd',
-        actorFromMedewerker(user),
-        maat ? `${maat.breedte}×${maat.hoogte} — ${materiaalNaam}` : materiaalNaam
-      );
+
+      regels.forEach(({ maatId, materiaalId, prijs }) => {
+        onRegelUpdated(maatId, materiaalId, prijs);
+        const materiaalNaam = materialen!.find((m) => m.id === materiaalId)?.omschrijving ?? materiaalId;
+        const maat = maten!.find((m) => m.id === maatId);
+        void logActiviteit(
+          'prijsmatrix_gewijzigd',
+          actorFromMedewerker(user),
+          maat ? `${maat.breedte}×${maat.hoogte} — ${materiaalNaam}` : materiaalNaam
+        );
+      });
+
+      setOpgeslagenCellen((current) => {
+        const next = { ...current };
+        gewijzigd.forEach(([cellKey]) => {
+          next[cellKey] = true;
+        });
+        return next;
+      });
+      setGewijzigdeCellen({});
       setActionError(null);
-      setOpgeslagenCellen((current) => ({ ...current, [key(maatId, materiaalId)]: true }));
     } catch {
       setActionError(t('prijsmatrixActionError'));
+    } finally {
+      setIsSaving(false);
     }
-  }
-
-  function handleChange(maatId: string, materiaalId: string, value: string) {
-    setInputWaarden((current) => ({ ...current, [key(maatId, materiaalId)]: value }));
-    setOpgeslagenCellen((current) => {
-      if (!current[key(maatId, materiaalId)]) return current;
-      const { [key(maatId, materiaalId)]: _verwijderd, ...rest } = current;
-      return rest;
-    });
   }
 
   return (
@@ -138,10 +176,18 @@ export function PrijsmatrixSection({
                       type="number"
                       value={huidigeWaarde(maat.id, materiaal.id)}
                       onChange={(event) => handleChange(maat.id, materiaal.id, event.target.value)}
-                      onBlur={() => handleBlur(maat.id, materiaal.id)}
                       data-testid={`prijsmatrix-cel-${maat.id}-${materiaal.id}`}
                       className="w-20 rounded-sm border border-transparent bg-black/40 px-2 py-1 text-sm text-white [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
+                    {gewijzigdeCellen[key(maat.id, materiaal.id)] && (
+                      <span
+                        data-testid={`prijsmatrix-gewijzigd-${maat.id}-${materiaal.id}`}
+                        className="text-xs text-amber-400"
+                        title={t('prijsmatrixGewijzigd')}
+                      >
+                        ●
+                      </span>
+                    )}
                     {opgeslagenCellen[key(maat.id, materiaal.id)] && (
                       <span
                         data-testid={`prijsmatrix-saved-${maat.id}-${materiaal.id}`}
@@ -159,6 +205,15 @@ export function PrijsmatrixSection({
         </tbody>
       </table>
       <p className="mt-2 text-xs normal-case tracking-normal text-white/50">{t('prijsmatrixHint')}</p>
+      <button
+        type="button"
+        onClick={handleOpslaan}
+        disabled={Object.keys(gewijzigdeCellen).length === 0 || isSaving}
+        data-testid="prijsmatrix-opslaan"
+        className="btn-beheer-primary mt-3 rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+      >
+        {isSaving ? t('prijsmatrixOpslaanBezig') : t('prijsmatrixOpslaan')}
+      </button>
       {actionError && (
         <p data-testid="prijsmatrix-action-error" className="mt-2 text-xs text-red-400">
           {actionError}
