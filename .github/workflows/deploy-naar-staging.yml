@@ -80,7 +80,7 @@ jobs:
         # DirectAdmin-managed nodeenv location (visible as `Lrwxrwxrwx` in File Manager),
         # not a plain directory. Trying to upload a real node_modules folder over it fails
         # ("path canonicalization failed"). Managing it is DirectAdmin's "Run NPM Install"
-        # button's job, not this workflow's -- see the manual-steps reminder below.
+        # button's job, not this workflow's -- see the npm install reminder step below.
 
       - name: Upload build to staging Node.js app via SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.6
@@ -139,21 +139,28 @@ jobs:
         # comment above). remote_path /.next already exists (from the original manual
         # deploy), so this only needs to write/overwrite files inside it, not create it.
 
-      - name: Manual restart reminder
+      - name: Trigger Passenger restart (tmp/restart.txt)
+        env:
+          SFTP_HOST: ${{ vars.STAGING_FTP_HOST }}
+          SFTP_USER: ${{ secrets.STAGING_FTP_USERNAME }}
+          SFTP_PASSWORD: ${{ secrets.STAGING_FTP_PASSWORD }}
+          BASIC_AUTH_PASSWORD: ${{ secrets.STAGING_BASIC_AUTH_PASSWORD }}
         run: |
-          echo '::warning::Staging is uploaded but NOT restarted -- DirectAdmin Node.js app has no API for this, only UI buttons. If package.json/package-lock.json changed, click Run NPM Install first, then always click RESTART -- otherwise the site keeps serving the previous build.'
-          {
-            echo '## :warning: Manual steps required'
-            echo ''
-            echo 'Files are uploaded to staging, but the Node.js app was **not** restarted automatically, and dependencies were **not** installed automatically -- DirectAdmin Node.js Selector has no API for start/restart/npm-install, only web UI buttons (none of the 269 endpoints in its own Swagger spec relate to Node.js/unit/passenger), and the restart.txt Passenger convention does not get picked up on this host either.'
-            echo ''
-            echo '1. If `package.json` or `package-lock.json` changed in this deploy, go to DirectAdmin, open the staging Node.js app, and click **Run NPM Install** (node_modules is a symlink into a DirectAdmin-managed location, so this workflow cannot upload it directly).'
-            echo '2. Always click **RESTART** afterwards -- this is what makes the new deploy actually take effect.'
-          } >> "$GITHUB_STEP_SUMMARY"
-        # Tried tmp/restart.txt (standard Passenger convention) as a separate, narrowly
-        # scoped upload first -- landed fine but the app kept serving the old build, so
-        # this host's Node.js Selector doesn't watch that file. Removed rather than left
-        # in as a no-op.
+          curl -s -u "$SFTP_USER:$SFTP_PASSWORD" -T /dev/null "sftp://$SFTP_HOST/tmp/restart.txt"
+          curl -s -o /dev/null -u "glassart:$BASIC_AUTH_PASSWORD" "https://staging.glassartanddesign.com/nl" || true
+        # Phusion Passenger (this host's Node.js runtime) restarts the app the next time a
+        # request reaches it after tmp/restart.txt's mtime changes -- confirmed working
+        # 2026-08-01 once pointed at the real Application root (an earlier "doesn't work"
+        # finding was actually a misdirected-account bug, not a real Passenger limitation
+        # -- see project memory). `-T /dev/null` overwrites restart.txt with a zero-byte
+        # file; only the mtime bump matters, content is irrelevant. The warm-up curl right
+        # after is what makes the restart happen now instead of waiting for the next real
+        # visitor -- it needs Basic Auth like the smoke check below, since an
+        # unauthenticated request never reaches the Node process at all.
+
+      - name: npm install reminder
+        run: |
+          echo '::notice::If package.json/package-lock.json changed in this deploy, DirectAdmin still needs a manual "Run NPM Install" click for staging -- node_modules is a symlink into a DirectAdmin-managed location this workflow cannot upload to. The restart above is automatic either way.'
 
       - name: Smoke check
         env:

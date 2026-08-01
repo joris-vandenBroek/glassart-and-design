@@ -108,7 +108,7 @@ jobs:
           cp app.js next.config.mjs package.json package-lock.json deploy_payload/
         # Same shape as the equivalent step in deploy-naar-staging.yml -- node_modules
         # deliberately excluded (managed via DirectAdmin's "Run NPM Install" button, see
-        # the manual restart reminder below).
+        # the npm install reminder step below).
 
       - name: Upload build to production Node.js app via SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.6
@@ -154,17 +154,26 @@ jobs:
           sftpArgs: '-o ConnectionAttempts=5 -o ConnectTimeout=15'
         # Separate step because .next is a dotdir the main step's "*" glob can't see.
 
-      - name: Manual restart reminder
+      - name: Trigger Passenger restart (tmp/restart.txt)
+        env:
+          SFTP_HOST: ${{ vars.PRODUCTION_SFTP_HOST }}
+          SFTP_USER: ${{ secrets.PRODUCTION_SFTP_USERNAME }}
+          SFTP_PASSWORD: ${{ secrets.PRODUCTION_SFTP_PASSWORD }}
         run: |
-          echo '::warning::Production is uploaded but NOT restarted -- DirectAdmin Node.js app has no API for this, only UI buttons. If package.json/package-lock.json changed, click Run NPM Install first, then always click RESTART -- otherwise the site keeps serving the previous build.'
-          {
-            echo '## :warning: Manual steps required'
-            echo ''
-            echo 'Files are uploaded to production, but the Node.js app was **not** restarted automatically, and dependencies were **not** installed automatically -- DirectAdmin Node.js Selector has no API for start/restart/npm-install, only web UI buttons.'
-            echo ''
-            echo '1. If `package.json` or `package-lock.json` changed in this deploy, go to DirectAdmin, open the production Node.js app, and click **Run NPM Install**.'
-            echo '2. Always click **RESTART** afterwards -- this is what makes the new deploy actually take effect.'
-          } >> "$GITHUB_STEP_SUMMARY"
+          curl -s -u "$SFTP_USER:$SFTP_PASSWORD" -T /dev/null "sftp://$SFTP_HOST/tmp/restart.txt"
+          curl -s -o /dev/null "https://glassartanddesign.com/nl" || true
+        # Phusion Passenger (this host's Node.js runtime) restarts the app the next time a
+        # request reaches it after tmp/restart.txt's mtime changes -- confirmed working
+        # 2026-08-01 once pointed at the real Application root -- see the equivalent step
+        # in deploy-naar-staging.yml and project memory for the full story (an earlier
+        # "doesn't work" finding was a misdirected-account bug, not a real limitation).
+        # `-T /dev/null` overwrites restart.txt with a zero-byte file; only the mtime bump
+        # matters. The warm-up curl right after makes the restart happen now instead of
+        # waiting for the next real visitor.
+
+      - name: npm install reminder
+        run: |
+          echo '::notice::If package.json/package-lock.json changed in this deploy, DirectAdmin still needs a manual "Run NPM Install" click for production -- node_modules is a symlink into a DirectAdmin-managed location this workflow cannot upload to. The restart above is automatic either way.'
 
       - name: Smoke check
         run: |
