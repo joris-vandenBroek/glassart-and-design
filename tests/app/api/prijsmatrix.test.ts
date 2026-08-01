@@ -1,4 +1,5 @@
 import { describe, expect, it, afterEach } from 'vitest';
+import { randomUUID } from 'crypto';
 import { getPool } from '@/lib/server/db';
 import { insertRow } from '@/lib/server/crud';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
@@ -55,14 +56,18 @@ function req(method: string, body?: unknown, cookie?: string) {
   });
 }
 
+function vindRegel(prijzen: Array<{ maatId: string; materiaalId: string; prijs: number | null }>, maatId: string, materiaalId: string) {
+  return prijzen.find((r) => r.maatId === maatId && r.materiaalId === materiaalId);
+}
+
 describe('prijsmatrix route', () => {
   it('rejects reading the matrix without a medewerker session', async () => {
     const response = await getMatrix(req('GET'));
     expect(response.status).toBe(401);
   });
 
-  it('rejects writing a prijs without a medewerker session', async () => {
-    const response = await putMatrix(req('PUT', { maatId: 'x', materiaalId: 'y', prijs: 100 }));
+  it('rejects writing prijzen without a medewerker session', async () => {
+    const response = await putMatrix(req('PUT', { regels: [{ maatId: 'x', materiaalId: 'y', prijs: 100 }] }));
     expect(response.status).toBe(401);
   });
 
@@ -73,31 +78,72 @@ describe('prijsmatrix route', () => {
 
     const response = await getMatrix(req('GET', undefined, cookie));
     const body = await response.json();
-    const regel = body.prijzen.find((r: { maatId: string; materiaalId: string }) => r.maatId === maatId && r.materiaalId === materiaalId);
-    expect(regel.prijs).toBeNull();
+    expect(vindRegel(body.prijzen, maatId, materiaalId)?.prijs).toBeNull();
   });
 
-  it('upserts a prijs, then reflects it on the next GET', async () => {
-    const maatId = await maakMaat(75, 75);
+  it('upserts multiple regels in a single bulk PUT call, then reflects them on the next GET', async () => {
+    const maatId1 = await maakMaat(75, 75);
+    const maatId2 = await maakMaat(80, 80);
     const materiaalId = await maakMateriaal();
     const cookie = await medewerkerCookie();
 
-    const putResponse = await putMatrix(req('PUT', { maatId, materiaalId, prijs: 250 }, cookie));
+    const putResponse = await putMatrix(
+      req(
+        'PUT',
+        {
+          regels: [
+            { maatId: maatId1, materiaalId, prijs: 250 },
+            { maatId: maatId2, materiaalId, prijs: 300 },
+          ],
+        },
+        cookie
+      )
+    );
     expect(putResponse.status).toBe(200);
 
     const response = await getMatrix(req('GET', undefined, cookie));
     const body = await response.json();
-    const regel = body.prijzen.find((r: { maatId: string; materiaalId: string }) => r.maatId === maatId && r.materiaalId === materiaalId);
-    expect(regel.prijs).toBe(250);
+    expect(vindRegel(body.prijzen, maatId1, materiaalId)?.prijs).toBe(250);
+    expect(vindRegel(body.prijzen, maatId2, materiaalId)?.prijs).toBe(300);
+  });
 
-    const updateResponse = await putMatrix(req('PUT', { maatId, materiaalId, prijs: 275 }, cookie));
+  it('updates an existing prijs when the same combinatie is sent again in a later bulk call', async () => {
+    const maatId = await maakMaat(85, 85);
+    const materiaalId = await maakMateriaal();
+    const cookie = await medewerkerCookie();
+
+    await putMatrix(req('PUT', { regels: [{ maatId, materiaalId, prijs: 250 }] }, cookie));
+    const updateResponse = await putMatrix(req('PUT', { regels: [{ maatId, materiaalId, prijs: 275 }] }, cookie));
     expect(updateResponse.status).toBe(200);
-    const secondResponse = await getMatrix(req('GET', undefined, cookie));
-    const secondBody = await secondResponse.json();
-    const secondRegel = secondBody.prijzen.find(
-      (r: { maatId: string; materiaalId: string }) => r.maatId === maatId && r.materiaalId === materiaalId
+
+    const response = await getMatrix(req('GET', undefined, cookie));
+    const body = await response.json();
+    expect(vindRegel(body.prijzen, maatId, materiaalId)?.prijs).toBe(275);
+  });
+
+  it('rolls back the entire batch when one regel is invalid, leaving the valid regel untouched', async () => {
+    const maatId = await maakMaat(90, 90);
+    const materiaalId = await maakMateriaal();
+    const cookie = await medewerkerCookie();
+    const nietBestaandeMaatId = randomUUID();
+
+    const putResponse = await putMatrix(
+      req(
+        'PUT',
+        {
+          regels: [
+            { maatId, materiaalId, prijs: 999 },
+            { maatId: nietBestaandeMaatId, materiaalId, prijs: 111 },
+          ],
+        },
+        cookie
+      )
     );
-    expect(secondRegel.prijs).toBe(275);
+    expect(putResponse.status).toBe(500);
+
+    const response = await getMatrix(req('GET', undefined, cookie));
+    const body = await response.json();
+    expect(vindRegel(body.prijzen, maatId, materiaalId)?.prijs).toBeNull();
   });
 
   it('automatically drops a prijsmatrix row when its maat is deleted (FK cascade)', async () => {
@@ -109,7 +155,6 @@ describe('prijsmatrix route', () => {
       100,
     ]);
     await getPool().query('DELETE FROM maten WHERE id = ?', [maatId]);
-    // The maat is already gone -- afterEach's cleanup DELETE for this id is then simply a no-op.
     const [rows] = await getPool().query('SELECT 1 FROM prijsmatrix WHERE maatId = ?', [maatId]);
     expect((rows as unknown[]).length).toBe(0);
   });
