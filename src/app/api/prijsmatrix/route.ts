@@ -25,14 +25,26 @@ export const PUT = withApiErrorHandling('PUT /api/prijsmatrix', async (request: 
   if (!(await requireMedewerker(request))) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
-  const { maatId, materiaalId, prijs } = (await request.json()) as {
-    maatId: string;
-    materiaalId: string;
-    prijs: number | null;
+  const { regels } = (await request.json()) as {
+    regels: Array<{ maatId: string; materiaalId: string; prijs: number | null }>;
   };
-  await getPool().query(
-    'INSERT INTO prijsmatrix (id, maatId, materiaalId, prijs) VALUES (UUID(), ?, ?, ?) ON DUPLICATE KEY UPDATE prijs = VALUES(prijs)',
-    [maatId, materiaalId, prijs]
-  );
-  return NextResponse.json({ ok: true });
+
+  const pool = getPool();
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    for (const regel of regels) {
+      await connection.query(
+        'INSERT INTO prijsmatrix (id, maatId, materiaalId, prijs) VALUES (UUID(), ?, ?, ?) ON DUPLICATE KEY UPDATE prijs = VALUES(prijs)',
+        [regel.maatId, regel.materiaalId, regel.prijs]
+      );
+    }
+    await connection.commit();
+    return NextResponse.json({ ok: true });
+  } catch {
+    await connection.rollback();
+    return NextResponse.json({ error: 'server-error' }, { status: 500 });
+  } finally {
+    connection.release();
+  }
 });
