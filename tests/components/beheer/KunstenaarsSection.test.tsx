@@ -233,7 +233,8 @@ describe('KunstenaarsSection', () => {
     fireEvent.change(screen.getByTestId('kunstenaar-modal-naam'), { target: { value: 'Nieuwe Kunstenaar' } });
     fireEvent.change(screen.getByTestId('kunstenaar-modal-omschrijving-nl'), { target: { value: 'Werkt met glas.' } });
     fireEvent.change(screen.getByTestId('kunstenaar-modal-prijsafspraken'), { target: { value: '30% commissie' } });
-    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-klant-1'));
+    fireEvent.focus(screen.getByTestId('kunstenaar-modal-klant-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-1-option-klant-1'));
     fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
 
     // Public record: no prijsafspraken, it is not publicly readable.
@@ -265,12 +266,14 @@ describe('KunstenaarsSection', () => {
   it('a new kunstenaar cannot select a second exclusieve klant -- there is no own account yet to satisfy the rule', async () => {
     renderSection();
     fireEvent.click(screen.getByTestId('kunstenaars-add'));
-    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-klant-1'));
-    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-klant-2'));
+    fireEvent.focus(screen.getByTestId('kunstenaar-modal-klant-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-1-option-klant-1'));
+    fireEvent.focus(screen.getByTestId('kunstenaar-modal-klant-2'));
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-2-option-klant-2'));
     expect(screen.getByTestId('kunstenaar-modal-error')).toHaveTextContent(
       'Bij 2 klanten moet één daarvan het klantaccount van deze kunstenaar zelf zijn.'
     );
-    expect(screen.getByTestId('kunstenaar-modal-klant-klant-2')).not.toBeChecked();
+    expect(screen.getByTestId('kunstenaar-modal-klant-2')).toHaveValue('');
   });
 
   it('allows a second exclusieve klant on an existing kunstenaar when one of the two is its own linked klant', async () => {
@@ -279,8 +282,10 @@ describe('KunstenaarsSection', () => {
     // Opslaan stays disabled until the async prijsafspraken fetch settles (see the
     // sibling 'opens a row for editing pre-filled...' test) -- wait for it before saving.
     await waitFor(() => expect(screen.getByTestId('kunstenaar-modal-opslaan')).not.toBeDisabled());
-    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-klant-1'));
-    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-klant-2'));
+    fireEvent.focus(screen.getByTestId('kunstenaar-modal-klant-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-1-option-klant-1'));
+    fireEvent.focus(screen.getByTestId('kunstenaar-modal-klant-2'));
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-2-option-klant-2'));
     expect(screen.queryByTestId('kunstenaar-modal-error')).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
 
@@ -296,22 +301,61 @@ describe('KunstenaarsSection', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
     await waitFor(() => expect(screen.getByTestId('kunstenaar-modal-opslaan')).not.toBeDisabled());
-    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-klant-1'));
-    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-klant-3'));
+    fireEvent.focus(screen.getByTestId('kunstenaar-modal-klant-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-1-option-klant-1'));
+    fireEvent.focus(screen.getByTestId('kunstenaar-modal-klant-2'));
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-2-option-klant-3'));
     expect(screen.getByTestId('kunstenaar-modal-error')).toHaveTextContent(
       'Bij 2 klanten moet één daarvan het klantaccount van deze kunstenaar zelf zijn.'
     );
-    expect(screen.getByTestId('kunstenaar-modal-klant-klant-3')).not.toBeChecked();
+    expect(screen.getByTestId('kunstenaar-modal-klant-2')).toHaveValue('');
   });
 
-  it('disables a third klant checkbox once two are already checked', async () => {
+  it('excludes the klant already chosen in the other slot from a combobox\'s option list', async () => {
     renderSection();
     fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
     await waitFor(() => expect(screen.getByTestId('kunstenaar-modal-opslaan')).not.toBeDisabled());
-    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-klant-1'));
-    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-klant-2'));
+    fireEvent.focus(screen.getByTestId('kunstenaar-modal-klant-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-1-option-klant-1'));
+    fireEvent.focus(screen.getByTestId('kunstenaar-modal-klant-2'));
+    expect(screen.queryByTestId('kunstenaar-modal-klant-2-option-klant-1')).not.toBeInTheDocument();
+    expect(screen.getByTestId('kunstenaar-modal-klant-2-option-klant-2')).toBeInTheDocument();
+
+    // Same exclusion in the other direction: a klant already chosen in slot 2
+    // must not reappear in slot 1's option list either.
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-2-option-klant-2'));
+    fireEvent.focus(screen.getByTestId('kunstenaar-modal-klant-1'));
+    expect(screen.queryByTestId('kunstenaar-modal-klant-1-option-klant-2')).not.toBeInTheDocument();
+    expect(screen.getByTestId('kunstenaar-modal-klant-1-option-klant-1')).toBeInTheDocument();
+  });
+
+  it('clearing klant 1 leaves klant 2 in its own slot instead of shifting it, even when the pair was only valid together', async () => {
+    // Starting pair is valid only as a pair (klant-2 is ka-1's own linked klant),
+    // so clearing klant 1 alone would violate the 2-klant rule if it were re-validated
+    // -- but clearing must always be allowed since it can only reduce the count.
+    const { onUpdate } = renderSection({
+      kunstenaars: [{ ...KUNSTENAARS[0], exclusieveKlantIds: ['klant-1', 'klant-2'] }],
+    });
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+    await waitFor(() => expect(screen.getByTestId('kunstenaar-modal-opslaan')).not.toBeDisabled());
+    expect(screen.getByTestId('kunstenaar-modal-klant-1')).toHaveValue('Galerie De Boer');
+    expect(screen.getByTestId('kunstenaar-modal-klant-2')).toHaveValue('Sabrina Glasser (eigen account)');
+
+    fireEvent.focus(screen.getByTestId('kunstenaar-modal-klant-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-klant-1-option-clear'));
+
     expect(screen.queryByTestId('kunstenaar-modal-error')).not.toBeInTheDocument();
-    expect(screen.getByTestId('kunstenaar-modal-klant-klant-3')).toBeDisabled();
+    expect(screen.getByTestId('kunstenaar-modal-klant-1')).toHaveValue('');
+    expect(screen.getByTestId('kunstenaar-modal-klant-2')).toHaveValue('Sabrina Glasser (eigen account)');
+
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
+
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith(
+        'ka-1',
+        expect.objectContaining({ exclusieveKlantIds: ['klant-2'] })
+      )
+    );
   });
 
   it('re-validates exclusieveKlantIds at save time, blocking a save when the list became invalid outside this session', async () => {
@@ -405,7 +449,8 @@ describe('KunstenaarsSection', () => {
     await waitFor(() =>
       expect(screen.getByTestId('kunstenaar-modal-prijsafspraken')).toHaveValue('20% commissie')
     );
-    expect(screen.getByTestId('kunstenaar-modal-klant-klant-1')).toBeChecked();
+    expect(screen.getByTestId('kunstenaar-modal-klant-1')).toHaveValue('Galerie De Boer');
+    expect(screen.getByTestId('kunstenaar-modal-klant-2')).toHaveValue('');
 
     fireEvent.change(screen.getByTestId('kunstenaar-modal-naam'), { target: { value: 'Sabrina G.' } });
     fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
