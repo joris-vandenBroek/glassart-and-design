@@ -165,14 +165,31 @@ jobs:
           SFTP_USER: ${{ secrets.STAGING_FTP_USERNAME }}
           SFTP_PASSWORD: ${{ secrets.STAGING_FTP_PASSWORD }}
         run: |
-          sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no -o ConnectTimeout=15 -o ConnectionAttempts=5 "$SFTP_USER@$SFTP_HOST" <<< $'rm .htaccess\nrm .htpasswd' || true
+          sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no -o ConnectTimeout=15 -o ConnectionAttempts=5 "$SFTP_USER@$SFTP_HOST" <<'SFTP_EOF' || true
+          -pwd
+          -ls -la
+          -rm .htaccess
+          -rm .htpasswd
+          -cd domains/staging.glassartanddesign.com/public_html
+          -pwd
+          -ls -la
+          -rm .htaccess
+          -rm .htpasswd
+          -cd /domains/staging.glassartanddesign.com/public_html
+          -pwd
+          -ls -la
+          -rm .htaccess
+          -rm .htpasswd
+          SFTP_EOF
         # One-time cleanup: staging used to sit behind HTTP Basic Auth (a leftover .htaccess/
         # .htpasswd pair on the server from the old static-export setup), which this workflow
         # itself never generated but still had to work around (see the removed curl -u calls
-        # below). The `|| true` on the whole sftp invocation makes this a no-op on every run
-        # after the first -- sftp's batch mode aborts the session on the first failing `rm`
-        # (e.g. .htaccess already gone), so a second `rm .htpasswd` in the same session isn't
-        # guaranteed to run either; that's fine once both files are actually gone.
+        # below). The Node.js app's SFTP root (where this account lands by default) is a
+        # different folder than the domain's actual Apache document root, so this tries both
+        # a relative and absolute domains/.../public_html path as well as the app root itself
+        # -- every `-`-prefixed sftp command continues past a failure (e.g. "No such file",
+        # wrong cwd) instead of aborting the whole batch, so this is safe to leave in place
+        # permanently as a no-op once the files are actually gone.
 
       - name: Trigger Passenger restart (tmp/restart.txt)
         env:
