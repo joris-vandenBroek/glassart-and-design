@@ -82,6 +82,26 @@ jobs:
         # ("path canonicalization failed"). Managing it is DirectAdmin's "Run NPM Install"
         # button's job, not this workflow's -- see the npm install reminder step below.
 
+      - name: Wait for host reachability
+        run: |
+          for i in $(seq 1 6); do
+            if timeout 5 bash -c "echo > /dev/tcp/h64.mijn.host/22" 2>/dev/null; then
+              echo "h64.mijn.host:22 reachable"
+              exit 0
+            fi
+            echo "Attempt $i/6: h64.mijn.host:22 not reachable yet, waiting 10s..."
+            sleep 10
+          done
+          echo "::warning::h64.mijn.host:22 still unreachable after 6 attempts (1 minute) -- proceeding anyway, the SFTP step's own ConnectionAttempts retry may still recover."
+        # A one-off "Network unreachable" from the GitHub Actions runner (not this host)
+        # has hit both deploy workflows repeatedly -- sftpArgs' ConnectionAttempts=5 below
+        # only retries within a single already-started ssh invocation, which doesn't help
+        # if the runner has no route at all yet. This waits up to a minute for basic TCP
+        # reachability before even attempting the real upload, so a runner-side network
+        # blip resolves on its own instead of failing the whole run. Non-fatal by design:
+        # if it's still unreachable after a minute, the actual upload step gets a chance
+        # to try anyway rather than failing the job here on a possibly-too-strict check.
+
       - name: Upload build to staging Node.js app via SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.6
         with:

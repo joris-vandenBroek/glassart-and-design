@@ -110,6 +110,21 @@ jobs:
         # deliberately excluded (managed via DirectAdmin's "Run NPM Install" button, see
         # the npm install reminder step below).
 
+      - name: Wait for host reachability
+        run: |
+          for i in $(seq 1 6); do
+            if timeout 5 bash -c "echo > /dev/tcp/h64.mijn.host/22" 2>/dev/null; then
+              echo "h64.mijn.host:22 reachable"
+              exit 0
+            fi
+            echo "Attempt $i/6: h64.mijn.host:22 not reachable yet, waiting 10s..."
+            sleep 10
+          done
+          echo "::warning::h64.mijn.host:22 still unreachable after 6 attempts (1 minute) -- proceeding anyway, the SFTP step's own ConnectionAttempts retry may still recover."
+        # Same reasoning as the equivalent step in deploy-naar-staging.yml -- a one-off
+        # "Network unreachable" from the runner itself has hit this workflow repeatedly,
+        # and sftpArgs' ConnectionAttempts=5 only retries within a single ssh invocation.
+
       - name: Upload build to production Node.js app via SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.6
         with:
