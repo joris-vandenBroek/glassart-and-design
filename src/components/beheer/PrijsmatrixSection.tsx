@@ -33,6 +33,7 @@ export function PrijsmatrixSection({
   const { user } = useAdminAuth();
   const [inputWaarden, setInputWaarden] = useState<Record<string, string>>({});
   const [actionError, setActionError] = useState<string | null>(null);
+  const [opgeslagenCellen, setOpgeslagenCellen] = useState<Record<string, boolean>>({});
 
   const soortNaamById = useMemo(() => {
     const map = new Map<string, string>();
@@ -94,9 +95,19 @@ export function PrijsmatrixSection({
         maat ? `${maat.breedte}×${maat.hoogte} — ${materiaalNaam}` : materiaalNaam
       );
       setActionError(null);
+      setOpgeslagenCellen((current) => ({ ...current, [key(maatId, materiaalId)]: true }));
     } catch {
       setActionError(t('prijsmatrixActionError'));
     }
+  }
+
+  function handleChange(maatId: string, materiaalId: string, value: string) {
+    setInputWaarden((current) => ({ ...current, [key(maatId, materiaalId)]: value }));
+    setOpgeslagenCellen((current) => {
+      if (!current[key(maatId, materiaalId)]) return current;
+      const { [key(maatId, materiaalId)]: _verwijderd, ...rest } = current;
+      return rest;
+    });
   }
 
   return (
@@ -126,16 +137,20 @@ export function PrijsmatrixSection({
                     <input
                       type="number"
                       value={huidigeWaarde(maat.id, materiaal.id)}
-                      onChange={(event) =>
-                        setInputWaarden((current) => ({
-                          ...current,
-                          [key(maat.id, materiaal.id)]: event.target.value,
-                        }))
-                      }
+                      onChange={(event) => handleChange(maat.id, materiaal.id, event.target.value)}
                       onBlur={() => handleBlur(maat.id, materiaal.id)}
                       data-testid={`prijsmatrix-cel-${maat.id}-${materiaal.id}`}
-                      className="w-20 rounded-sm border border-transparent bg-black/40 px-2 py-1 text-sm text-white"
+                      className="w-20 rounded-sm border border-transparent bg-black/40 px-2 py-1 text-sm text-white [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
+                    {opgeslagenCellen[key(maat.id, materiaal.id)] && (
+                      <span
+                        data-testid={`prijsmatrix-saved-${maat.id}-${materiaal.id}`}
+                        className="text-xs text-emerald-400"
+                        title={t('prijsmatrixOpgeslagen')}
+                      >
+                        ✓
+                      </span>
+                    )}
                   </div>
                 </td>
               ))}

@@ -62,6 +62,34 @@ describe('PrijsmatrixSection', () => {
     expect(onRegelUpdated).toHaveBeenCalledWith('maat-1', 'mat-1', 175);
   });
 
+  it('shows a saved confirmation next to a cell after it saves successfully', async () => {
+    renderSection();
+    expect(screen.queryByTestId('prijsmatrix-saved-maat-1-mat-1')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('prijsmatrix-cel-maat-1-mat-1'), { target: { value: '175' } });
+    fireEvent.blur(screen.getByTestId('prijsmatrix-cel-maat-1-mat-1'));
+    await waitFor(() => expect(screen.getByTestId('prijsmatrix-saved-maat-1-mat-1')).toBeInTheDocument());
+  });
+
+  it('hides the saved confirmation again once the cell is edited', async () => {
+    renderSection();
+    const input = screen.getByTestId('prijsmatrix-cel-maat-1-mat-1');
+    fireEvent.change(input, { target: { value: '175' } });
+    fireEvent.blur(input);
+    await waitFor(() => expect(screen.getByTestId('prijsmatrix-saved-maat-1-mat-1')).toBeInTheDocument());
+    fireEvent.change(input, { target: { value: '180' } });
+    expect(screen.queryByTestId('prijsmatrix-saved-maat-1-mat-1')).not.toBeInTheDocument();
+  });
+
+  it('does not show a saved confirmation when the save fails', async () => {
+    fetchMock.mockResolvedValue({ ok: false, json: async () => ({ ok: false }) });
+    renderSection();
+    const input = screen.getByTestId('prijsmatrix-cel-maat-1-mat-1');
+    fireEvent.change(input, { target: { value: '175' } });
+    fireEvent.blur(input);
+    await waitFor(() => expect(screen.getByTestId('prijsmatrix-action-error')).toBeInTheDocument());
+    expect(screen.queryByTestId('prijsmatrix-saved-maat-1-mat-1')).not.toBeInTheDocument();
+  });
+
   it('renders maten rows sorted by breedte then hoogte ascending', () => {
     const unsortedMaten = [
       { id: 'maat-large', breedte: 100, hoogte: 100 },
