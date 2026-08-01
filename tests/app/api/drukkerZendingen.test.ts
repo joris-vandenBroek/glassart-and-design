@@ -1,15 +1,25 @@
-import { describe, expect, it } from 'vitest';
-import { insertRow } from '@/lib/server/crud';
+import { afterEach, describe, expect, it } from 'vitest';
+import { deleteRow, insertRow } from '@/lib/server/crud';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { GET as listZendingen, POST as createZending } from '@/app/api/drukkers/[id]/zendingen/route';
 
-// No table-wide cleanup here: every test creates its own fresh drukker (a random
-// UUID), and listZendingen is scoped to that one drukkerId -- other drukkers/
-// zendingen (real or from other test runs) never affect these assertions, so there
-// is nothing to protect against and no need to ever touch rows this test didn't create.
+// Every test creates its own fresh drukker (a random UUID) and listZendingen is
+// scoped to that one drukkerId, so other drukkers/zendingen (real or from other
+// test runs) never affect these assertions -- but the drukker row this test itself
+// creates must still be removed, or it leaks into the shared staging DB on every
+// run (deleteRow cascades to any zendingen created under it, per ON DELETE CASCADE).
 describe('drukkerZendingen route', () => {
+  const createdDrukkerIds: string[] = [];
+
+  afterEach(async () => {
+    while (createdDrukkerIds.length > 0) {
+      await deleteRow('drukkers', createdDrukkerIds.pop()!);
+    }
+  });
+
   it('rejects listing without a medewerker session', async () => {
     const drukker = await insertRow<{ id: string }>('drukkers', { naam: 'PrintCo' } as never);
+    createdDrukkerIds.push(drukker.id);
     const response = await listZendingen(new Request('http://localhost/api'), {
       params: { id: drukker.id },
     });
@@ -18,6 +28,7 @@ describe('drukkerZendingen route', () => {
 
   it('creates and lists a zending for a medewerker, newest first', async () => {
     const drukker = await insertRow<{ id: string }>('drukkers', { naam: 'PrintCo' } as never);
+    createdDrukkerIds.push(drukker.id);
     const sessionId = await createSession('medewerker', 'staff-1');
     const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
 
