@@ -400,6 +400,7 @@
     "klantenLabelMinimaleAfname": "Minimale afname (override)",
     "klantenOpslaan": "Opslaan",
     "klantenModalTitel": "Klantgegevens",
+    "klantenHelp": "Hier bekijk en bewerk je de gegevens van een klant. Geef de klant een prijsgroep — dat moet, anders blijft de knop \"Goedkeuren\" uitgegrijsd. Wil je deze klant koppelen aan een kunstenaar? Kies die hieronder. Prijsafspraken en een eventuele opslag voor die kunstenaar stel je niet hier in, maar bij de kunstenaar zelf (scherm \"Kunstenaars\"). De knoppen onderaan: Opslaan bewaart je wijzigingen, Goedkeuren maakt van een aanvraag een actieve klant, Afwijzen wijst de aanvraag af.",
     "klantenContactPreferenceEmail": "E-mail",
     "klantenContactPreferencePhone": "Telefonisch",
     "klantenContactPreferenceWhatsapp": "WhatsApp",
