@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { SegmentenSection } from '@/components/beheer/SegmentenSection';
-import type { Segment } from '@/components/beheer/materiaalTypes';
+import type { Segment, Kunstwerk } from '@/components/beheer/materiaalTypes';
 import messages from '../../../messages/nl.json';
 
 const logActiviteitMock = vi.fn();
@@ -28,6 +28,22 @@ const SEGMENTEN: Segment[] = [
   { id: 'seg-2', omschrijving: 'Restaurant' },
 ];
 
+const KUNSTWERKEN: Kunstwerk[] = [
+  {
+    id: 'kw-1',
+    foto: 'https://example.com/kw-1.jpg',
+    naam: 'Restaurantwand',
+    kunstenaarId: null,
+    segmentIds: ['seg-2'],
+    materiaalIds: [],
+    maatIds: [],
+    omschrijvingNl: 'Restaurantwand',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+  },
+];
+
 function renderSection(overrides: Partial<React.ComponentProps<typeof SegmentenSection>> = {}) {
   const onAdd = vi.fn().mockResolvedValue(true);
   const onUpdate = vi.fn().mockResolvedValue(true);
@@ -36,6 +52,7 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof SegmentenS
     <NextIntlClientProvider locale="nl" messages={messages}>
       <SegmentenSection
         segmenten={SEGMENTEN}
+        kunstwerken={KUNSTWERKEN}
         loadError={null}
         onAdd={onAdd}
         onUpdate={onUpdate}
@@ -91,11 +108,42 @@ describe('SegmentenSection', () => {
     await waitFor(() => expect(onUpdate).toHaveBeenCalledWith('seg-2', { omschrijving: 'Restaurants' }));
   });
 
-  it('deletes a segment', async () => {
+  it('deletes a segment that is not linked to any kunstwerk', async () => {
     const { onRemove } = renderSection();
     fireEvent.click(screen.getByTestId('data-table-row-seg-1'));
     fireEvent.click(screen.getByTestId('segment-modal-verwijderen'));
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith('seg-1'));
+    await waitFor(() => expect(screen.queryByTestId('segment-modal')).not.toBeInTheDocument());
+  });
+
+  it('shows a delete confirmation with the usage count when the segment is still linked to a kunstwerk', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-seg-2'));
+    fireEvent.click(screen.getByTestId('segment-modal-verwijderen'));
+    expect(screen.getByTestId('segment-modal-verwijder-bevestiging')).toHaveTextContent(
+      'Dit segment wordt nog gebruikt door 1 kunstwerk(en). Weet je zeker dat je het wilt verwijderen?'
+    );
+    expect(screen.queryByTestId('segment-modal-opslaan')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('segment-modal-verwijderen')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('segment-modal-omschrijving')).not.toBeInTheDocument();
+  });
+
+  it('cancels the delete confirmation and returns to the normal edit view', () => {
+    const { onRemove } = renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-seg-2'));
+    fireEvent.click(screen.getByTestId('segment-modal-verwijderen'));
+    fireEvent.click(screen.getByTestId('segment-modal-verwijder-annuleren'));
+    expect(screen.getByTestId('segment-modal-omschrijving')).toHaveValue('Restaurant');
+    expect(screen.queryByTestId('segment-modal-verwijder-bevestiging')).not.toBeInTheDocument();
+    expect(onRemove).not.toHaveBeenCalled();
+  });
+
+  it('deletes the segment after confirming when it is still linked to a kunstwerk', async () => {
+    const { onRemove } = renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-seg-2'));
+    fireEvent.click(screen.getByTestId('segment-modal-verwijderen'));
+    fireEvent.click(screen.getByTestId('segment-modal-verwijder-bevestigen'));
+    await waitFor(() => expect(onRemove).toHaveBeenCalledWith('seg-2'));
     await waitFor(() => expect(screen.queryByTestId('segment-modal')).not.toBeInTheDocument());
   });
 
@@ -138,7 +186,7 @@ describe('SegmentenSection', () => {
     );
   });
 
-  it('logs segment_verwijderd with the logged-in medewerker when deleting', async () => {
+  it('logs segment_verwijderd with the logged-in medewerker when deleting a segment not in use', async () => {
     renderSection();
     fireEvent.click(screen.getByTestId('data-table-row-seg-1'));
     fireEvent.click(screen.getByTestId('segment-modal-verwijderen'));
