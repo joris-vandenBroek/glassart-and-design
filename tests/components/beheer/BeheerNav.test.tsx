@@ -127,4 +127,53 @@ describe('BeheerNav', () => {
     const item = screen.getByTestId('beheer-nav-materiaalsoorten');
     expect(item).toHaveTextContent('0');
   });
+
+  it('keeps the Stamgegevens group closed by default and toggles it open/closed on click', () => {
+    renderNav();
+    const toggle = screen.getByTestId('beheer-nav-group-stamgegevens');
+    const items = screen.getByTestId('beheer-nav-group-stamgegevens-items');
+    expect(toggle).toHaveTextContent('Stamgegevens');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(items).not.toBeVisible();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(items).toBeVisible();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(items).not.toBeVisible();
+  });
+
+  it('auto-opens the Stamgegevens group when the active section is inside it', () => {
+    renderNav('segmenten');
+    expect(screen.getByTestId('beheer-nav-group-stamgegevens')).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByTestId('beheer-nav-group-stamgegevens-items')).toBeVisible();
+  });
+
+  it('does not auto-open the Stamgegevens group for a top-level active section', () => {
+    renderNav('drukkers');
+    expect(screen.getByTestId('beheer-nav-group-stamgegevens')).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByTestId('beheer-nav-group-stamgegevens-items')).not.toBeVisible();
+  });
+
+  it('renders all 7 grouped items inside the Stamgegevens group with their counters', () => {
+    renderNav();
+    const items = screen.getByTestId('beheer-nav-group-stamgegevens-items');
+    expect(items).toContainElement(screen.getByTestId('beheer-nav-materiaalsoorten'));
+    expect(items).toContainElement(screen.getByTestId('beheer-nav-materialen'));
+    expect(items).toContainElement(screen.getByTestId('beheer-nav-maten'));
+    expect(items).toContainElement(screen.getByTestId('beheer-nav-segmenten'));
+    expect(items).toContainElement(screen.getByTestId('beheer-nav-stijlen'));
+    expect(items).toContainElement(screen.getByTestId('beheer-nav-onderwerpen'));
+    expect(items).toContainElement(screen.getByTestId('beheer-nav-prijsgroepen'));
+  });
+
+  it('keeps Drukkers, Glassart and Design and Instellingen outside the Stamgegevens group', () => {
+    renderNav();
+    const items = screen.getByTestId('beheer-nav-group-stamgegevens-items');
+    expect(items).not.toContainElement(screen.getByTestId('beheer-nav-drukkers'));
+    expect(items).not.toContainElement(screen.getByTestId('beheer-nav-glassartDesign'));
+    expect(items).not.toContainElement(screen.getByTestId('beheer-nav-instellingen'));
+  });
 });
