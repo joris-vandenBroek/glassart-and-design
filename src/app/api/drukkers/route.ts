@@ -7,8 +7,8 @@ export async function GET(request: Request) {
   if (!(await requireMedewerker(request))) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
-  const rows = await listRows('drukkers');
-  return NextResponse.json(rows);
+  const rows = await listRows<{ id: string; standaard?: boolean }>('drukkers');
+  return NextResponse.json(rows.map((row) => ({ ...row, standaard: Boolean(row.standaard) })));
 }
 
 export async function POST(request: Request) {
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   }
   try {
     const data = await request.json();
-    if (data.standaard === true) {
+    if (data.standaard) {
       await getPool().query('UPDATE drukkers SET standaard = FALSE WHERE standaard = TRUE');
     }
     const created = await insertRow('drukkers', data);

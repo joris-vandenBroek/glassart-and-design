@@ -83,9 +83,9 @@ describe('drukkers routes', () => {
     createdDrukkerIds.push(created.id);
 
     const existingAfter = await getDrukker(req('GET', undefined, cookie), { params: { id: existing.id } });
-    expect((await existingAfter.json()).standaard).toBe(0);
+    expect((await existingAfter.json()).standaard).toBe(false);
     const createdAfter = await getDrukker(req('GET', undefined, cookie), { params: { id: created.id } });
-    expect((await createdAfter.json()).standaard).toBe(1);
+    expect((await createdAfter.json()).standaard).toBe(true);
   });
 
   it('clears standaard on every other drukker when an existing drukker is patched to standaard', async () => {
@@ -106,8 +106,8 @@ describe('drukkers routes', () => {
     await patchDrukker(req('PATCH', { standaard: true }, cookie), { params: { id: drukkerB.id } });
 
     const aAfter = await getDrukker(req('GET', undefined, cookie), { params: { id: drukkerA.id } });
-    expect((await aAfter.json()).standaard).toBe(0);
+    expect((await aAfter.json()).standaard).toBe(false);
     const bAfter = await getDrukker(req('GET', undefined, cookie), { params: { id: drukkerB.id } });
-    expect((await bAfter.json()).standaard).toBe(1);
+    expect((await bAfter.json()).standaard).toBe(true);
   });
 });

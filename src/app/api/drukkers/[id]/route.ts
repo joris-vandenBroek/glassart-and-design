@@ -7,9 +7,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
   if (!(await requireMedewerker(request))) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
-  const row = await getRow('drukkers', params.id);
+  const row = await getRow<{ id: string; standaard?: boolean }>('drukkers', params.id);
   if (!row) return NextResponse.json({ error: 'not-found' }, { status: 404 });
-  return NextResponse.json(row);
+  return NextResponse.json({ ...row, standaard: Boolean(row.standaard) });
 }
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -18,7 +18,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
   try {
     const data = await request.json();
-    if (data.standaard === true) {
+    if (data.standaard) {
       await getPool().query('UPDATE drukkers SET standaard = FALSE WHERE standaard = TRUE AND id != ?', [
         params.id,
       ]);
