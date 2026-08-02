@@ -42,6 +42,19 @@ const KUNSTWERKEN: Kunstwerk[] = [
     omschrijvingDe: '',
     omschrijvingEn: '',
   },
+  {
+    id: 'kw-2',
+    foto: 'https://example.com/kw-2.jpg',
+    naam: 'Restaurantlogo',
+    kunstenaarId: null,
+    segmentIds: ['seg-2'],
+    materiaalIds: [],
+    maatIds: [],
+    omschrijvingNl: 'Restaurantlogo',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+  },
 ];
 
 function renderSection(overrides: Partial<React.ComponentProps<typeof SegmentenSection>> = {}) {
@@ -121,7 +134,7 @@ describe('SegmentenSection', () => {
     fireEvent.click(screen.getByTestId('data-table-row-seg-2'));
     fireEvent.click(screen.getByTestId('segment-modal-verwijderen'));
     expect(screen.getByTestId('segment-modal-verwijder-bevestiging')).toHaveTextContent(
-      'Dit segment wordt nog gebruikt door 1 kunstwerk(en). Weet je zeker dat je het wilt verwijderen?'
+      'Dit segment wordt nog gebruikt door 2 kunstwerk(en). Weet je zeker dat je het wilt verwijderen?'
     );
     expect(screen.queryByTestId('segment-modal-opslaan')).not.toBeInTheDocument();
     expect(screen.queryByTestId('segment-modal-verwijderen')).not.toBeInTheDocument();
@@ -145,6 +158,13 @@ describe('SegmentenSection', () => {
     fireEvent.click(screen.getByTestId('segment-modal-verwijder-bevestigen'));
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith('seg-2'));
     await waitFor(() => expect(screen.queryByTestId('segment-modal')).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'segment_verwijderd',
+        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+        'Restaurant'
+      )
+    );
   });
 
   it('shows an action error and keeps the modal open when onAdd fails', async () => {

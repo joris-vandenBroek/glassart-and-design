@@ -141,7 +141,7 @@ export function OnderwerpenSection({
                 type="button"
                 onClick={handleRemove}
                 data-testid="onderwerp-modal-verwijder-bevestigen"
-                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                className="btn-beheer-secondary rounded-sm border border-red-500/40 px-4 py-2 text-xs tracking-wide text-red-400 hover:border-red-500 hover:text-red-300"
               >
                 {t('verwijderenBevestigen')}
               </button>

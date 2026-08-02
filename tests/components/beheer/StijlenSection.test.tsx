@@ -145,6 +145,13 @@ describe('StijlenSection', () => {
     fireEvent.click(screen.getByTestId('stijl-modal-verwijder-bevestigen'));
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith('stijl-2'));
     await waitFor(() => expect(screen.queryByTestId('stijl-modal')).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(logActiviteitMock).toHaveBeenCalledWith('stijl_verwijderd', {
+        id: 'staff-1',
+        email: 'paul@glassartanddesign.com',
+        naam: 'paul@glassartanddesign.com',
+      })
+    );
   });
 
   it('shows an action error and keeps the modal open when onAdd fails', async () => {

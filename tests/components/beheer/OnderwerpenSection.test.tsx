@@ -145,6 +145,13 @@ describe('OnderwerpenSection', () => {
     fireEvent.click(screen.getByTestId('onderwerp-modal-verwijder-bevestigen'));
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith('ond-2'));
     await waitFor(() => expect(screen.queryByTestId('onderwerp-modal')).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(logActiviteitMock).toHaveBeenCalledWith('onderwerp_verwijderd', {
+        id: 'staff-1',
+        email: 'paul@glassartanddesign.com',
+        naam: 'paul@glassartanddesign.com',
+      })
+    );
   });
 
   it('shows an action error and keeps the modal open when onAdd fails', async () => {
