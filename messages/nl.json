@@ -576,6 +576,7 @@
     "kunstwerkenVerwijderen": "Verwijderen",
     "kunstwerkenModalTitelToevoegen": "Kunstwerk toevoegen",
     "kunstwerkenModalTitelBewerken": "Kunstwerk bewerken",
+    "kunstwerkenHelp": "Formaat bepaalt welke maten je kunt aanvinken: bij Vierkant zijn alleen vierkante maten (breedte = hoogte) te kiezen, de rest is grijs; bij Liggend en Staand zijn alleen niet-vierkante maten te kiezen; bij Alle is elke maat te kiezen, niets is uitgeschakeld. Vink je geen enkele maat aan (of geen materiaal)? Dan verschijnt een prijs-per-m²-veld in plaats van de vaste maat/materiaal-prijzen. Dit wordt nu gebruikt voor akoestische stof, maar werkt op dezelfde manier voor elk product dat je per vierkante meter wilt verkopen — de klant vult dan zelf breedte en hoogte in.",
     "kunstwerkenTabAlgemeen": "Algemeen",
     "kunstwerkenTabKenmerken": "Kenmerken",
     "kunstwerkenTabPrijzen": "Prijzen",

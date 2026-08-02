@@ -1016,4 +1016,12 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('kunstwerken-add'));
     expect(screen.getByTestId('kunstwerk-modal-tab-algemeen')).toHaveAttribute('aria-selected', 'true');
   });
+
+  it('shows a help popover explaining formaat and prijs-per-m²', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-help'));
+    expect(screen.getByTestId('kunstwerk-modal-help-popover')).toHaveTextContent('Formaat');
+  });
 });
