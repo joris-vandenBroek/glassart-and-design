@@ -57,7 +57,7 @@ describe('useAllOrders', () => {
           id: 'header-1',
           bestelnr: 'GD-00001',
           besteldatum: '2026-07-01T14:30:00',
-          status: 'Te beoordelen',
+          status: 'Te versturen naar drukker',
           lines: [{ id: 'line-1', quantity: 3 }],
         },
       ],
@@ -67,6 +67,7 @@ describe('useAllOrders', () => {
     await waitFor(() => expect(result.current.orders).toHaveLength(1));
     expect(result.current.orders[0].id).toBe('GD-00001');
     expect(result.current.orders[0].description).toBe('1 bestelregel, totaal 3 stuks');
+    expect(result.current.orders[0].status).toBe('Te versturen naar drukker');
     expect(result.current.loadError).toBe(false);
   });
 

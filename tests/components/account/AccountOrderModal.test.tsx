@@ -46,6 +46,7 @@ describe('AccountOrderModal', () => {
       id: 'GD-00001',
       date: '1-7-2026',
       time: '14:30',
+      status: 'Te beoordelen',
       description: '',
       lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
     });
@@ -59,6 +60,7 @@ describe('AccountOrderModal', () => {
       id: 'GD-00002',
       date: '2-7-2026',
       time: '09:00',
+      status: 'Te beoordelen',
       description: '',
       lines: [
         { id: 'line-2', kunstwerkId: 'kw-1', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: null, quantity: 1 },
@@ -74,6 +76,7 @@ describe('AccountOrderModal', () => {
       id: 'GD-00001',
       date: '1-7-2026',
       time: '14:30',
+      status: 'Te beoordelen',
       description: '',
       lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
     });
@@ -85,6 +88,7 @@ describe('AccountOrderModal', () => {
       id: 'GD-00001',
       date: '1-7-2026',
       time: '14:30',
+      status: 'Te beoordelen',
       description: '',
       lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
     });
