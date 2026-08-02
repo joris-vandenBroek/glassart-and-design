@@ -365,6 +365,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
         ) : activeSection === 'segmenten' ? (
           <SegmentenSection
             segmenten={segmenten.items}
+            kunstwerken={kunstwerken.items}
             loadError={segmenten.error === 'load' ? t('segmentenLoadError') : null}
             onAdd={segmenten.add}
             onUpdate={segmenten.update}
@@ -373,6 +374,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
         ) : activeSection === 'stijlen' ? (
           <StijlenSection
             stijlen={stijlen.items}
+            kunstwerken={kunstwerken.items}
             loadError={stijlen.error === 'load' ? t('stijlenLoadError') : null}
             onAdd={stijlen.add}
             onUpdate={stijlen.update}
@@ -381,6 +383,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
         ) : activeSection === 'onderwerpen' ? (
           <OnderwerpenSection
             onderwerpen={onderwerpen.items}
+            kunstwerken={kunstwerken.items}
             loadError={onderwerpen.error === 'load' ? t('onderwerpenLoadError') : null}
             onAdd={onderwerpen.add}
             onUpdate={onderwerpen.update}

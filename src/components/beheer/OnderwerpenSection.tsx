@@ -7,10 +7,11 @@ import { Modal } from '@/components/Modal';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
-import type { Onderwerp } from './materiaalTypes';
+import type { Onderwerp, Kunstwerk } from './materiaalTypes';
 
 interface OnderwerpenSectionProps {
   onderwerpen: Onderwerp[] | null;
+  kunstwerken: Kunstwerk[] | null;
   loadError: string | null;
   onAdd: (data: Omit<Onderwerp, 'id'>) => Promise<boolean>;
   onUpdate: (id: string, data: Omit<Onderwerp, 'id'>) => Promise<boolean>;
@@ -19,11 +20,19 @@ interface OnderwerpenSectionProps {
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; onderwerp: Onderwerp } | null;
 
-export function OnderwerpenSection({ onderwerpen, loadError, onAdd, onUpdate, onRemove }: OnderwerpenSectionProps) {
+export function OnderwerpenSection({
+  onderwerpen,
+  kunstwerken,
+  loadError,
+  onAdd,
+  onUpdate,
+  onRemove,
+}: OnderwerpenSectionProps) {
   const t = useTranslations('beheer');
   const [modalState, setModalState] = useState<ModalState>(null);
   const [omschrijving, setOmschrijving] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
+  const [pendingVerwijderCount, setPendingVerwijderCount] = useState<number | null>(null);
   const { user } = useAdminAuth();
 
   if (loadError) {
@@ -41,17 +50,20 @@ export function OnderwerpenSection({ onderwerpen, loadError, onAdd, onUpdate, on
   function openAdd() {
     setOmschrijving('');
     setActionError(null);
+    setPendingVerwijderCount(null);
     setModalState({ mode: 'add' });
   }
 
   function openEdit(onderwerp: Onderwerp) {
     setOmschrijving(onderwerp.omschrijving);
     setActionError(null);
+    setPendingVerwijderCount(null);
     setModalState({ mode: 'edit', onderwerp });
   }
 
   function closeModal() {
     setModalState(null);
+    setPendingVerwijderCount(null);
   }
 
   async function handleSave() {
@@ -73,6 +85,15 @@ export function OnderwerpenSection({ onderwerpen, loadError, onAdd, onUpdate, on
 
   async function handleRemove() {
     if (modalState?.mode !== 'edit') return;
+    if (pendingVerwijderCount === null) {
+      const inUseCount = (kunstwerken ?? []).filter((kunstwerk) =>
+        (kunstwerk.onderwerpIds ?? []).includes(modalState.onderwerp.id)
+      ).length;
+      if (inUseCount > 0) {
+        setPendingVerwijderCount(inUseCount);
+        return;
+      }
+    }
     const success = await onRemove(modalState.onderwerp.id);
     if (success) {
       void logActiviteit('onderwerp_verwijderd', actorFromMedewerker(user));
@@ -80,6 +101,10 @@ export function OnderwerpenSection({ onderwerpen, loadError, onAdd, onUpdate, on
     } else {
       setActionError(t('onderwerpenActionError'));
     }
+  }
+
+  function handleAnnulerenVerwijderen() {
+    setPendingVerwijderCount(null);
   }
 
   const columns: Column<Onderwerp>[] = [{ key: 'omschrijving', label: t('onderwerpenColOmschrijving') }];
@@ -110,45 +135,74 @@ export function OnderwerpenSection({ onderwerpen, loadError, onAdd, onUpdate, on
         closeLabel={t('modalClose')}
         title={modalState?.mode === 'edit' ? t('onderwerpenModalTitelBewerken') : t('onderwerpenModalTitelToevoegen')}
         footerActions={
-          <>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={!omschrijving}
-              data-testid="onderwerp-modal-opslaan"
-              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
-            >
-              {t('onderwerpenOpslaan')}
-            </button>
-            {modalState?.mode === 'edit' && (
+          modalState?.mode === 'edit' && pendingVerwijderCount !== null ? (
+            <>
               <button
                 type="button"
                 onClick={handleRemove}
-                data-testid="onderwerp-modal-verwijderen"
+                data-testid="onderwerp-modal-verwijder-bevestigen"
+                className="btn-beheer-secondary rounded-sm border border-red-500/40 px-4 py-2 text-xs tracking-wide text-red-400 hover:border-red-500 hover:text-red-300"
+              >
+                {t('verwijderenBevestigen')}
+              </button>
+              <button
+                type="button"
+                onClick={handleAnnulerenVerwijderen}
+                data-testid="onderwerp-modal-verwijder-annuleren"
                 className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
               >
-                {t('onderwerpenVerwijderen')}
+                {t('annuleren')}
               </button>
-            )}
-          </>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={!omschrijving}
+                data-testid="onderwerp-modal-opslaan"
+                className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+              >
+                {t('onderwerpenOpslaan')}
+              </button>
+              {modalState?.mode === 'edit' && (
+                <button
+                  type="button"
+                  onClick={handleRemove}
+                  data-testid="onderwerp-modal-verwijderen"
+                  className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                >
+                  {t('onderwerpenVerwijderen')}
+                </button>
+              )}
+            </>
+          )
         }
       >
         <div data-testid="onderwerp-modal" className="flex flex-col gap-2 text-sm text-white/80">
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            <span>
-              {t('onderwerpenLabelOmschrijving')}
-              <RequiredMark />
-            </span>
-            <input
-              type="text"
-              value={omschrijving}
-              onChange={(event) => setOmschrijving(event.target.value)}
-              data-testid="onderwerp-modal-omschrijving"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-            />
-          </label>
+          {pendingVerwijderCount !== null ? (
+            <p data-testid="onderwerp-modal-verwijder-bevestiging">
+              {t('onderwerpenVerwijderBevestiging', { count: pendingVerwijderCount })}
+            </p>
+          ) : (
+            <>
+              <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+                <span>
+                  {t('onderwerpenLabelOmschrijving')}
+                  <RequiredMark />
+                </span>
+                <input
+                  type="text"
+                  value={omschrijving}
+                  onChange={(event) => setOmschrijving(event.target.value)}
+                  data-testid="onderwerp-modal-omschrijving"
+                  className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+                />
+              </label>
 
-          <RequiredLegend testId="onderwerp-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
+              <RequiredLegend testId="onderwerp-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
+            </>
+          )}
 
           {actionError && (
             <p data-testid="onderwerp-modal-error" className="text-xs text-red-400">

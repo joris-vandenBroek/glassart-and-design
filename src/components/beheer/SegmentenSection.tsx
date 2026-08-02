@@ -7,10 +7,11 @@ import { Modal } from '@/components/Modal';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
-import type { Segment } from './materiaalTypes';
+import type { Segment, Kunstwerk } from './materiaalTypes';
 
 interface SegmentenSectionProps {
   segmenten: Segment[] | null;
+  kunstwerken: Kunstwerk[] | null;
   loadError: string | null;
   onAdd: (data: Omit<Segment, 'id'>) => Promise<boolean>;
   onUpdate: (id: string, data: Omit<Segment, 'id'>) => Promise<boolean>;
@@ -19,11 +20,19 @@ interface SegmentenSectionProps {
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; segment: Segment } | null;
 
-export function SegmentenSection({ segmenten, loadError, onAdd, onUpdate, onRemove }: SegmentenSectionProps) {
+export function SegmentenSection({
+  segmenten,
+  kunstwerken,
+  loadError,
+  onAdd,
+  onUpdate,
+  onRemove,
+}: SegmentenSectionProps) {
   const t = useTranslations('beheer');
   const [modalState, setModalState] = useState<ModalState>(null);
   const [omschrijving, setOmschrijving] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
+  const [pendingVerwijderCount, setPendingVerwijderCount] = useState<number | null>(null);
   const { user } = useAdminAuth();
 
   if (loadError) {
@@ -41,17 +50,20 @@ export function SegmentenSection({ segmenten, loadError, onAdd, onUpdate, onRemo
   function openAdd() {
     setOmschrijving('');
     setActionError(null);
+    setPendingVerwijderCount(null);
     setModalState({ mode: 'add' });
   }
 
   function openEdit(segment: Segment) {
     setOmschrijving(segment.omschrijving);
     setActionError(null);
+    setPendingVerwijderCount(null);
     setModalState({ mode: 'edit', segment });
   }
 
   function closeModal() {
     setModalState(null);
+    setPendingVerwijderCount(null);
   }
 
   async function handleSave() {
@@ -74,6 +86,15 @@ export function SegmentenSection({ segmenten, loadError, onAdd, onUpdate, onRemo
 
   async function handleRemove() {
     if (modalState?.mode !== 'edit') return;
+    if (pendingVerwijderCount === null) {
+      const inUseCount = (kunstwerken ?? []).filter((kunstwerk) =>
+        kunstwerk.segmentIds.includes(modalState.segment.id)
+      ).length;
+      if (inUseCount > 0) {
+        setPendingVerwijderCount(inUseCount);
+        return;
+      }
+    }
     const success = await onRemove(modalState.segment.id);
     if (success) {
       void logActiviteit('segment_verwijderd', actorFromMedewerker(user), modalState.segment.omschrijving);
@@ -81,6 +102,10 @@ export function SegmentenSection({ segmenten, loadError, onAdd, onUpdate, onRemo
     } else {
       setActionError(t('segmentenActionError'));
     }
+  }
+
+  function handleAnnulerenVerwijderen() {
+    setPendingVerwijderCount(null);
   }
 
   const columns: Column<Segment>[] = [{ key: 'omschrijving', label: t('segmentenColOmschrijving') }];
@@ -111,45 +136,74 @@ export function SegmentenSection({ segmenten, loadError, onAdd, onUpdate, onRemo
         closeLabel={t('modalClose')}
         title={modalState?.mode === 'edit' ? t('segmentenModalTitelBewerken') : t('segmentenModalTitelToevoegen')}
         footerActions={
-          <>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={!omschrijving}
-              data-testid="segment-modal-opslaan"
-              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
-            >
-              {t('segmentenOpslaan')}
-            </button>
-            {modalState?.mode === 'edit' && (
+          modalState?.mode === 'edit' && pendingVerwijderCount !== null ? (
+            <>
               <button
                 type="button"
                 onClick={handleRemove}
-                data-testid="segment-modal-verwijderen"
+                data-testid="segment-modal-verwijder-bevestigen"
+                className="btn-beheer-secondary rounded-sm border border-red-500/40 px-4 py-2 text-xs tracking-wide text-red-400 hover:border-red-500 hover:text-red-300"
+              >
+                {t('verwijderenBevestigen')}
+              </button>
+              <button
+                type="button"
+                onClick={handleAnnulerenVerwijderen}
+                data-testid="segment-modal-verwijder-annuleren"
                 className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
               >
-                {t('segmentenVerwijderen')}
+                {t('annuleren')}
               </button>
-            )}
-          </>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={!omschrijving}
+                data-testid="segment-modal-opslaan"
+                className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+              >
+                {t('segmentenOpslaan')}
+              </button>
+              {modalState?.mode === 'edit' && (
+                <button
+                  type="button"
+                  onClick={handleRemove}
+                  data-testid="segment-modal-verwijderen"
+                  className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                >
+                  {t('segmentenVerwijderen')}
+                </button>
+              )}
+            </>
+          )
         }
       >
         <div data-testid="segment-modal" className="flex flex-col gap-2 text-sm text-white/80">
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            <span>
-              {t('segmentenLabelOmschrijving')}
-              <RequiredMark />
-            </span>
-            <input
-              type="text"
-              value={omschrijving}
-              onChange={(event) => setOmschrijving(event.target.value)}
-              data-testid="segment-modal-omschrijving"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-            />
-          </label>
+          {pendingVerwijderCount !== null ? (
+            <p data-testid="segment-modal-verwijder-bevestiging">
+              {t('segmentenVerwijderBevestiging', { count: pendingVerwijderCount })}
+            </p>
+          ) : (
+            <>
+              <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+                <span>
+                  {t('segmentenLabelOmschrijving')}
+                  <RequiredMark />
+                </span>
+                <input
+                  type="text"
+                  value={omschrijving}
+                  onChange={(event) => setOmschrijving(event.target.value)}
+                  data-testid="segment-modal-omschrijving"
+                  className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+                />
+              </label>
 
-          <RequiredLegend testId="segment-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
+              <RequiredLegend testId="segment-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
+            </>
+          )}
 
           {actionError && (
             <p data-testid="segment-modal-error" className="text-xs text-red-400">
