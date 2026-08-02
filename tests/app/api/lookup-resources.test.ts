@@ -106,22 +106,22 @@ describe('generic lookup-resource routes', () => {
     expect(response.status).toBe(404);
   });
 
-  it('rejects reading a staff-only resource (drukkers) without a medewerker session', async () => {
+  it('rejects reading a staff-only resource (prijsgroepen) without a medewerker session', async () => {
     const response = await listResource(
-      new Request('http://localhost/api/drukkers', { method: 'GET' }),
-      { params: { resource: 'drukkers' } }
+      new Request('http://localhost/api/prijsgroepen', { method: 'GET' }),
+      { params: { resource: 'prijsgroepen' } }
     );
     expect(response.status).toBe(401);
   });
 
-  it('allows reading drukkers with a valid medewerker session', async () => {
+  it('allows reading prijsgroepen with a valid medewerker session', async () => {
     const sessionId = await createSession('medewerker', 'staff-1');
     const response = await listResource(
-      new Request('http://localhost/api/drukkers', {
+      new Request('http://localhost/api/prijsgroepen', {
         method: 'GET',
         headers: { cookie: `${SESSION_COOKIE_NAME}=${sessionId}` },
       }),
-      { params: { resource: 'drukkers' } }
+      { params: { resource: 'prijsgroepen' } }
     );
     expect(response.status).toBe(200);
   });
