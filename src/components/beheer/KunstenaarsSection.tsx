@@ -417,7 +417,7 @@ export function KunstenaarsSection({
           )}
           {fotoUploadError && (
             <p data-testid="kunstenaar-modal-foto-error" className="text-xs text-red-400">
-              {t('kunstenaarsFotoUploadError')}
+              {t(fotoUploadError === 'too-large' ? 'kunstenaarsFotoTooLarge' : 'kunstenaarsFotoUploadError')}
             </p>
           )}
           {foto && (
