@@ -5,6 +5,7 @@ import { Modal } from '@/components/Modal';
 import { ProductImage } from '@/components/ProductImage';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
 import { formatCurrency } from '@/lib/formatCurrency';
+import { toKlantBestellingStatus, KLANT_STATUS_BADGE_CLASS } from '@/lib/klantBestellingStatus';
 import type { DisplayOrder } from '@/lib/useAllOrders';
 import type { Kunstwerk, Materiaal, Maat } from '@/components/beheer/materiaalTypes';
 
@@ -46,6 +47,12 @@ export function AccountOrderModal({
           <p className="text-white/60">
             {order.date} {order.time}
           </p>
+          <span
+            data-testid="account-order-modal-status"
+            className={`w-fit rounded-full px-3 py-1 text-xs uppercase tracking-wide ${KLANT_STATUS_BADGE_CLASS[toKlantBestellingStatus(order.status)]}`}
+          >
+            {toKlantBestellingStatus(order.status) === 'afgewezen' ? t('statusAfgewezen') : t('statusInBehandeling')}
+          </span>
 
           {order.lines && order.lines.length > 0 ? (
             <ul className="flex max-h-72 flex-col gap-2 overflow-y-auto text-xs">
