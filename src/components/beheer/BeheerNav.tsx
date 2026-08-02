@@ -69,6 +69,10 @@ const TOP_ITEMS_AFTER_GROUP: NavItem[] = [
 
 const DISABLED_ITEMS: { id: string; labelKey: string }[] = [];
 
+function isGroupedSection(section: BeheerSection) {
+  return GROUPED_ITEMS.some((item) => item.id === section);
+}
+
 export function BeheerNav({
   activeSection,
   onSelect,
@@ -104,12 +108,10 @@ export function BeheerNav({
     activiteit: activiteitCount,
   };
 
-  const [stamgegevensOpen, setStamgegevensOpen] = useState(() =>
-    GROUPED_ITEMS.some((item) => item.id === activeSection)
-  );
+  const [stamgegevensOpen, setStamgegevensOpen] = useState(() => isGroupedSection(activeSection));
 
   useEffect(() => {
-    if (GROUPED_ITEMS.some((item) => item.id === activeSection)) {
+    if (isGroupedSection(activeSection)) {
       setStamgegevensOpen(true);
     }
   }, [activeSection]);
@@ -143,6 +145,7 @@ export function BeheerNav({
         type="button"
         data-testid="beheer-nav-group-stamgegevens"
         aria-expanded={stamgegevensOpen}
+        aria-controls="beheer-nav-group-stamgegevens-items"
         onClick={() => setStamgegevensOpen((current) => !current)}
         className="flex items-center justify-between rounded-sm px-3 py-2 text-left text-white/60 hover:bg-white/10 hover:text-white"
       >
@@ -155,9 +158,10 @@ export function BeheerNav({
         </span>
       </button>
       <div
+        id="beheer-nav-group-stamgegevens-items"
         data-testid="beheer-nav-group-stamgegevens-items"
         hidden={!stamgegevensOpen}
-        className="ml-2 flex flex-col gap-1 border-l border-white/10 pl-2"
+        className={`ml-2 flex-col gap-1 border-l border-white/10 pl-2 ${stamgegevensOpen ? 'flex' : 'hidden'}`}
       >
         {GROUPED_ITEMS.map(renderItem)}
       </div>

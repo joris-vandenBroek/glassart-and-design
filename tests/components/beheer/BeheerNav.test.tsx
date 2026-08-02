@@ -135,26 +135,38 @@ describe('BeheerNav', () => {
     expect(toggle).toHaveTextContent('Stamgegevens');
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(items).not.toBeVisible();
+    expect(items).toHaveClass('hidden');
+    expect(items).not.toHaveClass('flex');
 
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
     expect(items).toBeVisible();
+    expect(items).toHaveClass('flex');
+    expect(items).not.toHaveClass('hidden');
 
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(items).not.toBeVisible();
+    expect(items).toHaveClass('hidden');
+    expect(items).not.toHaveClass('flex');
   });
 
   it('auto-opens the Stamgegevens group when the active section is inside it', () => {
     renderNav('segmenten');
     expect(screen.getByTestId('beheer-nav-group-stamgegevens')).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByTestId('beheer-nav-group-stamgegevens-items')).toBeVisible();
+    const items = screen.getByTestId('beheer-nav-group-stamgegevens-items');
+    expect(items).toBeVisible();
+    expect(items).toHaveClass('flex');
+    expect(items).not.toHaveClass('hidden');
   });
 
   it('does not auto-open the Stamgegevens group for a top-level active section', () => {
     renderNav('drukkers');
     expect(screen.getByTestId('beheer-nav-group-stamgegevens')).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.getByTestId('beheer-nav-group-stamgegevens-items')).not.toBeVisible();
+    const items = screen.getByTestId('beheer-nav-group-stamgegevens-items');
+    expect(items).not.toBeVisible();
+    expect(items).toHaveClass('hidden');
+    expect(items).not.toHaveClass('flex');
   });
 
   it('renders all 7 grouped items inside the Stamgegevens group with their counters', () => {
