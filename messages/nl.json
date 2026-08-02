@@ -631,6 +631,7 @@
     "prijsgroepenActionError": "Er is iets misgegaan. Probeer het opnieuw.",
     "prijsgroepenModalTitelToevoegen": "Prijsgroep toevoegen",
     "prijsgroepenModalTitelBewerken": "Prijsgroep bewerken",
+    "prijsgroepenHelp": "Kies of dit een korting of een opslag is, en vul het percentage in. Let op: dit is puur informatief — het percentage wordt nergens automatisch verrekend in de prijs van een bestelling. Het is alleen een label bij de klant.",
     "prijsgroepenEmpty": "Geen prijsgroepen gevonden.",
     "prijsgroepenColNaam": "Naam",
     "prijsgroepenColType": "Type",
