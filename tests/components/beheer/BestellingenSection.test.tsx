@@ -272,4 +272,12 @@ describe('BestellingenSection', () => {
       expect(screen.queryByTestId('bestellingen-selectie-balk')).not.toBeInTheDocument();
     });
   });
+
+  it('shows a help popover explaining the drukker flow', () => {
+    renderSection();
+    expect(screen.queryByTestId('bestellingen-help-popover')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('bestellingen-help'));
+    expect(screen.getByTestId('bestellingen-help-popover')).toHaveTextContent('drukker');
+  });
 });

@@ -461,6 +461,7 @@
     "bestellingenColAantal": "Aantal",
     "bestellingenColStatus": "Status",
     "bestellingenModalTitel": "Bestelgegevens",
+    "bestellingenHelp": "Zo werkt versturen naar de drukker: 1. Vink een of meer bestellingen aan die klaarstaan (status \"Te versturen naar drukker\"). 2. Klik op Versturen naar drukker — kies een drukker en bekijk de mail voordat je 'm verstuurt. 3. Na versturen krijgen alle aangevinkte bestellingen de status \"Verstuurd naar drukker\". 4. Een verstuurde mail terugvinden? Open de drukker zelf (scherm \"Drukkers\") — daar staat een overzicht van alle verstuurde mails.",
     "bestellingenRegelOnbekend": "Onbekend",
     "bestellingenModalLabelMateriaal": "Materiaal",
     "bestellingenModalLabelMaat": "Maat",
