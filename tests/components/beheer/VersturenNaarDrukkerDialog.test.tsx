@@ -50,6 +50,11 @@ const DRUKKERS: Drukker[] = [
   { id: 'drukker-1', naam: 'Drukkerij Janssen', adres: 'Perslaan 1', postcode: '1000 AA', plaats: 'Utrecht', email: 'info@janssen.nl', prijsafspraken: '' },
 ];
 
+const DRUKKERS_MET_STANDAARD: Drukker[] = [
+  { id: 'drukker-1', naam: 'Drukkerij Janssen', adres: 'Perslaan 1', postcode: '1000 AA', plaats: 'Utrecht', email: 'info@janssen.nl', prijsafspraken: '' },
+  { id: 'drukker-2', naam: 'Drukkerij Tweede', adres: 'Perslaan 2', postcode: '1000 AB', plaats: 'Utrecht', email: 'info@tweede.nl', prijsafspraken: '', standaard: true },
+];
+
 const KUNSTWERKEN: Kunstwerk[] = [
   { id: 'kw-1', foto: '', naam: 'Hotel paneel', kunstenaarId: null, segmentIds: [], materiaalIds: ['mat-1'], maatIds: ['maat-1'], omschrijvingNl: 'Hotel paneel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
@@ -130,6 +135,18 @@ describe('VersturenNaarDrukkerDialog', () => {
     expect(screen.getByTestId('drukker-versturen-drukker')).toHaveValue('drukker-1');
     expect(screen.getByTestId('drukker-versturen-preview')).toHaveTextContent('Testbedrijf BV');
     expect(screen.getByTestId('drukker-versturen-preview')).toHaveTextContent('Hotel paneel');
+  });
+
+  it('pre-selects the standaard drukker when multiple drukkers exist', () => {
+    renderDialog({ drukkers: DRUKKERS_MET_STANDAARD });
+    expect(screen.getByTestId('drukker-versturen-drukker')).toHaveValue('drukker-2');
+  });
+
+  it('falls back to the first drukker when none is marked standaard', () => {
+    renderDialog({
+      drukkers: DRUKKERS_MET_STANDAARD.map((drukker) => ({ ...drukker, standaard: false })),
+    });
+    expect(screen.getByTestId('drukker-versturen-drukker')).toHaveValue('drukker-1');
   });
 
   it('sends the mail, updates statuses, saves a zending, logs the activiteit, and closes', async () => {
