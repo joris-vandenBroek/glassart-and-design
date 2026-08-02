@@ -49,7 +49,10 @@
     "onderwerpFacetTitle": "Motiv",
     "aiGegenereerdFacetLabel": "Nur KI-generiert",
     "clearAllFilters": "Filter zurücksetzen",
-    "removeFilterAria": "Filter {label} entfernen"
+    "removeFilterAria": "Filter {label} entfernen",
+    "mobileFiltersButtonLabel": "Filter",
+    "mobileFiltersShowResults": "{count, plural, one {# Ergebnis} other {# Ergebnisse}} anzeigen",
+    "mobileFiltersCloseAria": "Panel schließen"
   },
   "segments": {
     "hotel": {

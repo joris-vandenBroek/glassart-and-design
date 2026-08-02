@@ -470,4 +470,10 @@ describe('ProductsGrid', () => {
     fireEvent.click(screen.getByTestId('facet-formaat-option-vierkant'));
     expect(screen.getAllByTestId('product-card')).toHaveLength(2); // kw-3 and kw-alle both match
   });
+
+  it('does not show the mobile filters toggle on desktop', async () => {
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+    expect(screen.queryByTestId('mobile-filters-toggle')).not.toBeInTheDocument();
+  });
 });
