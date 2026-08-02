@@ -222,6 +222,22 @@ describe('BeheerShell', () => {
     expect(screen.getByTestId('data-table-row-soort-1')).toHaveTextContent('Veiligheidsglas');
   });
 
+  it('opens the Stamgegevens nav group when switching to a grouped section like Materiaalsoorten', async () => {
+    mockCollections({
+      materiaalsoorten: [
+        { id: 'soort-1', omschrijving: 'Veiligheidsglas' },
+        { id: 'soort-2', omschrijving: 'Dibond' },
+      ],
+    });
+    renderShell();
+    await waitFor(() => expect(screen.getByTestId('beheer-nav-materiaalsoorten')).toHaveTextContent('2'));
+    expect(screen.getByTestId('beheer-nav-group-stamgegevens-items')).not.toBeVisible();
+
+    screen.getByTestId('beheer-nav-materiaalsoorten').click();
+    expect(await screen.findByTestId('materiaalsoorten-section')).toBeInTheDocument();
+    expect(screen.getByTestId('beheer-nav-group-stamgegevens-items')).toBeVisible();
+  });
+
   it('shows the materiaalsoort name in Materialen and the materialen count in the nav', async () => {
     renderShell();
     await waitFor(() => expect(screen.getByTestId('beheer-nav-materialen')).toHaveTextContent('1'));
