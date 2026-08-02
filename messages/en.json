@@ -247,8 +247,7 @@
     "logout": "Log out",
     "orders": {
       "lineSummary": "{lines, plural, one {# order line} other {# order lines}}, totaling {quantity, plural, one {# piece} other {# pieces}}",
-      "statusTeBeoordelen": "Under review",
-      "statusGoedgekeurd": "Approved",
+      "statusInBehandeling": "In progress",
       "statusAfgewezen": "Rejected",
       "modalClose": "Close",
       "modalLineUnknown": "Unknown item",

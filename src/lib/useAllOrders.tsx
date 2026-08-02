@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState } from 'react';
+import type { Bestelling } from '@/components/beheer/BestellingenSection';
 import { formatOrderDateTime } from '@/lib/formatOrderDateTime';
 import { useCustomerAuth } from './useCustomerAuth';
 
@@ -21,12 +22,14 @@ export interface DisplayOrder {
   date: string;
   time: string;
   description: string;
+  status: Bestelling['status'];
   lines: DisplayOrderLine[] | null;
 }
 
 interface RealOrder {
   id: string;
   date: Date | null;
+  status: Bestelling['status'];
   lineCount: number;
   totalQuantity: number;
   lines: DisplayOrderLine[];
@@ -59,6 +62,7 @@ export function useAllOrders(): UseAllOrdersResult {
           id: string;
           bestelnr: string;
           besteldatum: string;
+          status: Bestelling['status'];
           lines: Array<{
             id: string;
             kunstwerkId: string | null;
@@ -73,6 +77,7 @@ export function useAllOrders(): UseAllOrdersResult {
         const orders = headers.map((header) => ({
           id: header.bestelnr ?? header.id,
           date: header.besteldatum ? new Date(header.besteldatum) : null,
+          status: header.status,
           lineCount: header.lines.length,
           totalQuantity: header.lines.reduce((sum, line) => sum + (line.quantity ?? 0), 0),
           lines: header.lines,
@@ -102,6 +107,7 @@ export function useAllOrders(): UseAllOrdersResult {
         id: order.id,
         date,
         time,
+        status: order.status,
         description: tAccount('orders.lineSummary', {
           lines: order.lineCount,
           quantity: order.totalQuantity,

@@ -244,8 +244,7 @@
     "logout": "Déconnexion",
     "orders": {
       "lineSummary": "{lines, plural, one {# ligne de commande} other {# lignes de commande}}, au total {quantity, plural, one {# pièce} other {# pièces}}",
-      "statusTeBeoordelen": "En cours d'examen",
-      "statusGoedgekeurd": "Approuvée",
+      "statusInBehandeling": "En cours de traitement",
       "statusAfgewezen": "Refusée",
       "modalClose": "Fermer",
       "modalLineUnknown": "Article inconnu",

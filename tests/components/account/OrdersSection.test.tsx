@@ -71,14 +71,34 @@ describe('OrdersSection', () => {
     );
   });
 
-  it('renders a real order with bestelnr, description, date and time, and no status', async () => {
+  it('renders a real order with bestelnr, description, date, time and a status badge', async () => {
     signedInWithOneOrder();
     renderSection();
 
     await waitFor(() => expect(screen.getByTestId('account-order-GD-00001')).toBeInTheDocument());
     expect(screen.getByText('1 bestelregel, totaal 2 stuks')).toBeInTheDocument();
     expect(screen.getByText('1-7-2026 14:30')).toBeInTheDocument();
-    expect(screen.queryByText('Te beoordelen')).not.toBeInTheDocument();
+    expect(screen.getByTestId('account-order-GD-00001-status')).toHaveTextContent('In behandeling');
+  });
+
+  it('shows "Afgewezen" for a rejected order', async () => {
+    authUser = { id: 'uid-1', email: 'klant@example.com', status: 'Goedgekeurd' };
+    ordersResponse = {
+      ok: true,
+      body: [
+        {
+          id: 'header-1',
+          bestelnr: 'GD-00002',
+          besteldatum: '2026-07-01T14:30:00',
+          status: 'Afgewezen',
+          lines: [{ id: 'line-1', kunstwerkId: null, maatId: null, materiaalId: null, prijs: null, quantity: 1 }],
+        },
+      ],
+    };
+    renderSection();
+
+    await waitFor(() => expect(screen.getByTestId('account-order-GD-00002')).toBeInTheDocument());
+    expect(screen.getByTestId('account-order-GD-00002-status')).toHaveTextContent('Afgewezen');
   });
 
   it('opens a modal with order details when a row is clicked', async () => {
