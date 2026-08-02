@@ -45,12 +45,10 @@ Geen andere UI-wijzigingen; de bestaande `data-testid`-attributen en dropzone-st
 
 ### Vertalingen
 
-Nieuwe keys in `messages/nl.json`, `en.json`, `de.json`, `fr.json`, naast de bestaande `...FotoUploadError`-keys:
+De `beheer`-namespace bestaat alleen in `messages/nl.json` — `en.json`/`de.json`/`fr.json` hebben geen `beheer`-sectie, dit deel van de app (staff-only) is Nederlands-only. Nieuwe keys komen dus uitsluitend in `messages/nl.json`, naast de bestaande `...FotoUploadError`-keys:
 
-- `kunstwerkenFotoTooLarge`
-- `kunstenaarsFotoTooLarge`
-
-NL-tekst bijvoorbeeld: "Het bestand is te groot, ook na compressie. Kies een kleinere foto." — overige talen naar analogie van de bestaande `...FotoUploadError`-vertalingen in dezelfde bestanden.
+- `kunstwerkenFotoTooLarge`: "Het bestand is te groot, ook na compressie. Kies een kleinere foto."
+- `kunstenaarsFotoTooLarge`: "Het bestand is te groot, ook na compressie. Kies een kleinere foto."
 
 ### Tests
 
