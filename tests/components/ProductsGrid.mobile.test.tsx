@@ -129,6 +129,7 @@ describe('ProductsGrid on mobile', () => {
     fireEvent.click(screen.getByTestId('mobile-filters-toggle'));
     expect(screen.getByTestId('modal')).toBeInTheDocument();
     expect(screen.getByTestId('filter-seg-hotel')).toBeInTheDocument();
+    expect(screen.getByTestId('modal-close')).toHaveAttribute('aria-label', 'Paneel sluiten');
   });
 
   it('filters live while the panel stays open, and shows the live count on the close button', async () => {

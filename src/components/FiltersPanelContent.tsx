@@ -7,7 +7,7 @@ import type { Segment, Kunstwerk, KunstwerkFormaat, Stijl, Onderwerp } from './b
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
 
 export const ALL_FILTER = 'all';
-export const FORMAAT_OPTIES: Exclude<KunstwerkFormaat, 'alle'>[] = ['staand', 'liggend', 'vierkant'];
+const FORMAAT_OPTIES: Exclude<KunstwerkFormaat, 'alle'>[] = ['staand', 'liggend', 'vierkant'];
 
 function filterButtonClass(isActive: boolean) {
   return isActive

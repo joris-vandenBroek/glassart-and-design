@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { ProductsGrid } from '@/components/ProductsGrid';
@@ -142,6 +142,11 @@ function renderProductsGrid() {
 
 beforeEach(() => {
   fetchMock.mockReset();
+  // Re-stub fetch each test: the module-level vi.stubGlobal only runs once, but the
+  // afterEach below calls vi.unstubAllGlobals() (needed to reset matchMedia between
+  // tests), which also undoes the fetch stub after the first test. Without this,
+  // every test after the first hits the real global fetch with a relative URL and throws.
+  vi.stubGlobal('fetch', fetchMock);
   logActiviteitMock.mockReset();
   currentSearchParams = new URLSearchParams();
   authUser = null;
@@ -159,6 +164,20 @@ beforeEach(() => {
     const resource = url.replace(/^\/api\//, '');
     return { ok: true, json: async () => collections[resource] ?? [] };
   });
+  // This suite is desktop-focused: stub matchMedia to explicitly report desktop so
+  // useIsDesktop() doesn't rely on jsdom's lack of a matchMedia implementation.
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn().mockReturnValue({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe('ProductsGrid', () => {
