@@ -52,6 +52,34 @@ describe('DrukkerModal verplichte velden', () => {
   });
 });
 
+describe('DrukkerModal standaard', () => {
+  it('defaults the standaard checkbox to unchecked when adding a new drukker', () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal({ mode: 'add' });
+    expect(screen.getByTestId('drukker-modal-standaard')).not.toBeChecked();
+  });
+
+  it('pre-fills the standaard checkbox from the drukker when editing', () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal({ mode: 'edit', drukker: { ...DRUKKER, standaard: true } });
+    expect(screen.getByTestId('drukker-modal-standaard')).toBeChecked();
+  });
+
+  it('includes standaard in the payload passed to onAdd when toggled on', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    const { onAdd } = renderModal({ mode: 'add' });
+    fireEvent.change(screen.getByTestId('drukker-modal-naam'), { target: { value: 'Nieuwe' } });
+    fireEvent.change(screen.getByTestId('drukker-modal-email'), { target: { value: 'x@y.nl' } });
+    fireEvent.click(screen.getByTestId('drukker-modal-standaard'));
+    fireEvent.click(screen.getByTestId('drukker-modal-opslaan'));
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith(
+        expect.objectContaining({ naam: 'Nieuwe', email: 'x@y.nl', standaard: true })
+      )
+    );
+  });
+});
+
 describe('DrukkerModal zendingen', () => {
   it('shows "nog geen mails verzonden" once loaded empty', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => [] });

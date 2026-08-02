@@ -26,9 +26,10 @@ interface FormFields {
   plaats: string;
   email: string;
   prijsafspraken: string;
+  standaard: boolean;
 }
 
-const EMPTY_FIELDS: FormFields = { naam: '', adres: '', postcode: '', plaats: '', email: '', prijsafspraken: '' };
+const EMPTY_FIELDS: FormFields = { naam: '', adres: '', postcode: '', plaats: '', email: '', prijsafspraken: '', standaard: false };
 
 export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: DrukkerModalProps) {
   const t = useTranslations('beheer');
@@ -41,8 +42,8 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
 
   useEffect(() => {
     if (state?.mode === 'edit') {
-      const { naam, adres, postcode, plaats, email, prijsafspraken } = state.drukker;
-      setFields({ naam, adres, postcode, plaats, email, prijsafspraken });
+      const { naam, adres, postcode, plaats, email, prijsafspraken, standaard } = state.drukker;
+      setFields({ naam, adres, postcode, plaats, email, prijsafspraken, standaard: standaard ?? false });
     } else if (state?.mode === 'add') {
       setFields(EMPTY_FIELDS);
     }
@@ -183,6 +184,15 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
             rows={4}
             className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
           />
+        </label>
+        <label className="flex items-center gap-2 text-xs uppercase tracking-wide text-white/60">
+          <input
+            type="checkbox"
+            checked={fields.standaard}
+            onChange={(event) => setField('standaard', event.target.checked)}
+            data-testid="drukker-modal-standaard"
+          />
+          {t('drukkersLabelStandaard')}
         </label>
 
         <RequiredLegend testId="drukker-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>

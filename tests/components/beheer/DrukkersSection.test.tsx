@@ -94,6 +94,7 @@ describe('DrukkersSection', () => {
         plaats: 'Stad',
         email: 'info@nieuw.nl',
         prijsafspraken: 'Geen korting.',
+        standaard: false,
       })
     );
     await waitFor(() => expect(screen.queryByTestId('drukker-modal')).not.toBeInTheDocument());
@@ -128,6 +129,7 @@ describe('DrukkersSection', () => {
         plaats: 'Amersfoort',
         email: 'info@janssen.nl',
         prijsafspraken: '10% korting boven 50 stuks.',
+        standaard: false,
       })
     );
     expect(logActiviteitMock).toHaveBeenCalledWith(
