@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 export type BeheerSection =
@@ -39,18 +40,26 @@ interface BeheerNavProps {
   activiteitCount: number;
 }
 
-const ACTIVE_ITEMS: { id: BeheerSection; labelKey: string }[] = [
+type NavItem = { id: BeheerSection; labelKey: string };
+
+const TOP_ITEMS_BEFORE_GROUP: NavItem[] = [
   { id: 'klanten', labelKey: 'navKlanten' },
   { id: 'bestellingen', labelKey: 'navBestellingen' },
+];
+
+const GROUPED_ITEMS: NavItem[] = [
   { id: 'materiaalsoorten', labelKey: 'navMateriaalsoorten' },
   { id: 'materialen', labelKey: 'navMaterialen' },
   { id: 'maten', labelKey: 'navMaten' },
   { id: 'segmenten', labelKey: 'navSegmenten' },
   { id: 'stijlen', labelKey: 'navStijlen' },
   { id: 'onderwerpen', labelKey: 'navOnderwerpen' },
+  { id: 'prijsgroepen', labelKey: 'navPrijsgroepen' },
+];
+
+const TOP_ITEMS_AFTER_GROUP: NavItem[] = [
   { id: 'kunstwerken', labelKey: 'navKunstwerken' },
   { id: 'kunstenaars', labelKey: 'navKunstenaars' },
-  { id: 'prijsgroepen', labelKey: 'navPrijsgroepen' },
   { id: 'prijsmatrix', labelKey: 'navPrijsmatrix' },
   { id: 'drukkers', labelKey: 'navDrukkers' },
   { id: 'activiteit', labelKey: 'navActiviteit' },
@@ -59,6 +68,10 @@ const ACTIVE_ITEMS: { id: BeheerSection; labelKey: string }[] = [
 ];
 
 const DISABLED_ITEMS: { id: string; labelKey: string }[] = [];
+
+function isGroupedSection(section: BeheerSection) {
+  return GROUPED_ITEMS.some((item) => item.id === section);
+}
 
 export function BeheerNav({
   activeSection,
@@ -95,27 +108,64 @@ export function BeheerNav({
     activiteit: activiteitCount,
   };
 
+  const [stamgegevensOpen, setStamgegevensOpen] = useState(() => isGroupedSection(activeSection));
+
+  useEffect(() => {
+    if (isGroupedSection(activeSection)) {
+      setStamgegevensOpen(true);
+    }
+  }, [activeSection]);
+
+  function renderItem(item: NavItem) {
+    return (
+      <button
+        key={item.id}
+        type="button"
+        data-testid={`beheer-nav-${item.id}`}
+        aria-current={activeSection === item.id ? 'true' : undefined}
+        onClick={() => onSelect(item.id)}
+        className={`flex items-center justify-between rounded-sm px-3 py-2 text-left ${
+          activeSection === item.id
+            ? 'bg-white/15 text-white'
+            : 'text-white/60 hover:bg-white/10 hover:text-white'
+        }`}
+      >
+        <span>{t(item.labelKey)}</span>
+        {counts[item.id] !== undefined && (
+          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[0.65rem]">{counts[item.id]}</span>
+        )}
+      </button>
+    );
+  }
+
   return (
     <nav data-testid="beheer-nav" className="flex flex-col gap-1 text-xs tracking-wide">
-      {ACTIVE_ITEMS.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          data-testid={`beheer-nav-${item.id}`}
-          aria-current={activeSection === item.id ? 'true' : undefined}
-          onClick={() => onSelect(item.id)}
-          className={`flex items-center justify-between rounded-sm px-3 py-2 text-left ${
-            activeSection === item.id
-              ? 'bg-white/15 text-white'
-              : 'text-white/60 hover:bg-white/10 hover:text-white'
-          }`}
+      {TOP_ITEMS_BEFORE_GROUP.map(renderItem)}
+      <button
+        type="button"
+        data-testid="beheer-nav-group-stamgegevens"
+        aria-expanded={stamgegevensOpen}
+        aria-controls="beheer-nav-group-stamgegevens-items"
+        onClick={() => setStamgegevensOpen((current) => !current)}
+        className="flex items-center justify-between rounded-sm px-3 py-2 text-left text-white/60 hover:bg-white/10 hover:text-white"
+      >
+        <span>{t('navStamgegevens')}</span>
+        <span
+          aria-hidden="true"
+          className={`text-[10px] text-white/40 transition-transform ${stamgegevensOpen ? '' : '-rotate-90'}`}
         >
-          <span>{t(item.labelKey)}</span>
-          {counts[item.id] !== undefined && (
-            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[0.65rem]">{counts[item.id]}</span>
-          )}
-        </button>
-      ))}
+          &#9662;
+        </span>
+      </button>
+      <div
+        id="beheer-nav-group-stamgegevens-items"
+        data-testid="beheer-nav-group-stamgegevens-items"
+        hidden={!stamgegevensOpen}
+        className={`ml-2 flex-col gap-1 border-l border-white/10 pl-2 ${stamgegevensOpen ? 'flex' : 'hidden'}`}
+      >
+        {GROUPED_ITEMS.map(renderItem)}
+      </div>
+      {TOP_ITEMS_AFTER_GROUP.map(renderItem)}
       {DISABLED_ITEMS.map((item) => (
         <button
           key={item.id}
