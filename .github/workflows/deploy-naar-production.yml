@@ -194,6 +194,8 @@ jobs:
           echo '::notice::If package.json/package-lock.json changed in this deploy, DirectAdmin still needs a manual "Run NPM Install" click for production -- node_modules is a symlink into a DirectAdmin-managed location this workflow cannot upload to. The restart above is automatic either way.'
 
       - name: Smoke check
+        env:
+          VERSION_TAG: ${{ steps.version.outputs.tag }}
         run: |
           sleep 5
           attempt=1
@@ -220,3 +222,17 @@ jobs:
             echo "::error::Under Construction-gate lijkt niet actief op /nl/collecties/ -- controleer of MIJNHOST_BUILD=true echt is meegegeven aan de build."
             exit 1
           fi
+
+          beheer_body=$(curl -s "https://glassartanddesign.com/nl/beheer")
+          if ! echo "$beheer_body" | grep -q ">${VERSION_TAG}<"; then
+            echo "::error::Beheer-header toont niet '$VERSION_TAG' op /nl/beheer -- de nieuwe build lijkt niet live te staan."
+            exit 1
+          fi
+          echo "Beheer version label confirmed: $VERSION_TAG"
+        # AppVersionLabel (src/components/AppVersionLabel.tsx) renders NEXT_PUBLIC_APP_VERSION
+        # as plain server-rendered text (">v5<" etc, confirmed present in the raw HTML, not
+        # just after client-side hydration) -- checking for it here catches a deploy that
+        # returns 200 but is still serving a stale build (e.g. Passenger not actually
+        # restarted). Unlike staging's equivalent check, VERSION_TAG here is always non-empty
+        # -- "Resolve version to deploy" above already fails the whole run if it can't resolve
+        # one, and validates it against ^v[0-9]+$ before this step ever sees it.
