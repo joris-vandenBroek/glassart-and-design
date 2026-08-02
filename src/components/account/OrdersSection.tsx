@@ -4,7 +4,11 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAllOrders, type DisplayOrder } from '@/lib/useAllOrders';
 import { useApiCollection } from '@/lib/useApiCollection';
-import { toKlantBestellingStatus, KLANT_STATUS_BADGE_CLASS } from '@/lib/klantBestellingStatus';
+import {
+  toKlantBestellingStatus,
+  KLANT_STATUS_BADGE_CLASS,
+  KLANT_STATUS_TRANSLATION_KEY,
+} from '@/lib/klantBestellingStatus';
 import type { Kunstwerk, Materiaal, Maat } from '@/components/beheer/materiaalTypes';
 import { AccountOrderModal } from './AccountOrderModal';
 
@@ -43,7 +47,7 @@ export function OrdersSection() {
                   data-testid={`account-order-${order.id}-status`}
                   className={`shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] uppercase tracking-wide ${KLANT_STATUS_BADGE_CLASS[klantStatus]}`}
                 >
-                  {klantStatus === 'afgewezen' ? t('orders.statusAfgewezen') : t('orders.statusInBehandeling')}
+                  {t(`orders.${KLANT_STATUS_TRANSLATION_KEY[klantStatus]}`)}
                 </span>
                 <span className="whitespace-nowrap text-white/50">
                   {order.date} {order.time}

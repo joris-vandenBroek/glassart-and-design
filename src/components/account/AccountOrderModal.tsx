@@ -5,7 +5,11 @@ import { Modal } from '@/components/Modal';
 import { ProductImage } from '@/components/ProductImage';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
 import { formatCurrency } from '@/lib/formatCurrency';
-import { toKlantBestellingStatus, KLANT_STATUS_BADGE_CLASS } from '@/lib/klantBestellingStatus';
+import {
+  toKlantBestellingStatus,
+  KLANT_STATUS_BADGE_CLASS,
+  KLANT_STATUS_TRANSLATION_KEY,
+} from '@/lib/klantBestellingStatus';
 import type { DisplayOrder } from '@/lib/useAllOrders';
 import type { Kunstwerk, Materiaal, Maat } from '@/components/beheer/materiaalTypes';
 
@@ -34,6 +38,7 @@ export function AccountOrderModal({
 }: AccountOrderModalProps) {
   const t = useTranslations('accountPage.orders');
   const locale = useLocale();
+  const klantStatus = order ? toKlantBestellingStatus(order.status) : null;
 
   return (
     <Modal
@@ -49,9 +54,9 @@ export function AccountOrderModal({
           </p>
           <span
             data-testid="account-order-modal-status"
-            className={`w-fit rounded-full px-3 py-1 text-xs uppercase tracking-wide ${KLANT_STATUS_BADGE_CLASS[toKlantBestellingStatus(order.status)]}`}
+            className={`w-fit rounded-full px-3 py-1 text-xs uppercase tracking-wide ${KLANT_STATUS_BADGE_CLASS[klantStatus!]}`}
           >
-            {toKlantBestellingStatus(order.status) === 'afgewezen' ? t('statusAfgewezen') : t('statusInBehandeling')}
+            {t(KLANT_STATUS_TRANSLATION_KEY[klantStatus!])}
           </span>
 
           {order.lines && order.lines.length > 0 ? (
