@@ -14,10 +14,39 @@ interface CustomerAuthValue {
   user: CustomerUser | null;
   isCustomer: boolean;
   isHydrated: boolean;
+  login: (email: string, password: string) => Promise<string>;
   logout: () => Promise<void>;
 }
 
 const CustomerAuthContext = createContext<CustomerAuthValue | null>(null);
+
+async function loadMe(): Promise<{ user: CustomerUser | null; isCustomer: boolean }> {
+  const response = await fetch('/api/auth/me?type=klant');
+  const body = await response.json();
+  const klant = body.user as
+    | {
+        id: string;
+        email: string | null;
+        companyName?: string;
+        contactPerson?: string;
+        status?: string;
+        minimaleAfname?: number | null;
+      }
+    | null;
+  if (!klant) {
+    return { user: null, isCustomer: false };
+  }
+  return {
+    user: {
+      uid: klant.id,
+      email: klant.email,
+      companyName: klant.companyName ?? null,
+      contactPerson: klant.contactPerson ?? null,
+      minimaleAfname: klant.minimaleAfname ?? null,
+    },
+    isCustomer: klant.status === 'Goedgekeurd',
+  };
+}
 
 export function CustomerAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CustomerUser | null>(null);
@@ -26,39 +55,12 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    async function load() {
-      try {
-        const response = await fetch('/api/auth/me?type=klant');
-        const body = await response.json();
-        if (cancelled) return;
-        const klant = body.user as
-          | {
-              id: string;
-              email: string | null;
-              companyName?: string;
-              contactPerson?: string;
-              status?: string;
-              minimaleAfname?: number | null;
-            }
-          | null;
-        if (!klant) {
-          setUser(null);
-          setIsCustomer(false);
-        } else {
-          setUser({
-            uid: klant.id,
-            email: klant.email,
-            companyName: klant.companyName ?? null,
-            contactPerson: klant.contactPerson ?? null,
-            minimaleAfname: klant.minimaleAfname ?? null,
-          });
-          setIsCustomer(klant.status === 'Goedgekeurd');
-        }
-      } finally {
-        if (!cancelled) setIsHydrated(true);
-      }
-    }
-    load();
+    loadMe().then((loaded) => {
+      if (cancelled) return;
+      setUser(loaded.user);
+      setIsCustomer(loaded.isCustomer);
+      setIsHydrated(true);
+    });
     return () => {
       cancelled = true;
     };
@@ -69,6 +71,24 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
       user,
       isCustomer,
       isHydrated,
+      // The login form navigates client-side afterwards (router.replace), which does not
+      // remount this provider (it lives in the locale layout) -- so the context state has
+      // to be refreshed here, not left for a future mount's /api/auth/me call.
+      login: async (email: string, password: string) => {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        if (!response.ok) {
+          throw new Error('invalid-credentials');
+        }
+        const body = (await response.json()) as { status: string };
+        const loaded = await loadMe();
+        setUser(loaded.user);
+        setIsCustomer(loaded.isCustomer);
+        return body.status;
+      },
       logout: async () => {
         await fetch('/api/auth/logout', { method: 'POST' });
         setUser(null);

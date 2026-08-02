@@ -3,12 +3,14 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
+import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { PasswordInput } from '@/components/PasswordInput';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 
 export function CustomerLoginForm() {
   const t = useTranslations('loginPage');
   const router = useRouter();
+  const { login } = useCustomerAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -17,21 +19,12 @@ export function CustomerLoginForm() {
     event.preventDefault();
     setError(null);
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      if (!response.ok) {
-        setError(t('loginError'));
-        return;
-      }
-      const body = await response.json();
-      if (body.status === 'Goedgekeurd') {
+      const status = await login(email, password);
+      if (status === 'Goedgekeurd') {
         router.replace('/account');
-      } else if (body.status === 'Beoordelen') {
+      } else if (status === 'Beoordelen') {
         setError(t('pendingMessage'));
-      } else if (body.status === 'Afgewezen') {
+      } else if (status === 'Afgewezen') {
         setError(t('rejectedMessage'));
       } else {
         setError(t('accountIncompleteMessage'));

@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { Link, usePathname } from '@/i18n/navigation';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
+import { getKlantInitials } from '@/lib/getKlantInitials';
 import { Logo } from './Logo';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { CartPanel } from './CartPanel';
@@ -10,8 +11,9 @@ import { CollectiesDropdown } from './CollectiesDropdown';
 
 export function NavBar() {
   const t = useTranslations('nav');
-  const { isCustomer, isHydrated } = useCustomerAuth();
+  const { isCustomer, isHydrated, user } = useCustomerAuth();
   const pathname = usePathname();
+  const initials = getKlantInitials(user?.companyName, user?.contactPerson, user?.email);
 
   if (pathname.startsWith('/beheer')) {
     return null;
@@ -43,7 +45,7 @@ export function NavBar() {
             aria-label={t('myAccount')}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-silver text-xs font-semibold text-ink"
           >
-            GD
+            {initials}
           </Link>
         ) : (
           <>

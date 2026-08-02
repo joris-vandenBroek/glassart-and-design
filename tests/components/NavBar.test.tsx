@@ -24,9 +24,10 @@ vi.mock('@/components/CartPanel', () => ({
 
 let isCustomer = false;
 let isHydrated = true;
+let user: { companyName: string | null; contactPerson: string | null; email: string | null } | null = null;
 
 vi.mock('@/lib/useCustomerAuth', () => ({
-  useCustomerAuth: () => ({ isCustomer, isHydrated, user: null, logout: vi.fn() }),
+  useCustomerAuth: () => ({ isCustomer, isHydrated, user, logout: vi.fn() }),
 }));
 
 function renderNavBar() {
@@ -40,11 +41,13 @@ function renderNavBar() {
 function signedOut() {
   isCustomer = false;
   isHydrated = true;
+  user = null;
 }
 
 function signedInAsApprovedCustomer() {
   isCustomer = true;
   isHydrated = true;
+  user = { companyName: 'Hotel De Zon', contactPerson: 'Jan Jansen', email: 'jan@hoteldezon.nl' };
 }
 
 beforeEach(() => {
@@ -87,6 +90,31 @@ describe('NavBar', () => {
     expect(screen.getByTestId('account-icon')).toHaveAttribute('href', '/account');
     expect(screen.queryByTestId('nav-become-client')).not.toBeInTheDocument();
     expect(screen.queryByTestId('nav-login')).not.toBeInTheDocument();
+  });
+
+  it('shows initials derived from the logged-in klant\'s company name, not a static placeholder', async () => {
+    signedInAsApprovedCustomer();
+    renderNavBar();
+    await waitFor(() => expect(screen.getByTestId('account-icon')).toBeInTheDocument());
+    expect(screen.getByTestId('account-icon')).toHaveTextContent('HD');
+  });
+
+  it('falls back to contact person when company name is missing', async () => {
+    isCustomer = true;
+    isHydrated = true;
+    user = { companyName: null, contactPerson: 'Jan Jansen', email: 'jan@hoteldezon.nl' };
+    renderNavBar();
+    await waitFor(() => expect(screen.getByTestId('account-icon')).toBeInTheDocument());
+    expect(screen.getByTestId('account-icon')).toHaveTextContent('JJ');
+  });
+
+  it('falls back to email when company name and contact person are both missing', async () => {
+    isCustomer = true;
+    isHydrated = true;
+    user = { companyName: null, contactPerson: null, email: 'jan@hoteldezon.nl' };
+    renderNavBar();
+    await waitFor(() => expect(screen.getByTestId('account-icon')).toBeInTheDocument());
+    expect(screen.getByTestId('account-icon')).toHaveTextContent('JA');
   });
 
   it('points Contact at /contact and Word klant at /word-klant', async () => {

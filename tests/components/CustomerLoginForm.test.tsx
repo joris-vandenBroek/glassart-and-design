@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { CustomerLoginForm } from '@/components/CustomerLoginForm';
+import { CustomerAuthProvider } from '@/lib/useCustomerAuth';
 import messages from '../../messages/nl.json';
 
 const fetchMock = vi.fn();
@@ -12,10 +13,15 @@ vi.mock('@/i18n/navigation', () => ({
   useRouter: () => ({ replace: replaceMock }),
 }));
 
+// Provider mounts and calls /api/auth/me once before any test interacts with the form.
+const NOT_LOGGED_IN_RESPONSE = { ok: true, json: async () => ({ user: null }) };
+
 function renderForm() {
   return render(
     <NextIntlClientProvider locale="nl" messages={messages}>
-      <CustomerLoginForm />
+      <CustomerAuthProvider>
+        <CustomerLoginForm />
+      </CustomerAuthProvider>
     </NextIntlClientProvider>
   );
 }
@@ -29,11 +35,12 @@ function submitWith(email: string, password: string) {
 beforeEach(() => {
   fetchMock.mockReset();
   replaceMock.mockReset();
+  fetchMock.mockResolvedValueOnce(NOT_LOGGED_IN_RESPONSE);
 });
 
 describe('CustomerLoginForm', () => {
   it('shows a generic error when the credentials are wrong', async () => {
-    fetchMock.mockResolvedValue({ ok: false });
+    fetchMock.mockResolvedValueOnce({ ok: false });
     renderForm();
     submitWith('klant@example.com', 'fout');
     expect(await screen.findByTestId('login-error')).toHaveTextContent(
@@ -42,16 +49,29 @@ describe('CustomerLoginForm', () => {
     expect(replaceMock).not.toHaveBeenCalled();
   });
 
-  it('grants access and redirects to /account when the klant is "Goedgekeurd"', async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ status: 'Goedgekeurd' }) });
+  it('grants access, refreshes the auth context and redirects to /account when the klant is "Goedgekeurd"', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'Goedgekeurd' }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ user: { id: 'k1', email: 'klant@example.com', status: 'Goedgekeurd' } }),
+      });
     renderForm();
     submitWith('klant@example.com', 'geheim123');
 
     await waitFor(() => expect(replaceMock).toHaveBeenCalledWith('/account'));
+    // login() must refetch /api/auth/me itself -- router.replace() is a client-side
+    // navigation and does not remount CustomerAuthProvider to pick this up on its own.
+    expect(fetchMock).toHaveBeenCalledWith('/api/auth/me?type=klant');
   });
 
   it('shows a pending message and does not grant access when status is "Beoordelen"', async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ status: 'Beoordelen' }) });
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'Beoordelen' }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ user: { id: 'k1', email: 'klant@example.com', status: 'Beoordelen' } }),
+      });
     renderForm();
     submitWith('klant@example.com', 'geheim123');
 
@@ -62,7 +82,12 @@ describe('CustomerLoginForm', () => {
   });
 
   it('shows a rejected message when status is "Afgewezen"', async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ status: 'Afgewezen' }) });
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'Afgewezen' }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ user: { id: 'k1', email: 'klant@example.com', status: 'Afgewezen' } }),
+      });
     renderForm();
     submitWith('klant@example.com', 'geheim123');
 
@@ -72,7 +97,12 @@ describe('CustomerLoginForm', () => {
   });
 
   it('shows the accountIncompleteMessage for any other status', async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ status: undefined }) });
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ status: undefined }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ user: { id: 'k1', email: 'klant@example.com', status: undefined } }),
+      });
     renderForm();
     submitWith('klant@example.com', 'geheim123');
 
@@ -82,7 +112,7 @@ describe('CustomerLoginForm', () => {
   });
 
   it('shows a generic error when the request itself fails (network error)', async () => {
-    fetchMock.mockRejectedValue(new Error('network error'));
+    fetchMock.mockRejectedValueOnce(new Error('network error'));
     renderForm();
     submitWith('klant@example.com', 'geheim123');
 

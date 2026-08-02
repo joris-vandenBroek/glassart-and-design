@@ -47,6 +47,45 @@ describe('useCustomerAuth', () => {
     expect(result.current.isCustomer).toBe(false);
   });
 
+  it('login() refreshes user/isCustomer in place, without a remount', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ user: null }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'Goedgekeurd' }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          user: { id: 'k1', email: 'k@example.com', status: 'Goedgekeurd' },
+        }),
+      });
+    const { result } = renderHook(() => useCustomerAuth(), { wrapper: CustomerAuthProvider });
+    await waitFor(() => expect(result.current.isHydrated).toBe(true));
+    expect(result.current.isCustomer).toBe(false);
+
+    let status = '';
+    await act(async () => {
+      status = await result.current.login('k@example.com', 'geheim123');
+    });
+
+    expect(status).toBe('Goedgekeurd');
+    expect(result.current.isCustomer).toBe(true);
+    expect(result.current.user).toMatchObject({ uid: 'k1', email: 'k@example.com' });
+    expect(fetchMock).toHaveBeenCalledWith('/api/auth/login', expect.objectContaining({ method: 'POST' }));
+  });
+
+  it('login() throws when the credentials are rejected', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ user: null }) })
+      .mockResolvedValueOnce({ ok: false });
+    const { result } = renderHook(() => useCustomerAuth(), { wrapper: CustomerAuthProvider });
+    await waitFor(() => expect(result.current.isHydrated).toBe(true));
+
+    await expect(
+      act(async () => {
+        await result.current.login('k@example.com', 'fout');
+      })
+    ).rejects.toThrow();
+  });
+
   it('logs out via POST /api/auth/logout', async () => {
     fetchMock
       .mockResolvedValueOnce({ ok: true, json: async () => ({ user: null }) })
