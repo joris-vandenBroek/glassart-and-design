@@ -7,10 +7,11 @@ import { Modal } from '@/components/Modal';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
-import type { Stijl } from './materiaalTypes';
+import type { Stijl, Kunstwerk } from './materiaalTypes';
 
 interface StijlenSectionProps {
   stijlen: Stijl[] | null;
+  kunstwerken: Kunstwerk[] | null;
   loadError: string | null;
   onAdd: (data: Omit<Stijl, 'id'>) => Promise<boolean>;
   onUpdate: (id: string, data: Omit<Stijl, 'id'>) => Promise<boolean>;
@@ -19,11 +20,12 @@ interface StijlenSectionProps {
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; stijl: Stijl } | null;
 
-export function StijlenSection({ stijlen, loadError, onAdd, onUpdate, onRemove }: StijlenSectionProps) {
+export function StijlenSection({ stijlen, kunstwerken, loadError, onAdd, onUpdate, onRemove }: StijlenSectionProps) {
   const t = useTranslations('beheer');
   const [modalState, setModalState] = useState<ModalState>(null);
   const [omschrijving, setOmschrijving] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
+  const [pendingVerwijderCount, setPendingVerwijderCount] = useState<number | null>(null);
   const { user } = useAdminAuth();
 
   if (loadError) {
@@ -41,17 +43,20 @@ export function StijlenSection({ stijlen, loadError, onAdd, onUpdate, onRemove }
   function openAdd() {
     setOmschrijving('');
     setActionError(null);
+    setPendingVerwijderCount(null);
     setModalState({ mode: 'add' });
   }
 
   function openEdit(stijl: Stijl) {
     setOmschrijving(stijl.omschrijving);
     setActionError(null);
+    setPendingVerwijderCount(null);
     setModalState({ mode: 'edit', stijl });
   }
 
   function closeModal() {
     setModalState(null);
+    setPendingVerwijderCount(null);
   }
 
   async function handleSave() {
@@ -68,6 +73,15 @@ export function StijlenSection({ stijlen, loadError, onAdd, onUpdate, onRemove }
 
   async function handleRemove() {
     if (modalState?.mode !== 'edit') return;
+    if (pendingVerwijderCount === null) {
+      const inUseCount = (kunstwerken ?? []).filter((kunstwerk) =>
+        (kunstwerk.stijlIds ?? []).includes(modalState.stijl.id)
+      ).length;
+      if (inUseCount > 0) {
+        setPendingVerwijderCount(inUseCount);
+        return;
+      }
+    }
     const success = await onRemove(modalState.stijl.id);
     if (success) {
       void logActiviteit('stijl_verwijderd', actorFromMedewerker(user));
@@ -75,6 +89,10 @@ export function StijlenSection({ stijlen, loadError, onAdd, onUpdate, onRemove }
     } else {
       setActionError(t('stijlenActionError'));
     }
+  }
+
+  function handleAnnulerenVerwijderen() {
+    setPendingVerwijderCount(null);
   }
 
   const columns: Column<Stijl>[] = [{ key: 'omschrijving', label: t('stijlenColOmschrijving') }];
@@ -105,45 +123,74 @@ export function StijlenSection({ stijlen, loadError, onAdd, onUpdate, onRemove }
         closeLabel={t('modalClose')}
         title={modalState?.mode === 'edit' ? t('stijlenModalTitelBewerken') : t('stijlenModalTitelToevoegen')}
         footerActions={
-          <>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={!omschrijving}
-              data-testid="stijl-modal-opslaan"
-              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
-            >
-              {t('stijlenOpslaan')}
-            </button>
-            {modalState?.mode === 'edit' && (
+          modalState?.mode === 'edit' && pendingVerwijderCount !== null ? (
+            <>
               <button
                 type="button"
                 onClick={handleRemove}
-                data-testid="stijl-modal-verwijderen"
+                data-testid="stijl-modal-verwijder-bevestigen"
                 className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
               >
-                {t('stijlenVerwijderen')}
+                {t('verwijderenBevestigen')}
               </button>
-            )}
-          </>
+              <button
+                type="button"
+                onClick={handleAnnulerenVerwijderen}
+                data-testid="stijl-modal-verwijder-annuleren"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+              >
+                {t('annuleren')}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={!omschrijving}
+                data-testid="stijl-modal-opslaan"
+                className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+              >
+                {t('stijlenOpslaan')}
+              </button>
+              {modalState?.mode === 'edit' && (
+                <button
+                  type="button"
+                  onClick={handleRemove}
+                  data-testid="stijl-modal-verwijderen"
+                  className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                >
+                  {t('stijlenVerwijderen')}
+                </button>
+              )}
+            </>
+          )
         }
       >
         <div data-testid="stijl-modal" className="flex flex-col gap-2 text-sm text-white/80">
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            <span>
-              {t('stijlenLabelOmschrijving')}
-              <RequiredMark />
-            </span>
-            <input
-              type="text"
-              value={omschrijving}
-              onChange={(event) => setOmschrijving(event.target.value)}
-              data-testid="stijl-modal-omschrijving"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-            />
-          </label>
+          {pendingVerwijderCount !== null ? (
+            <p data-testid="stijl-modal-verwijder-bevestiging">
+              {t('stijlenVerwijderBevestiging', { count: pendingVerwijderCount })}
+            </p>
+          ) : (
+            <>
+              <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+                <span>
+                  {t('stijlenLabelOmschrijving')}
+                  <RequiredMark />
+                </span>
+                <input
+                  type="text"
+                  value={omschrijving}
+                  onChange={(event) => setOmschrijving(event.target.value)}
+                  data-testid="stijl-modal-omschrijving"
+                  className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+                />
+              </label>
 
-          <RequiredLegend testId="stijl-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
+              <RequiredLegend testId="stijl-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
+            </>
+          )}
 
           {actionError && (
             <p data-testid="stijl-modal-error" className="text-xs text-red-400">

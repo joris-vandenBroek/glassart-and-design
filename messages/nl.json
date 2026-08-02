@@ -506,6 +506,7 @@
     "stijlenToevoegen": "Stijl toevoegen",
     "stijlenOpslaan": "Opslaan",
     "stijlenVerwijderen": "Verwijderen",
+    "stijlenVerwijderBevestiging": "Deze stijl wordt nog gebruikt door {count} kunstwerk(en). Weet je zeker dat je het wilt verwijderen?",
     "navOnderwerpen": "Onderwerpen",
     "onderwerpenLoadError": "Kon de onderwerpen niet laden. Probeer de pagina te verversen.",
     "onderwerpenActionError": "Er is iets misgegaan. Probeer het opnieuw.",

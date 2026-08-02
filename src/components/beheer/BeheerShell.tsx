@@ -374,6 +374,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
         ) : activeSection === 'stijlen' ? (
           <StijlenSection
             stijlen={stijlen.items}
+            kunstwerken={kunstwerken.items}
             loadError={stijlen.error === 'load' ? t('stijlenLoadError') : null}
             onAdd={stijlen.add}
             onUpdate={stijlen.update}
