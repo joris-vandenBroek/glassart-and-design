@@ -618,6 +618,7 @@
     "prijsmatrixLoadError": "Kon de prijsmatrix niet laden. Probeer de pagina te verversen.",
     "prijsmatrixActionError": "Er is iets misgegaan. Probeer het opnieuw.",
     "prijsmatrixTitle": "Prijs per maat en materiaal",
+    "prijsmatrixHelp": "Hier stel je de basisprijs in per combinatie van maat en materiaal. Zo komt de uiteindelijke prijs tot stand: meestal is dat de basisprijs uit deze tabel plus de vaste opslag van de kunstenaar (indien van toepassing). Heeft een kunstwerk geen materiaal of geen maat (bv. akoestische stof)? Dan geldt geen matrixprijs, maar de prijs-per-m² die bij dat kunstwerk zelf is ingesteld. Staat er nog geen prijs in voor een combinatie? Dan blijft de prijs onbekend totdat je 'm hier invult.",
     "prijsmatrixHint": "Vul een prijs in voor elke combinatie. Een lege cel toont \"prijs op aanvraag\" in de webshop. Klik op Opslaan om je wijzigingen te bewaren.",
     "prijsmatrixOpgeslagen": "Opgeslagen",
     "prijsmatrixGewijzigd": "Nog niet opgeslagen",
