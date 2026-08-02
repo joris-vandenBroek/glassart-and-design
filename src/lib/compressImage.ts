@@ -43,6 +43,8 @@ export function compressImage(file: File): Promise<File> {
           fallbackToOriginal();
           return;
         }
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
         canvas.toBlob(
           (blob) => {
