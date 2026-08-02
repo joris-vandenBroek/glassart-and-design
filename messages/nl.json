@@ -244,8 +244,7 @@
     "logout": "Uitloggen",
     "orders": {
       "lineSummary": "{lines, plural, one {# bestelregel} other {# bestelregels}}, totaal {quantity, plural, one {# stuk} other {# stuks}}",
-      "statusTeBeoordelen": "Te beoordelen",
-      "statusGoedgekeurd": "Goedgekeurd",
+      "statusInBehandeling": "In behandeling",
       "statusAfgewezen": "Afgewezen",
       "modalClose": "Sluiten",
       "modalLineUnknown": "Onbekend artikel",

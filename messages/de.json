@@ -244,8 +244,7 @@
     "logout": "Abmelden",
     "orders": {
       "lineSummary": "{lines, plural, one {# Bestellposition} other {# Bestellpositionen}}, insgesamt {quantity} Stück",
-      "statusTeBeoordelen": "In Prüfung",
-      "statusGoedgekeurd": "Genehmigt",
+      "statusInBehandeling": "In Bearbeitung",
       "statusAfgewezen": "Abgelehnt",
       "modalClose": "Schließen",
       "modalLineUnknown": "Unbekannter Artikel",
