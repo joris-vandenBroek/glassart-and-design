@@ -126,24 +126,16 @@ jobs:
         # and sftpArgs' ConnectionAttempts=5 only retries within a single ssh invocation.
 
       - name: Upload build to production Node.js app via SFTP
-        uses: Wandalen/wretry.action@v3
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
         with:
-          action: wlixcc/SFTP-Deploy-Action@v1.2.6
-          # Retries the WHOLE step (fresh connection attempt), not just the underlying sftp
-          # client's own ConnectionAttempts -- see the matching comment in
-          # deploy-naar-staging.yml for why (confirmed needed 2026-08-02: this exact
-          # "Network unreachable" blip survived the "Wait for host reachability" step above).
-          attempt_limit: 3
-          attempt_delay: 30000
-          with: |
-            server: ${{ vars.PRODUCTION_SFTP_HOST }}
-            port: 22
-            username: ${{ secrets.PRODUCTION_SFTP_USERNAME }}
-            password: ${{ secrets.PRODUCTION_SFTP_PASSWORD }}
-            sftp_only: true
-            local_path: './deploy_payload/*'
-            remote_path: '/'
-            sftpArgs: '-o ConnectionAttempts=5 -o ConnectTimeout=15'
+          server: ${{ vars.PRODUCTION_SFTP_HOST }}
+          port: 22
+          username: ${{ secrets.PRODUCTION_SFTP_USERNAME }}
+          password: ${{ secrets.PRODUCTION_SFTP_PASSWORD }}
+          sftp_only: true
+          local_path: './deploy_payload/*'
+          remote_path: '/'
+          sftpArgs: '-o ConnectionAttempts=5 -o ConnectTimeout=15'
         # KNOWN UNKNOWN: PRODUCTION_SFTP_HOST/USERNAME/PASSWORD are intentionally NEW
         # secret/variable names, not yet created -- deliberately distinct from the OLD
         # PRODUCTION_FTP_HOST/USERNAME/PASSWORD ones, which belong to the old
@@ -165,20 +157,16 @@ jobs:
         # nothing to accidentally wipe.
 
       - name: Upload .next build via SFTP
-        uses: Wandalen/wretry.action@v3
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
         with:
-          action: wlixcc/SFTP-Deploy-Action@v1.2.6
-          attempt_limit: 3
-          attempt_delay: 30000
-          with: |
-            server: ${{ vars.PRODUCTION_SFTP_HOST }}
-            port: 22
-            username: ${{ secrets.PRODUCTION_SFTP_USERNAME }}
-            password: ${{ secrets.PRODUCTION_SFTP_PASSWORD }}
-            sftp_only: true
-            local_path: './deploy_payload/.next/*'
-            remote_path: '/.next'
-            sftpArgs: '-o ConnectionAttempts=5 -o ConnectTimeout=15'
+          server: ${{ vars.PRODUCTION_SFTP_HOST }}
+          port: 22
+          username: ${{ secrets.PRODUCTION_SFTP_USERNAME }}
+          password: ${{ secrets.PRODUCTION_SFTP_PASSWORD }}
+          sftp_only: true
+          local_path: './deploy_payload/.next/*'
+          remote_path: '/.next'
+          sftpArgs: '-o ConnectionAttempts=5 -o ConnectTimeout=15'
         # Separate step because .next is a dotdir the main step's "*" glob can't see.
 
       - name: Trigger Passenger restart (tmp/restart.txt)
