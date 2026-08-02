@@ -49,7 +49,10 @@
     "onderwerpFacetTitle": "Sujet",
     "aiGegenereerdFacetLabel": "Généré par IA uniquement",
     "clearAllFilters": "Effacer les filtres",
-    "removeFilterAria": "Supprimer le filtre {label}"
+    "removeFilterAria": "Supprimer le filtre {label}",
+    "mobileFiltersButtonLabel": "Filtres",
+    "mobileFiltersShowResults": "Afficher {count, plural, one {# résultat} other {# résultats}}",
+    "mobileFiltersCloseAria": "Fermer le panneau"
   },
   "segments": {
     "hotel": {

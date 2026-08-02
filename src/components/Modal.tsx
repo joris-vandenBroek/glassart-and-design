@@ -9,6 +9,7 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   closeLabel: string;
+  closeButtonAriaLabel?: string;
   title: ReactNode;
   children: ReactNode;
   wide?: boolean;
@@ -20,6 +21,7 @@ export function Modal({
   isOpen,
   onClose,
   closeLabel,
+  closeButtonAriaLabel,
   title,
   children,
   wide = false,
@@ -63,7 +65,7 @@ export function Modal({
           ref={closeButtonRef}
           type="button"
           data-testid="modal-close"
-          aria-label={closeLabel}
+          aria-label={closeButtonAriaLabel ?? closeLabel}
           onClick={onClose}
           className="absolute right-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white/80 hover:text-white"
         >
