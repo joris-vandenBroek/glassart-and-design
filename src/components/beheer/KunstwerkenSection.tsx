@@ -690,7 +690,7 @@ export function KunstwerkenSection({
           )}
           {fotoUploadError && (
             <p data-testid="kunstwerk-modal-foto-error" className="text-xs text-red-400">
-              {t('kunstwerkenFotoUploadError')}
+              {t(fotoUploadError === 'too-large' ? 'kunstwerkenFotoTooLarge' : 'kunstwerkenFotoUploadError')}
             </p>
           )}
 
