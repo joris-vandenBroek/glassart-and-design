@@ -10,14 +10,11 @@ import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
 import { ProductImage } from './ProductImage';
 import { ProductModal } from './ProductModal';
-import { Combobox } from './Combobox';
 import { Breadcrumb } from './Breadcrumb';
-import { FilterSection } from './FilterSection';
+import { FiltersPanelContent, ALL_FILTER, FORMAAT_OPTIES } from './FiltersPanelContent';
 import { resolveKunstenaarOmschrijving } from '@/lib/resolveKunstenaarOmschrijving';
 import type { Segment, Kunstwerk, Materiaal, Maat, Materiaalsoort, KunstwerkFormaat, Stijl, Onderwerp } from './beheer/materiaalTypes';
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
-
-const ALL_FILTER = 'all';
 
 export function ProductsGrid() {
   const locale = useLocale();
@@ -107,12 +104,6 @@ export function ProductsGrid() {
     ? (kunstenaars.items ?? []).find((kunstenaar) => kunstenaar.id === kunstenaarFilter) ?? null
     : null;
 
-  function filterButtonClass(isActive: boolean) {
-    return isActive
-      ? 'rounded-full bg-silver px-4 py-1.5 text-xs font-head tracking-wide text-ink'
-      : 'rounded-full border border-white/20 px-4 py-1.5 text-xs font-head tracking-wide text-white/70 hover:border-gold/40 hover:text-gold';
-  }
-
   function handleSelect(kunstwerk: Kunstwerk) {
     setSelectedKunstwerk(kunstwerk);
     if (user) {
@@ -156,7 +147,6 @@ export function ProductsGrid() {
     });
   }
 
-  const FORMAAT_OPTIES: Exclude<KunstwerkFormaat, 'alle'>[] = ['staand', 'liggend', 'vierkant'];
   const formaatLabels: Record<Exclude<KunstwerkFormaat, 'alle'>, string> = {
     staand: tCollections('formaatStaand'),
     liggend: tCollections('formaatLiggend'),
@@ -211,132 +201,37 @@ export function ProductsGrid() {
     setAiGegenereerdFilter(false);
   }
 
+  const filtersPanelProps = {
+    segmenten: segmenten.items,
+    activeFilter,
+    onSelectFilter: setActiveFilter,
+    segmentCountBase,
+    kunstenaars: kunstenaars.items,
+    kunstenaarFilter,
+    onKunstenaarFilterChange: setKunstenaarFilter,
+    formaatFilters,
+    onToggleFormaat: toggleFormaat,
+    formaatCountBase,
+    formaatLabels,
+    stijlen: stijlen.items,
+    stijlFilters,
+    onToggleStijl: toggleStijl,
+    stijlCountBase,
+    onderwerpen: onderwerpen.items,
+    onderwerpFilters,
+    onToggleOnderwerp: toggleOnderwerp,
+    onderwerpCountBase,
+    aiGegenereerdFilter,
+    onAiGegenereerdFilterChange: setAiGegenereerdFilter,
+  };
+
   return (
     <>
       <Breadcrumb items={breadcrumbItems} />
 
       <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 md:grid-cols-[220px_minmax(0,1fr)]">
         <aside className="flex flex-col">
-          <FilterSection title={tCollections('collectieFacetTitle')} testId="collectie">
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                data-testid="filter-all"
-                aria-pressed={activeFilter === ALL_FILTER}
-                onClick={() => setActiveFilter(ALL_FILTER)}
-                className={filterButtonClass(activeFilter === ALL_FILTER)}
-              >
-                {tCollections('filterAll')} ({segmentCountBase.length})
-              </button>
-              {segmenten.items.map((segment) => (
-                <button
-                  key={segment.id}
-                  type="button"
-                  data-testid={`filter-${segment.id}`}
-                  aria-pressed={activeFilter === segment.id}
-                  onClick={() => setActiveFilter(segment.id)}
-                  className={filterButtonClass(activeFilter === segment.id)}
-                >
-                  {segment.omschrijving} (
-                  {segmentCountBase.filter((kunstwerk) => kunstwerk.segmentIds.includes(segment.id)).length})
-                </button>
-              ))}
-            </div>
-          </FilterSection>
-
-          <FilterSection title={tCollections('kunstenaarFacetTitle')} testId="kunstenaar">
-            <Combobox
-              options={(kunstenaars.items ?? []).map((kunstenaar) => ({ value: kunstenaar.id, label: kunstenaar.naam }))}
-              value={kunstenaarFilter}
-              onChange={setKunstenaarFilter}
-              placeholder={tCollections('kunstenaarFilterPlaceholder')}
-              noResultsLabel={tCollections('kunstenaarFilterNoResults')}
-              clearLabel={tCollections('kunstenaarFilterClear')}
-              testId="kunstenaar-filter"
-            />
-          </FilterSection>
-
-          <FilterSection title={tCollections('formaatFacetTitle')} testId="formaat">
-            {FORMAAT_OPTIES.map((formaat) => {
-              const isChecked = formaatFilters.has(formaat);
-              const count = formaatCountBase.filter(
-                (kunstwerk) => kunstwerk.formaat === formaat || kunstwerk.formaat === 'alle'
-              ).length;
-              return (
-                <label
-                  key={formaat}
-                  data-testid={`facet-formaat-option-${formaat}`}
-                  className="flex cursor-pointer items-center gap-2 text-xs text-white/70"
-                >
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => toggleFormaat(formaat)}
-                    className="h-3.5 w-3.5 accent-gold"
-                  />
-                  <span className={isChecked ? 'text-white' : ''}>{formaatLabels[formaat]}</span>
-                  <span className="ml-auto text-[11px] text-white/40">{count}</span>
-                </label>
-              );
-            })}
-          </FilterSection>
-
-          <FilterSection title={tCollections('stijlFacetTitle')} testId="stijl">
-            {(stijlen.items ?? []).map((stijl) => {
-              const isChecked = stijlFilters.has(stijl.id);
-              const count = stijlCountBase.filter((kunstwerk) => (kunstwerk.stijlIds ?? []).includes(stijl.id)).length;
-              return (
-                <label
-                  key={stijl.id}
-                  data-testid={`facet-stijl-option-${stijl.id}`}
-                  className="flex cursor-pointer items-center gap-2 text-xs text-white/70"
-                >
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => toggleStijl(stijl.id)}
-                    className="h-3.5 w-3.5 accent-gold"
-                  />
-                  <span className={isChecked ? 'text-white' : ''}>{stijl.omschrijving}</span>
-                  <span className="ml-auto text-[11px] text-white/40">{count}</span>
-                </label>
-              );
-            })}
-          </FilterSection>
-
-          <FilterSection title={tCollections('onderwerpFacetTitle')} testId="onderwerp">
-            {(onderwerpen.items ?? []).map((onderwerp) => {
-              const isChecked = onderwerpFilters.has(onderwerp.id);
-              const count = onderwerpCountBase.filter((kunstwerk) => (kunstwerk.onderwerpIds ?? []).includes(onderwerp.id)).length;
-              return (
-                <label
-                  key={onderwerp.id}
-                  data-testid={`facet-onderwerp-option-${onderwerp.id}`}
-                  className="flex cursor-pointer items-center gap-2 text-xs text-white/70"
-                >
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => toggleOnderwerp(onderwerp.id)}
-                    className="h-3.5 w-3.5 accent-gold"
-                  />
-                  <span className={isChecked ? 'text-white' : ''}>{onderwerp.omschrijving}</span>
-                  <span className="ml-auto text-[11px] text-white/40">{count}</span>
-                </label>
-              );
-            })}
-          </FilterSection>
-
-          <label className="flex cursor-pointer items-center gap-2 border-t border-white/10 pt-4 text-xs text-white/70">
-            <input
-              type="checkbox"
-              checked={aiGegenereerdFilter}
-              onChange={(event) => setAiGegenereerdFilter(event.target.checked)}
-              data-testid="facet-ai-gegenereerd"
-              className="h-3.5 w-3.5 accent-gold"
-            />
-            <span className={aiGegenereerdFilter ? 'text-white' : ''}>{tCollections('aiGegenereerdFacetLabel')}</span>
-          </label>
+          <FiltersPanelContent {...filtersPanelProps} />
         </aside>
 
         <div>
