@@ -210,9 +210,23 @@ jobs:
           fi
 
           if [ -n "$VERSION_TAG" ]; then
-            beheer_body=$(curl -s "https://staging.glassartanddesign.com/nl/beheer")
-            if ! echo "$beheer_body" | grep -q ">${VERSION_TAG}<"; then
-              echo "::error::Beheer-header toont niet '$VERSION_TAG' op /nl/beheer -- de nieuwe build lijkt niet live te staan."
+            attempt=1
+            max_attempts=5
+            found="false"
+            while [ "$attempt" -le "$max_attempts" ]; do
+              beheer_body=$(curl -s "https://staging.glassartanddesign.com/nl/beheer")
+              if echo "$beheer_body" | grep -q ">${VERSION_TAG}<"; then
+                found="true"
+                break
+              fi
+              echo "Attempt $attempt/$max_attempts: /nl/beheer does not show $VERSION_TAG yet"
+              attempt=$((attempt + 1))
+              if [ "$attempt" -le "$max_attempts" ]; then
+                sleep 5
+              fi
+            done
+            if [ "$found" != "true" ]; then
+              echo "::error::Beheer-header toont niet '$VERSION_TAG' op /nl/beheer na $max_attempts pogingen -- de nieuwe build lijkt niet live te staan."
               exit 1
             fi
             echo "Beheer version label confirmed: $VERSION_TAG"
@@ -224,7 +238,11 @@ jobs:
         # actually restarted), which the plain status-code check above can't distinguish.
         # VERSION_TAG is empty on non-master dispatches (see "Compute next version number"),
         # where AppVersionLabel renders nothing at all -- skip the check entirely then rather
-        # than asserting an empty string is present.
+        # than asserting an empty string is present. Retries with its own loop (confirmed
+        # needed 2026-08-02): the status-code loop above can pass on its first attempt against
+        # the still-running OLD process (Passenger only swaps in the new one asynchronously
+        # after the warm-up curl in "Trigger Passenger restart" reaches it), so a single
+        # immediate check here can catch that stale process instead of the new build.
 
       - name: Tag staged version
         if: github.ref == 'refs/heads/master'

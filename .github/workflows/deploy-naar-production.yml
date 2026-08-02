@@ -217,15 +217,43 @@ jobs:
             exit 1
           fi
 
-          gate_body=$(curl -s "https://glassartanddesign.com/nl/collecties")
-          if ! echo "$gate_body" | grep -q "We zijn met iets moois bezig"; then
-            echo "::error::Under Construction-gate lijkt niet actief op /nl/collecties/ -- controleer of MIJNHOST_BUILD=true echt is meegegeven aan de build."
+          attempt=1
+          max_attempts=5
+          gate_ok="false"
+          while [ "$attempt" -le "$max_attempts" ]; do
+            gate_body=$(curl -s "https://glassartanddesign.com/nl/collecties")
+            if echo "$gate_body" | grep -q "We zijn met iets moois bezig"; then
+              gate_ok="true"
+              break
+            fi
+            echo "Attempt $attempt/$max_attempts: Under Construction-gate not showing on /nl/collecties yet"
+            attempt=$((attempt + 1))
+            if [ "$attempt" -le "$max_attempts" ]; then
+              sleep 5
+            fi
+          done
+          if [ "$gate_ok" != "true" ]; then
+            echo "::error::Under Construction-gate lijkt niet actief op /nl/collecties/ na $max_attempts pogingen -- controleer of MIJNHOST_BUILD=true echt is meegegeven aan de build."
             exit 1
           fi
 
-          beheer_body=$(curl -s "https://glassartanddesign.com/nl/beheer")
-          if ! echo "$beheer_body" | grep -q ">${VERSION_TAG}<"; then
-            echo "::error::Beheer-header toont niet '$VERSION_TAG' op /nl/beheer -- de nieuwe build lijkt niet live te staan."
+          attempt=1
+          max_attempts=5
+          version_ok="false"
+          while [ "$attempt" -le "$max_attempts" ]; do
+            beheer_body=$(curl -s "https://glassartanddesign.com/nl/beheer")
+            if echo "$beheer_body" | grep -q ">${VERSION_TAG}<"; then
+              version_ok="true"
+              break
+            fi
+            echo "Attempt $attempt/$max_attempts: /nl/beheer does not show $VERSION_TAG yet"
+            attempt=$((attempt + 1))
+            if [ "$attempt" -le "$max_attempts" ]; then
+              sleep 5
+            fi
+          done
+          if [ "$version_ok" != "true" ]; then
+            echo "::error::Beheer-header toont niet '$VERSION_TAG' op /nl/beheer na $max_attempts pogingen -- de nieuwe build lijkt niet live te staan."
             exit 1
           fi
           echo "Beheer version label confirmed: $VERSION_TAG"
@@ -235,4 +263,8 @@ jobs:
         # returns 200 but is still serving a stale build (e.g. Passenger not actually
         # restarted). Unlike staging's equivalent check, VERSION_TAG here is always non-empty
         # -- "Resolve version to deploy" above already fails the whole run if it can't resolve
-        # one, and validates it against ^v[0-9]+$ before this step ever sees it.
+        # one, and validates it against ^v[0-9]+$ before this step ever sees it. Both this and
+        # the gate check above retry with their own loop (confirmed needed 2026-08-02, see
+        # staging's equivalent comment): the plain status-code loop can pass on its first
+        # attempt against the still-running OLD process, since Passenger only swaps in the new
+        # one asynchronously after the warm-up curl in "Trigger Passenger restart" reaches it.
