@@ -2,6 +2,13 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
+import { compressImage } from '@/lib/compressImage';
+
+vi.mock('@/lib/compressImage', () => ({
+  compressImage: vi.fn(),
+}));
+
+const compressImageMock = vi.mocked(compressImage);
 
 function TestConsumer() {
   const { uploading, error, upload } = useKunstwerkFotoUpload();
@@ -33,6 +40,8 @@ beforeEach(() => {
   vi.stubEnv('NEXT_PUBLIC_UPLOAD_ENDPOINT_URL', 'https://mail-server.example.com/upload-kunstwerk-foto.php');
   vi.stubEnv('NEXT_PUBLIC_UPLOAD_SECRET', 'test-upload-secret');
   vi.stubGlobal('fetch', vi.fn());
+  compressImageMock.mockReset();
+  compressImageMock.mockImplementation(async (file: File) => file);
 });
 
 describe('useKunstwerkFotoUpload', () => {
@@ -111,5 +120,31 @@ describe('useKunstwerkFotoUpload', () => {
     fireEvent.change(screen.getByTestId('file-input'), { target: { files: [makeFile()] } });
     await waitFor(() => expect(screen.getByTestId('error')).toHaveTextContent('upload'));
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('sets error to too-large and does not call fetch when the compressed file still exceeds 8MB', async () => {
+    const oversized = new File([new Uint8Array(9 * 1024 * 1024)], 'foto.jpg', { type: 'image/jpeg' });
+    compressImageMock.mockResolvedValue(oversized);
+    render(<TestConsumer />);
+    fireEvent.change(screen.getByTestId('file-input'), { target: { files: [makeFile()] } });
+    await waitFor(() => expect(screen.getByTestId('error')).toHaveTextContent('too-large'));
+    expect(screen.getByTestId('url')).toHaveTextContent('none');
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('uploads the compressed file returned by compressImage, not the original', async () => {
+    const compressed = new File(['klein'], 'foto.jpg', { type: 'image/jpeg' });
+    compressImageMock.mockResolvedValue(compressed);
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, url: 'https://storage.example.com/foto.jpg' }),
+    });
+    render(<TestConsumer />);
+    fireEvent.change(screen.getByTestId('file-input'), { target: { files: [makeFile('groot-origineel.jpg')] } });
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    const [, options] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const body = options.body as FormData;
+    expect((body.get('foto') as File).name).toBe('foto.jpg');
+    expect(compressImageMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'groot-origineel.jpg' }));
   });
 });
