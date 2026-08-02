@@ -202,17 +202,17 @@ In `tests/components/beheer/KlantModal.test.tsx`, add inside the `describe('Klan
 ```tsx
   it('shows a help popover with an explanation of the screen', () => {
     renderModal(KLANT);
-    expect(screen.queryByTestId('klanten-help-popover')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('klant-modal-help-popover')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId('klanten-help'));
-    expect(screen.getByTestId('klanten-help-popover')).toHaveTextContent('prijsgroep');
+    fireEvent.click(screen.getByTestId('klant-modal-help'));
+    expect(screen.getByTestId('klant-modal-help-popover')).toHaveTextContent('prijsgroep');
   });
 ```
 
 - [ ] **Step 3: Run the test to verify it fails**
 
 Run: `npx vitest run tests/components/beheer/KlantModal.test.tsx -t "help popover"`
-Expected: FAIL — `Unable to find an element by: [data-testid="klanten-help"]`
+Expected: FAIL — `Unable to find an element by: [data-testid="klant-modal-help"]`
 
 - [ ] **Step 4: Add the import and wire up the icon**
 
@@ -228,10 +228,12 @@ Then change the `title` prop of the `<Modal>` (currently `title={t('klantenModal
       title={
         <span className="inline-flex items-center gap-2">
           {t('klantenModalTitel')}
-          <HelpHint text={t('klantenHelp')} testId="klanten-help" />
+          <HelpHint text={t('klantenHelp')} testId="klant-modal-help" />
         </span>
       }
 ```
+
+Note: the test id is `klant-modal-help` (singular, matching this file's existing `klant-modal-*` convention for every other field/button), not `klanten-help` — the i18n key stays `klantenHelp` (plural, matching this file's translation-key convention), only the `data-testid` is singular.
 
 - [ ] **Step 5: Run the test to verify it passes**
 
@@ -358,31 +360,33 @@ In `tests/components/beheer/KunstenaarsSection.test.tsx`, add inside the `descri
     renderSection();
     fireEvent.click(screen.getByTestId('kunstenaars-add'));
 
-    fireEvent.click(screen.getByTestId('kunstenaars-help'));
-    expect(screen.getByTestId('kunstenaars-help-popover')).toHaveTextContent('prijsafspraken');
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-help'));
+    expect(screen.getByTestId('kunstenaar-modal-help-popover')).toHaveTextContent('prijsafspraken');
   });
 
   it('shows a help popover next to the Opslag field', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('kunstenaars-add'));
 
-    fireEvent.click(screen.getByTestId('kunstenaars-help-opslag'));
-    expect(screen.getByTestId('kunstenaars-help-opslag-popover')).toHaveTextContent('matrixprijs');
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-help-opslag'));
+    expect(screen.getByTestId('kunstenaar-modal-help-opslag-popover')).toHaveTextContent('prijsmatrix');
   });
 
   it('shows a help popover next to the exclusiviteit fields', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('kunstenaars-add'));
 
-    fireEvent.click(screen.getByTestId('kunstenaars-help-exclusiviteit'));
-    expect(screen.getByTestId('kunstenaars-help-exclusiviteit-popover')).toHaveTextContent('twee klanten');
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-help-exclusiviteit'));
+    expect(screen.getByTestId('kunstenaar-modal-help-exclusiviteit-popover')).toHaveTextContent('twee klanten');
   });
 ```
+
+Note: the test ids use the singular `kunstenaar-modal-*` prefix (matching this file's existing modal-field convention — e.g. `kunstenaar-modal-prijsopslag`, `kunstenaar-modal-naam`), not the plural `kunstenaars-*` prefix. The `kunstenaars-add` id used to open the modal is pre-existing and stays as-is — only the new help testids follow the `kunstenaar-modal-*` convention.
 
 - [ ] **Step 3: Run the tests to verify they fail**
 
 Run: `npx vitest run tests/components/beheer/KunstenaarsSection.test.tsx -t "help popover"`
-Expected: FAIL — `Unable to find an element by: [data-testid="kunstenaars-help"]` (and similarly for the other two, once the first is fixed)
+Expected: FAIL — `Unable to find an element by: [data-testid="kunstenaar-modal-help"]` (and similarly for the other two, once the first is fixed)
 
 - [ ] **Step 4: Add the import and wire up the three icons**
 
@@ -398,7 +402,7 @@ Change the `title` prop of the `<Modal>` (currently at line 364):
         title={
           <span className="inline-flex items-center gap-2">
             {modalState?.mode === 'edit' ? t('kunstenaarsModalTitelBewerken') : t('kunstenaarsModalTitelToevoegen')}
-            <HelpHint text={t('kunstenaarsHelp')} testId="kunstenaars-help" />
+            <HelpHint text={t('kunstenaarsHelp')} testId="kunstenaar-modal-help" />
           </span>
         }
 ```
@@ -409,7 +413,7 @@ Change the Opslag `<label>` (currently lines 496-505):
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
             <span className="inline-flex items-center gap-2">
               {t('kunstenaarsLabelPrijsopslag')}
-              <HelpHint text={t('kunstenaarsHelpOpslag')} size="sm" testId="kunstenaars-help-opslag" />
+              <HelpHint text={t('kunstenaarsHelpOpslag')} size="sm" testId="kunstenaar-modal-help-opslag" />
             </span>
             <input
               type="number"
@@ -427,7 +431,7 @@ Change the exclusiviteit `<fieldset>`'s `<legend>` (currently lines 507-510):
           <fieldset className="flex flex-col gap-3">
             <legend className="inline-flex items-center gap-2 text-xs uppercase tracking-wide text-white/60">
               {t('kunstenaarsLabelKlant')}
-              <HelpHint text={t('kunstenaarsHelpExclusiviteit')} size="sm" testId="kunstenaars-help-exclusiviteit" />
+              <HelpHint text={t('kunstenaarsHelpExclusiviteit')} size="sm" testId="kunstenaar-modal-help-exclusiviteit" />
             </legend>
 ```
 
@@ -542,15 +546,17 @@ In `tests/components/beheer/KunstwerkenSection.test.tsx`, add inside the `descri
     renderSection();
     fireEvent.click(screen.getByTestId('kunstwerken-add'));
 
-    fireEvent.click(screen.getByTestId('kunstwerken-help'));
-    expect(screen.getByTestId('kunstwerken-help-popover')).toHaveTextContent('Formaat');
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-help'));
+    expect(screen.getByTestId('kunstwerk-modal-help-popover')).toHaveTextContent('Formaat');
   });
 ```
+
+Note: the test id uses the singular `kunstwerk-modal-*` prefix (matching this file's existing modal-field convention — e.g. `kunstwerk-modal-opslaan`, `kunstwerk-modal-foto-dropzone`), not the plural `kunstwerken-*` prefix. The `kunstwerken-add` id used to open the modal is pre-existing and stays as-is.
 
 - [ ] **Step 3: Run the test to verify it fails**
 
 Run: `npx vitest run tests/components/beheer/KunstwerkenSection.test.tsx -t "help popover"`
-Expected: FAIL — `Unable to find an element by: [data-testid="kunstwerken-help"]`
+Expected: FAIL — `Unable to find an element by: [data-testid="kunstwerk-modal-help"]`
 
 - [ ] **Step 4: Add the import and wire up the icon**
 
@@ -566,7 +572,7 @@ Change the `title` prop of the `<Modal>` (currently at line 610):
         title={
           <span className="inline-flex items-center gap-2">
             {modalState?.mode === 'edit' ? t('kunstwerkenModalTitelBewerken') : t('kunstwerkenModalTitelToevoegen')}
-            <HelpHint text={t('kunstwerkenHelp')} testId="kunstwerken-help" />
+            <HelpHint text={t('kunstwerkenHelp')} testId="kunstwerk-modal-help" />
           </span>
         }
 ```
@@ -613,15 +619,17 @@ In `tests/components/beheer/PrijsgroepenSection.test.tsx`, add inside the `descr
     renderSection();
     fireEvent.click(screen.getByTestId('prijsgroepen-add'));
 
-    fireEvent.click(screen.getByTestId('prijsgroepen-help'));
-    expect(screen.getByTestId('prijsgroepen-help-popover')).toHaveTextContent('puur informatief');
+    fireEvent.click(screen.getByTestId('prijsgroep-modal-help'));
+    expect(screen.getByTestId('prijsgroep-modal-help-popover')).toHaveTextContent('puur informatief');
   });
 ```
+
+Note: the test id uses the singular `prijsgroep-modal-*` prefix (matching this file's existing modal-field convention — e.g. `prijsgroep-modal-opslaan`, `prijsgroep-modal-verwijderen`), not the plural `prijsgroepen-*` prefix. The `prijsgroepen-add` id used to open the modal is pre-existing and stays as-is.
 
 - [ ] **Step 3: Run the test to verify it fails**
 
 Run: `npx vitest run tests/components/beheer/PrijsgroepenSection.test.tsx -t "help popover"`
-Expected: FAIL — `Unable to find an element by: [data-testid="prijsgroepen-help"]`
+Expected: FAIL — `Unable to find an element by: [data-testid="prijsgroep-modal-help"]`
 
 - [ ] **Step 4: Add the import and wire up the icon**
 
@@ -637,7 +645,7 @@ Change the `title` prop of the `<Modal>` (currently at line 154):
         title={
           <span className="inline-flex items-center gap-2">
             {modalState?.mode === 'edit' ? t('prijsgroepenModalTitelBewerken') : t('prijsgroepenModalTitelToevoegen')}
-            <HelpHint text={t('prijsgroepenHelp')} testId="prijsgroepen-help" />
+            <HelpHint text={t('prijsgroepenHelp')} testId="prijsgroep-modal-help" />
           </span>
         }
 ```

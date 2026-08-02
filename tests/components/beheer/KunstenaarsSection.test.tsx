@@ -649,4 +649,28 @@ describe('KunstenaarsSection', () => {
     fireEvent.click(screen.getByTestId('kunstenaars-add'));
     expect(screen.getByTestId('kunstenaar-modal-verplicht-legende')).toHaveTextContent('* verplicht veld');
   });
+
+  it('shows a help popover with an explanation of the screen', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstenaars-add'));
+
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-help'));
+    expect(screen.getByTestId('kunstenaar-modal-help-popover')).toHaveTextContent('prijsafspraken');
+  });
+
+  it('shows a help popover next to the Opslag field', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstenaars-add'));
+
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-help-opslag'));
+    expect(screen.getByTestId('kunstenaar-modal-help-opslag-popover')).toHaveTextContent('prijsmatrix');
+  });
+
+  it('shows a help popover next to the exclusiviteit fields', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstenaars-add'));
+
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-help-exclusiviteit'));
+    expect(screen.getByTestId('kunstenaar-modal-help-exclusiviteit-popover')).toHaveTextContent('twee klanten');
+  });
 });

@@ -432,4 +432,12 @@ describe('KlantModal', () => {
     expect(patchBody()).toEqual({ kunstenaarId: null });
     await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, kunstenaarId: null }));
   });
+
+  it('shows a help popover with an explanation of the screen', () => {
+    renderModal(KLANT);
+    expect(screen.queryByTestId('klant-modal-help-popover')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('klant-modal-help'));
+    expect(screen.getByTestId('klant-modal-help-popover')).toHaveTextContent('prijsgroep');
+  });
 });

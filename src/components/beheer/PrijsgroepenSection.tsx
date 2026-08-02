@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
+import { HelpHint } from '@/components/HelpHint';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
@@ -151,7 +152,12 @@ export function PrijsgroepenSection({
         isOpen={modalState !== null}
         onClose={closeModal}
         closeLabel={t('modalClose')}
-        title={modalState?.mode === 'edit' ? t('prijsgroepenModalTitelBewerken') : t('prijsgroepenModalTitelToevoegen')}
+        title={
+          <span className="inline-flex items-center gap-2">
+            {modalState?.mode === 'edit' ? t('prijsgroepenModalTitelBewerken') : t('prijsgroepenModalTitelToevoegen')}
+            <HelpHint text={t('prijsgroepenHelp')} testId="prijsgroep-modal-help" />
+          </span>
+        }
         footerActions={
           <>
             <button

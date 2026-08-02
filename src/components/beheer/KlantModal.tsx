@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Modal } from '@/components/Modal';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { Combobox } from '@/components/Combobox';
+import { HelpHint } from '@/components/HelpHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import type { Klant } from './KlantenSection';
@@ -207,7 +208,12 @@ export function KlantModal({
       isOpen={klant !== null}
       onClose={onClose}
       closeLabel={t('modalClose')}
-      title={t('klantenModalTitel')}
+      title={
+        <span className="inline-flex items-center gap-2">
+          {t('klantenModalTitel')}
+          <HelpHint text={t('klantenHelp')} testId="klant-modal-help" />
+        </span>
+      }
       footerActions={
         klant && fields ? (
           <>
