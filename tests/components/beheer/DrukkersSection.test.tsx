@@ -76,6 +76,17 @@ describe('DrukkersSection', () => {
     expect(screen.getByTestId('data-table-row-drukker-1')).toHaveTextContent('Utrecht');
   });
 
+  it('shows a Standaard badge next to the standaard drukker and not next to others', () => {
+    renderSection({
+      drukkers: [
+        DRUKKERS[0],
+        { ...DRUKKERS[0], id: 'drukker-2', naam: 'Drukkerij Tweede', standaard: true },
+      ],
+    });
+    expect(screen.getByTestId('data-table-row-drukker-1')).not.toHaveTextContent('Standaard');
+    expect(screen.getByTestId('data-table-row-drukker-2')).toHaveTextContent('Standaard');
+  });
+
   it('adds a new drukker, closes the modal, and logs drukker_toegevoegd', async () => {
     const { onAdd } = renderSection();
     fireEvent.click(screen.getByTestId('drukkers-add'));

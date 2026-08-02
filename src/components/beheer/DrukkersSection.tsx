@@ -33,7 +33,23 @@ export function DrukkersSection({ drukkers, loadError, onAdd, onUpdate, onRemove
   }
 
   const columns: Column<Drukker>[] = [
-    { key: 'naam', label: t('drukkersColNaam') },
+    {
+      key: 'naam',
+      label: t('drukkersColNaam'),
+      render: (drukker) => (
+        <span className="flex items-center gap-2">
+          {drukker.naam}
+          {drukker.standaard && (
+            <span
+              data-testid={`drukker-standaard-badge-${drukker.id}`}
+              className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white/70"
+            >
+              {t('drukkersStandaardBadge')}
+            </span>
+          )}
+        </span>
+      ),
+    },
     { key: 'plaats', label: t('drukkersColPlaats') },
     { key: 'email', label: t('drukkersColEmail') },
   ];
