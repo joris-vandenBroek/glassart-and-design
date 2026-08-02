@@ -92,6 +92,22 @@ describe('Modal', () => {
     expect(screen.getByTestId('modal-close')).toHaveAttribute('aria-label', 'Close it');
   });
 
+  it("uses closeButtonAriaLabel instead of closeLabel for the close button's aria-label when provided", () => {
+    renderWithIntl(
+      <Modal
+        isOpen
+        onClose={vi.fn()}
+        closeLabel="Toon 3 resultaten"
+        closeButtonAriaLabel="Paneel sluiten"
+        title="Testmodal"
+      >
+        <p>Inhoud</p>
+      </Modal>
+    );
+    expect(screen.getByTestId('modal-close')).toHaveAttribute('aria-label', 'Paneel sluiten');
+    expect(screen.getByTestId('modal-footer-close')).toHaveTextContent('Toon 3 resultaten');
+  });
+
   it('calls onClose when the footer close button is clicked', () => {
     const onClose = vi.fn();
     renderWithIntl(
