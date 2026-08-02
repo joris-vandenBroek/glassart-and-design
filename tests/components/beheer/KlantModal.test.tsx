@@ -435,9 +435,9 @@ describe('KlantModal', () => {
 
   it('shows a help popover with an explanation of the screen', () => {
     renderModal(KLANT);
-    expect(screen.queryByTestId('klanten-help-popover')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('klant-modal-help-popover')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId('klanten-help'));
-    expect(screen.getByTestId('klanten-help-popover')).toHaveTextContent('prijsgroep');
+    fireEvent.click(screen.getByTestId('klant-modal-help'));
+    expect(screen.getByTestId('klant-modal-help-popover')).toHaveTextContent('prijsgroep');
   });
 });

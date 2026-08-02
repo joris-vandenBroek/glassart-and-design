@@ -211,7 +211,7 @@ export function KlantModal({
       title={
         <span className="inline-flex items-center gap-2">
           {t('klantenModalTitel')}
-          <HelpHint text={t('klantenHelp')} testId="klanten-help" />
+          <HelpHint text={t('klantenHelp')} testId="klant-modal-help" />
         </span>
       }
       footerActions={
