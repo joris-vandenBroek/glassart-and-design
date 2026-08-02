@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
 import { Combobox } from '@/components/Combobox';
+import { HelpHint } from '@/components/HelpHint';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 import { useAdminAuth } from '@/lib/useAdminAuth';
@@ -361,7 +362,12 @@ export function KunstenaarsSection({
         isOpen={modalState !== null}
         onClose={closeModal}
         closeLabel={t('modalClose')}
-        title={modalState?.mode === 'edit' ? t('kunstenaarsModalTitelBewerken') : t('kunstenaarsModalTitelToevoegen')}
+        title={
+          <span className="inline-flex items-center gap-2">
+            {modalState?.mode === 'edit' ? t('kunstenaarsModalTitelBewerken') : t('kunstenaarsModalTitelToevoegen')}
+            <HelpHint text={t('kunstenaarsHelp')} testId="kunstenaar-modal-help" />
+          </span>
+        }
         footerActions={
           <>
             <button
@@ -494,7 +500,10 @@ export function KunstenaarsSection({
           </label>
 
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('kunstenaarsLabelPrijsopslag')}
+            <span className="inline-flex items-center gap-2">
+              {t('kunstenaarsLabelPrijsopslag')}
+              <HelpHint text={t('kunstenaarsHelpOpslag')} size="sm" testId="kunstenaar-modal-help-opslag" />
+            </span>
             <input
               type="number"
               value={prijsopslag}
@@ -505,8 +514,9 @@ export function KunstenaarsSection({
           </label>
 
           <fieldset className="flex flex-col gap-3">
-            <legend className="text-xs uppercase tracking-wide text-white/60">
+            <legend className="inline-flex items-center gap-2 text-xs uppercase tracking-wide text-white/60">
               {t('kunstenaarsLabelKlant')}
+              <HelpHint text={t('kunstenaarsHelpExclusiviteit')} size="sm" testId="kunstenaar-modal-help-exclusiviteit" />
             </legend>
             <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
               {t('kunstenaarsLabelKlant1')}
