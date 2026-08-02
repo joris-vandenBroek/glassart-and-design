@@ -383,6 +383,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
         ) : activeSection === 'onderwerpen' ? (
           <OnderwerpenSection
             onderwerpen={onderwerpen.items}
+            kunstwerken={kunstwerken.items}
             loadError={onderwerpen.error === 'load' ? t('onderwerpenLoadError') : null}
             onAdd={onderwerpen.add}
             onUpdate={onderwerpen.update}
