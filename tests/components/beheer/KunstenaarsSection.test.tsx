@@ -663,7 +663,7 @@ describe('KunstenaarsSection', () => {
     fireEvent.click(screen.getByTestId('kunstenaars-add'));
 
     fireEvent.click(screen.getByTestId('kunstenaar-modal-help-opslag'));
-    expect(screen.getByTestId('kunstenaar-modal-help-opslag-popover')).toHaveTextContent('matrixprijs');
+    expect(screen.getByTestId('kunstenaar-modal-help-opslag-popover')).toHaveTextContent('prijsmatrix');
   });
 
   it('shows a help popover next to the exclusiviteit fields', () => {

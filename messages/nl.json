@@ -598,7 +598,7 @@
     "kunstenaarsLabelOmschrijvingEn": "Omschrijving (EN)",
     "kunstenaarsLabelPrijsafspraken": "Prijsafspraken (intern)",
     "kunstenaarsLabelPrijsopslag": "Prijsopslag (€, wordt bij de matrixprijs opgeteld)",
-    "kunstenaarsHelpOpslag": "Dit bedrag komt boven op de matrixprijs, voor ieder kunstwerk van deze kunstenaar. Bijvoorbeeld: basisprijs €100 + opslag €15 = €115. Het is een vast bedrag, geen percentage.",
+    "kunstenaarsHelpOpslag": "Dit bedrag komt boven op de basisprijs uit de prijsmatrix, voor ieder kunstwerk van deze kunstenaar. Bijvoorbeeld: basisprijs €100 + opslag €15 = €115. Het is een vast bedrag, geen percentage.",
     "kunstenaarsExclusiviteitOpen": "Open voor alle klanten",
     "kunstenaarsExclusiviteitOngeldig": "Bij 2 klanten moet één daarvan het klantaccount van deze kunstenaar zelf zijn.",
     "kunstenaarsLabelKlant": "Exclusief verkooprecht voor klant",
