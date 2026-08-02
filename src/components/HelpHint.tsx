@@ -21,6 +21,7 @@ export function HelpHint({ text, size = 'md', testId }: HelpHintProps) {
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
+        event.stopPropagation();
         setIsOpen(false);
       }
     }
@@ -30,10 +31,11 @@ export function HelpHint({ text, size = 'md', testId }: HelpHintProps) {
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown);
+    const container = containerRef.current;
+    container?.addEventListener('keydown', handleKeyDown);
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
+      container?.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen]);
@@ -46,6 +48,8 @@ export function HelpHint({ text, size = 'md', testId }: HelpHintProps) {
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         aria-expanded={isOpen}
+        aria-label="Uitleg"
+        title="Uitleg"
         data-testid={buttonTestId}
         className={`inline-flex ${dimensionClass} shrink-0 items-center justify-center rounded-full border border-white/30 font-semibold text-white/60 hover:border-white/60 hover:text-white`}
       >
