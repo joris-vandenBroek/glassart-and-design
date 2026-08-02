@@ -75,4 +75,5 @@ export interface Drukker {
   plaats: string;
   email: string;
   prijsafspraken: string;
+  standaard?: boolean;
 }

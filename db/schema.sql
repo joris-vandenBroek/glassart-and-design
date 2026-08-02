@@ -131,7 +131,8 @@ CREATE TABLE drukkers (
   postcode VARCHAR(20),
   plaats VARCHAR(255),
   email VARCHAR(255),
-  prijsafspraken TEXT
+  prijsafspraken TEXT,
+  standaard BOOLEAN DEFAULT FALSE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE drukkerZendingen (

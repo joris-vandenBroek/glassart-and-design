@@ -22,5 +22,4 @@ export const LOOKUP_RESOURCES: Record<string, LookupResourceConfig> = {
     jsonColumns: ['segmentIds', 'materiaalIds', 'maatIds', 'stijlIds', 'onderwerpIds'],
     writeAuthRequired: 'medewerker',
   },
-  drukkers: { jsonColumns: [], readAuthRequired: 'medewerker', writeAuthRequired: 'medewerker' },
 };

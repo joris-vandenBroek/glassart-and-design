@@ -45,7 +45,7 @@ export function VersturenNaarDrukkerDialog({
 
   useEffect(() => {
     if (isOpen) {
-      setDrukkerId(drukkers[0]?.id ?? '');
+      setDrukkerId(drukkers.find((d) => d.standaard)?.id ?? drukkers[0]?.id ?? '');
       setError(null);
       setIsSending(false);
       setMailSent(false);
