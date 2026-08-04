@@ -25,6 +25,7 @@ function resolveOrderThumbnails(
   kunstwerken: Kunstwerk[] | null
 ): OrderThumbnail[] {
   if (!lines || lines.length === 0) return [];
+  if (kunstwerken === null) return [];
 
   const uniqueIds = Array.from(
     new Set(lines.map((line) => line.kunstwerkId).filter((id): id is string => id !== null))

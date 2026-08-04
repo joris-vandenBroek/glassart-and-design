@@ -208,6 +208,87 @@ describe('OrdersSection', () => {
     expect(stack).toHaveTextContent('+2');
   });
 
+  it('deduplicates lines with the same kunstwerkId and renders only 1 tile', async () => {
+    authUser = { id: 'uid-1', email: 'klant@example.com', status: 'Goedgekeurd' };
+    kunstwerkenResponse = [
+      {
+        id: 'kw-1',
+        foto: 'https://example.com/kw-1.jpg',
+        naam: 'Hotel paneel',
+        kunstenaarId: null,
+        segmentIds: [],
+        materiaalIds: [],
+        maatIds: [],
+        omschrijvingNl: 'Hotel paneel',
+        omschrijvingFr: '',
+        omschrijvingDe: '',
+        omschrijvingEn: '',
+      },
+    ];
+    ordersResponse = {
+      ok: true,
+      body: [
+        {
+          id: 'header-1',
+          bestelnr: 'GD-00005',
+          besteldatum: '2026-07-01T14:30:00',
+          status: 'Te beoordelen',
+          lines: [
+            { id: 'line-1', kunstwerkId: 'kw-1', maatId: null, materiaalId: null, prijs: null, quantity: 1 },
+            { id: 'line-2', kunstwerkId: 'kw-1', maatId: null, materiaalId: null, prijs: null, quantity: 2 },
+          ],
+        },
+      ],
+    };
+    renderSection();
+
+    await waitFor(() => expect(screen.getByTestId('account-order-GD-00005')).toBeInTheDocument());
+    const stack = screen.getByTestId('account-order-GD-00005-thumbnails');
+    expect(stack.children).toHaveLength(1);
+  });
+
+  it('renders 3 tiles for exactly 3 unique kunstwerken without an overflow badge', async () => {
+    authUser = { id: 'uid-1', email: 'klant@example.com', status: 'Goedgekeurd' };
+    kunstwerkenResponse = ['kw-1', 'kw-2', 'kw-3'].map((id) => ({
+      id,
+      foto: `https://example.com/${id}.jpg`,
+      naam: id,
+      kunstenaarId: null,
+      segmentIds: [],
+      materiaalIds: [],
+      maatIds: [],
+      omschrijvingNl: id,
+      omschrijvingFr: '',
+      omschrijvingDe: '',
+      omschrijvingEn: '',
+    }));
+    ordersResponse = {
+      ok: true,
+      body: [
+        {
+          id: 'header-1',
+          bestelnr: 'GD-00006',
+          besteldatum: '2026-07-01T14:30:00',
+          status: 'Te beoordelen',
+          lines: ['kw-1', 'kw-2', 'kw-3'].map((id, index) => ({
+            id: `line-${index}`,
+            kunstwerkId: id,
+            maatId: null,
+            materiaalId: null,
+            prijs: null,
+            quantity: 1,
+          })),
+        },
+      ],
+    };
+    renderSection();
+
+    await waitFor(() => expect(screen.getByTestId('account-order-GD-00006')).toBeInTheDocument());
+    const stack = screen.getByTestId('account-order-GD-00006-thumbnails');
+    expect(stack.children).toHaveLength(3);
+    expect(stack).not.toHaveTextContent('+');
+  });
+
   it('gives the id/description/status/date row both a mobile (2-row grid) and a desktop (1-row grid) layout', async () => {
     signedInWithOneOrder();
     renderSection();
