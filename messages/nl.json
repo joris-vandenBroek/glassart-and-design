@@ -266,6 +266,7 @@
       "labelAddress": "Adres",
       "labelPostcode": "Postcode",
       "labelCity": "Plaats",
+      "labelLand": "Land",
       "labelContactPreference": "Hoe wilt u gecontacteerd worden?",
       "contactPreferenceEmail": "E-mail",
       "contactPreferencePhone": "Telefonisch",
