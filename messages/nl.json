@@ -249,6 +249,10 @@
       "modalClose": "Sluiten",
       "modalLineUnknown": "Onbekend artikel",
       "modalLinePriceOnRequest": "Prijs op aanvraag",
+      "modalLabelMateriaal": "Materiaal",
+      "modalLabelMaat": "Maat",
+      "modalTotalLabel": "Totaal",
+      "modalTotalIncomplete": "Wordt nog vastgesteld",
       "modalTitel": "Bestelling {id}",
       "loadError": "Bestellingen konden niet worden geladen. Probeer het later opnieuw."
     },

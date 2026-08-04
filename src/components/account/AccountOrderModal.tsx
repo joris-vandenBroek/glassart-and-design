@@ -40,59 +40,104 @@ export function AccountOrderModal({
   const locale = useLocale();
   const klantStatus = order ? toKlantBestellingStatus(order.status) : null;
 
+  const heeftRegels = !!order?.lines && order.lines.length > 0;
+  const heeftOngeprijsdeRegel = heeftRegels && order!.lines!.some((line) => line.prijs === null);
+  const totaalWeergave = !heeftRegels
+    ? null
+    : heeftOngeprijsdeRegel
+      ? t('modalTotalIncomplete')
+      : formatCurrency(order!.lines!.reduce((sum, line) => sum + (line.prijs ?? 0) * line.quantity, 0));
+
   return (
     <Modal
       isOpen={order !== null}
       onClose={onClose}
       closeLabel={t('modalClose')}
       title={order ? t('modalTitel', { id: order.id }) : ''}
+      subtitle={
+        order ? (
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col items-start gap-1">
+              <span>
+                {order.date} {order.time}
+              </span>
+              <span
+                data-testid="account-order-modal-status"
+                className={`w-fit rounded-full px-3 py-1 text-xs uppercase tracking-wide ${KLANT_STATUS_BADGE_CLASS[klantStatus!]}`}
+              >
+                {t(KLANT_STATUS_TRANSLATION_KEY[klantStatus!])}
+              </span>
+            </div>
+            {totaalWeergave !== null && (
+              <div className="shrink-0 text-right">
+                <p className="text-[0.65rem] uppercase tracking-wide text-white/40">{t('modalTotalLabel')}</p>
+                <p data-testid="account-order-modal-total" className="text-sm font-semibold text-white">
+                  {totaalWeergave}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : undefined
+      }
     >
       {order && (
         <div data-testid="account-order-modal" className="flex flex-col gap-3 text-sm text-white/80">
-          <p className="text-white/60">
-            {order.date} {order.time}
-          </p>
-          <span
-            data-testid="account-order-modal-status"
-            className={`w-fit rounded-full px-3 py-1 text-xs uppercase tracking-wide ${KLANT_STATUS_BADGE_CLASS[klantStatus!]}`}
-          >
-            {t(KLANT_STATUS_TRANSLATION_KEY[klantStatus!])}
-          </span>
-
-          {order.lines && order.lines.length > 0 ? (
+          {heeftRegels ? (
             <ul className="flex max-h-72 flex-col gap-2 overflow-y-auto text-xs">
-              {order.lines.map((line) => {
+              {order.lines!.map((line) => {
                 const kunstwerk = (kunstwerken ?? []).find((k) => k.id === line.kunstwerkId);
                 const materiaal = (materialen ?? []).find((m) => m.id === line.materiaalId);
                 const maat = (maten ?? []).find((m) => m.id === line.maatId);
+                const maatWeergave = maat
+                  ? maatLabel(maat)
+                  : line.breedte != null && line.hoogte != null
+                    ? `${line.breedte}×${line.hoogte} cm`
+                    : line.maatId;
+
                 return (
                   <li
                     key={line.id}
                     data-testid={`account-order-modal-line-${line.id}`}
-                    className="flex items-center justify-between gap-2"
+                    className="flex gap-3 rounded-md border border-white/10 bg-white/[0.02] p-3"
                   >
                     {kunstwerk ? (
-                      <div className="flex items-center gap-2">
-                        <ProductImage src={kunstwerk.foto} alt="" className="h-10 w-10 rounded" />
-                        <div>
-                          <p>{resolveKunstwerkOmschrijving(kunstwerk, locale)}</p>
-                          <p className="text-white/50">
-                            {materiaal ? materiaalLabel(materiaal) : line.materiaalId}
-                            {' · '}
-                            {maat
-                              ? maatLabel(maat)
-                              : line.breedte != null && line.hoogte != null
-                                ? `${line.breedte}×${line.hoogte} cm`
-                                : line.maatId}
-                            {' · '}
-                            {line.prijs !== null ? formatCurrency(line.prijs) : t('modalLinePriceOnRequest')}
-                          </p>
-                        </div>
-                      </div>
+                      <ProductImage src={kunstwerk.foto} alt="" className="h-[72px] w-[72px] shrink-0 rounded-md" />
                     ) : (
-                      <span>{t('modalLineUnknown')}</span>
+                      <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-md bg-white/5 text-lg text-white/25">
+                        ?
+                      </div>
                     )}
-                    <span>×{line.quantity}</span>
+                    <div className="min-w-0 flex-1">
+                      {kunstwerk ? (
+                        <>
+                          <p className="font-semibold text-white/90">
+                            {resolveKunstwerkOmschrijving(kunstwerk, locale)}
+                          </p>
+                          <div className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-[0.68rem] text-white/60">
+                            <span className="text-white/35">{t('modalLabelMateriaal')}</span>
+                            <span>{materiaal ? materiaalLabel(materiaal) : line.materiaalId}</span>
+                            <span className="text-white/35">{t('modalLabelMaat')}</span>
+                            <span>{maatWeergave}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="font-semibold text-white/90">{t('modalLineUnknown')}</p>
+                      )}
+                      <div className="mt-2 flex items-baseline justify-between border-t border-white/10 pt-1.5">
+                        {line.prijs !== null ? (
+                          <>
+                            <span className="text-white/45">
+                              {line.quantity} × {formatCurrency(line.prijs)}
+                            </span>
+                            <span className="font-semibold text-white/90">
+                              {formatCurrency(line.prijs * line.quantity)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-white/45">{t('modalLinePriceOnRequest')}</span>
+                        )}
+                      </div>
+                    </div>
                   </li>
                 );
               })}
