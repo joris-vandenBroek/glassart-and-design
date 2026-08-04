@@ -9,6 +9,20 @@ body {
   font-family: var(--font-body);
 }
 
+/* Browser autofill (esp. Chrome) replaces the input background with a light
+   color the app never controls, which also hides the white eye-icon toggle
+   on password fields since it sits visually on top of that background. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:autofill {
+  -webkit-text-fill-color: #f5f6f8;
+  -webkit-box-shadow: 0 0 0px 1000px #1c1c1e inset;
+  box-shadow: 0 0 0px 1000px #1c1c1e inset;
+  caret-color: #f5f6f8;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
 @layer components {
   .btn-gold {
     @apply bg-gold text-ink transition hover:-translate-y-0.5 hover:bg-gold-bright hover:shadow-[0_8px_32px_rgba(212,175,55,0.35)];
