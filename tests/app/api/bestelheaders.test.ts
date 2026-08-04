@@ -15,6 +15,7 @@ const createdKunstenaarIds: string[] = [];
 const createdMaatIds: string[] = [];
 const createdMateriaalIds: string[] = [];
 const createdMateriaalsoortIds: string[] = [];
+const createdPrijsgroepIds: string[] = [];
 
 afterEach(async () => {
   const pool = getPool();
@@ -49,6 +50,10 @@ afterEach(async () => {
     await pool.query('DELETE FROM materiaalsoorten WHERE id IN (?)', [createdMateriaalsoortIds]);
     createdMateriaalsoortIds.length = 0;
   }
+  if (createdPrijsgroepIds.length > 0) {
+    await pool.query('DELETE FROM prijsgroepen WHERE id IN (?)', [createdPrijsgroepIds]);
+    createdPrijsgroepIds.length = 0;
+  }
 });
 
 async function nextExpectedBestelnr(): Promise<string> {
@@ -62,6 +67,28 @@ async function klant(email: string): Promise<{ id: string; cookie: string }> {
     email,
     wachtwoordHash: await hashPassword('x'),
     status: 'Goedgekeurd',
+  } as never);
+  createdKlantEmails.push(email);
+  const sessionId = await createSession('klant', created.id);
+  return { id: created.id, cookie: `${SESSION_COOKIE_NAME}=${sessionId}` };
+}
+
+async function maakPrijsgroep(aanpassing: { kortingspercentage?: number; opslagpercentage?: number }): Promise<string> {
+  const prijsgroep = await insertRow<{ id: string }>('prijsgroepen', {
+    naam: 'Test prijsgroep',
+    kortingspercentage: aanpassing.kortingspercentage ?? null,
+    opslagpercentage: aanpassing.opslagpercentage ?? null,
+  } as never);
+  createdPrijsgroepIds.push(prijsgroep.id);
+  return prijsgroep.id;
+}
+
+async function klantMetPrijsgroep(email: string, prijsgroepId: string): Promise<{ id: string; cookie: string }> {
+  const created = await insertRow<{ id: string }>('klanten', {
+    email,
+    wachtwoordHash: await hashPassword('x'),
+    status: 'Goedgekeurd',
+    prijsgroepId,
   } as never);
   createdKlantEmails.push(email);
   const sessionId = await createSession('klant', created.id);
@@ -159,6 +186,42 @@ describe('bestelheaders routes', () => {
     const body = await response.json();
     const [lineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE bestelheaderId = ?', [body.id]);
     expect(Number((lineRows as Array<{ prijs: string }>)[0].prijs)).toBe(140);
+  });
+
+  it('applies the ordering klant\'s prijsgroep korting on top of the matrixprijs', async () => {
+    const prijsgroepId = await maakPrijsgroep({ kortingspercentage: 20 });
+    const { cookie } = await klantMetPrijsgroep('prijsgroep-korting@example.com', prijsgroepId);
+    const maatId = await maakMaat(55, 75);
+    const materiaalId = await maakMateriaal();
+    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100);
+
+    const response = await createHeader(
+      postRequest({ lines: [{ kunstwerkId, maatId, materiaalId, prijs: 1, quantity: 1 }] }, cookie)
+    );
+    const body = await response.json();
+    const [lineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE bestelheaderId = ?', [body.id]);
+    expect(Number((lineRows as Array<{ prijs: string }>)[0].prijs)).toBe(80);
+  });
+
+  it('applies the ordering klant\'s prijsgroep opslag on top of a kunstenaar prijsopslag', async () => {
+    const prijsgroepId = await maakPrijsgroep({ opslagpercentage: 10 });
+    const { cookie } = await klantMetPrijsgroep('prijsgroep-opslag@example.com', prijsgroepId);
+    const maatId = await maakMaat(56, 76);
+    const materiaalId = await maakMateriaal();
+    const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+      naam: 'Opslag Artiest 2',
+    } as never);
+    createdKunstenaarIds.push(kunstenaar.id);
+    await getPool().query('INSERT INTO kunstenaarAfspraken (id, prijsopslag) VALUES (?, ?)', [kunstenaar.id, 40]);
+    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100, kunstenaar.id);
+
+    const response = await createHeader(
+      postRequest({ lines: [{ kunstwerkId, maatId, materiaalId, prijs: 1, quantity: 1 }] }, cookie)
+    );
+    const body = await response.json();
+    const [lineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE bestelheaderId = ?', [body.id]);
+    // matrix 100 + kunstenaar opslag 40 = 140, plus 10% prijsgroep opslag = 154
+    expect(Number((lineRows as Array<{ prijs: string }>)[0].prijs)).toBe(154);
   });
 
   it('rejects a line for a fixed maat/materiaal with no matrixprijs set', async () => {

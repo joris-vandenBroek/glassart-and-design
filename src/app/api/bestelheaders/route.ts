@@ -148,7 +148,8 @@ export async function POST(request: Request) {
           maatIds,
           prijsPerM2: kunstwerkRow.prijsPerM2 != null ? Number(kunstwerkRow.prijsPerM2) : null,
         },
-        line
+        line,
+        klantId
       );
       if (resultaat.status === 'onbekend') {
         await connection.rollback();

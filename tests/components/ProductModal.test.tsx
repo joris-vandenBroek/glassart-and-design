@@ -762,6 +762,25 @@ describe('ProductModal', () => {
     expect(screen.getByTestId('product-modal-prijs')).toHaveTextContent('€ 360,00');
   });
 
+  it('applies the ingelogde klant\'s prijsgroep korting to the live prijsPerM2 preview', async () => {
+    vi.useRealTimers();
+    authUser = {
+      id: 'uid-1',
+      email: 'klant@example.com',
+      status: 'Goedgekeurd',
+      companyName: 'Testbedrijf BV',
+      prijsgroep: { kortingspercentage: 10, opslagpercentage: null },
+    };
+    renderModal(() => {}, MATERIAALLOOS_KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, ONDERWERPEN, 'dialog', []);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    fireEvent.change(screen.getByTestId('product-modal-maat-custom-breedte'), { target: { value: '100' } });
+    fireEvent.change(screen.getByTestId('product-modal-maat-custom-hoogte'), { target: { value: '200' } });
+    // basisprijs 100cm x 200cm x 180/m2 = 360, min 10% prijsgroep korting = 324
+    expect(screen.getByTestId('product-modal-prijs')).toHaveTextContent('€ 324,00');
+  });
+
   it('adds a materiaalloos item to the cart with the computed price and no material/maat, logging mandje_toegevoegd', async () => {
     vi.useRealTimers();
     function Probe() {

@@ -1,6 +1,7 @@
 import { describe, expect, it, afterEach } from 'vitest';
 import { getPool } from '@/lib/server/db';
 import { insertRow } from '@/lib/server/crud';
+import { hashPassword } from '@/lib/server/password';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { GET as getKunstwerkPrijzen } from '@/app/api/kunstwerken/prijzen/route';
 
@@ -8,6 +9,8 @@ const createdMaatIds: string[] = [];
 const createdMateriaalsoortIds: string[] = [];
 const createdMateriaalIds: string[] = [];
 const createdKunstwerkIds: string[] = [];
+const createdPrijsgroepIds: string[] = [];
+const createdKlantEmails: string[] = [];
 
 afterEach(async () => {
   const pool = getPool();
@@ -26,6 +29,14 @@ afterEach(async () => {
   if (createdMateriaalsoortIds.length > 0) {
     await pool.query('DELETE FROM materiaalsoorten WHERE id IN (?)', [createdMateriaalsoortIds]);
     createdMateriaalsoortIds.length = 0;
+  }
+  if (createdKlantEmails.length > 0) {
+    await pool.query('DELETE FROM klanten WHERE email IN (?)', [createdKlantEmails]);
+    createdKlantEmails.length = 0;
+  }
+  if (createdPrijsgroepIds.length > 0) {
+    await pool.query('DELETE FROM prijsgroepen WHERE id IN (?)', [createdPrijsgroepIds]);
+    createdPrijsgroepIds.length = 0;
   }
 });
 
@@ -52,6 +63,27 @@ async function medewerkerCookie(): Promise<string> {
   return `${SESSION_COOKIE_NAME}=${sessionId}`;
 }
 
+async function klantCookieMetPrijsgroep(
+  email: string,
+  aanpassing: { kortingspercentage?: number; opslagpercentage?: number }
+): Promise<string> {
+  const prijsgroep = await insertRow<{ id: string }>('prijsgroepen', {
+    naam: 'Test prijsgroep',
+    kortingspercentage: aanpassing.kortingspercentage ?? null,
+    opslagpercentage: aanpassing.opslagpercentage ?? null,
+  } as never);
+  createdPrijsgroepIds.push(prijsgroep.id);
+  const klant = await insertRow<{ id: string }>('klanten', {
+    email,
+    wachtwoordHash: await hashPassword('x'),
+    status: 'Goedgekeurd',
+    prijsgroepId: prijsgroep.id,
+  } as never);
+  createdKlantEmails.push(email);
+  const sessionId = await createSession('klant', klant.id);
+  return `${SESSION_COOKIE_NAME}=${sessionId}`;
+}
+
 describe('GET /api/kunstwerken/prijzen', () => {
   it('bulk mode: returns computed prijzen keyed by kunstwerkId, without needing auth', async () => {
     const maatId = await maakMaat(41, 61);
@@ -72,6 +104,30 @@ describe('GET /api/kunstwerken/prijzen', () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body[kunstwerk.id]).toEqual([{ maatId, materiaalId, prijs: 150 }]);
+  });
+
+  it('bulk mode: applies an ingelogde klant\'s prijsgroep korting to the shown prijs', async () => {
+    const maatId = await maakMaat(45, 65);
+    const materiaalId = await maakMateriaal();
+    await getPool().query('INSERT INTO prijsmatrix (id, maatId, materiaalId, prijs) VALUES (UUID(), ?, ?, ?)', [
+      maatId,
+      materiaalId,
+      100,
+    ]);
+    const kunstwerk = await insertRow<{ id: string }>(
+      'kunstwerken',
+      { naam: 'Bulk korting werk', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
+      ['materiaalIds', 'maatIds']
+    );
+    createdKunstwerkIds.push(kunstwerk.id);
+    const cookie = await klantCookieMetPrijsgroep('bulk-prijzen-korting@example.com', { kortingspercentage: 15 });
+
+    const response = await getKunstwerkPrijzen(
+      new Request('http://localhost/api/kunstwerken/prijzen', { headers: { cookie } })
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body[kunstwerk.id]).toEqual([{ maatId, materiaalId, prijs: 85 }]);
   });
 
   it('ad-hoc mode: returns prijzen for the given materiaalIds x maatIds without a saved kunstwerk', async () => {

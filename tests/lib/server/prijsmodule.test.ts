@@ -1,9 +1,12 @@
 import { describe, expect, it, afterEach } from 'vitest';
 import { getPool } from '@/lib/server/db';
 import { insertRow } from '@/lib/server/crud';
+import { hashPassword } from '@/lib/server/password';
 import {
   combineerPrijs,
   prijsopslagVoorKunstenaar,
+  pasPrijsgroepToe,
+  prijsgroepVoorKlant,
   berekenPrijzenVoorCombinaties,
   berekenPrijzenVoorAlleKunstwerken,
   berekenBestellijnPrijs,
@@ -14,6 +17,8 @@ const createdMateriaalsoortIds: string[] = [];
 const createdMateriaalIds: string[] = [];
 const createdKunstenaarIds: string[] = [];
 const createdKunstwerkIds: string[] = [];
+const createdPrijsgroepIds: string[] = [];
+const createdKlantEmails: string[] = [];
 
 afterEach(async () => {
   const pool = getPool();
@@ -37,7 +42,36 @@ afterEach(async () => {
     await pool.query('DELETE FROM materiaalsoorten WHERE id IN (?)', [createdMateriaalsoortIds]);
     createdMateriaalsoortIds.length = 0;
   }
+  if (createdKlantEmails.length > 0) {
+    await pool.query('DELETE FROM klanten WHERE email IN (?)', [createdKlantEmails]);
+    createdKlantEmails.length = 0;
+  }
+  if (createdPrijsgroepIds.length > 0) {
+    await pool.query('DELETE FROM prijsgroepen WHERE id IN (?)', [createdPrijsgroepIds]);
+    createdPrijsgroepIds.length = 0;
+  }
 });
+
+async function maakPrijsgroep(aanpassing: { kortingspercentage?: number; opslagpercentage?: number }): Promise<string> {
+  const prijsgroep = await insertRow<{ id: string }>('prijsgroepen', {
+    naam: 'Test prijsgroep',
+    kortingspercentage: aanpassing.kortingspercentage ?? null,
+    opslagpercentage: aanpassing.opslagpercentage ?? null,
+  } as never);
+  createdPrijsgroepIds.push(prijsgroep.id);
+  return prijsgroep.id;
+}
+
+async function maakKlantMetPrijsgroep(email: string, prijsgroepId: string | null): Promise<string> {
+  const klant = await insertRow<{ id: string }>('klanten', {
+    email,
+    wachtwoordHash: await hashPassword('x'),
+    status: 'Goedgekeurd',
+    prijsgroepId,
+  } as never);
+  createdKlantEmails.push(email);
+  return klant.id;
+}
 
 async function maakMaat(breedte: number, hoogte: number) {
   const maat = await insertRow<{ id: string }>('maten', { breedte, hoogte } as never);
@@ -72,6 +106,44 @@ async function maakKunstenaarMetOpslag(prijsopslag: number) {
 describe('combineerPrijs', () => {
   it('adds the opslag to the basisprijs and rounds to 2 decimals', () => {
     expect(combineerPrijs(100, 12.345)).toBe(112.35);
+  });
+});
+
+describe('pasPrijsgroepToe', () => {
+  it('returns the prijs unchanged when there is no prijsgroep', () => {
+    expect(pasPrijsgroepToe(100, null)).toBe(100);
+  });
+
+  it('subtracts the kortingspercentage from the prijs', () => {
+    expect(pasPrijsgroepToe(100, { kortingspercentage: 15, opslagpercentage: null })).toBe(85);
+  });
+
+  it('adds the opslagpercentage to the prijs', () => {
+    expect(pasPrijsgroepToe(100, { kortingspercentage: null, opslagpercentage: 20 })).toBe(120);
+  });
+
+  it('rounds the result to 2 decimals', () => {
+    expect(pasPrijsgroepToe(99.99, { kortingspercentage: 10, opslagpercentage: null })).toBe(89.99);
+  });
+});
+
+describe('prijsgroepVoorKlant', () => {
+  it('returns null for a null klantId', async () => {
+    expect(await prijsgroepVoorKlant(getPool(), null)).toBeNull();
+  });
+
+  it('returns null for a klant without a prijsgroepId', async () => {
+    const klantId = await maakKlantMetPrijsgroep('geen-prijsgroep@example.com', null);
+    expect(await prijsgroepVoorKlant(getPool(), klantId)).toBeNull();
+  });
+
+  it('returns the kortingspercentage/opslagpercentage for a klant with a prijsgroep', async () => {
+    const prijsgroepId = await maakPrijsgroep({ kortingspercentage: 12 });
+    const klantId = await maakKlantMetPrijsgroep('met-prijsgroep@example.com', prijsgroepId);
+    expect(await prijsgroepVoorKlant(getPool(), klantId)).toEqual({
+      kortingspercentage: 12,
+      opslagpercentage: null,
+    });
   });
 });
 
@@ -146,6 +218,28 @@ describe('berekenPrijzenVoorAlleKunstwerken', () => {
     const result = await berekenPrijzenVoorAlleKunstwerken(getPool());
     expect(result[kunstwerk.id]).toEqual([]);
   });
+
+  it('applies the ingelogde klant\'s prijsgroep korting on top of the kunstenaar opslag', async () => {
+    const maatId = await maakMaat(61, 81);
+    const materiaalId = await maakMateriaal(5);
+    await getPool().query(
+      'INSERT INTO prijsmatrix (id, maatId, materiaalId, prijs) VALUES (UUID(), ?, ?, ?)',
+      [maatId, materiaalId, 200]
+    );
+    const kunstenaarId = await maakKunstenaarMetOpslag(30);
+    const kunstwerk = await insertRow<{ id: string }>(
+      'kunstwerken',
+      { naam: 'Test werk met korting', kunstenaarId, materiaalIds: [materiaalId], maatIds: [maatId] } as never,
+      ['materiaalIds', 'maatIds']
+    );
+    createdKunstwerkIds.push(kunstwerk.id);
+    const prijsgroepId = await maakPrijsgroep({ kortingspercentage: 10 });
+    const klantId = await maakKlantMetPrijsgroep('bulk-korting@example.com', prijsgroepId);
+
+    const result = await berekenPrijzenVoorAlleKunstwerken(getPool(), klantId);
+    // basisprijs 200 + kunstenaar opslag 30 = 230, min 10% korting = 207
+    expect(result[kunstwerk.id]).toEqual([{ maatId, materiaalId, prijs: 207 }]);
+  });
 });
 
 describe('berekenBestellijnPrijs', () => {
@@ -203,5 +297,39 @@ describe('berekenBestellijnPrijs', () => {
       { maatId: '', materiaalId }
     );
     expect(result).toEqual({ status: 'onbekend' });
+  });
+
+  it('subtracts the klant\'s prijsgroep korting from a matrix-based prijs', async () => {
+    const maatId = await maakMaat(81, 81);
+    const materiaalId = await maakMateriaal(4);
+    await getPool().query(
+      'INSERT INTO prijsmatrix (id, maatId, materiaalId, prijs) VALUES (UUID(), ?, ?, ?)',
+      [maatId, materiaalId, 200]
+    );
+    const prijsgroepId = await maakPrijsgroep({ kortingspercentage: 25 });
+    const klantId = await maakKlantMetPrijsgroep('lijn-korting@example.com', prijsgroepId);
+
+    const result = await berekenBestellijnPrijs(
+      getPool(),
+      { kunstenaarId: null, maatIds: [maatId], prijsPerM2: null },
+      { maatId, materiaalId },
+      klantId
+    );
+    expect(result).toEqual({ status: 'vast', prijs: 150 });
+  });
+
+  it('adds the klant\'s prijsgroep opslag to a prijsPerM2-based prijs', async () => {
+    const materiaalId = await maakMateriaal(3);
+    const prijsgroepId = await maakPrijsgroep({ opslagpercentage: 10 });
+    const klantId = await maakKlantMetPrijsgroep('lijn-opslag@example.com', prijsgroepId);
+
+    const result = await berekenBestellijnPrijs(
+      getPool(),
+      { kunstenaarId: null, maatIds: [], prijsPerM2: 100 },
+      { maatId: '', materiaalId, breedte: 120, hoogte: 60 },
+      klantId
+    );
+    // 120cm x 60cm x 100/m2 = 72, plus 10% opslag = 79.20
+    expect(result).toEqual({ status: 'vast', prijs: 79.2 });
   });
 });

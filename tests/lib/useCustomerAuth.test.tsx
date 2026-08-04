@@ -32,6 +32,7 @@ describe('useCustomerAuth', () => {
       companyName: 'Acme',
       contactPerson: 'Jan',
       minimaleAfname: 5,
+      prijsgroep: null,
     });
     expect(result.current.isCustomer).toBe(true);
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/me?type=klant');

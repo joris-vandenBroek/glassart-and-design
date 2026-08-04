@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import type { PrijsgroepAanpassing } from '@/lib/prijsgroep';
 
 interface CustomerUser {
   uid: string;
@@ -8,6 +9,7 @@ interface CustomerUser {
   companyName: string | null;
   contactPerson: string | null;
   minimaleAfname: number | null;
+  prijsgroep: PrijsgroepAanpassing | null;
 }
 
 interface CustomerAuthValue {
@@ -31,6 +33,7 @@ async function loadMe(): Promise<{ user: CustomerUser | null; isCustomer: boolea
         contactPerson?: string;
         status?: string;
         minimaleAfname?: number | null;
+        prijsgroep?: PrijsgroepAanpassing | null;
       }
     | null;
   if (!klant) {
@@ -43,6 +46,7 @@ async function loadMe(): Promise<{ user: CustomerUser | null; isCustomer: boolea
       companyName: klant.companyName ?? null,
       contactPerson: klant.contactPerson ?? null,
       minimaleAfname: klant.minimaleAfname ?? null,
+      prijsgroep: klant.prijsgroep ?? null,
     },
     isCustomer: klant.status === 'Goedgekeurd',
   };

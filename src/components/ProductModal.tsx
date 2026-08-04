@@ -11,6 +11,7 @@ import { resolveOrderRight } from '@/lib/resolveOrderRight';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { findVeiligheidsglasMateriaalId, MATERIAALLOOS_LABEL } from '@/lib/kunstwerkMateriaal';
 import { useApiRecord } from '@/lib/useApiRecord';
+import { pasPrijsgroepToe } from '@/lib/prijsgroep';
 import { ProductImage } from './ProductImage';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort, Segment, Stijl, Onderwerp } from './beheer/materiaalTypes';
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
@@ -185,7 +186,10 @@ export function ProductModal({
   const customSizeValid = customSizeFilledIn && !customSizeExceedsMax;
   const prijsPerM2Prijs =
     isMaatloos && customSizeValid && kunstwerk.prijsPerM2
-      ? Math.round((customBreedteNum / 100) * (customHoogteNum / 100) * kunstwerk.prijsPerM2 * 100) / 100
+      ? pasPrijsgroepToe(
+          Math.round((customBreedteNum / 100) * (customHoogteNum / 100) * kunstwerk.prijsPerM2 * 100) / 100,
+          user?.prijsgroep ?? null
+        )
       : null;
   const prijsWeergave: string | null = isMaatloos
     ? prijsPerM2Prijs !== null

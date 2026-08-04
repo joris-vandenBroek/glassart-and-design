@@ -1,4 +1,8 @@
 import type { Pool, PoolConnection } from 'mysql2/promise';
+import { pasPrijsgroepToe, type PrijsgroepAanpassing } from '@/lib/prijsgroep';
+
+export { pasPrijsgroepToe };
+export type { PrijsgroepAanpassing };
 
 export type Queryable = Pool | PoolConnection;
 
@@ -24,6 +28,22 @@ export async function prijsopslagVoorKunstenaar(db: Queryable, kunstenaarId: str
   return row?.prijsopslag != null ? Number(row.prijsopslag) : 0;
 }
 
+export async function prijsgroepVoorKlant(db: Queryable, klantId: string | null): Promise<PrijsgroepAanpassing | null> {
+  if (!klantId) return null;
+  const [rows] = await db.query(
+    `SELECT p.kortingspercentage, p.opslagpercentage
+     FROM klanten k JOIN prijsgroepen p ON p.id = k.prijsgroepId
+     WHERE k.id = ?`,
+    [klantId]
+  );
+  const row = (rows as Array<{ kortingspercentage: string | null; opslagpercentage: string | null }>)[0];
+  if (!row) return null;
+  return {
+    kortingspercentage: row.kortingspercentage != null ? Number(row.kortingspercentage) : null,
+    opslagpercentage: row.opslagpercentage != null ? Number(row.opslagpercentage) : null,
+  };
+}
+
 export async function berekenPrijzenVoorCombinaties(
   db: Queryable,
   kunstenaarId: string | null,
@@ -45,7 +65,10 @@ export async function berekenPrijzenVoorCombinaties(
   }));
 }
 
-export async function berekenPrijzenVoorAlleKunstwerken(db: Queryable): Promise<Record<string, PrijsCombinatie[]>> {
+export async function berekenPrijzenVoorAlleKunstwerken(
+  db: Queryable,
+  klantId: string | null = null
+): Promise<Record<string, PrijsCombinatie[]>> {
   const [kunstwerkRows] = await db.query('SELECT id, kunstenaarId, materiaalIds, maatIds FROM kunstwerken');
   const [matrixRows] = await db.query('SELECT maatId, materiaalId, prijs FROM prijsmatrix WHERE prijs IS NOT NULL');
   const matrixByKey = new Map<string, number>();
@@ -57,6 +80,7 @@ export async function berekenPrijzenVoorAlleKunstwerken(db: Queryable): Promise<
   for (const row of afsprakenRows as Array<{ id: string; prijsopslag: string | null }>) {
     opslagByKunstenaarId.set(row.id, row.prijsopslag != null ? Number(row.prijsopslag) : 0);
   }
+  const prijsgroep = await prijsgroepVoorKlant(db, klantId);
 
   const result: Record<string, PrijsCombinatie[]> = {};
   for (const row of kunstwerkRows as Array<{
@@ -81,7 +105,8 @@ export async function berekenPrijzenVoorAlleKunstwerken(db: Queryable): Promise<
       for (const maatId of maatIds) {
         const basisPrijs = matrixByKey.get(`${maatId}:${materiaalId}`);
         if (basisPrijs === undefined) continue;
-        combinaties.push({ maatId, materiaalId, prijs: combineerPrijs(basisPrijs, opslag) });
+        const prijs = pasPrijsgroepToe(combineerPrijs(basisPrijs, opslag), prijsgroep);
+        combinaties.push({ maatId, materiaalId, prijs });
       }
     }
     result[row.id] = combinaties;
@@ -92,15 +117,18 @@ export async function berekenPrijzenVoorAlleKunstwerken(db: Queryable): Promise<
 export async function berekenBestellijnPrijs(
   db: Queryable,
   kunstwerk: { kunstenaarId: string | null; maatIds: string[]; prijsPerM2: number | null },
-  line: { maatId: string; materiaalId: string; breedte?: number; hoogte?: number }
+  line: { maatId: string; materiaalId: string; breedte?: number; hoogte?: number },
+  klantId: string | null = null
 ): Promise<LijnPrijsResultaat> {
   if (kunstwerk.maatIds.length === 0) {
     if (kunstwerk.prijsPerM2 == null || !line.breedte || !line.hoogte) {
       return { status: 'onbekend' };
     }
+    const basisPrijs = Math.round((line.breedte / 100) * (line.hoogte / 100) * kunstwerk.prijsPerM2 * 100) / 100;
+    const prijsgroep = await prijsgroepVoorKlant(db, klantId);
     return {
       status: 'vast',
-      prijs: Math.round((line.breedte / 100) * (line.hoogte / 100) * kunstwerk.prijsPerM2 * 100) / 100,
+      prijs: pasPrijsgroepToe(basisPrijs, prijsgroep),
     };
   }
 
@@ -117,5 +145,6 @@ export async function berekenBestellijnPrijs(
     return { status: 'onbekend' };
   }
   const opslag = await prijsopslagVoorKunstenaar(db, kunstwerk.kunstenaarId);
-  return { status: 'vast', prijs: combineerPrijs(Number(matrixPrijs), opslag) };
+  const prijsgroep = await prijsgroepVoorKlant(db, klantId);
+  return { status: 'vast', prijs: pasPrijsgroepToe(combineerPrijs(Number(matrixPrijs), opslag), prijsgroep) };
 }

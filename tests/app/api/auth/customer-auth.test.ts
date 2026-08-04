@@ -1,10 +1,13 @@
 import { describe, expect, it, afterEach } from 'vitest';
 import { getPool } from '@/lib/server/db';
 import { randomUUID } from 'crypto';
+import { insertRow } from '@/lib/server/crud';
 import { POST as register } from '@/app/api/auth/register/route';
 import { POST as login } from '@/app/api/auth/login/route';
 import { POST as logout } from '@/app/api/auth/logout/route';
 import { GET as me } from '@/app/api/auth/me/route';
+
+const createdPrijsgroepIds: string[] = [];
 
 function jsonRequest(body: unknown, cookie?: string) {
   return new Request('http://localhost/api', {
@@ -22,6 +25,10 @@ afterEach(async () => {
     "DELETE FROM sessions WHERE userType = 'klant' AND userId IN (SELECT id FROM klanten WHERE email LIKE '%@example.com')"
   );
   await getPool().query("DELETE FROM klanten WHERE email LIKE '%@example.com'");
+  if (createdPrijsgroepIds.length > 0) {
+    await getPool().query('DELETE FROM prijsgroepen WHERE id IN (?)', [createdPrijsgroepIds]);
+    createdPrijsgroepIds.length = 0;
+  }
 });
 
 describe('customer auth routes', () => {
@@ -112,5 +119,45 @@ describe('customer auth routes', () => {
     );
     const afterLogoutBody = await afterLogout.json();
     expect(afterLogoutBody.user).toBeNull();
+  });
+
+  it('includes the klant\'s prijsgroep korting/opslag in /me, and null without a prijsgroep', async () => {
+    const prijsgroep = await insertRow<{ id: string }>('prijsgroepen', {
+      naam: 'Me-route prijsgroep',
+      kortingspercentage: 18,
+      opslagpercentage: null,
+    } as never);
+    createdPrijsgroepIds.push(prijsgroep.id);
+
+    await register(
+      jsonRequest({ email: 'prijsgroep-me@example.com', password: 'geheim123', companyName: 'A' })
+    );
+    await getPool().query('UPDATE klanten SET prijsgroepId = ? WHERE email = ?', [
+      prijsgroep.id,
+      'prijsgroep-me@example.com',
+    ]);
+    const loginResponse = await login(
+      jsonRequest({ email: 'prijsgroep-me@example.com', password: 'geheim123' })
+    );
+    const cookie = loginResponse.headers.get('set-cookie')!;
+
+    const meResponse = await me(
+      new Request('http://localhost/api/auth/me?type=klant', { headers: { cookie } })
+    );
+    const meBody = await meResponse.json();
+    expect(meBody.user.prijsgroep).toEqual({ kortingspercentage: 18, opslagpercentage: null });
+
+    await register(
+      jsonRequest({ email: 'geen-prijsgroep-me@example.com', password: 'geheim123', companyName: 'A' })
+    );
+    const login2 = await login(
+      jsonRequest({ email: 'geen-prijsgroep-me@example.com', password: 'geheim123' })
+    );
+    const cookie2 = login2.headers.get('set-cookie')!;
+    const meResponse2 = await me(
+      new Request('http://localhost/api/auth/me?type=klant', { headers: { cookie: cookie2 } })
+    );
+    const meBody2 = await meResponse2.json();
+    expect(meBody2.user.prijsgroep).toBeNull();
   });
 });

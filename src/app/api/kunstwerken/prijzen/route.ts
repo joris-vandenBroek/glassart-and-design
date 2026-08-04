@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getPool } from '@/lib/server/db';
-import { requireMedewerker } from '@/lib/server/requireAuth';
+import { requireMedewerker, requireKlant } from '@/lib/server/requireAuth';
 import { berekenPrijzenVoorAlleKunstwerken, berekenPrijzenVoorCombinaties } from '@/lib/server/prijsmodule';
 import { withApiErrorHandling } from '@/lib/server/apiRoute';
 
@@ -25,6 +25,9 @@ export const GET = withApiErrorHandling('GET /api/kunstwerken/prijzen', async (r
     return NextResponse.json({ prijzen });
   }
 
-  const prijzenPerKunstwerk = await berekenPrijzenVoorAlleKunstwerken(getPool());
+  // Bulk mode stays public (no login required), but an ingelogde klant's own prijsgroep
+  // korting/opslag is applied on top of the base price when a valid klant session is present.
+  const klantId = await requireKlant(request);
+  const prijzenPerKunstwerk = await berekenPrijzenVoorAlleKunstwerken(getPool(), klantId);
   return NextResponse.json(prijzenPerKunstwerk);
 });
