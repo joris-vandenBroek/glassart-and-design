@@ -484,6 +484,8 @@
     "bestellingenModalLabelAantal": "Aantal",
     "bestellingenModalTotalLabel": "Totaal",
     "bestellingenModalTotalIncomplete": "Wordt nog vastgesteld",
+    "bestellingenModalBtwLabel": "Btw ({percentage}%)",
+    "bestellingenModalTotaalInclLabel": "Totaal incl. btw",
     "bestellingenModalPrijsOpAanvraag": "Prijs op aanvraag",
     "bestellingenModalPrijsVaststellen": "Prijs vaststellen",
     "bestellingenModalRegelOpslaan": "Opslaan",
