@@ -73,6 +73,7 @@ export function BestellingModal({
       setEditingLineId(null);
       setLineDraft(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bestelling?.id]);
 
   const materiaalsoortNaamById = new Map(
