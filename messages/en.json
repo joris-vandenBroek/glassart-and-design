@@ -258,6 +258,8 @@
       "modalLabelMaat": "Size",
       "modalTotalLabel": "Total",
       "modalTotalIncomplete": "To be determined",
+      "modalBtwLabel": "VAT ({percentage}%)",
+      "modalTotaalInclLabel": "Total incl. VAT",
       "modalTitel": "Order {id}",
       "loadError": "Couldn't load your orders. Please try again later."
     },

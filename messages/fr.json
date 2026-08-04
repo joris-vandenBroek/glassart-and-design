@@ -255,6 +255,8 @@
       "modalLabelMaat": "Taille",
       "modalTotalLabel": "Total",
       "modalTotalIncomplete": "À déterminer",
+      "modalBtwLabel": "TVA ({percentage}%)",
+      "modalTotaalInclLabel": "Total TTC",
       "modalTitel": "Commande {id}",
       "loadError": "Impossible de charger vos commandes. Veuillez réessayer plus tard."
     },

@@ -255,6 +255,8 @@
       "modalLabelMaat": "Maat",
       "modalTotalLabel": "Totaal",
       "modalTotalIncomplete": "Wordt nog vastgesteld",
+      "modalBtwLabel": "Btw ({percentage}%)",
+      "modalTotaalInclLabel": "Totaal incl. btw",
       "modalTitel": "Bestelling {id}",
       "loadError": "Bestellingen konden niet worden geladen. Probeer het later opnieuw."
     },
