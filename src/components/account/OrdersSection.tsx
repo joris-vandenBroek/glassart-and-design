@@ -6,6 +6,7 @@ import { useAllOrders, type DisplayOrder, type DisplayOrderLine } from '@/lib/us
 import { useApiCollection } from '@/lib/useApiCollection';
 import { useApiRecord } from '@/lib/useApiRecord';
 import { ProductImage } from '@/components/ProductImage';
+import { HelpHint } from '@/components/HelpHint';
 import {
   toKlantBestellingStatus,
   KLANT_STATUS_BADGE_CLASS,
@@ -109,9 +110,10 @@ export function OrdersSection() {
 
   return (
     <div data-testid="orders-section">
-      <p className="mb-3 text-[0.65rem] uppercase tracking-[0.2em] text-white/50">
-        {t('navOrders')}
-      </p>
+      <div className="mb-3 flex items-center gap-2">
+        <p className="text-[0.65rem] uppercase tracking-[0.2em] text-white/50">{t('navOrders')}</p>
+        <HelpHint text={t('orders.statusHelp')} size="sm" testId="orders-status-help" />
+      </div>
       {loadError && (
         <p data-testid="orders-load-error" className="mb-3 text-xs text-red-400">
           {t('orders.loadError')}

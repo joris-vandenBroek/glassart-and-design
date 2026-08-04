@@ -12,6 +12,7 @@ import { formatCurrency } from '@/lib/formatCurrency';
 import { findVeiligheidsglasMateriaalId, MATERIAALLOOS_LABEL } from '@/lib/kunstwerkMateriaal';
 import { useApiRecord } from '@/lib/useApiRecord';
 import { pasPrijsgroepToe } from '@/lib/prijsgroep';
+import { HelpHint } from '@/components/HelpHint';
 import { ProductImage } from './ProductImage';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort, Segment, Stijl, Onderwerp } from './beheer/materiaalTypes';
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
@@ -466,9 +467,14 @@ export function ProductModal({
         {prijsWeergave !== null && (
           <div className="flex flex-col gap-1">
             <span className="text-[0.65rem] uppercase tracking-wide text-white/60">{t('priceLabel')}</span>
-            <p data-testid="product-modal-prijs" className="text-sm text-white/80">
-              {prijsWeergave}
-            </p>
+            <div className="flex items-center gap-2">
+              <p data-testid="product-modal-prijs" className="text-sm text-white/80">
+                {prijsWeergave}
+              </p>
+              {prijsWeergave === t('priceOnRequest') && (
+                <HelpHint text={t('priceOnRequestHelp')} size="sm" testId="product-modal-prijs-help" />
+              )}
+            </div>
           </div>
         )}
         <div className="flex flex-col gap-1">

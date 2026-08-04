@@ -585,6 +585,34 @@ describe('ProductModal', () => {
     expect(screen.getByTestId('product-modal-maat-custom-hoogte')).toBeInTheDocument();
     expect(screen.getByTestId('product-modal-prijs')).toHaveTextContent('Prijs op aanvraag');
     expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
+    expect(screen.queryByTestId('product-modal-prijs-help-popover')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('product-modal-prijs-help'));
+    expect(screen.getByTestId('product-modal-prijs-help-popover')).toHaveTextContent('eigen (afwijkende) maat');
+  });
+
+  it('does not show a help icon next to a resolved, fixed price', () => {
+    render(
+      <NextIntlClientProvider locale="nl" messages={messages}>
+        <CustomerAuthProvider>
+          <CartProvider>
+            <ProductModal
+              kunstwerk={KUNSTWERK}
+              prijzen={KUNSTWERK_PRIJZEN}
+              materialen={MATERIALEN}
+              maten={MATEN}
+              materiaalsoorten={MATERIAALSOORTEN}
+              kunstenaars={KUNSTENAARS}
+              segmenten={SEGMENTEN}
+              stijlen={STIJLEN}
+              onderwerpen={ONDERWERPEN}
+              onClose={() => {}}
+            />
+          </CartProvider>
+        </CustomerAuthProvider>
+      </NextIntlClientProvider>
+    );
+    expect(screen.getByTestId('product-modal-prijs')).not.toHaveTextContent('Prijs op aanvraag');
+    expect(screen.queryByTestId('product-modal-prijs-help')).not.toBeInTheDocument();
   });
 
   it('shows a lead-time warning and no max error for an oversized custom veiligheidsglas size', () => {

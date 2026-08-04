@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { Modal } from '@/components/Modal';
 import { ProductImage } from '@/components/ProductImage';
+import { HelpHint } from '@/components/HelpHint';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
 import { formatCurrency } from '@/lib/formatCurrency';
 import {
@@ -76,12 +77,15 @@ export function AccountOrderModal({
               <span>
                 {order.date} {order.time}
               </span>
-              <span
-                data-testid="account-order-modal-status"
-                className={`w-fit rounded-full px-3 py-1 text-xs uppercase tracking-wide ${KLANT_STATUS_BADGE_CLASS[klantStatus!]}`}
-              >
-                {t(KLANT_STATUS_TRANSLATION_KEY[klantStatus!])}
-              </span>
+              <div className="flex items-center gap-2">
+                <span
+                  data-testid="account-order-modal-status"
+                  className={`w-fit rounded-full px-3 py-1 text-xs uppercase tracking-wide ${KLANT_STATUS_BADGE_CLASS[klantStatus!]}`}
+                >
+                  {t(KLANT_STATUS_TRANSLATION_KEY[klantStatus!])}
+                </span>
+                <HelpHint text={t('statusHelp')} size="sm" testId="account-order-modal-status-help" />
+              </div>
             </div>
             {totaalWeergave !== null && (
               <div className="shrink-0 text-right">
@@ -165,7 +169,14 @@ export function AccountOrderModal({
                             </span>
                           </>
                         ) : (
-                          <span className="text-white/45">{t('modalLinePriceOnRequest')}</span>
+                          <span className="flex items-center gap-2 text-white/45">
+                            {t('modalLinePriceOnRequest')}
+                            <HelpHint
+                              text={t('priceOnRequestHelp')}
+                              size="sm"
+                              testId={`account-order-modal-line-${line.id}-price-help`}
+                            />
+                          </span>
                         )}
                       </div>
                     </div>

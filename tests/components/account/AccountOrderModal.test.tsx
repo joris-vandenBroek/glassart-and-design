@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { AccountOrderModal } from '@/components/account/AccountOrderModal';
 import type { DisplayOrder } from '@/lib/useAllOrders';
@@ -73,6 +73,38 @@ describe('AccountOrderModal', () => {
     const line = screen.getByTestId('account-order-modal-line-line-2');
     expect(line).toHaveTextContent('90×140 cm');
     expect(line).toHaveTextContent('Prijs op aanvraag');
+  });
+
+  it('shows a help popover next to a "Prijs op aanvraag" line explaining why', () => {
+    renderModal({
+      id: 'GD-00002',
+      date: '2-7-2026',
+      time: '09:00',
+      status: 'Te beoordelen',
+      description: '',
+      lines: [
+        { id: 'line-2', kunstwerkId: 'kw-1', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: null, quantity: 1 },
+      ],
+    });
+    fireEvent.click(screen.getByTestId('account-order-modal-line-line-2-price-help'));
+    expect(screen.getByTestId('account-order-modal-line-line-2-price-help-popover')).toHaveTextContent(
+      'eigen (afwijkende) maat'
+    );
+  });
+
+  it('shows a help popover explaining the status badge', () => {
+    renderModal({
+      id: 'GD-00001',
+      date: '1-7-2026',
+      time: '14:30',
+      status: 'Te beoordelen',
+      description: '',
+      lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
+    });
+    expect(screen.queryByTestId('account-order-modal-status-help-popover')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('account-order-modal-status-help'));
+    expect(screen.getByTestId('account-order-modal-status-help-popover')).toHaveTextContent('In behandeling');
   });
 
   it('shows the order id in the modal header', () => {

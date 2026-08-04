@@ -75,6 +75,14 @@ describe('OrdersSection', () => {
     expect(screen.queryByTestId('orders-load-error')).not.toBeInTheDocument();
   });
 
+  it('shows a help popover explaining the status badges', () => {
+    renderSection();
+    expect(screen.queryByTestId('orders-status-help-popover')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('orders-status-help'));
+    expect(screen.getByTestId('orders-status-help-popover')).toHaveTextContent('In behandeling');
+  });
+
   it('shows an error message when loading orders fails', async () => {
     authUser = { id: 'uid-1', email: 'klant@example.com', status: 'Goedgekeurd' };
     ordersResponse = { ok: false };
