@@ -73,7 +73,7 @@ export function Modal({
         </button>
         <div data-testid="modal-header" className="shrink-0 border-b border-white/10 px-6 pb-3 pt-6 pr-10">
           <h2 className="text-base font-semibold tracking-wide text-white">{title}</h2>
-          {subtitle && <p className="mt-0.5 text-xs text-white/50">{subtitle}</p>}
+          {subtitle && <div className="mt-0.5 text-xs text-white/50">{subtitle}</div>}
         </div>
         <div data-testid="modal-body" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
           {children}

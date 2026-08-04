@@ -50,6 +50,29 @@ describe('Modal', () => {
     expect(screen.getByTestId('modal-header')).toHaveTextContent('Extra context');
   });
 
+  it('renders a non-text subtitle (e.g. a flex row with a badge) without nesting block content in a <p>', () => {
+    renderWithIntl(
+      <Modal
+        isOpen
+        onClose={vi.fn()}
+        closeLabel="Sluiten"
+        title="Testmodal"
+        subtitle={
+          <div data-testid="rich-subtitle" className="flex items-center gap-2">
+            <span>Extra context</span>
+            <span data-testid="badge">Badge</span>
+          </div>
+        }
+      >
+        <p>Inhoud</p>
+      </Modal>
+    );
+    const subtitleEl = screen.getByTestId('rich-subtitle');
+    expect(subtitleEl.tagName).toBe('DIV');
+    expect(subtitleEl.closest('p')).toBeNull();
+    expect(screen.getByTestId('badge')).toHaveTextContent('Badge');
+  });
+
   it('calls onClose when the backdrop is clicked', () => {
     const onClose = vi.fn();
     renderWithIntl(
