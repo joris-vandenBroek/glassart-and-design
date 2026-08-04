@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface UseApiRecordOptions<T> {
   seed?: T;
@@ -19,11 +19,25 @@ export function useApiRecord<T>(
 ): UseApiRecordResult<T> {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<'load' | 'action' | null>(null);
+  const seedRef = useRef(options?.seed);
+  seedRef.current = options?.seed;
 
   const fetchRecord = useCallback(async () => {
     try {
       const response = await fetch(`/api/${resource}/${id}`);
-      if (!response.ok) throw new Error('load failed');
+      if (!response.ok) {
+        const seed = seedRef.current;
+        if (seed === undefined) throw new Error('load failed');
+        const seedResponse = await fetch(`/api/${resource}/${id}`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(seed),
+        });
+        if (!seedResponse.ok) throw new Error('seed failed');
+        setData(seed);
+        setError(null);
+        return true;
+      }
       setData(await response.json());
       setError(null);
       return true;
