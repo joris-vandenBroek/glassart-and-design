@@ -17,6 +17,8 @@ CREATE TABLE klanten (
   invoiceAddress VARCHAR(255),
   invoicePostcode VARCHAR(20),
   invoiceCity VARCHAR(255),
+  land VARCHAR(2),
+  invoiceLand VARCHAR(2),
   status VARCHAR(50) NOT NULL DEFAULT 'Beoordelen',
   prijsgroepId CHAR(36),
   kunstenaarId CHAR(36),

@@ -73,6 +73,7 @@ const TYPE_LABEL_KEYS: Record<ActiviteitType, string> = {
   drukker_verwijderd: 'activiteitTypeDrukkerVerwijderd',
   bestelling_verstuurd_naar_drukker: 'activiteitTypeBestellingVerstuurdNaarDrukker',
   bestelinstellingen_gewijzigd: 'activiteitTypeBestelinstellingenGewijzigd',
+  btwtarieven_gewijzigd: 'activiteitTypeBtwTarievenGewijzigd',
   klant_minimale_afname_gewijzigd: 'activiteitTypeKlantMinimaleAfnameGewijzigd',
   stijl_toegevoegd: 'activiteitTypeStijlToegevoegd',
   stijl_gewijzigd: 'activiteitTypeStijlGewijzigd',
