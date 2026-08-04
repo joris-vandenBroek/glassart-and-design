@@ -234,28 +234,36 @@ export function BestellingModal({
               </span>
             </div>
             {totaalWeergave !== null && (
-              <div className="shrink-0 text-right">
-                <p className="text-[0.65rem] uppercase tracking-wide text-white/40">{t('bestellingenModalTotalLabel')}</p>
-                <p data-testid="bestelling-modal-total" className="text-sm font-semibold text-white tabular-nums">
+              <div className="grid shrink-0 grid-cols-[auto_auto] items-baseline gap-x-2 gap-y-0.5">
+                <span className="text-[0.65rem] uppercase tracking-wide text-white/40">
+                  {t('bestellingenModalTotalLabel')}
+                </span>
+                <span
+                  data-testid="bestelling-modal-total"
+                  className="text-right text-sm font-semibold text-white tabular-nums"
+                >
                   {totaalWeergave}
-                </p>
+                </span>
                 {btwBedrag !== null && (
-                  <div data-testid="bestelling-modal-btw" className="mt-1">
-                    <p className="text-[0.65rem] uppercase tracking-wide text-white/40">
+                  <div data-testid="bestelling-modal-btw" className="contents">
+                    <span className="text-[0.65rem] uppercase tracking-wide text-white/40">
                       {t('bestellingenModalBtwLabel', { percentage: btwPercentage })}
-                    </p>
-                    <p className="text-sm text-white/80 tabular-nums">{formatCurrency(btwBedrag)}</p>
+                    </span>
+                    <span className="text-right text-sm text-white/80 tabular-nums">{formatCurrency(btwBedrag)}</span>
                   </div>
                 )}
                 {totaalInclBtw !== null && (
-                  <div className="mt-1">
-                    <p className="text-[0.65rem] uppercase tracking-wide text-white/40">
+                  <>
+                    <span className="text-[0.65rem] uppercase tracking-wide text-white/40">
                       {t('bestellingenModalTotaalInclLabel')}
-                    </p>
-                    <p data-testid="bestelling-modal-totaal-incl" className="text-sm font-semibold text-white tabular-nums">
+                    </span>
+                    <span
+                      data-testid="bestelling-modal-totaal-incl"
+                      className="text-right text-sm font-semibold text-white tabular-nums"
+                    >
                       {formatCurrency(totaalInclBtw)}
-                    </p>
-                  </div>
+                    </span>
+                  </>
                 )}
               </div>
             )}
@@ -320,7 +328,7 @@ export function BestellingModal({
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="text-white/90">
+                    <p className="line-clamp-2 font-semibold text-white/90">
                       {kunstwerk ? kunstwerk.omschrijvingNl : t('bestellingenRegelOnbekend')}
                     </p>
 
