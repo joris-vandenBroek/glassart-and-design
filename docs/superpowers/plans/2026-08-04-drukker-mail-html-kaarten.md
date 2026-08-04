@@ -438,13 +438,20 @@ function formaatSuffix(kunstwerk: Kunstwerk | undefined): string {
   return '';
 }
 
-function formatRegel(
+interface ResolvedRegel {
+  kunstwerk: Kunstwerk | undefined;
+  naam: string;
+  materiaalOmschrijving: string;
+  maatOmschrijving: string;
+}
+
+function resolveRegel(
   line: BestellingLine,
   kunstwerken: Kunstwerk[],
   materialen: Materiaal[],
   maten: Maat[],
   materiaalsoorten: Materiaalsoort[]
-): string {
+): ResolvedRegel {
   const kunstwerk = kunstwerken.find((k) => k.id === line.kunstwerkId);
   const materiaal = materialen.find((m) => m.id === line.materiaalId);
   const materiaalsoort = materiaal ? materiaalsoorten.find((s) => s.id === materiaal.materiaalsoortId) : undefined;
@@ -459,6 +466,24 @@ function formatRegel(
     : line.breedte != null && line.hoogte != null
       ? `${line.breedte}×${line.hoogte} cm${formaatSuffix(kunstwerk)}`
       : 'Onbekende maat';
+
+  return { kunstwerk, naam, materiaalOmschrijving, maatOmschrijving };
+}
+
+function formatRegel(
+  line: BestellingLine,
+  kunstwerken: Kunstwerk[],
+  materialen: Materiaal[],
+  maten: Maat[],
+  materiaalsoorten: Materiaalsoort[]
+): string {
+  const { naam, materiaalOmschrijving, maatOmschrijving } = resolveRegel(
+    line,
+    kunstwerken,
+    materialen,
+    maten,
+    materiaalsoorten
+  );
 
   return `${naam} — ${materiaalOmschrijving}, maat ${maatOmschrijving}, aantal ${line.quantity}`;
 }
@@ -470,20 +495,13 @@ function formatRegelHtml(
   maten: Maat[],
   materiaalsoorten: Materiaalsoort[]
 ): string {
-  const kunstwerk = kunstwerken.find((k) => k.id === line.kunstwerkId);
-  const materiaal = materialen.find((m) => m.id === line.materiaalId);
-  const materiaalsoort = materiaal ? materiaalsoorten.find((s) => s.id === materiaal.materiaalsoortId) : undefined;
-  const maat = maten.find((m) => m.id === line.maatId);
-
-  const naam = kunstwerk?.omschrijvingNl ?? 'Onbekend kunstwerk';
-  const materiaalOmschrijving = materiaal
-    ? `${materiaal.materiaaldikte}mm ${materiaalsoort?.omschrijving ?? materiaal.materiaalsoortId} — ${materiaal.omschrijving}`
-    : 'Onbekend materiaal';
-  const maatOmschrijving = maat
-    ? `${maat.breedte}×${maat.hoogte} cm${formaatSuffix(kunstwerk)}`
-    : line.breedte != null && line.hoogte != null
-      ? `${line.breedte}×${line.hoogte} cm${formaatSuffix(kunstwerk)}`
-      : 'Onbekende maat';
+  const { kunstwerk, naam, materiaalOmschrijving, maatOmschrijving } = resolveRegel(
+    line,
+    kunstwerken,
+    materialen,
+    maten,
+    materiaalsoorten
+  );
 
   const thumbnail = kunstwerk?.foto
     ? `<img src="${escapeHtml(kunstwerk.foto)}" width="64" height="64" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:4px;display:block;" />`
