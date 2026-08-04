@@ -106,8 +106,8 @@ describe('BestellingModal', () => {
     expect(line1).toHaveTextContent('Hotel paneel');
     expect(line1).toHaveTextContent('4mm Veiligheidsglas — Extra diepte en stevigheid.');
     expect(line1).toHaveTextContent('40×60 cm');
-    expect(line1).toHaveTextContent('€ 150,00');
-    expect(line1).toHaveTextContent('×3');
+    expect(line1).toHaveTextContent('3 × € 150,00');
+    expect(line1).toHaveTextContent('€ 450,00');
     expect(line1.querySelector('img')).toHaveAttribute('src', 'https://example.com/kw-1.jpg');
   });
 
@@ -115,7 +115,7 @@ describe('BestellingModal', () => {
     renderModal(BESTELLING);
     const line2 = screen.getByTestId('bestelling-modal-line-line-2');
     expect(line2).toHaveTextContent('Onbekend');
-    expect(line2).toHaveTextContent('×2');
+    expect(line2).toHaveTextContent('2 × € 0,00');
     expect(line2.querySelector('img')).not.toBeInTheDocument();
   });
 
@@ -369,7 +369,7 @@ describe('BestellingModal — regel bewerken', () => {
     fireEvent.change(screen.getByTestId('bestelling-modal-regel-aantal-line-1'), { target: { value: '9' } });
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-annuleren-line-1'));
     expect(screen.queryByTestId('bestelling-modal-regel-materiaal-line-1')).not.toBeInTheDocument();
-    expect(screen.getByTestId('bestelling-modal-line-line-1')).toHaveTextContent('×3');
+    expect(screen.getByTestId('bestelling-modal-line-line-1')).toHaveTextContent('3 × € 150,00');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -402,5 +402,19 @@ describe('BestellingModal — regel bewerken', () => {
         hoogte: 145,
       })
     );
+  });
+});
+
+describe('BestellingModal — bestelling-totaal', () => {
+  it('shows the order total in the header, computed from all lines', () => {
+    renderModal(BESTELLING);
+    // line-1: 150 × 3 = 450, line-2: 0 × 2 = 0 → total 450
+    expect(screen.getByTestId('bestelling-modal-total')).toHaveTextContent('€ 450,00');
+  });
+
+  it('shows an incomplete-total placeholder and disables Goedkeuren when a line has no price yet', () => {
+    renderModal(BESTELLING_MET_EIGEN_MAAT);
+    expect(screen.getByTestId('bestelling-modal-total')).toHaveTextContent('Wordt nog vastgesteld');
+    expect(screen.getByTestId('bestelling-modal-goedkeuren')).toBeDisabled();
   });
 });
