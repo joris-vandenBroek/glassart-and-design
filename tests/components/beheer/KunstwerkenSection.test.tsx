@@ -887,14 +887,6 @@ describe('KunstwerkenSection', () => {
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-stijl-stijl-3')).toBeChecked());
   });
 
-  it('shows a read-only computed price preview per materiaal/maat combination instead of an input', async () => {
-    renderSection();
-    fireEvent.click(screen.getByTestId('kunstwerken-add')); // opens the add modal with every materiaal + maat pre-checked
-    const cel = await screen.findByTestId('kunstwerk-modal-prijs-preview-mat-1-maat-1');
-    expect(cel).toHaveTextContent('€ 150,00');
-    expect(screen.queryByTestId('kunstwerk-modal-prijs-mat-1-maat-1')).not.toBeInTheDocument();
-  });
-
   it('creates a brand-new segment inline, adds it to the Segmenten table, and auto-selects it on the kunstwerk', async () => {
     const onAddSegment = vi.fn().mockResolvedValue(true);
     const { rerender } = renderSection({ onAddSegment });

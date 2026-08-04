@@ -35,7 +35,7 @@ interface KunstwerkenSectionProps {
 }
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; kunstwerk: Kunstwerk } | null;
-type TabId = 'algemeen' | 'kenmerken' | 'prijzen' | 'omschrijvingen';
+type TabId = 'algemeen' | 'kenmerken' | 'omschrijvingen';
 type KunstwerkRow = Kunstwerk & { segmentNamen: string; kunstenaarNaam: string };
 
 function toggle(list: string[], id: string): string[] {
@@ -471,10 +471,8 @@ export function KunstwerkenSection({
   }
 
   const algemeenHeeftFout = !foto || !naam || formaat === null;
-  const kenmerkenHeeftFout = segmentIds.length === 0;
-  // Prices are computed automatically (Prijsmatrix + kunstenaar-opslag), nothing for the
-  // admin to fill in here anymore, so this tab has no error state outside the maatloos case.
-  const prijzenHeeftFout = isMaatloos ? !prijsPerM2 || Number(prijsPerM2) <= 0 : false;
+  const kenmerkenHeeftFout =
+    segmentIds.length === 0 || (isMaatloos && (!prijsPerM2 || Number(prijsPerM2) <= 0));
   const omschrijvingenHeeftFout = !omschrijvingNl;
   const opslaanDisabled =
     !foto ||
@@ -648,7 +646,6 @@ export function KunstwerkenSection({
               tabs={[
                 { id: 'algemeen', label: t('kunstwerkenTabAlgemeen'), hasError: algemeenHeeftFout },
                 { id: 'kenmerken', label: t('kunstwerkenTabKenmerken'), hasError: kenmerkenHeeftFout },
-                { id: 'prijzen', label: t('kunstwerkenTabPrijzen'), hasError: prijzenHeeftFout },
                 { id: 'omschrijvingen', label: t('kunstwerkenTabOmschrijvingen'), hasError: omschrijvingenHeeftFout },
               ]}
               activeTabId={activeTab}
@@ -879,6 +876,32 @@ export function KunstwerkenSection({
             </fieldset>
           </details>
 
+          {isMaatloos && (
+            <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+              <span>
+                {t('kunstwerkenLabelPrijsPerM2')}
+                <RequiredMark />
+              </span>
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-white/50">€</span>
+                <input
+                  type="number"
+                  value={prijsPerM2}
+                  onChange={(event) => setPrijsPerM2(event.target.value)}
+                  data-testid="kunstwerk-modal-prijs-per-m2"
+                  className={`w-24 rounded-sm border bg-black/40 px-2 py-1 text-sm text-white ${
+                    !prijsPerM2 || Number(prijsPerM2) <= 0 ? 'border-red-500/70' : 'border-transparent'
+                  }`}
+                />
+              </div>
+              {(!prijsPerM2 || Number(prijsPerM2) <= 0) && (
+                <span data-testid="kunstwerk-modal-prijs-per-m2-hint" className="normal-case tracking-normal text-red-400">
+                  {t('kunstwerkenPrijsPerM2Verplicht')}
+                </span>
+              )}
+            </label>
+          )}
+
           <fieldset className="flex flex-col gap-1">
             <legend className="text-xs uppercase tracking-wide text-white/60">
               {t('kunstwerkenLabelStijlen')}
@@ -970,87 +993,6 @@ export function KunstwerkenSection({
             />
             {t('kunstwerkenLabelAiGegenereerd')}
           </label>
-              </div>
-
-              <div className={activeTab === 'prijzen' ? 'flex flex-col gap-3' : 'hidden'}>
-          {materiaalIds.length > 0 && maatIds.length > 0 && (
-            <div className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-white/60">
-                {t('kunstwerkenLabelPrijzen')}
-                <RequiredMark />
-              </span>
-              <table data-testid="kunstwerk-modal-prijzen" className="border-collapse text-sm text-white/80">
-                <thead>
-                  <tr>
-                    <th className="border border-white/10 px-2 py-1"></th>
-                    {(maten ?? [])
-                      .filter((maat) => maatIds.includes(maat.id))
-                      .map((maat) => (
-                        <th key={maat.id} className="border border-white/10 px-2 py-1 text-xs font-semibold">
-                          {`${maat.breedte}×${maat.hoogte}`}
-                        </th>
-                      ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(materialen ?? [])
-                    .filter((materiaal) => materiaalIds.includes(materiaal.id))
-                    .map((materiaal) => (
-                      <tr key={materiaal.id}>
-                        <td className="border border-white/10 px-2 py-1 text-xs whitespace-nowrap">
-                          {materiaalLabel(materiaal)}
-                        </td>
-                        {(maten ?? [])
-                          .filter((maat) => maatIds.includes(maat.id))
-                          .map((maat) => {
-                            const regel = previewPrijzen.find(
-                              (p) => p.materiaalId === materiaal.id && p.maatId === maat.id
-                            );
-                            return (
-                              <td
-                                key={maat.id}
-                                data-testid={`kunstwerk-modal-prijs-preview-${materiaal.id}-${maat.id}`}
-                                className="border border-white/10 px-2 py-1 text-xs"
-                              >
-                                {regel ? `€ ${regel.prijs.toFixed(2).replace('.', ',')}` : '—'}
-                              </td>
-                            );
-                          })}
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-              <span className="text-xs normal-case tracking-normal text-white/50">
-                {t('kunstwerkenPrijzenHint')}
-              </span>
-            </div>
-          )}
-
-          {isMaatloos && (
-            <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-              <span>
-                {t('kunstwerkenLabelPrijsPerM2')}
-                <RequiredMark />
-              </span>
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-white/50">€</span>
-                <input
-                  type="number"
-                  value={prijsPerM2}
-                  onChange={(event) => setPrijsPerM2(event.target.value)}
-                  data-testid="kunstwerk-modal-prijs-per-m2"
-                  className={`w-24 rounded-sm border bg-black/40 px-2 py-1 text-sm text-white ${
-                    !prijsPerM2 || Number(prijsPerM2) <= 0 ? 'border-red-500/70' : 'border-transparent'
-                  }`}
-                />
-              </div>
-              {(!prijsPerM2 || Number(prijsPerM2) <= 0) && (
-                <span data-testid="kunstwerk-modal-prijs-per-m2-hint" className="normal-case tracking-normal text-red-400">
-                  {t('kunstwerkenPrijsPerM2Verplicht')}
-                </span>
-              )}
-            </label>
-          )}
               </div>
 
               <div className={activeTab === 'omschrijvingen' ? 'flex flex-col gap-3' : 'hidden'}>
