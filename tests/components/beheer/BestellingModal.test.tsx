@@ -5,6 +5,8 @@ import { NextIntlClientProvider } from 'next-intl';
 import { BestellingModal } from '@/components/beheer/BestellingModal';
 import type { Bestelling } from '@/components/beheer/BestellingenSection';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from '@/components/beheer/materiaalTypes';
+import type { Klant } from '@/components/beheer/KlantenSection';
+import type { BtwTarieven } from '@/components/beheer/btwTarievenTypes';
 import messages from '../../../messages/nl.json';
 
 const fetchMock = vi.fn();
@@ -43,6 +45,32 @@ const MATERIALEN: Materiaal[] = [
 ];
 const MATEN: Maat[] = [{ id: 'maat-1', breedte: 40, hoogte: 60 }];
 const MATERIAALSOORTEN: Materiaalsoort[] = [{ id: 'soort-1', omschrijving: 'Veiligheidsglas' }];
+const KLANTEN: Klant[] = [
+  {
+    id: 'uid-1',
+    companyName: 'Testbedrijf BV',
+    kvk: '12345678',
+    contactPerson: 'Jan Jansen',
+    email: 'jan@example.com',
+    phone: '0612345678',
+    contactPreference: 'email',
+    address: 'Teststraat 1',
+    postcode: '1234 AB',
+    city: 'Teststad',
+    land: 'NL',
+    deliveryAddress: '',
+    deliveryPostcode: '',
+    deliveryCity: '',
+    invoiceAddress: '',
+    invoicePostcode: '',
+    invoiceCity: '',
+    invoiceLand: '',
+    status: 'Goedgekeurd',
+    prijsgroepId: null,
+    kunstenaarId: null,
+  },
+];
+const BTWTARIEVEN: BtwTarieven = { tarieven: [{ land: 'NL', percentage: 21 }], standaardPercentage: 21 };
 
 const BESTELLING: Bestelling = {
   id: 'header-1',
@@ -72,6 +100,8 @@ function renderModal(bestelling: Bestelling | null) {
         materialen={MATERIALEN}
         maten={MATEN}
         materiaalsoorten={MATERIAALSOORTEN}
+        klanten={KLANTEN}
+        btwTarieven={BTWTARIEVEN}
         onClose={onClose}
         onUpdated={onUpdated}
         onLinePrijsVastgesteld={onLinePrijsVastgesteld}
@@ -288,6 +318,8 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
             materialen={MATERIALEN}
             maten={MATEN}
             materiaalsoorten={MATERIAALSOORTEN}
+            klanten={KLANTEN}
+            btwTarieven={BTWTARIEVEN}
             onClose={vi.fn()}
             onUpdated={vi.fn()}
             onLinePrijsVastgesteld={(_bestellingId, lineId, prijs) => {
@@ -416,5 +448,73 @@ describe('BestellingModal — bestelling-totaal', () => {
     renderModal(BESTELLING_MET_EIGEN_MAAT);
     expect(screen.getByTestId('bestelling-modal-total')).toHaveTextContent('Wordt nog vastgesteld');
     expect(screen.getByTestId('bestelling-modal-goedkeuren')).toBeDisabled();
+  });
+});
+
+describe('BestellingModal — btw', () => {
+  it('shows the btw percentage, btw-bedrag and totaal incl. btw based on the klant land', () => {
+    renderModal(BESTELLING);
+    // total excl. btw = 450 (see the bestelling-totaal describe block above)
+    expect(screen.getByTestId('bestelling-modal-btw')).toHaveTextContent('21');
+    expect(screen.getByTestId('bestelling-modal-btw')).toHaveTextContent('€ 94,50');
+    expect(screen.getByTestId('bestelling-modal-totaal-incl')).toHaveTextContent('€ 544,50');
+  });
+
+  it('falls back to standaardPercentage when the klant has no land set', () => {
+    const klantZonderLand = { ...KLANTEN[0], land: undefined };
+    render(
+      <NextIntlClientProvider locale="nl" messages={messages}>
+        <BestellingModal
+          bestelling={BESTELLING}
+          kunstwerken={KUNSTWERKEN}
+          materialen={MATERIALEN}
+          maten={MATEN}
+          materiaalsoorten={MATERIAALSOORTEN}
+          klanten={[klantZonderLand]}
+          btwTarieven={{ tarieven: [{ land: 'DE', percentage: 19 }], standaardPercentage: 21 }}
+          onClose={vi.fn()}
+          onUpdated={vi.fn()}
+          onLinePrijsVastgesteld={vi.fn()}
+          onLineUpdated={vi.fn()}
+        />
+      </NextIntlClientProvider>
+    );
+    expect(screen.getByTestId('bestelling-modal-btw')).toHaveTextContent('21');
+  });
+
+  it('shows no btw block when the total itself is incomplete', () => {
+    renderModal(BESTELLING_MET_EIGEN_MAAT);
+    expect(screen.queryByTestId('bestelling-modal-btw')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-totaal-incl')).not.toBeInTheDocument();
+  });
+
+  it('uses invoiceLand over land when both are set (invoiceLand takes precedence)', () => {
+    const klantMetAfwijkendFactuurland = { ...KLANTEN[0], land: 'NL', invoiceLand: 'BE' };
+    render(
+      <NextIntlClientProvider locale="nl" messages={messages}>
+        <BestellingModal
+          bestelling={BESTELLING}
+          kunstwerken={KUNSTWERKEN}
+          materialen={MATERIALEN}
+          maten={MATEN}
+          materiaalsoorten={MATERIAALSOORTEN}
+          klanten={[klantMetAfwijkendFactuurland]}
+          btwTarieven={{
+            tarieven: [
+              { land: 'NL', percentage: 21 },
+              { land: 'BE', percentage: 6 },
+            ],
+            standaardPercentage: 21,
+          }}
+          onClose={vi.fn()}
+          onUpdated={vi.fn()}
+          onLinePrijsVastgesteld={vi.fn()}
+          onLineUpdated={vi.fn()}
+        />
+      </NextIntlClientProvider>
+    );
+    const btw = screen.getByTestId('bestelling-modal-btw');
+    expect(btw).toHaveTextContent('6');
+    expect(btw).not.toHaveTextContent('21');
   });
 });

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAllOrders, type DisplayOrder, type DisplayOrderLine } from '@/lib/useAllOrders';
 import { useApiCollection } from '@/lib/useApiCollection';
+import { useApiRecord } from '@/lib/useApiRecord';
 import { ProductImage } from '@/components/ProductImage';
 import {
   toKlantBestellingStatus,
@@ -11,6 +12,8 @@ import {
   KLANT_STATUS_TRANSLATION_KEY,
 } from '@/lib/klantBestellingStatus';
 import type { Kunstwerk, Materiaal, Maat } from '@/components/beheer/materiaalTypes';
+import type { BtwTarieven } from '@/components/beheer/btwTarievenTypes';
+import { BTWTARIEVEN_SEED } from '@/data/btwTarievenSeed';
 import { AccountOrderModal } from './AccountOrderModal';
 
 const MAX_VISIBLE_THUMBNAILS = 3;
@@ -81,7 +84,28 @@ export function OrdersSection() {
   const kunstwerken = useApiCollection<Kunstwerk>('kunstwerken');
   const materialen = useApiCollection<Materiaal>('materialen');
   const maten = useApiCollection<Maat>('maten');
+  const btwtarieven = useApiRecord<BtwTarieven>('instellingen', 'btwtarieven', { seed: BTWTARIEVEN_SEED });
+  const [ownLand, setOwnLand] = useState<{ land: string | null; invoiceLand: string | null } | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<DisplayOrder | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch('/api/klanten/me');
+        if (!response.ok || cancelled) return;
+        const klant = (await response.json()) as { land?: string | null; invoiceLand?: string | null };
+        if (!cancelled) setOwnLand({ land: klant.land ?? null, invoiceLand: klant.invoiceLand ?? null });
+      } catch {
+        // leave ownLand null — btw falls back to standaardtarief
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const resolvedLand = ownLand ? ownLand.invoiceLand || ownLand.land || null : null;
 
   return (
     <div data-testid="orders-section">
@@ -138,6 +162,8 @@ export function OrdersSection() {
         kunstwerken={kunstwerken.items}
         materialen={materialen.items}
         maten={maten.items}
+        land={resolvedLand}
+        btwTarieven={btwtarieven.data}
         onClose={() => setSelectedOrder(null)}
       />
     </div>

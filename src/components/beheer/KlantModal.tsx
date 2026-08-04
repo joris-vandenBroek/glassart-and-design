@@ -8,6 +8,7 @@ import { Combobox } from '@/components/Combobox';
 import { HelpHint } from '@/components/HelpHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
+import { LAND_OPTIONS, landNaam } from '@/data/landen';
 import type { Klant } from './KlantenSection';
 import type { Prijsgroep } from './materiaalTypes';
 import type { Kunstenaar } from './kunstenaarTypes';
@@ -28,12 +29,14 @@ interface EditableFields {
   address: string;
   postcode: string;
   city: string;
+  land: string;
   deliveryAddress: string;
   deliveryPostcode: string;
   deliveryCity: string;
   invoiceAddress: string;
   invoicePostcode: string;
   invoiceCity: string;
+  invoiceLand: string;
 }
 
 function fieldsFromKlant(klant: Klant): EditableFields {
@@ -47,12 +50,14 @@ function fieldsFromKlant(klant: Klant): EditableFields {
     address: klant.address,
     postcode: klant.postcode,
     city: klant.city,
+    land: klant.land ?? '',
     deliveryAddress: klant.deliveryAddress,
     deliveryPostcode: klant.deliveryPostcode,
     deliveryCity: klant.deliveryCity,
     invoiceAddress: klant.invoiceAddress,
     invoicePostcode: klant.invoicePostcode,
     invoiceCity: klant.invoiceCity,
+    invoiceLand: klant.invoiceLand ?? '',
   };
 }
 
@@ -357,6 +362,21 @@ export function KlantModal({
               testId="klant-modal-city"
               onChange={(value) => setField('city', value)}
             />
+            {isEditing ? (
+              <label className="flex flex-col gap-1">
+                <span className="text-xs uppercase tracking-wide text-white/60">{t('klantenLabelLand')}</span>
+                <Combobox
+                  options={LAND_OPTIONS}
+                  value={fields.land || null}
+                  onChange={(value) => setField('land', value ?? '')}
+                  placeholder={t('klantenLabelLand')}
+                  noResultsLabel={t('klantenLabelLand')}
+                  testId="klant-modal-land"
+                />
+              </label>
+            ) : (
+              <Veld label={t('klantenLabelLand')} value={landNaam(fields.land)} editing={false} />
+            )}
           </div>
 
           <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
@@ -421,6 +441,24 @@ export function KlantModal({
                   testId="klant-modal-invoiceCity"
                   onChange={(value) => setField('invoiceCity', value)}
                 />
+                {isEditing ? (
+                  <label className="flex flex-col gap-1">
+                    <span className="text-xs uppercase tracking-wide text-white/60">
+                      {t('klantenLabelLand')}
+                    </span>
+                    <Combobox
+                      options={LAND_OPTIONS}
+                      value={fields.invoiceLand || null}
+                      onChange={(value) => setField('invoiceLand', value ?? '')}
+                      placeholder={t('klantenLabelLand')}
+                      noResultsLabel={t('klantenLabelLand')}
+                      clearLabel={t('klantenLabelGebruiktStandaardadres')}
+                      testId="klant-modal-invoiceLand"
+                    />
+                  </label>
+                ) : (
+                  <Veld label={t('klantenLabelLand')} value={landNaam(fields.invoiceLand)} editing={false} />
+                )}
               </div>
             )}
           </div>

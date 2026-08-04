@@ -24,6 +24,8 @@ export interface Klant {
   invoiceAddress: string;
   invoicePostcode: string;
   invoiceCity: string;
+  land?: string | null;
+  invoiceLand?: string | null;
   status: 'Beoordelen' | 'Goedgekeurd' | 'Afgewezen';
   prijsgroepId: string | null;
   kunstenaarId: string | null;

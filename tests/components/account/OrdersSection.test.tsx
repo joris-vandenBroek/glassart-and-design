@@ -11,6 +11,8 @@ vi.stubGlobal('fetch', fetchMock);
 let authUser: Record<string, unknown> | null = null;
 let ordersResponse: { ok: boolean; body?: unknown } = { ok: true, body: [] };
 let kunstwerkenResponse: unknown[] = [];
+let klantMeResponse: unknown = { land: 'NL', invoiceLand: '' };
+let btwTarievenResponse: unknown = { tarieven: [{ land: 'NL', percentage: 21 }], standaardPercentage: 21 };
 
 function renderSection() {
   return render(
@@ -43,10 +45,18 @@ beforeEach(() => {
   authUser = null;
   ordersResponse = { ok: true, body: [] };
   kunstwerkenResponse = [];
+  klantMeResponse = { land: 'NL', invoiceLand: '' };
+  btwTarievenResponse = { tarieven: [{ land: 'NL', percentage: 21 }], standaardPercentage: 21 };
   fetchMock.mockReset();
   fetchMock.mockImplementation(async (url: string) => {
     if (url === '/api/auth/me?type=klant') {
       return { ok: true, json: async () => ({ user: authUser }) };
+    }
+    if (url === '/api/klanten/me') {
+      return { ok: true, json: async () => klantMeResponse };
+    }
+    if (url === '/api/instellingen/btwtarieven') {
+      return { ok: true, json: async () => btwTarievenResponse };
     }
     if (url.startsWith('/api/bestelheaders')) {
       return { ok: ordersResponse.ok, json: async () => ordersResponse.body };
@@ -297,5 +307,24 @@ describe('OrdersSection', () => {
     const row = screen.getByTestId('account-order-GD-00001-row');
     expect(row.className).toMatch(/grid-cols-\[minmax\(0,1fr\)_auto\]/);
     expect(row.className).toMatch(/sm:grid-cols-\[auto_minmax\(0,1fr\)_auto_auto\]/);
+  });
+
+  it('passes the klant\'s own land through to the order modal for btw calculation', async () => {
+    klantMeResponse = { land: 'BE', invoiceLand: '' };
+    btwTarievenResponse = {
+      tarieven: [
+        { land: 'NL', percentage: 21 },
+        { land: 'BE', percentage: 6 },
+      ],
+      standaardPercentage: 21,
+    };
+    signedInWithOneOrder();
+    (ordersResponse.body as { lines: { prijs: number | null }[] }[])[0].lines[0].prijs = 100;
+    renderSection();
+    await waitFor(() => expect(screen.getByTestId('account-order-GD-00001')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('account-order-GD-00001'));
+    const btw = await screen.findByTestId('account-order-modal-btw');
+    expect(btw).toHaveTextContent('6');
+    expect(btw).not.toHaveTextContent('21');
   });
 });

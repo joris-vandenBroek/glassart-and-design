@@ -18,4 +18,6 @@ export const SELF_EDITABLE_KLANT_FIELDS = [
   'invoiceAddress',
   'invoicePostcode',
   'invoiceCity',
+  'land',
+  'invoiceLand',
 ] as const;

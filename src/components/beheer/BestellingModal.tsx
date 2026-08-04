@@ -9,6 +9,8 @@ import { formatCurrency } from '@/lib/formatCurrency';
 import { ProductImage } from '@/components/ProductImage';
 import type { Bestelling, BestellingLine } from './BestellingenSection';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from './materiaalTypes';
+import type { Klant } from './KlantenSection';
+import type { BtwTarieven } from './btwTarievenTypes';
 
 const STATUS_BADGE_CLASS: Record<Bestelling['status'], string> = {
   'Te beoordelen': 'bg-amber-400/10 text-amber-300',
@@ -32,6 +34,8 @@ interface BestellingModalProps {
   materialen: Materiaal[] | null;
   maten: Maat[] | null;
   materiaalsoorten: Materiaalsoort[] | null;
+  klanten: Klant[] | null;
+  btwTarieven: BtwTarieven | null;
   onClose: () => void;
   onUpdated: (bestelling: Bestelling) => void;
   onLinePrijsVastgesteld: (bestellingId: string, lineId: string, prijs: number) => void;
@@ -48,6 +52,8 @@ export function BestellingModal({
   materialen,
   maten,
   materiaalsoorten,
+  klanten,
+  btwTarieven,
   onClose,
   onUpdated,
   onLinePrijsVastgesteld,
@@ -80,6 +86,17 @@ export function BestellingModal({
         ? t('bestellingenModalTotalIncomplete')
         : formatCurrency(bestelling.lines.reduce((sum, line) => sum + (line.prijs ?? 0) * line.quantity, 0))
       : null;
+  const totaalExclBtwGetal =
+    bestelling && !heeftOngeprijsdeRegel
+      ? bestelling.lines.reduce((sum, line) => sum + (line.prijs ?? 0) * line.quantity, 0)
+      : null;
+  const klant = bestelling ? (klanten ?? []).find((k) => k.id === bestelling.klantId) : undefined;
+  const land = klant ? klant.invoiceLand || klant.land || null : null;
+  const btwPercentage =
+    btwTarieven && (btwTarieven.tarieven.find((t) => t.land === land)?.percentage ?? btwTarieven.standaardPercentage);
+  const btwBedrag =
+    totaalExclBtwGetal !== null && btwPercentage != null ? totaalExclBtwGetal * (btwPercentage / 100) : null;
+  const totaalInclBtw = totaalExclBtwGetal !== null && btwBedrag !== null ? totaalExclBtwGetal + btwBedrag : null;
 
   async function handleGoedkeuren() {
     if (!bestelling) return;
@@ -218,9 +235,27 @@ export function BestellingModal({
             {totaalWeergave !== null && (
               <div className="shrink-0 text-right">
                 <p className="text-[0.65rem] uppercase tracking-wide text-white/40">{t('bestellingenModalTotalLabel')}</p>
-                <p data-testid="bestelling-modal-total" className="text-sm font-semibold text-white">
+                <p data-testid="bestelling-modal-total" className="text-sm font-semibold text-white tabular-nums">
                   {totaalWeergave}
                 </p>
+                {btwBedrag !== null && (
+                  <div data-testid="bestelling-modal-btw" className="mt-1">
+                    <p className="text-[0.65rem] uppercase tracking-wide text-white/40">
+                      {t('bestellingenModalBtwLabel', { percentage: btwPercentage })}
+                    </p>
+                    <p className="text-sm text-white/80 tabular-nums">{formatCurrency(btwBedrag)}</p>
+                  </div>
+                )}
+                {totaalInclBtw !== null && (
+                  <div className="mt-1">
+                    <p className="text-[0.65rem] uppercase tracking-wide text-white/40">
+                      {t('bestellingenModalTotaalInclLabel')}
+                    </p>
+                    <p data-testid="bestelling-modal-totaal-incl" className="text-sm font-semibold text-white tabular-nums">
+                      {formatCurrency(totaalInclBtw)}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>

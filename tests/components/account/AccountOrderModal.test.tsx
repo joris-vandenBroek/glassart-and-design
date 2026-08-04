@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { AccountOrderModal } from '@/components/account/AccountOrderModal';
 import type { DisplayOrder } from '@/lib/useAllOrders';
 import type { Kunstwerk, Materiaal, Maat } from '@/components/beheer/materiaalTypes';
+import type { BtwTarieven } from '@/components/beheer/btwTarievenTypes';
 import messages from '../../../messages/nl.json';
 
 const KUNSTWERKEN: Kunstwerk[] = [
@@ -25,8 +26,9 @@ const MATERIALEN: Materiaal[] = [
   { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Extra diepte en stevigheid.' },
 ];
 const MATEN: Maat[] = [{ id: 'maat-1', breedte: 40, hoogte: 60 }];
+const BTWTARIEVEN: BtwTarieven = { tarieven: [{ land: 'NL', percentage: 21 }], standaardPercentage: 21 };
 
-function renderModal(order: DisplayOrder | null) {
+function renderModal(order: DisplayOrder | null, land: string | null = 'NL', btwTarieven: BtwTarieven | null = BTWTARIEVEN) {
   return render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <AccountOrderModal
@@ -34,6 +36,8 @@ function renderModal(order: DisplayOrder | null) {
         kunstwerken={KUNSTWERKEN}
         materialen={MATERIALEN}
         maten={MATEN}
+        land={land}
+        btwTarieven={btwTarieven}
         onClose={() => {}}
       />
     </NextIntlClientProvider>
@@ -174,5 +178,54 @@ describe('AccountOrderModal', () => {
       lines: null,
     });
     expect(screen.queryByTestId('account-order-modal-total')).not.toBeInTheDocument();
+  });
+
+  it('shows the btw percentage, btw-bedrag and totaal incl. btw', () => {
+    renderModal({
+      id: 'GD-00005',
+      date: '1-7-2026',
+      time: '14:30',
+      status: 'Te beoordelen',
+      description: '',
+      lines: [
+        { id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 },
+        { id: 'line-2', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 50, quantity: 1 },
+      ],
+    });
+    // total excl. btw = 350
+    expect(screen.getByTestId('account-order-modal-btw')).toHaveTextContent('21');
+    expect(screen.getByTestId('account-order-modal-btw')).toHaveTextContent('€ 73,50');
+    expect(screen.getByTestId('account-order-modal-totaal-incl')).toHaveTextContent('€ 423,50');
+  });
+
+  it('falls back to standaardPercentage when land is null', () => {
+    renderModal(
+      {
+        id: 'GD-00001',
+        date: '1-7-2026',
+        time: '14:30',
+        status: 'Te beoordelen',
+        description: '',
+        lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
+      },
+      null,
+      { tarieven: [{ land: 'DE', percentage: 19 }], standaardPercentage: 21 }
+    );
+    expect(screen.getByTestId('account-order-modal-btw')).toHaveTextContent('21');
+  });
+
+  it('shows no btw block when the total itself is incomplete', () => {
+    renderModal({
+      id: 'GD-00002',
+      date: '2-7-2026',
+      time: '09:00',
+      status: 'Te beoordelen',
+      description: '',
+      lines: [
+        { id: 'line-2', kunstwerkId: 'kw-1', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: null, quantity: 1 },
+      ],
+    });
+    expect(screen.queryByTestId('account-order-modal-btw')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('account-order-modal-totaal-incl')).not.toBeInTheDocument();
   });
 });

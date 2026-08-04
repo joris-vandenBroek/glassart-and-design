@@ -17,6 +17,7 @@ const KLANT_PROFILE = {
   address: 'Kerkstraat 12',
   postcode: '1234 AB',
   city: 'Amsterdam',
+  land: 'NL',
   contactPreference: 'email',
 };
 
@@ -235,5 +236,16 @@ describe('SettingsSection', () => {
     renderSection();
     await waitFor(() => expect(screen.getByTestId('settings-company-name')).toHaveValue('Hotel De Zilveren Zwaan'));
     expect(screen.getByTestId('settings-verplicht-legende')).toHaveTextContent('* verplicht veld');
+  });
+
+  it('pre-fills the Land combobox from the real klant profile and includes it when saving', async () => {
+    renderSection();
+    await waitFor(() => expect(screen.getByTestId('settings-land')).toHaveValue('Nederland'));
+    fireEvent.click(screen.getByTestId('settings-submit'));
+    await waitFor(() => expect(screen.getByTestId('settings-saved')).toBeInTheDocument());
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/klanten/me',
+      expect.objectContaining({ method: 'PATCH', body: JSON.stringify(KLANT_PROFILE) })
+    );
   });
 });

@@ -136,4 +136,14 @@ describe('klanten self-service route', () => {
     ]);
     expect((rows as Array<{ companyName: string }>)[0].companyName).toBe('Klant B');
   });
+
+  it('updates land and invoiceLand via self-service PATCH', async () => {
+    const { klant, cookie } = await createKlantWithCookie();
+    const response = await patchMe(req('PATCH', { land: 'BE', invoiceLand: 'DE' }, cookie));
+    expect(response.status).toBe(200);
+    const [rows] = await getPool().query('SELECT land, invoiceLand FROM klanten WHERE id = ?', [klant.id]);
+    const row = (rows as Array<{ land: string; invoiceLand: string }>)[0];
+    expect(row.land).toBe('BE');
+    expect(row.invoiceLand).toBe('DE');
+  });
 });

@@ -46,6 +46,12 @@ beforeEach(() => {
     if (url === '/api/auth/me?type=klant') {
       return { ok: true, json: async () => ({ user: authUser }) };
     }
+    if (url === '/api/klanten/me') {
+      return { ok: true, json: async () => ({ land: 'NL', invoiceLand: '' }) };
+    }
+    if (url === '/api/instellingen/btwtarieven') {
+      return { ok: true, json: async () => ({ tarieven: [{ land: 'NL', percentage: 21 }], standaardPercentage: 21 }) };
+    }
     return { ok: true, json: async () => [] };
   });
 });

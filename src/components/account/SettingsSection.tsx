@@ -8,6 +8,8 @@ import { LOCALE_META } from '@/lib/localeMeta';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { PasswordInput } from '@/components/PasswordInput';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
+import { Combobox } from '@/components/Combobox';
+import { LAND_OPTIONS } from '@/data/landen';
 
 type ContactPreference = 'email' | 'phone' | 'whatsapp';
 
@@ -19,6 +21,7 @@ interface KlantProfile {
   address: string;
   postcode: string;
   city: string;
+  land: string;
   contactPreference: ContactPreference;
 }
 
@@ -30,6 +33,7 @@ const EMPTY_PROFILE: KlantProfile = {
   address: '',
   postcode: '',
   city: '',
+  land: '',
   contactPreference: 'email',
 };
 
@@ -66,6 +70,7 @@ export function SettingsSection() {
         address: klant.address ?? '',
         postcode: klant.postcode ?? '',
         city: klant.city ?? '',
+        land: klant.land ?? '',
         contactPreference: klant.contactPreference ?? 'email',
       });
     })();
@@ -250,6 +255,20 @@ export function SettingsSection() {
           onChange={(e) => setField('city', e.target.value)}
           data-testid="settings-city"
           className={fieldClassName}
+        />
+      </label>
+      <label className={labelClassName}>
+        <span>
+          {t('labelLand')}
+          <RequiredMark />
+        </span>
+        <Combobox
+          options={LAND_OPTIONS}
+          value={profile.land || null}
+          onChange={(value) => setField('land', value ?? '')}
+          placeholder={t('labelLand')}
+          noResultsLabel={t('labelLand')}
+          testId="settings-land"
         />
       </label>
 

@@ -12,6 +12,7 @@ import {
 } from '@/lib/klantBestellingStatus';
 import type { DisplayOrder } from '@/lib/useAllOrders';
 import type { Kunstwerk, Materiaal, Maat } from '@/components/beheer/materiaalTypes';
+import type { BtwTarieven } from '@/components/beheer/btwTarievenTypes';
 
 function materiaalLabel(materiaal: Materiaal): string {
   return `${materiaal.materiaaldikte}mm — ${materiaal.omschrijving}`;
@@ -26,6 +27,8 @@ interface AccountOrderModalProps {
   kunstwerken: Kunstwerk[] | null;
   materialen: Materiaal[] | null;
   maten: Maat[] | null;
+  land: string | null;
+  btwTarieven: BtwTarieven | null;
   onClose: () => void;
 }
 
@@ -34,6 +37,8 @@ export function AccountOrderModal({
   kunstwerken,
   materialen,
   maten,
+  land,
+  btwTarieven,
   onClose,
 }: AccountOrderModalProps) {
   const t = useTranslations('accountPage.orders');
@@ -47,6 +52,16 @@ export function AccountOrderModal({
     : heeftOngeprijsdeRegel
       ? t('modalTotalIncomplete')
       : formatCurrency(order!.lines!.reduce((sum, line) => sum + (line.prijs ?? 0) * line.quantity, 0));
+
+  const totaalExclBtwGetal =
+    heeftRegels && !heeftOngeprijsdeRegel
+      ? order!.lines!.reduce((sum, line) => sum + (line.prijs ?? 0) * line.quantity, 0)
+      : null;
+  const btwPercentage =
+    btwTarieven && (btwTarieven.tarieven.find((t) => t.land === land)?.percentage ?? btwTarieven.standaardPercentage);
+  const btwBedrag =
+    totaalExclBtwGetal !== null && btwPercentage != null ? totaalExclBtwGetal * (btwPercentage / 100) : null;
+  const totaalInclBtw = totaalExclBtwGetal !== null && btwBedrag !== null ? totaalExclBtwGetal + btwBedrag : null;
 
   return (
     <Modal
@@ -74,6 +89,22 @@ export function AccountOrderModal({
                 <p data-testid="account-order-modal-total" className="text-sm font-semibold text-white">
                   {totaalWeergave}
                 </p>
+                {btwBedrag !== null && (
+                  <div data-testid="account-order-modal-btw" className="mt-1">
+                    <p className="text-[0.65rem] uppercase tracking-wide text-white/40">
+                      {t('modalBtwLabel', { percentage: btwPercentage })}
+                    </p>
+                    <p className="text-sm text-white/80 tabular-nums">{formatCurrency(btwBedrag)}</p>
+                  </div>
+                )}
+                {totaalInclBtw !== null && (
+                  <div className="mt-1">
+                    <p className="text-[0.65rem] uppercase tracking-wide text-white/40">{t('modalTotaalInclLabel')}</p>
+                    <p data-testid="account-order-modal-totaal-incl" className="text-sm font-semibold text-white tabular-nums">
+                      {formatCurrency(totaalInclBtw)}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
