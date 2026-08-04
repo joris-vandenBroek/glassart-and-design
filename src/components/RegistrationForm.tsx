@@ -5,11 +5,15 @@ import { useTranslations } from 'next-intl';
 import { logActiviteit, ONBEKENDE_ACTOR } from '@/lib/logActiviteit';
 import { PasswordInput } from '@/components/PasswordInput';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
+import { Combobox } from '@/components/Combobox';
+import { LAND_OPTIONS } from '@/data/landen';
 
 export function RegistrationForm() {
   const t = useTranslations('registrationPage');
   const [showDeliveryAddress, setShowDeliveryAddress] = useState(false);
   const [showInvoiceAddress, setShowInvoiceAddress] = useState(false);
+  const [land, setLand] = useState<string | null>('NL');
+  const [invoiceLand, setInvoiceLand] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -51,12 +55,14 @@ export function RegistrationForm() {
           address: formData.get('address') as string,
           postcode: formData.get('postcode') as string,
           city: formData.get('city') as string,
+          land: land ?? '',
           deliveryAddress: (formData.get('deliveryAddress') as string) || '',
           deliveryPostcode: (formData.get('deliveryPostcode') as string) || '',
           deliveryCity: (formData.get('deliveryCity') as string) || '',
           invoiceAddress: (formData.get('invoiceAddress') as string) || '',
           invoicePostcode: (formData.get('invoicePostcode') as string) || '',
           invoiceCity: (formData.get('invoiceCity') as string) || '',
+          invoiceLand: invoiceLand ?? '',
         }),
       });
       if (!response.ok) {
@@ -216,6 +222,21 @@ export function RegistrationForm() {
         <input type="text" name="city" required data-testid="word-klant-city" className={fieldClassName} />
       </label>
 
+      <label className={labelClassName}>
+        <span>
+          {t('labelLand')}
+          <RequiredMark />
+        </span>
+        <Combobox
+          options={LAND_OPTIONS}
+          value={land}
+          onChange={setLand}
+          placeholder={t('labelLand')}
+          noResultsLabel={t('labelLand')}
+          testId="word-klant-land"
+        />
+      </label>
+
       <label className="flex items-center gap-2 text-xs uppercase tracking-wide text-white/60">
         <input
           type="checkbox"
@@ -299,6 +320,18 @@ export function RegistrationForm() {
               name="invoiceCity"
               data-testid="word-klant-invoice-city"
               className={fieldClassName}
+            />
+          </label>
+
+          <label className={labelClassName}>
+            {t('labelInvoiceLand')}
+            <Combobox
+              options={LAND_OPTIONS}
+              value={invoiceLand}
+              onChange={setInvoiceLand}
+              placeholder={t('labelInvoiceLand')}
+              noResultsLabel={t('labelInvoiceLand')}
+              testId="word-klant-invoice-land"
             />
           </label>
         </>

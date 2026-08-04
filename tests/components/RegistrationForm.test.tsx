@@ -143,12 +143,14 @@ describe('RegistrationForm', () => {
           address: 'Teststraat 1',
           postcode: '1234 AB',
           city: 'Teststad',
+          land: 'NL',
           deliveryAddress: '',
           deliveryPostcode: '',
           deliveryCity: '',
           invoiceAddress: '',
           invoicePostcode: '',
           invoiceCity: '',
+          invoiceLand: '',
         }),
       })
     );
@@ -226,5 +228,37 @@ describe('RegistrationForm', () => {
     renderForm();
     const label = screen.getByTestId('word-klant-company-name').closest('label');
     expect(label).toHaveTextContent('Bedrijfsnaam *');
+  });
+
+  it('shows a Land combobox defaulted to Nederland in the main address block', () => {
+    renderForm();
+    // Combobox renders the selected label as the input's `value`, not text content
+    // (see tests/components/Combobox.test.tsx), so this uses toHaveValue rather than
+    // the brief's toHaveTextContent, which can never pass on an <input>.
+    expect(screen.getByTestId('word-klant-land')).toHaveValue('Nederland');
+  });
+
+  it('shows an invoiceLand combobox only when "different invoice address" is checked, with no default', () => {
+    renderForm();
+    expect(screen.queryByTestId('word-klant-invoice-land')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('word-klant-different-invoice'));
+    expect(screen.getByTestId('word-klant-invoice-land')).toBeInTheDocument();
+    expect(screen.getByTestId('word-klant-invoice-land')).not.toHaveValue('Nederland');
+  });
+
+  it('includes land and invoiceLand in the POST body', async () => {
+    fetchMock.mockResolvedValue({ ok: true });
+    renderForm();
+    fillRequiredFields();
+    fireEvent.click(screen.getByTestId('word-klant-different-invoice'));
+    fireEvent.focus(screen.getByTestId('word-klant-invoice-land'));
+    fireEvent.change(screen.getByTestId('word-klant-invoice-land'), { target: { value: 'Duitsland' } });
+    fireEvent.click(screen.getByTestId('word-klant-invoice-land-option-DE'));
+    fireEvent.submit(screen.getByTestId('word-klant-submit').closest('form')!);
+
+    await waitFor(() => expect(screen.getByTestId('word-klant-confirmation')).toBeInTheDocument());
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body);
+    expect(body.land).toBe('NL');
+    expect(body.invoiceLand).toBe('DE');
   });
 });
