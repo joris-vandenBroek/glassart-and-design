@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { InstellingenSection } from '@/components/beheer/InstellingenSection';
 import type { Bestelinstellingen } from '@/components/beheer/bestelinstellingenTypes';
+import type { BtwTarieven } from '@/components/beheer/btwTarievenTypes';
 import messages from '../../../messages/nl.json';
 
 const logActiviteitMock = vi.fn();
@@ -24,20 +25,25 @@ beforeEach(() => {
 });
 
 const BESTELINSTELLINGEN: Bestelinstellingen = { minimaleAfname: 3 };
+const BTWTARIEVEN: BtwTarieven = { tarieven: [{ land: 'NL', percentage: 21 }], standaardPercentage: 21 };
 
 function renderSection(overrides: Partial<React.ComponentProps<typeof InstellingenSection>> = {}) {
   const onSave = vi.fn().mockResolvedValue(true);
+  const onSaveBtw = vi.fn().mockResolvedValue(true);
   render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <InstellingenSection
         bestelinstellingen={BESTELINSTELLINGEN}
         loadError={null}
         onSave={onSave}
+        btwTarieven={BTWTARIEVEN}
+        btwLoadError={null}
+        onSaveBtw={onSaveBtw}
         {...overrides}
       />
     </NextIntlClientProvider>
   );
-  return { onSave };
+  return { onSave, onSaveBtw };
 }
 
 describe('InstellingenSection', () => {
@@ -85,5 +91,57 @@ describe('InstellingenSection', () => {
       'Er is iets misgegaan. Probeer het opnieuw.'
     );
     expect(logActiviteitMock).not.toHaveBeenCalled();
+  });
+
+  it('pre-fills the btw-tarieven rows and the standaardtarief', () => {
+    renderSection();
+    expect(screen.getByTestId('instellingen-btw-standaard')).toHaveValue(21);
+    expect(screen.getByTestId('instellingen-btw-percentage-0')).toHaveValue(21);
+    expect(screen.getByTestId('instellingen-btw-land-0')).toHaveValue('Nederland');
+  });
+
+  it('adds a new land+percentage row via "Land toevoegen"', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('instellingen-btw-toevoegen'));
+    expect(screen.getByTestId('instellingen-btw-land-1')).toBeInTheDocument();
+    fireEvent.focus(screen.getByTestId('instellingen-btw-land-1'));
+    fireEvent.click(screen.getByTestId('instellingen-btw-land-1-option-BE'));
+    fireEvent.change(screen.getByTestId('instellingen-btw-percentage-1'), { target: { value: '6' } });
+    fireEvent.click(screen.getByTestId('instellingen-opslaan'));
+    expect(screen.getByTestId('instellingen-btw-land-1')).toHaveValue('België');
+  });
+
+  it('removes a row via its verwijder-knop', () => {
+    renderSection({
+      btwTarieven: {
+        tarieven: [
+          { land: 'NL', percentage: 21 },
+          { land: 'BE', percentage: 6 },
+        ],
+        standaardPercentage: 21,
+      },
+    });
+    expect(screen.getByTestId('instellingen-btw-land-1')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('instellingen-btw-verwijderen-1'));
+    expect(screen.queryByTestId('instellingen-btw-land-1')).not.toBeInTheDocument();
+  });
+
+  it('saves btw-tarieven changes via onSaveBtw and logs btwtarieven_gewijzigd', async () => {
+    const { onSaveBtw } = renderSection();
+    fireEvent.change(screen.getByTestId('instellingen-btw-percentage-0'), { target: { value: '20' } });
+    fireEvent.click(screen.getByTestId('instellingen-opslaan'));
+    await waitFor(() =>
+      expect(onSaveBtw).toHaveBeenCalledWith({
+        tarieven: [{ land: 'NL', percentage: 20 }],
+        standaardPercentage: 21,
+      })
+    );
+    await waitFor(() =>
+      expect(logActiviteitMock).toHaveBeenCalledWith('btwtarieven_gewijzigd', {
+        id: 'staff-1',
+        email: 'paul@glassartanddesign.com',
+        naam: 'paul@glassartanddesign.com',
+      })
+    );
   });
 });

@@ -24,6 +24,7 @@ import type { Materiaalsoort, Materiaal, Maat, Segment, Stijl, Onderwerp, Kunstw
 import type { Kunstenaar } from './kunstenaarTypes';
 import type { Bedrijfsgegevens } from './bedrijfsgegevensTypes';
 import type { Bestelinstellingen } from './bestelinstellingenTypes';
+import type { BtwTarieven } from './btwTarievenTypes';
 import type { ActiviteitType } from '@/lib/logActiviteit';
 import { useApiCollection } from '@/lib/useApiCollection';
 import { useApiRecord } from '@/lib/useApiRecord';
@@ -31,6 +32,7 @@ import { MATERIAALSOORTEN_SEED, buildMaterialenSeed } from '@/data/materiaalsoor
 import { SEGMENTEN_SEED, MATEN_SEED, buildKunstwerkenSeed } from '@/data/kunstwerkenSeed';
 import { BEDRIJFSGEGEVENS_SEED } from '@/data/bedrijfsgegevensSeed';
 import { BESTELINSTELLINGEN_SEED } from '@/data/bestelinstellingenSeed';
+import { BTWTARIEVEN_SEED } from '@/data/btwTarievenSeed';
 
 interface BeheerShellProps {
   email: string;
@@ -264,6 +266,9 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   const bestelinstellingen = useApiRecord<Bestelinstellingen>('instellingen', 'bestelinstellingen', {
     seed: BESTELINSTELLINGEN_SEED,
   });
+  const btwtarieven = useApiRecord<BtwTarieven>('instellingen', 'btwtarieven', {
+    seed: BTWTARIEVEN_SEED,
+  });
 
   const klantenCount = (klanten ?? []).length;
   const bestellingenCount = (bestellingen ?? []).length;
@@ -454,6 +459,9 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             bestelinstellingen={bestelinstellingen.data}
             loadError={bestelinstellingen.error === 'load' ? t('instellingenLoadError') : null}
             onSave={bestelinstellingen.save}
+            btwTarieven={btwtarieven.data}
+            btwLoadError={btwtarieven.error === 'load' ? t('instellingenLoadError') : null}
+            onSaveBtw={btwtarieven.save}
           />
         ) : (
           <ActiviteitSection activiteiten={activiteiten} loadError={activiteitenLoadError} />

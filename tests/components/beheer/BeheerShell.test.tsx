@@ -86,6 +86,7 @@ const BEDRIJFSGEGEVENS_FIXTURE = {
 };
 
 const BESTELINSTELLINGEN_FIXTURE = { minimaleAfname: 1 };
+const BTWTARIEVEN_FIXTURE = { tarieven: [{ land: 'NL', percentage: 21 }], standaardPercentage: 21 };
 
 let collections: Record<string, unknown[]> = {};
 let klantenLoadFails = false;
@@ -123,6 +124,9 @@ beforeEach(() => {
     }
     if (resource === 'instellingen' && id === 'bestelinstellingen') {
       return { ok: true, json: async () => BESTELINSTELLINGEN_FIXTURE };
+    }
+    if (resource === 'instellingen' && id === 'btwtarieven') {
+      return { ok: true, json: async () => BTWTARIEVEN_FIXTURE };
     }
     if (method === 'GET' && !id) {
       return { ok: true, json: async () => collections[resource] ?? [] };
