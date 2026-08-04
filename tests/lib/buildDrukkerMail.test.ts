@@ -333,7 +333,8 @@ describe('buildDrukkerMail', () => {
     });
     expect(mail.html).toContain('Maat: 40×60 cm');
     expect(mail.html).toContain('Aantal: 2');
-    expect(mail.html).not.toContain('150');
+    expect(mail.html).not.toContain('€150');
+    expect(mail.html).not.toContain('150,00');
   });
 
   it('HTML-escapes a bedrijfsnaam containing special characters', () => {

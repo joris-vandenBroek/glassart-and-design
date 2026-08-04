@@ -59,7 +59,7 @@ function resolveRegel(
   const materiaalsoort = materiaal ? materiaalsoorten.find((s) => s.id === materiaal.materiaalsoortId) : undefined;
   const maat = maten.find((m) => m.id === line.maatId);
 
-  const naam = kunstwerk?.naam ?? 'Onbekend kunstwerk';
+  const naam = kunstwerk?.naam || 'Onbekend kunstwerk';
   const materiaalOmschrijving = materiaal
     ? `${materiaal.materiaaldikte}mm ${materiaalsoort?.omschrijving ?? materiaal.materiaalsoortId} — ${materiaal.omschrijving}`
     : 'Onbekend materiaal';
@@ -107,7 +107,7 @@ function formatRegelHtml(
 
   const thumbnail = kunstwerk?.foto
     ? `<img src="${escapeHtml(kunstwerk.foto)}" width="64" height="64" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:4px;display:block;" />`
-    : `<div style="width:64px;height:64px;border-radius:4px;background:#2a2a2a;color:#888888;text-align:center;line-height:64px;font-family:Arial,sans-serif;font-size:20px;">?</div>`;
+    : `<div style="width:64px;height:64px;border-radius:4px;background:#f2f2f2;color:#999999;text-align:center;line-height:64px;font-family:Arial,sans-serif;font-size:20px;border:1px solid #e5e5e5;">?</div>`;
 
   return `<tr>
   <td style="padding:8px 0;border-bottom:1px solid #e5e5e5;">

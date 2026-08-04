@@ -201,7 +201,7 @@ export function VersturenNaarDrukkerDialog({
           <p className="text-xs text-white/70">{mail.subject}</p>
           <div
             data-testid="drukker-versturen-preview"
-            className="max-h-64 overflow-y-auto rounded-sm bg-black/40 p-3 text-xs text-white/80"
+            className="max-h-64 overflow-y-auto rounded-sm bg-white p-3 text-xs"
             dangerouslySetInnerHTML={{ __html: mail.html }}
           />
         </div>
