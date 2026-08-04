@@ -56,7 +56,7 @@ const DRUKKERS_MET_STANDAARD: Drukker[] = [
 ];
 
 const KUNSTWERKEN: Kunstwerk[] = [
-  { id: 'kw-1', foto: '', naam: 'Hotel paneel', kunstenaarId: null, segmentIds: [], materiaalIds: ['mat-1'], maatIds: ['maat-1'], omschrijvingNl: 'Hotel paneel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'kw-1', foto: 'https://example.com/hotel-paneel.jpg', naam: 'Hotel paneel', kunstenaarId: null, segmentIds: [], materiaalIds: ['mat-1'], maatIds: ['maat-1'], omschrijvingNl: 'Hotel paneel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const MATERIALEN: Materiaal[] = [{ id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 6, omschrijving: 'Helder' }];
 const MATEN: Maat[] = [{ id: 'maat-1', breedte: 40, hoogte: 60 }];
@@ -117,6 +117,11 @@ function statusCallFor(headerId: string) {
   return fetchMock.mock.calls.find((call) => (call[0] as string) === `/api/bestelheaders/${headerId}`);
 }
 
+function mailCallPayload() {
+  const call = fetchMock.mock.calls.find((call) => (call[0] as string) === 'https://example.com/mail.php');
+  return call ? JSON.parse((call[1] as { body: string }).body) : undefined;
+}
+
 beforeEach(() => {
   logActiviteitMock.mockReset();
   fetchMock.mockReset();
@@ -130,11 +135,15 @@ beforeEach(() => {
 });
 
 describe('VersturenNaarDrukkerDialog', () => {
-  it('pre-selects the only drukker and shows the full e-mail preview', () => {
+  it('pre-selects the only drukker and shows the full e-mail preview, including a line thumbnail', () => {
     renderDialog();
     expect(screen.getByTestId('drukker-versturen-drukker')).toHaveValue('drukker-1');
     expect(screen.getByTestId('drukker-versturen-preview')).toHaveTextContent('Testbedrijf BV');
     expect(screen.getByTestId('drukker-versturen-preview')).toHaveTextContent('Hotel paneel');
+    expect(screen.getByTestId('drukker-versturen-preview').querySelector('img')).toHaveAttribute(
+      'src',
+      'https://example.com/hotel-paneel.jpg'
+    );
   });
 
   it('pre-selects the standaard drukker when multiple drukkers exist', () => {
@@ -149,20 +158,20 @@ describe('VersturenNaarDrukkerDialog', () => {
     expect(screen.getByTestId('drukker-versturen-drukker')).toHaveValue('drukker-1');
   });
 
-  it('sends the mail, updates statuses, saves a zending, logs the activiteit, and closes', async () => {
+  it('sends the mail with both a plain-text and an html body, updates statuses, saves a zending, logs the activiteit, and closes', async () => {
     const { onVerstuurd, onClose } = renderDialog();
 
     fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
 
     await waitFor(() =>
-      expect(fetchMock).toHaveBeenCalledWith(
-        'https://example.com/mail.php',
-        expect.objectContaining({
-          method: 'POST',
-          body: expect.stringContaining('"to":"info@janssen.nl"'),
-        })
-      )
+      expect(fetchMock).toHaveBeenCalledWith('https://example.com/mail.php', expect.objectContaining({ method: 'POST' }))
     );
+    expect(mailCallPayload()).toMatchObject({
+      to: 'info@janssen.nl',
+      subject: expect.stringContaining('Nieuwe order(s) voor de drukker'),
+      body: expect.stringContaining('Testbedrijf BV'),
+      html: expect.stringContaining('<img src="https://example.com/hotel-paneel.jpg"'),
+    });
     await waitFor(() =>
       expect(statusCallFor('header-1')).toEqual([
         '/api/bestelheaders/header-1',
