@@ -91,10 +91,14 @@ export function OrdersSection() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const response = await fetch('/api/klanten/me');
-      if (!response.ok || cancelled) return;
-      const klant = (await response.json()) as { land?: string | null; invoiceLand?: string | null };
-      if (!cancelled) setOwnLand({ land: klant.land ?? null, invoiceLand: klant.invoiceLand ?? null });
+      try {
+        const response = await fetch('/api/klanten/me');
+        if (!response.ok || cancelled) return;
+        const klant = (await response.json()) as { land?: string | null; invoiceLand?: string | null };
+        if (!cancelled) setOwnLand({ land: klant.land ?? null, invoiceLand: klant.invoiceLand ?? null });
+      } catch {
+        // leave ownLand null — btw falls back to standaardtarief
+      }
     })();
     return () => {
       cancelled = true;

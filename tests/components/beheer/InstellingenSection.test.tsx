@@ -86,11 +86,57 @@ describe('InstellingenSection', () => {
 
   it('shows an action error and does not log when onSave fails', async () => {
     renderSection({ onSave: vi.fn().mockResolvedValue(false) });
+    fireEvent.change(screen.getByTestId('instellingen-minimale-afname'), { target: { value: '8' } });
     fireEvent.click(screen.getByTestId('instellingen-opslaan'));
     expect(await screen.findByTestId('instellingen-error-message')).toHaveTextContent(
       'Er is iets misgegaan. Probeer het opnieuw.'
     );
     expect(logActiviteitMock).not.toHaveBeenCalled();
+  });
+
+  it('does not call onSave or log bestelinstellingen_gewijzigd when minimale afname is unchanged', async () => {
+    const { onSave, onSaveBtw } = renderSection();
+    fireEvent.click(screen.getByTestId('instellingen-opslaan'));
+    await waitFor(() => expect(onSaveBtw).not.toHaveBeenCalled());
+    expect(onSave).not.toHaveBeenCalled();
+    expect(logActiviteitMock).not.toHaveBeenCalled();
+  });
+
+  it('does not call onSaveBtw or log btwtarieven_gewijzigd when only minimale afname changes', async () => {
+    const { onSave, onSaveBtw } = renderSection();
+    fireEvent.change(screen.getByTestId('instellingen-minimale-afname'), { target: { value: '8' } });
+    fireEvent.click(screen.getByTestId('instellingen-opslaan'));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ minimaleAfname: 8 }));
+    expect(onSaveBtw).not.toHaveBeenCalled();
+    expect(logActiviteitMock).not.toHaveBeenCalledWith('btwtarieven_gewijzigd', expect.anything());
+  });
+
+  it('does not call onSave or log bestelinstellingen_gewijzigd when only btw changes', async () => {
+    const { onSave, onSaveBtw } = renderSection();
+    fireEvent.change(screen.getByTestId('instellingen-btw-percentage-0'), { target: { value: '20' } });
+    fireEvent.click(screen.getByTestId('instellingen-opslaan'));
+    await waitFor(() => expect(onSaveBtw).toHaveBeenCalled());
+    expect(onSave).not.toHaveBeenCalled();
+    expect(logActiviteitMock).not.toHaveBeenCalledWith('bestelinstellingen_gewijzigd', expect.anything());
+  });
+
+  it('falls back to the BTWTARIEVEN_SEED and renders the btw block when btwTarieven is null (fresh environment)', () => {
+    renderSection({ btwTarieven: null });
+    expect(screen.getByTestId('instellingen-btw-standaard')).toHaveValue(21);
+    expect(screen.getByTestId('instellingen-btw-percentage-0')).toHaveValue(21);
+    expect(screen.getByTestId('instellingen-btw-land-0')).toHaveValue('Nederland');
+  });
+
+  it('saves an edit made on top of the seeded btw-tarieven when btwTarieven started out null, creating the row', async () => {
+    const { onSaveBtw } = renderSection({ btwTarieven: null });
+    fireEvent.change(screen.getByTestId('instellingen-btw-percentage-0'), { target: { value: '20' } });
+    fireEvent.click(screen.getByTestId('instellingen-opslaan'));
+    await waitFor(() =>
+      expect(onSaveBtw).toHaveBeenCalledWith({
+        tarieven: [{ land: 'NL', percentage: 20 }],
+        standaardPercentage: 21,
+      })
+    );
   });
 
   it('pre-fills the btw-tarieven rows and the standaardtarief', () => {

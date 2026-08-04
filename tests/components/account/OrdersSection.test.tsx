@@ -311,11 +311,20 @@ describe('OrdersSection', () => {
 
   it('passes the klant\'s own land through to the order modal for btw calculation', async () => {
     klantMeResponse = { land: 'BE', invoiceLand: '' };
+    btwTarievenResponse = {
+      tarieven: [
+        { land: 'NL', percentage: 21 },
+        { land: 'BE', percentage: 6 },
+      ],
+      standaardPercentage: 21,
+    };
     signedInWithOneOrder();
     (ordersResponse.body as { lines: { prijs: number | null }[] }[])[0].lines[0].prijs = 100;
     renderSection();
     await waitFor(() => expect(screen.getByTestId('account-order-GD-00001')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('account-order-GD-00001'));
-    expect(screen.getByTestId('account-order-modal-total')).toBeInTheDocument();
+    const btw = await screen.findByTestId('account-order-modal-btw');
+    expect(btw).toHaveTextContent('6');
+    expect(btw).not.toHaveTextContent('21');
   });
 });

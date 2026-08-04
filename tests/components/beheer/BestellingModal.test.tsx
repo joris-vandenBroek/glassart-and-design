@@ -487,4 +487,34 @@ describe('BestellingModal — btw', () => {
     expect(screen.queryByTestId('bestelling-modal-btw')).not.toBeInTheDocument();
     expect(screen.queryByTestId('bestelling-modal-totaal-incl')).not.toBeInTheDocument();
   });
+
+  it('uses invoiceLand over land when both are set (invoiceLand takes precedence)', () => {
+    const klantMetAfwijkendFactuurland = { ...KLANTEN[0], land: 'NL', invoiceLand: 'BE' };
+    render(
+      <NextIntlClientProvider locale="nl" messages={messages}>
+        <BestellingModal
+          bestelling={BESTELLING}
+          kunstwerken={KUNSTWERKEN}
+          materialen={MATERIALEN}
+          maten={MATEN}
+          materiaalsoorten={MATERIAALSOORTEN}
+          klanten={[klantMetAfwijkendFactuurland]}
+          btwTarieven={{
+            tarieven: [
+              { land: 'NL', percentage: 21 },
+              { land: 'BE', percentage: 6 },
+            ],
+            standaardPercentage: 21,
+          }}
+          onClose={vi.fn()}
+          onUpdated={vi.fn()}
+          onLinePrijsVastgesteld={vi.fn()}
+          onLineUpdated={vi.fn()}
+        />
+      </NextIntlClientProvider>
+    );
+    const btw = screen.getByTestId('bestelling-modal-btw');
+    expect(btw).toHaveTextContent('6');
+    expect(btw).not.toHaveTextContent('21');
+  });
 });

@@ -6,6 +6,7 @@ import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import { Combobox } from '@/components/Combobox';
 import { LAND_OPTIONS } from '@/data/landen';
+import { BTWTARIEVEN_SEED } from '@/data/btwTarievenSeed';
 import type { Bestelinstellingen } from './bestelinstellingenTypes';
 import type { BtwTarief, BtwTarieven } from './btwTarievenTypes';
 
@@ -29,7 +30,7 @@ export function InstellingenSection({
   const t = useTranslations('beheer');
   const { user } = useAdminAuth();
   const [form, setForm] = useState<Bestelinstellingen | null>(bestelinstellingen);
-  const [btwForm, setBtwForm] = useState<BtwTarieven | null>(btwTarieven);
+  const [btwForm, setBtwForm] = useState<BtwTarieven | null>(btwTarieven ?? BTWTARIEVEN_SEED);
   const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -37,7 +38,7 @@ export function InstellingenSection({
   }, [bestelinstellingen]);
 
   useEffect(() => {
-    setBtwForm(btwTarieven);
+    setBtwForm(btwTarieven ?? BTWTARIEVEN_SEED);
   }, [btwTarieven]);
 
   if (loadError) {
@@ -76,15 +77,24 @@ export function InstellingenSection({
     if (!form) return;
     setActionError(null);
     const clamped = { minimaleAfname: Math.max(1, Math.round(form.minimaleAfname) || 1) };
-    const success = await onSave(clamped);
-    if (!success) {
-      setActionError(t('instellingenActionError'));
-      return;
-    }
-    setForm(clamped);
-    void logActiviteit('bestelinstellingen_gewijzigd', actorFromMedewerker(user));
 
-    if (btwForm) {
+    const bestelinstellingenDirty =
+      !bestelinstellingen || clamped.minimaleAfname !== bestelinstellingen.minimaleAfname;
+    if (bestelinstellingenDirty) {
+      const success = await onSave(clamped);
+      if (!success) {
+        setActionError(t('instellingenActionError'));
+        return;
+      }
+      setForm(clamped);
+      void logActiviteit('bestelinstellingen_gewijzigd', actorFromMedewerker(user));
+    } else {
+      setForm(clamped);
+    }
+
+    const currentBtw = btwTarieven ?? BTWTARIEVEN_SEED;
+    const btwDirty = btwForm && JSON.stringify(btwForm) !== JSON.stringify(currentBtw);
+    if (btwDirty) {
       const btwSuccess = await onSaveBtw(btwForm);
       if (!btwSuccess) {
         setActionError(t('instellingenActionError'));
