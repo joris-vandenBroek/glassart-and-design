@@ -90,7 +90,7 @@ export function HelpHint({ text, size = 'md', testId }: HelpHintProps) {
           ref={popoverRef}
           role="tooltip"
           data-testid={popoverTestId}
-          className={`absolute top-full z-30 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-md border border-white/10 bg-charcoal p-3 text-xs font-normal leading-relaxed text-white/80 shadow-lg ${PLACEMENT_CLASS[placement]}`}
+          className={`absolute top-full z-30 mt-2 w-64 max-w-[calc(100vw-2rem)] whitespace-pre-line rounded-md border border-white/10 bg-charcoal p-3 text-xs font-normal leading-relaxed text-white/80 shadow-lg ${PLACEMENT_CLASS[placement]}`}
         >
           {text}
         </span>
