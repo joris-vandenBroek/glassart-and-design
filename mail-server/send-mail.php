@@ -42,6 +42,7 @@ if (!is_array($input) || !hash_equals($config['shared_secret'], (string) ($input
 $to = trim((string) ($input['to'] ?? ''));
 $subject = trim((string) ($input['subject'] ?? ''));
 $body = trim((string) ($input['body'] ?? ''));
+$html = trim((string) ($input['html'] ?? ''));
 
 if (!filter_var($to, FILTER_VALIDATE_EMAIL) || $subject === '' || $body === '') {
     http_response_code(400);
@@ -64,8 +65,15 @@ try {
     $mail->setFrom($config['from_email'], $config['from_name']);
     $mail->addAddress($to);
     $mail->Subject = $subject;
-    $mail->Body = $body;
-    $mail->isHTML(false);
+
+    if ($html !== '') {
+        $mail->isHTML(true);
+        $mail->Body = $html;
+        $mail->AltBody = $body;
+    } else {
+        $mail->isHTML(false);
+        $mail->Body = $body;
+    }
 
     $mail->send();
 

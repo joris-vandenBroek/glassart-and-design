@@ -92,7 +92,7 @@ export function VersturenNaarDrukkerDialog({
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret, to: drukker.email, subject: mail.subject, body: mail.body }),
+        body: JSON.stringify({ secret, to: drukker.email, subject: mail.subject, body: mail.text, html: mail.html }),
       });
       if (!response.ok) {
         setError(t('drukkerVersturenMailError'));
@@ -113,7 +113,7 @@ export function VersturenNaarDrukkerDialog({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           onderwerp: mail.subject,
-          body: mail.body,
+          body: mail.text,
           bestellingIds: bestellingen.map((b) => b.id),
           aantalKlanten: new Set(bestellingen.map((b) => b.klantId)).size,
           aantalRegels: bestellingen.reduce((sum, b) => sum + b.lineCount, 0),
@@ -198,14 +198,12 @@ export function VersturenNaarDrukkerDialog({
 
         <div className="flex flex-col gap-1">
           <span className="text-xs uppercase tracking-wide text-white/60">{t('drukkerVersturenLabelPreview')}</span>
-          <pre
+          <p className="text-xs text-white/70">{mail.subject}</p>
+          <div
             data-testid="drukker-versturen-preview"
-            className="max-h-64 overflow-y-auto whitespace-pre-wrap rounded-sm bg-black/40 p-3 text-xs text-white/80"
-          >
-            {mail.subject}
-            {'\n\n'}
-            {mail.body}
-          </pre>
+            className="max-h-64 overflow-y-auto rounded-sm bg-white p-3 text-xs"
+            dangerouslySetInnerHTML={{ __html: mail.html }}
+          />
         </div>
 
         {heeftOntbrekendeKlantgegevens && (

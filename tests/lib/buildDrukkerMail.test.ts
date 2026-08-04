@@ -101,9 +101,9 @@ describe('buildDrukkerMail', () => {
       maten: MATEN,
       materiaalsoorten: MATERIAALSOORTEN,
     });
-    expect(mail.body).toContain('== Testbedrijf BV ==');
-    expect(mail.body).toContain('Afleveradres: Teststraat 1, 1234 AB Teststad');
-    expect(mail.body).toContain('Hotel paneel — 6mm Glas — Helder, maat 40×60 cm, aantal 2');
+    expect(mail.text).toContain('== Testbedrijf BV ==');
+    expect(mail.text).toContain('Afleveradres: Teststraat 1, 1234 AB Teststad');
+    expect(mail.text).toContain('Hotel paneel — 6mm Glas — Helder, maat 40×60 cm, aantal 2');
   });
 
   it('uses the delivery address instead of the standaardadres when it is set', () => {
@@ -115,8 +115,8 @@ describe('buildDrukkerMail', () => {
       maten: MATEN,
       materiaalsoorten: MATERIAALSOORTEN,
     });
-    expect(mail.body).toContain('Afleveradres: Havenweg 5, 5678 CD Havenstad');
-    expect(mail.body).not.toContain('Teststraat 1');
+    expect(mail.text).toContain('Afleveradres: Havenweg 5, 5678 CD Havenstad');
+    expect(mail.text).not.toContain('Teststraat 1');
   });
 
   it('falls back to the standaardadres when deliveryAddress is null (nullable DB column, not just empty string)', () => {
@@ -128,7 +128,7 @@ describe('buildDrukkerMail', () => {
       maten: MATEN,
       materiaalsoorten: MATERIAALSOORTEN,
     });
-    expect(mail.body).toContain('Afleveradres: Teststraat 1, 1234 AB Teststad');
+    expect(mail.text).toContain('Afleveradres: Teststraat 1, 1234 AB Teststad');
   });
 
   it('groups multiple bestellingen from the same klant into a single section', () => {
@@ -146,9 +146,9 @@ describe('buildDrukkerMail', () => {
       maten: MATEN,
       materiaalsoorten: MATERIAALSOORTEN,
     });
-    expect(mail.body.match(/== Testbedrijf BV ==/g)).toHaveLength(1);
-    expect(mail.body).toContain('aantal 2');
-    expect(mail.body).toContain('aantal 1');
+    expect(mail.text.match(/== Testbedrijf BV ==/g)).toHaveLength(1);
+    expect(mail.text).toContain('aantal 2');
+    expect(mail.text).toContain('aantal 1');
   });
 
   it('creates a section per klant when bestellingen come from different klanten', () => {
@@ -160,8 +160,8 @@ describe('buildDrukkerMail', () => {
       maten: MATEN,
       materiaalsoorten: MATERIAALSOORTEN,
     });
-    expect(mail.body).toContain('== Testbedrijf BV ==');
-    expect(mail.body).toContain('== Ander Bedrijf ==');
+    expect(mail.text).toContain('== Testbedrijf BV ==');
+    expect(mail.text).toContain('== Ander Bedrijf ==');
   });
 
   it('describes a custom-size line using its breedte/hoogte instead of a maat lookup', () => {
@@ -179,7 +179,7 @@ describe('buildDrukkerMail', () => {
       maten: MATEN,
       materiaalsoorten: MATERIAALSOORTEN,
     });
-    expect(mail.body).toContain('maat 90×140 cm');
+    expect(mail.text).toContain('maat 90×140 cm');
   });
 
   it('appends the formaat suffix on a custom-size (breedte/hoogte) line too', () => {
@@ -197,7 +197,7 @@ describe('buildDrukkerMail', () => {
       maten: MATEN,
       materiaalsoorten: MATERIAALSOORTEN,
     });
-    expect(mail.body).toContain('maat 90×140 cm (Liggend), aantal 1');
+    expect(mail.text).toContain('maat 90×140 cm (Liggend), aantal 1');
   });
 
   it('sets a subject mentioning the drukker order', () => {
@@ -225,7 +225,7 @@ describe('buildDrukkerMail', () => {
       maten: MATEN,
       materiaalsoorten: MATERIAALSOORTEN,
     });
-    expect(mail.body).toContain('maat 40×60 cm (Liggend), aantal 1');
+    expect(mail.text).toContain('maat 40×60 cm (Liggend), aantal 1');
   });
 
   it('appends " (Staand)" to the maat when the kunstwerk formaat is staand', () => {
@@ -241,7 +241,7 @@ describe('buildDrukkerMail', () => {
       maten: MATEN,
       materiaalsoorten: MATERIAALSOORTEN,
     });
-    expect(mail.body).toContain('maat 40×60 cm (Staand), aantal 1');
+    expect(mail.text).toContain('maat 40×60 cm (Staand), aantal 1');
   });
 
   it('adds no suffix when the kunstwerk formaat is vierkant or not set', () => {
@@ -253,8 +253,8 @@ describe('buildDrukkerMail', () => {
       maten: MATEN,
       materiaalsoorten: MATERIAALSOORTEN,
     });
-    expect(mail.body).toContain('maat 40×60 cm, aantal 2');
-    expect(mail.body).not.toContain('cm (');
+    expect(mail.text).toContain('maat 40×60 cm, aantal 2');
+    expect(mail.text).not.toContain('cm (');
   });
 
   it('falls back to the bestelling companyName and "Onbekend afleveradres" when the klant is not found', () => {
@@ -266,8 +266,8 @@ describe('buildDrukkerMail', () => {
       maten: MATEN,
       materiaalsoorten: MATERIAALSOORTEN,
     });
-    expect(mail.body).toContain('== Verdwenen BV ==');
-    expect(mail.body).toContain('Afleveradres: Onbekend afleveradres');
+    expect(mail.text).toContain('== Verdwenen BV ==');
+    expect(mail.text).toContain('Afleveradres: Onbekend afleveradres');
   });
 
   it('falls back to "Onbekend materiaal", "Onbekend kunstwerk" and "Onbekende maat" for unmatched reference ids', () => {
@@ -292,8 +292,61 @@ describe('buildDrukkerMail', () => {
       maten: MATEN,
       materiaalsoorten: MATERIAALSOORTEN,
     });
-    expect(mail.body).toContain('Onbekend kunstwerk');
-    expect(mail.body).toContain('Onbekend materiaal');
-    expect(mail.body).toContain('Onbekende maat');
+    expect(mail.text).toContain('Onbekend kunstwerk');
+    expect(mail.text).toContain('Onbekend materiaal');
+    expect(mail.text).toContain('Onbekende maat');
+  });
+
+  it('includes an <img> for a line whose kunstwerk has a foto, in the html output', () => {
+    const mail = buildDrukkerMail({
+      bestellingen: [bestelling()],
+      klanten: [klant()],
+      kunstwerken: [{ ...KUNSTWERKEN[0], foto: 'https://example.com/foto.jpg' }, KUNSTWERKEN[1], KUNSTWERKEN[2]],
+      materialen: MATERIALEN,
+      maten: MATEN,
+      materiaalsoorten: MATERIAALSOORTEN,
+    });
+    expect(mail.html).toContain('<img src="https://example.com/foto.jpg"');
+  });
+
+  it('shows a "?" placeholder in the html output when a line\'s kunstwerk has no foto', () => {
+    const mail = buildDrukkerMail({
+      bestellingen: [bestelling()],
+      klanten: [klant()],
+      kunstwerken: KUNSTWERKEN,
+      materialen: MATERIALEN,
+      maten: MATEN,
+      materiaalsoorten: MATERIAALSOORTEN,
+    });
+    expect(mail.html).not.toContain('<img src=""');
+    expect(mail.html).toContain('>?<');
+  });
+
+  it('includes the maat and aantal but no price figures in the html output', () => {
+    const mail = buildDrukkerMail({
+      bestellingen: [bestelling()],
+      klanten: [klant()],
+      kunstwerken: KUNSTWERKEN,
+      materialen: MATERIALEN,
+      maten: MATEN,
+      materiaalsoorten: MATERIAALSOORTEN,
+    });
+    expect(mail.html).toContain('Maat: 40×60 cm');
+    expect(mail.html).toContain('Aantal: 2');
+    expect(mail.html).not.toContain('€150');
+    expect(mail.html).not.toContain('150,00');
+  });
+
+  it('HTML-escapes a bedrijfsnaam containing special characters', () => {
+    const mail = buildDrukkerMail({
+      bestellingen: [bestelling()],
+      klanten: [klant({ companyName: 'A & B <Glas>' })],
+      kunstwerken: KUNSTWERKEN,
+      materialen: MATERIALEN,
+      maten: MATEN,
+      materiaalsoorten: MATERIAALSOORTEN,
+    });
+    expect(mail.html).toContain('A &amp; B &lt;Glas&gt;');
+    expect(mail.html).not.toContain('A & B <Glas>');
   });
 });
