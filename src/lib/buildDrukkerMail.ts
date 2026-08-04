@@ -17,7 +17,7 @@ export interface DrukkerMail {
 }
 
 function formatAfleveradres(klant: Klant): string {
-  const heeftAfleveradres = klant.deliveryAddress.trim() !== '';
+  const heeftAfleveradres = !!klant.deliveryAddress?.trim();
   const adres = heeftAfleveradres ? klant.deliveryAddress : klant.address;
   const postcode = heeftAfleveradres ? klant.deliveryPostcode : klant.postcode;
   const plaats = heeftAfleveradres ? klant.deliveryCity : klant.city;

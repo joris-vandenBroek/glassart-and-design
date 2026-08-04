@@ -119,6 +119,18 @@ describe('buildDrukkerMail', () => {
     expect(mail.body).not.toContain('Teststraat 1');
   });
 
+  it('falls back to the standaardadres when deliveryAddress is null (nullable DB column, not just empty string)', () => {
+    const mail = buildDrukkerMail({
+      bestellingen: [bestelling()],
+      klanten: [klant({ deliveryAddress: null as unknown as string, deliveryPostcode: null as unknown as string, deliveryCity: null as unknown as string })],
+      kunstwerken: KUNSTWERKEN,
+      materialen: MATERIALEN,
+      maten: MATEN,
+      materiaalsoorten: MATERIAALSOORTEN,
+    });
+    expect(mail.body).toContain('Afleveradres: Teststraat 1, 1234 AB Teststad');
+  });
+
   it('groups multiple bestellingen from the same klant into a single section', () => {
     const mail = buildDrukkerMail({
       bestellingen: [
