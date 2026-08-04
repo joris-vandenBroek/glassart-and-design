@@ -249,6 +249,10 @@
       "modalClose": "Fermer",
       "modalLineUnknown": "Article inconnu",
       "modalLinePriceOnRequest": "Prix sur demande",
+      "modalLabelMateriaal": "Matériau",
+      "modalLabelMaat": "Taille",
+      "modalTotalLabel": "Total",
+      "modalTotalIncomplete": "À déterminer",
       "modalTitel": "Commande {id}",
       "loadError": "Impossible de charger vos commandes. Veuillez réessayer plus tard."
     },

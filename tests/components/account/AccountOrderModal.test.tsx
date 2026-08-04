@@ -120,4 +120,59 @@ describe('AccountOrderModal', () => {
     });
     expect(screen.getByTestId('account-order-modal-status')).toHaveTextContent('Afgewezen');
   });
+
+  it('shows the order total in the header when every line has a price', () => {
+    renderModal({
+      id: 'GD-00005',
+      date: '1-7-2026',
+      time: '14:30',
+      status: 'Te beoordelen',
+      description: '',
+      lines: [
+        { id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 },
+        { id: 'line-2', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 50, quantity: 1 },
+      ],
+    });
+    expect(screen.getByTestId('account-order-modal-total')).toHaveTextContent('€ 350,00');
+  });
+
+  it('shows a subtotal per line (aantal × stukprijs)', () => {
+    renderModal({
+      id: 'GD-00001',
+      date: '1-7-2026',
+      time: '14:30',
+      status: 'Te beoordelen',
+      description: '',
+      lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
+    });
+    const line = screen.getByTestId('account-order-modal-line-line-1');
+    expect(line).toHaveTextContent('2 × € 150,00');
+    expect(line).toHaveTextContent('€ 300,00');
+  });
+
+  it('shows an incomplete-total placeholder instead of a wrong total when a line has no price yet', () => {
+    renderModal({
+      id: 'GD-00002',
+      date: '2-7-2026',
+      time: '09:00',
+      status: 'Te beoordelen',
+      description: '',
+      lines: [
+        { id: 'line-2', kunstwerkId: 'kw-1', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: null, quantity: 1 },
+      ],
+    });
+    expect(screen.getByTestId('account-order-modal-total')).toHaveTextContent('Wordt nog vastgesteld');
+  });
+
+  it('shows no total block for an order with no line detail', () => {
+    renderModal({
+      id: 'GD-00006',
+      date: '1-7-2026',
+      time: '14:30',
+      status: 'Te beoordelen',
+      description: '3 bestelregels, totaal 5 stuks',
+      lines: null,
+    });
+    expect(screen.queryByTestId('account-order-modal-total')).not.toBeInTheDocument();
+  });
 });

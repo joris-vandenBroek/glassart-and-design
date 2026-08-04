@@ -252,6 +252,10 @@
       "modalClose": "Close",
       "modalLineUnknown": "Unknown item",
       "modalLinePriceOnRequest": "Price on request",
+      "modalLabelMateriaal": "Material",
+      "modalLabelMaat": "Size",
+      "modalTotalLabel": "Total",
+      "modalTotalIncomplete": "To be determined",
       "modalTitel": "Order {id}",
       "loadError": "Couldn't load your orders. Please try again later."
     },
