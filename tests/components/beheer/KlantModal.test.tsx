@@ -40,6 +40,8 @@ const KLANT: Klant = {
   invoiceAddress: '',
   invoicePostcode: '',
   invoiceCity: '',
+  land: 'NL',
+  invoiceLand: '',
   status: 'Beoordelen',
   prijsgroepId: null,
   kunstenaarId: null,
@@ -249,6 +251,8 @@ describe('KlantModal', () => {
       invoiceAddress: '',
       invoicePostcode: '',
       invoiceCity: '',
+      land: 'NL',
+      invoiceLand: '',
     });
     await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, contactPerson: 'Piet Pietersen' }));
     expect(logActiviteitMock).toHaveBeenCalledWith(
@@ -300,6 +304,8 @@ describe('KlantModal', () => {
       invoiceAddress: 'Factuurlaan 9',
       invoicePostcode: '9999 ZZ',
       invoiceCity: 'Factuurstad',
+      land: 'NL',
+      invoiceLand: '',
     });
     expect(onUpdated).toHaveBeenCalled();
   });
@@ -439,5 +445,47 @@ describe('KlantModal', () => {
 
     fireEvent.click(screen.getByTestId('klant-modal-help'));
     expect(screen.getByTestId('klant-modal-help-popover')).toHaveTextContent('prijsgroep');
+  });
+
+  it('shows the resolved land name read-only, and a Combobox in edit mode', () => {
+    renderModal({ ...KLANT, land: 'BE' });
+    expect(screen.getByTestId('klant-modal')).toHaveTextContent('België');
+    fireEvent.click(screen.getByTestId('klant-modal-bewerken'));
+    expect(screen.getByTestId('klant-modal-land')).toBeInTheDocument();
+  });
+
+  it('includes land and invoiceLand in the Opslaan diff when changed', async () => {
+    const { onUpdated } = renderModal({ ...KLANT, land: 'NL' });
+    fireEvent.click(screen.getByTestId('klant-modal-bewerken'));
+    fireEvent.focus(screen.getByTestId('klant-modal-land'));
+    fireEvent.click(screen.getByTestId('klant-modal-land-option-BE'));
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
+
+    await waitFor(() => expect(patchCall()).toBeDefined());
+    expect(patchBody()).toEqual({
+      companyName: 'Testbedrijf BV',
+      kvk: '12345678',
+      contactPerson: 'Jan Jansen',
+      contactPreference: 'email',
+      email: 'jan@example.com',
+      phone: '0612345678',
+      address: 'Teststraat 1',
+      postcode: '1234 AB',
+      city: 'Teststad',
+      land: 'BE',
+      deliveryAddress: '',
+      deliveryPostcode: '',
+      deliveryCity: '',
+      invoiceAddress: '',
+      invoicePostcode: '',
+      invoiceCity: '',
+      invoiceLand: '',
+    });
+    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, land: 'BE' }));
+  });
+
+  it('shows an invoiceLand Combobox inside the factuuradres block once it has a value', () => {
+    renderModal({ ...KLANT, invoiceAddress: 'Factuurlaan 9', invoiceLand: 'DE' });
+    expect(screen.getByTestId('klant-modal')).toHaveTextContent('Duitsland');
   });
 });
