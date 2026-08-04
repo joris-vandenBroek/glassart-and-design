@@ -249,7 +249,7 @@
       "lineSummary": "{lines, plural, one {# ligne de commande} other {# lignes de commande}}, au total {quantity, plural, one {# pièce} other {# pièces}}",
       "statusInBehandeling": "En cours de traitement",
       "statusAfgewezen": "Refusée",
-      "statusHelp": "En cours de traitement signifie que nous examinons encore votre commande, ou qu'elle est déjà en route vers l'imprimeur. Refusée signifie que nous n'avons pas pu exécuter la commande — n'hésitez pas à nous contacter si vous avez des questions.",
+      "statusHelp": "En cours de traitement signifie que nous traitons encore votre commande. Refusée signifie que nous n'avons pas pu exécuter la commande — n'hésitez pas à nous contacter si vous avez des questions.",
       "modalClose": "Fermer",
       "modalLineUnknown": "Article inconnu",
       "modalLinePriceOnRequest": "Prix sur demande",

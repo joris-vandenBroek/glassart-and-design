@@ -249,7 +249,7 @@
       "lineSummary": "{lines, plural, one {# Bestellposition} other {# Bestellpositionen}}, insgesamt {quantity} Stück",
       "statusInBehandeling": "In Bearbeitung",
       "statusAfgewezen": "Abgelehnt",
-      "statusHelp": "In Bearbeitung bedeutet, dass wir Ihre Bestellung noch prüfen oder dass sie bereits auf dem Weg zur Druckerei ist. Abgelehnt bedeutet, dass wir die Bestellung nicht ausführen konnten — kontaktieren Sie uns gerne bei Fragen.",
+      "statusHelp": "In Bearbeitung bedeutet, dass wir Ihre Bestellung noch verarbeiten. Abgelehnt bedeutet, dass wir die Bestellung nicht ausführen konnten — kontaktieren Sie uns gerne bei Fragen.",
       "modalClose": "Schließen",
       "modalLineUnknown": "Unbekannter Artikel",
       "modalLinePriceOnRequest": "Preis auf Anfrage",

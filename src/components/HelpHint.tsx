@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 interface HelpHintProps {
   text: string;
@@ -8,11 +8,41 @@ interface HelpHintProps {
   testId?: string;
 }
 
+type Placement = 'center' | 'left' | 'right';
+
+const VIEWPORT_MARGIN = 16;
+
+const PLACEMENT_CLASS: Record<Placement, string> = {
+  center: 'left-1/2 -translate-x-1/2',
+  left: 'left-0',
+  right: 'right-0',
+};
+
 export function HelpHint({ text, size = 'md', testId }: HelpHintProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [placement, setPlacement] = useState<Placement>('center');
   const containerRef = useRef<HTMLSpanElement>(null);
+  const popoverRef = useRef<HTMLSpanElement>(null);
   const buttonTestId = testId ?? 'help-hint-button';
   const popoverTestId = testId ? `${testId}-popover` : 'help-hint-popover';
+
+  // Runs before paint, so a corrected placement never flashes the default centered one.
+  useLayoutEffect(() => {
+    if (!isOpen || !containerRef.current || !popoverRef.current) {
+      return;
+    }
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const popoverWidth = popoverRef.current.getBoundingClientRect().width;
+    const centeredLeft = containerRect.left + containerRect.width / 2 - popoverWidth / 2;
+    const centeredRight = centeredLeft + popoverWidth;
+    if (centeredLeft < VIEWPORT_MARGIN) {
+      setPlacement('left');
+    } else if (centeredRight > window.innerWidth - VIEWPORT_MARGIN) {
+      setPlacement('right');
+    } else {
+      setPlacement('center');
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -57,9 +87,10 @@ export function HelpHint({ text, size = 'md', testId }: HelpHintProps) {
       </button>
       {isOpen && (
         <span
+          ref={popoverRef}
           role="tooltip"
           data-testid={popoverTestId}
-          className="absolute left-1/2 top-full z-30 mt-2 w-64 -translate-x-1/2 rounded-md border border-white/10 bg-charcoal p-3 text-xs font-normal leading-relaxed text-white/80 shadow-lg"
+          className={`absolute top-full z-30 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-md border border-white/10 bg-charcoal p-3 text-xs font-normal leading-relaxed text-white/80 shadow-lg ${PLACEMENT_CLASS[placement]}`}
         >
           {text}
         </span>

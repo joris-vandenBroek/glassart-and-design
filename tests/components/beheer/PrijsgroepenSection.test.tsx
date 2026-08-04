@@ -196,11 +196,11 @@ describe('PrijsgroepenSection', () => {
     expect(screen.getByTestId('prijsgroep-modal-verplicht-legende')).toHaveTextContent('* verplicht veld');
   });
 
-  it('shows a help popover explaining that the percentage is informational only', () => {
+  it('shows a help popover explaining that the percentage is applied automatically', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('prijsgroepen-add'));
 
     fireEvent.click(screen.getByTestId('prijsgroep-modal-help'));
-    expect(screen.getByTestId('prijsgroep-modal-help-popover')).toHaveTextContent('puur informatief');
+    expect(screen.getByTestId('prijsgroep-modal-help-popover')).toHaveTextContent('automatisch toegepast');
   });
 });

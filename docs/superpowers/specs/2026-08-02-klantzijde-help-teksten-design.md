@@ -43,10 +43,14 @@ review) — geaccepteerd door de klant voor deze korte teksten.
 
 **Bestelstatus** (nieuwe sleutel `accountPage.orders.statusHelp`):
 
-> In behandeling betekent dat we je bestelling nog aan het bekijken zijn, of
-> dat 'm al onderweg is naar de drukker. Afgewezen betekent dat we de
-> bestelling niet konden uitvoeren — neem gerust contact met ons op als je
-> daar vragen over hebt.
+> In behandeling betekent dat we je bestelling nog aan het verwerken zijn.
+> Afgewezen betekent dat we de bestelling niet konden uitvoeren — neem
+> gerust contact met ons op als je daar vragen over hebt.
+>
+> (Herzien op 2026-08-02: de eerste versie noemde "onderweg naar de
+> drukker" en gebruikte "dat 'm" — beide op verzoek verwijderd/vervangen,
+> omdat klanten niet per se weten dat het drukwerk wordt uitbesteed, en de
+> zinsbouw onnatuurlijk was.)
 
 **Prijs op aanvraag** (nieuwe sleutels `cart.priceOnRequestHelp` en
 `accountPage.orders.priceOnRequestHelp`, identieke tekst):

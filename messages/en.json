@@ -252,7 +252,7 @@
       "lineSummary": "{lines, plural, one {# order line} other {# order lines}}, totaling {quantity, plural, one {# piece} other {# pieces}}",
       "statusInBehandeling": "In progress",
       "statusAfgewezen": "Rejected",
-      "statusHelp": "In progress means we're still reviewing your order, or it's already on its way to the printer. Rejected means we weren't able to fulfil the order — feel free to contact us if you have any questions.",
+      "statusHelp": "In progress means we're still processing your order. Rejected means we weren't able to fulfil the order — feel free to contact us if you have any questions.",
       "modalClose": "Close",
       "modalLineUnknown": "Unknown item",
       "modalLinePriceOnRequest": "Price on request",
