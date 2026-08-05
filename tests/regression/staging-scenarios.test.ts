@@ -56,6 +56,15 @@ import { buildDrukkerMail } from '@/lib/buildDrukkerMail';
 import { resolveBtwPercentage } from '@/lib/resolveBtw';
 import type { BtwTarieven } from '@/components/beheer/btwTarievenTypes';
 
+// Narrates each meaningful step to the terminal while the suite runs, so a human running
+// `npm run test:regression` sees what's actually happening (which klant/kunstenaar/bedrag/
+// etc.) rather than just a final pass/fail line. Needs `disableConsoleIntercept: true` in
+// vitest.regression.config.ts, otherwise Vitest buffers this until the test finishes.
+function stap(tekst: string) {
+  // eslint-disable-next-line no-console
+  console.log(`    • ${tekst}`);
+}
+
 function req(method: string, body?: unknown, cookie?: string) {
   return new Request('http://localhost/api', {
     method,
@@ -143,9 +152,11 @@ describe('Deel C1 -- klant-kunstenaar exclusiviteit (echte workflow)', () => {
         naam: 'AUTOTEST Kunstenaar Exclusief',
       } as never);
       kunstenaarId = kunstenaar.id;
+      stap(`Kunstenaar "AUTOTEST Kunstenaar Exclusief" aangemaakt (${kunstenaarId})`);
 
       fixture = await maakMaatMateriaal('C1');
       await zetMatrixPrijs(fixture.maatId, fixture.materiaalId, 100);
+      stap(`Maat/materiaal + prijsmatrix-regel aangemaakt (matrixprijs EUR 100)`);
       const kunstwerk = await insertRow<{ id: string }>(
         'kunstwerken',
         {
@@ -157,6 +168,7 @@ describe('Deel C1 -- klant-kunstenaar exclusiviteit (echte workflow)', () => {
         ['materiaalIds', 'maatIds']
       );
       kunstwerkId = kunstwerk.id;
+      stap(`Kunstwerk "AUTOTEST Kunstwerk Exclusief" aangemaakt (${kunstwerkId})`);
 
       const eigenAccount = await maakKlant('c1-eigen-account');
       klantEmails.push(eigenAccount.email);
@@ -166,6 +178,7 @@ describe('Deel C1 -- klant-kunstenaar exclusiviteit (echte workflow)', () => {
       klantEmails.push(geblokkeerdA.email);
       const geblokkeerdB = await maakKlant('c1-geblokkeerd-b');
       klantEmails.push(geblokkeerdB.email);
+      stap(`4 testklanten aangemaakt: eigenAccount=${eigenAccount.email}, toegestaan=${toegestaneKlant.email}, 2x geblokkeerd`);
 
       const staff = await medewerkerCookie();
 
@@ -174,6 +187,7 @@ describe('Deel C1 -- klant-kunstenaar exclusiviteit (echte workflow)', () => {
         params: { id: eigenAccount.id },
       });
       expect(linkKlant.status).toBe(200);
+      stap(`eigenAccount gekoppeld als kunstenaars eigen klantaccount (PATCH klanten -> ${linkKlant.status})`);
 
       // Exclusiviteit: toegestaneKlant + het eigen kunstenaars-klantaccount.
       const setExclusief = await patchKunstenaar(
@@ -181,16 +195,19 @@ describe('Deel C1 -- klant-kunstenaar exclusiviteit (echte workflow)', () => {
         { params: { id: kunstenaarId } }
       );
       expect(setExclusief.status).toBe(200);
+      stap(`Exclusiviteit ingesteld op [toegestaneKlant, eigenAccount] (PATCH kunstenaars -> ${setExclusief.status})`);
 
       const lijn = { kunstwerkId, maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 1, quantity: 1 };
 
       for (const geblokkeerd of [geblokkeerdA, geblokkeerdB]) {
         const response = await createHeader(req('POST', { lines: [lijn] }, geblokkeerd.cookie));
         expect(response.status).toBe(403);
+        stap(`${geblokkeerd.email} probeert te bestellen -> ${response.status} (verwacht: geblokkeerd)`);
       }
       for (const toegestaan of [toegestaneKlant, eigenAccount]) {
         const response = await createHeader(req('POST', { lines: [lijn] }, toegestaan.cookie));
         expect(response.status).toBe(201);
+        stap(`${toegestaan.email} probeert te bestellen -> ${response.status} (verwacht: toegestaan)`);
       }
 
       // Edge case: haal het eigen klantaccount weer uit de lijst -- geen automatische
@@ -200,14 +217,17 @@ describe('Deel C1 -- klant-kunstenaar exclusiviteit (echte workflow)', () => {
         { params: { id: kunstenaarId } }
       );
       expect(verwijderEigenAccount.status).toBe(200);
+      stap(`eigenAccount uit de exclusiviteitslijst verwijderd, alleen toegestaneKlant blijft over`);
       const nogmaals = await createHeader(req('POST', { lines: [lijn] }, eigenAccount.cookie));
       expect(nogmaals.status).toBe(403);
+      stap(`eigenAccount probeert opnieuw te bestellen -> ${nogmaals.status} (verwacht: nu ook geblokkeerd, geen automatische uitzondering)`);
     } finally {
       await opruimenKlanten(klantEmails);
       const pool = getPool();
       if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
       if (kunstenaarId) await pool.query('DELETE FROM kunstenaars WHERE id = ?', [kunstenaarId]);
       if (fixture) await fixture.opruimen();
+      stap('Opgeruimd: klanten, kunstwerk, kunstenaar, maat/materiaal.');
     }
   });
 });
@@ -247,6 +267,8 @@ describe('Deel C2 -- kunstenaarsopslag + prijsgroep (prijsopbouw van een bestell
       );
       kunstwerkId = kunstwerk.id;
 
+      stap(`Kunstenaar zonder opslag + kunstwerk met 2 materiaal/maat-combinaties (matrixprijzen EUR 100 en EUR 250)`);
+
       const prijsgroepNul = await insertRow<{ id: string }>('prijsgroepen', {
         naam: 'AUTOTEST Prijsgroep 0',
         kortingspercentage: 0,
@@ -256,6 +278,7 @@ describe('Deel C2 -- kunstenaarsopslag + prijsgroep (prijsopbouw van een bestell
 
       const klant = await maakKlant('c2-klant', { prijsgroepId: prijsgroepNul.id });
       klantEmails.push(klant.email);
+      stap(`Klant ${klant.email} aangemaakt met Prijsgroep 0 (0% korting)`);
 
       async function bestelBeideCombinaties() {
         const response = await createHeader(
@@ -286,6 +309,7 @@ describe('Deel C2 -- kunstenaarsopslag + prijsgroep (prijsopbouw van een bestell
       const zonderOpslag = await bestelBeideCombinaties();
       expect(zonderOpslag.a).toBe(100);
       expect(zonderOpslag.b).toBe(250);
+      stap(`Stap 1 (geen opslag, Prijsgroep 0): besteld prijzen = EUR ${zonderOpslag.a} / EUR ${zonderOpslag.b} (verwacht: gelijk aan matrixprijs)`);
 
       // Stap 2: kunstenaarsopslag EUR 20 -> prijs == matrixprijs + 20.
       const opslagResponse = await putKunstenaarAfspraken(
@@ -293,9 +317,11 @@ describe('Deel C2 -- kunstenaarsopslag + prijsgroep (prijsopbouw van een bestell
         { params: { id: kunstenaarId } }
       );
       expect(opslagResponse.status).toBe(200);
+      stap(`Kunstenaarsopslag ingesteld op EUR 20 (PUT kunstenaarAfspraken -> ${opslagResponse.status})`);
       const metOpslag = await bestelBeideCombinaties();
       expect(metOpslag.a).toBe(120);
       expect(metOpslag.b).toBe(270);
+      stap(`Stap 2 (EUR 20 opslag, Prijsgroep 0): besteld prijzen = EUR ${metOpslag.a} / EUR ${metOpslag.b} (verwacht: matrixprijs + 20)`);
 
       // Stap 3: klant naar Prijsgroep 25 (25% korting) -> prijs == (matrixprijs + 20) * 0,75.
       const prijsgroep25 = await insertRow<{ id: string }>('prijsgroepen', {
@@ -308,9 +334,11 @@ describe('Deel C2 -- kunstenaarsopslag + prijsgroep (prijsopbouw van een bestell
         params: { id: klant.id },
       });
       expect(switchGroep.status).toBe(200);
+      stap(`Klant omgezet naar Prijsgroep 25 (25% korting) (PATCH klanten -> ${switchGroep.status})`);
       const metPrijsgroep = await bestelBeideCombinaties();
       expect(metPrijsgroep.a).toBe(90); // (100 + 20) * 0,75
       expect(metPrijsgroep.b).toBe(202.5); // (250 + 20) * 0,75
+      stap(`Stap 3 (EUR 20 opslag + Prijsgroep 25): besteld prijzen = EUR ${metPrijsgroep.a} / EUR ${metPrijsgroep.b} (verwacht: (matrixprijs + 20) x 0,75)`);
     } finally {
       await opruimenKlanten(klantEmails);
       const pool = getPool();
@@ -318,6 +346,7 @@ describe('Deel C2 -- kunstenaarsopslag + prijsgroep (prijsopbouw van een bestell
       if (kunstenaarId) await pool.query('DELETE FROM kunstenaars WHERE id = ?', [kunstenaarId]); // cascades kunstenaarAfspraken
       for (const fixture of fixtures) await fixture.opruimen();
       if (prijsgroepIds.length > 0) await pool.query('DELETE FROM prijsgroepen WHERE id IN (?)', [prijsgroepIds]);
+      stap('Opgeruimd: klant, kunstwerk, kunstenaar, 2x maat/materiaal, 2x prijsgroep.');
     }
   });
 });
@@ -350,6 +379,7 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
       klantEmails.push(klantX.email);
       const klantY = await maakKlant('c3-klant-y');
       klantEmails.push(klantY.email);
+      stap(`2 klanten aangemaakt: ${klantX.email}, ${klantY.email}`);
 
       const lijn = { kunstwerkId, maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 1, quantity: 1 };
       const headerXResponse = await createHeader(req('POST', { lines: [lijn] }, klantX.cookie));
@@ -359,6 +389,7 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
       const headerX = await headerXResponse.json();
       const headerY = await headerYResponse.json();
       headerIds.push(headerX.id, headerY.id);
+      stap(`Elke klant plaatst 1 bestelling: ${headerX.bestelnr} (${klantX.email}), ${headerY.bestelnr} (${klantY.email})`);
 
       // Staff keurt beide goed ("Te versturen naar drukker").
       for (const id of headerIds) {
@@ -367,6 +398,7 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
         });
         expect(response.status).toBe(200);
       }
+      stap('Beide bestellingen goedgekeurd -> "Te versturen naar drukker"');
 
       const drukkerStandaard = await insertRow<{ id: string }>('drukkers', {
         naam: 'AUTOTEST Drukker Standaard',
@@ -379,6 +411,7 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
         standaard: false,
       } as never);
       drukkerIds.push(drukkerStandaard.id, drukkerAlternatief.id);
+      stap(`2 drukkers aangemaakt: "${drukkerStandaard.naam}" (standaard) en "${drukkerAlternatief.naam}" (niet-standaard)`);
 
       // Combineer beide bestellingen (van 2 verschillende klanten) in één mail.
       const mail = buildDrukkerMail({
@@ -395,6 +428,7 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
       // companyName fallback ("Onbekend klant" resolution) still yields one section per klant.
       expect(mail.text).toContain(klantX.email);
       expect(mail.text).toContain(klantY.email);
+      stap(`Mail gebouwd: 1 sectie per klant, onderwerp "${mail.subject}"`);
 
       // Verstuur naar de NIET-standaard drukker (server-side effect only, geen echte mail).
       const zendingResponse = await postZending(
@@ -413,6 +447,7 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
         { params: { id: drukkerAlternatief.id } }
       );
       expect(zendingResponse.status).toBe(201);
+      stap(`Zending geregistreerd bij "${drukkerAlternatief.naam}" (POST zendingen -> ${zendingResponse.status})`);
 
       for (const id of headerIds) {
         const response = await patchHeader(req('PATCH', { status: 'Verstuurd naar drukker' }, staff), {
@@ -420,17 +455,20 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
         });
         expect(response.status).toBe(200);
       }
+      stap('Beide bestellingen op "Verstuurd naar drukker" gezet');
 
       const alternatiefZendingen = await (
         await listZendingen(req('GET', undefined, staff), { params: { id: drukkerAlternatief.id } })
       ).json();
       expect(alternatiefZendingen).toHaveLength(1);
       expect(alternatiefZendingen[0].bestellingIds.sort()).toEqual([...headerIds].sort());
+      stap(`Controle: "${drukkerAlternatief.naam}" heeft ${alternatiefZendingen.length} zending met beide bestellingen`);
 
       const standaardZendingen = await (
         await listZendingen(req('GET', undefined, staff), { params: { id: drukkerStandaard.id } })
       ).json();
       expect(standaardZendingen).toHaveLength(0);
+      stap(`Controle: "${drukkerStandaard.naam}" (standaard) heeft ${standaardZendingen.length} zendingen -- de mail is dus NIET naar de standaard drukker gegaan`);
 
       for (const id of headerIds) {
         const [rows] = await getPool().query('SELECT status FROM bestelheaders WHERE id = ?', [id]);
@@ -457,6 +495,7 @@ describe('Klant-levenscyclus -- registreren tot inloggen na goedkeuring', () => 
         req('POST', { email, password: wachtwoord, companyName: 'AUTOTEST Lifecycle BV', contactPerson: 'Jan Test' })
       );
       expect(registratie.status).toBe(201);
+      stap(`Klant ${email} geregistreerd via /api/auth/register (-> ${registratie.status})`);
 
       const [rowsNaRegistratie] = await getPool().query(
         'SELECT id, status, prijsgroepId FROM klanten WHERE email = ?',
@@ -465,10 +504,12 @@ describe('Klant-levenscyclus -- registreren tot inloggen na goedkeuring', () => 
       const klant = (rowsNaRegistratie as Array<{ id: string; status: string; prijsgroepId: string | null }>)[0];
       expect(klant.status).toBe('Beoordelen');
       expect(klant.prijsgroepId).toBeNull();
+      stap(`Status in DB: "${klant.status}", prijsgroepId: ${klant.prijsgroepId}`);
 
       const loginNogTeBeoordelen = await loginKlant(req('POST', { email, password: wachtwoord }));
       expect(loginNogTeBeoordelen.status).toBe(200);
       expect((await loginNogTeBeoordelen.json()).status).toBe('Beoordelen');
+      stap('Inloggen vóór goedkeuring lukt (200), meldt status "Beoordelen"');
 
       const prijsgroep = await insertRow<{ id: string }>('prijsgroepen', {
         naam: 'AUTOTEST Lifecycle Prijsgroep',
@@ -483,17 +524,21 @@ describe('Klant-levenscyclus -- registreren tot inloggen na goedkeuring', () => 
         { params: { id: klant.id } }
       );
       expect(goedkeuring.status).toBe(200);
+      stap(`Medewerker keurt goed met een prijsgroep (PATCH klanten -> ${goedkeuring.status})`);
 
       const loginNaGoedkeuring = await loginKlant(req('POST', { email, password: wachtwoord }));
       expect(loginNaGoedkeuring.status).toBe(200);
       expect((await loginNaGoedkeuring.json()).status).toBe('Goedgekeurd');
+      stap('Inloggen na goedkeuring meldt status "Goedgekeurd"');
 
       // Goedkeuring wijzigt niets aan het wachtwoord -- een verkeerd wachtwoord blijft afgewezen.
       const foutWachtwoord = await loginKlant(req('POST', { email, password: 'onjuist' }));
       expect(foutWachtwoord.status).toBe(401);
+      stap(`Inloggen met fout wachtwoord blijft ${foutWachtwoord.status} na goedkeuring`);
     } finally {
       await opruimenKlanten([email]);
       if (prijsgroepIds.length > 0) await getPool().query('DELETE FROM prijsgroepen WHERE id IN (?)', [prijsgroepIds]);
+      stap('Opgeruimd: klant, prijsgroep.');
     }
   });
 
@@ -512,6 +557,7 @@ describe('Klant-levenscyclus -- registreren tot inloggen na goedkeuring', () => 
       const tarieven = (await tarievenResponse.json()) as BtwTarieven;
       expect(tarieven.tarieven.some((t) => t.land === landZonderTarief)).toBe(false);
       expect(resolveBtwPercentage(tarieven.tarieven, landZonderTarief)).toBeNull();
+      stap(`Echte btw-tarieven opgehaald (${tarieven.tarieven.length} land(en) geconfigureerd); land "${landZonderTarief}" komt daar niet in voor -> resolveBtwPercentage = null`);
 
       const klant = await insertRow<{ id: string }>('klanten', {
         email,
@@ -520,6 +566,7 @@ describe('Klant-levenscyclus -- registreren tot inloggen na goedkeuring', () => 
         status: 'Beoordelen',
         land: landZonderTarief,
       } as never);
+      stap(`Klant ${email} aangemaakt met land="${landZonderTarief}"`);
 
       const prijsgroep = await insertRow<{ id: string }>('prijsgroepen', {
         naam: 'AUTOTEST Lifecycle Geen Btw Prijsgroep',
@@ -538,6 +585,7 @@ describe('Klant-levenscyclus -- registreren tot inloggen na goedkeuring', () => 
         { params: { id: klant.id } }
       );
       expect(goedkeuring.status).toBe(200);
+      stap(`Medewerker keurt via de API toch goed ondanks ontbrekend btw-tarief (-> ${goedkeuring.status}, want dit is UI-only gehandhaafd)`);
       const [rows] = await getPool().query('SELECT status, land FROM klanten WHERE id = ?', [klant.id]);
       const row = (rows as Array<{ status: string; land: string }>)[0];
       expect(row.status).toBe('Goedgekeurd');
@@ -545,6 +593,7 @@ describe('Klant-levenscyclus -- registreren tot inloggen na goedkeuring', () => 
     } finally {
       await opruimenKlanten([email]);
       if (prijsgroepIds.length > 0) await getPool().query('DELETE FROM prijsgroepen WHERE id IN (?)', [prijsgroepIds]);
+      stap('Opgeruimd: klant, prijsgroep.');
     }
   });
 });
@@ -572,6 +621,7 @@ describe('Bestelling-levenscyclus -- plaatsen tot verstuurd naar drukker', () =>
 
       const klant = await maakKlant('lifecycle-bestelling-klant');
       klantEmails.push(klant.email);
+      stap(`Klant ${klant.email} + kunstwerk "AUTOTEST Kunstwerk Eigen Maat" klaargezet`);
 
       const plaatsing = await createHeader(
         req(
@@ -594,6 +644,7 @@ describe('Bestelling-levenscyclus -- plaatsen tot verstuurd naar drukker', () =>
       );
       expect(plaatsing.status).toBe(201);
       const header = await plaatsing.json();
+      stap(`Bestelling ${header.bestelnr} geplaatst met een eigen-maat-regel (3x 90x45cm)`);
 
       const [headerNaPlaatsing] = await getPool().query('SELECT status FROM bestelheaders WHERE id = ?', [header.id]);
       expect((headerNaPlaatsing as Array<{ status: string }>)[0].status).toBe('Te beoordelen');
@@ -602,6 +653,7 @@ describe('Bestelling-levenscyclus -- plaatsen tot verstuurd naar drukker', () =>
       ]);
       const line = (lineRows as Array<{ id: string; prijs: string | null }>)[0];
       expect(line.prijs).toBeNull();
+      stap(`Status "${(headerNaPlaatsing as Array<{ status: string }>)[0].status}", regelprijs: ${line.prijs} (op-aanvraag, zoals verwacht)`);
 
       // NB: de UI blokkeert "Goedkeuren" clientside zolang een regel geen prijs heeft
       // (BestellingModal.tsx) -- de API zelf handhaaft dat niet, dus dat is hier bewust
@@ -611,11 +663,13 @@ describe('Bestelling-levenscyclus -- plaatsen tot verstuurd naar drukker', () =>
         params: { id: header.id, lineId: line.id },
       });
       expect(prijsVaststellen.status).toBe(200);
+      stap('Medewerker stelt de prijs vast op EUR 245');
 
       const goedkeuren = await patchHeader(req('PATCH', { status: 'Te versturen naar drukker' }, staff), {
         params: { id: header.id },
       });
       expect(goedkeuren.status).toBe(200);
+      stap('Bestelling goedgekeurd -> "Te versturen naar drukker"');
 
       const drukker = await insertRow<{ id: string }>('drukkers', {
         naam: 'AUTOTEST Drukker Levenscyclus',
@@ -633,6 +687,7 @@ describe('Bestelling-levenscyclus -- plaatsen tot verstuurd naar drukker', () =>
         { params: { id: drukker.id } }
       );
       expect(zending.status).toBe(201);
+      stap(`Zending geregistreerd bij "${drukker.naam}"`);
 
       const versturen = await patchHeader(req('PATCH', { status: 'Verstuurd naar drukker' }, staff), {
         params: { id: header.id },
@@ -643,12 +698,14 @@ describe('Bestelling-levenscyclus -- plaatsen tot verstuurd naar drukker', () =>
       expect((eindstatus as Array<{ status: string }>)[0].status).toBe('Verstuurd naar drukker');
       const [eindprijs] = await getPool().query('SELECT prijs FROM bestellines WHERE id = ?', [line.id]);
       expect(Number((eindprijs as Array<{ prijs: string }>)[0].prijs)).toBe(245);
+      stap(`Eindstatus "${(eindstatus as Array<{ status: string }>)[0].status}", regelprijs blijft EUR ${Number((eindprijs as Array<{ prijs: string }>)[0].prijs)}`);
     } finally {
       await opruimenKlanten(klantEmails);
       const pool = getPool();
       if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
       if (fixture) await fixture.opruimen();
       if (drukkerIds.length > 0) await pool.query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]);
+      stap('Opgeruimd: klant, kunstwerk, maat/materiaal, drukker.');
     }
   });
 });
@@ -676,6 +733,7 @@ describe('Materiaalloos kunstwerk (prijs per m2) + prijsgroep', () => {
 
       const klant = await maakKlant('maatloos-prijsgroep', { prijsgroepId: prijsgroep.id });
       klantEmails.push(klant.email);
+      stap(`Maatloos kunstwerk (EUR 100/m2) + klant ${klant.email} met 25% korting klaargezet`);
 
       const response = await createHeader(
         req(
@@ -692,12 +750,15 @@ describe('Materiaalloos kunstwerk (prijs per m2) + prijsgroep', () => {
       const body = await response.json();
       const [lineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE bestelheaderId = ?', [body.id]);
       // basisprijs = (120/100) * (60/100) * 100 = 72, x 0,75 (25% korting) = 54.
-      expect(Number((lineRows as Array<{ prijs: string }>)[0].prijs)).toBe(54);
+      const eindprijs = Number((lineRows as Array<{ prijs: string }>)[0].prijs);
+      expect(eindprijs).toBe(54);
+      stap(`Bestelling 120x60cm geplaatst -> EUR ${eindprijs} (verwacht: 1,2 x 0,6 x 100 x 0,75 = 54)`);
     } finally {
       await opruimenKlanten(klantEmails);
       const pool = getPool();
       if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
       if (prijsgroepIds.length > 0) await getPool().query('DELETE FROM prijsgroepen WHERE id IN (?)', [prijsgroepIds]);
+      stap('Opgeruimd: klant, kunstwerk, prijsgroep.');
     }
   });
 });
@@ -716,6 +777,7 @@ describe('Account verwijderen (klant, zelfbediening)', () => {
         status: 'Goedgekeurd',
       } as never);
       klantId = created.id; // capture now -- `created` itself is out of scope in `finally`
+      stap(`Klant ${email} aangemaakt`);
 
       // Zo werkt de echte "Account verwijderen"-flow ook (SettingsSection.tsx): het
       // wachtwoord wordt herbevestigd via een normale login-call, niet door de DELETE-route
@@ -725,16 +787,19 @@ describe('Account verwijderen (klant, zelfbediening)', () => {
       expect(foutWachtwoord.status).toBe(401);
       const [nogSteedsAanwezig] = await getPool().query('SELECT id FROM klanten WHERE id = ?', [created.id]);
       expect((nogSteedsAanwezig as unknown[]).length).toBe(1);
+      stap(`Herbevestiging met fout wachtwoord -> ${foutWachtwoord.status}, account bestaat nog`);
 
       const juistWachtwoord = await loginKlant(req('POST', { email, password: wachtwoord }));
       expect(juistWachtwoord.status).toBe(200);
       const cookie = juistWachtwoord.headers.get('set-cookie')!;
+      stap('Herbevestiging met juist wachtwoord lukt, wachtwoord-check gepasseerd');
 
       const verwijdering = await deleteKlant(req('DELETE', undefined, cookie), { params: { id: created.id } });
       expect(verwijdering.status).toBe(200);
 
       const [naVerwijdering] = await getPool().query('SELECT id FROM klanten WHERE id = ?', [created.id]);
       expect((naVerwijdering as unknown[]).length).toBe(0);
+      stap(`Account verwijderd (DELETE klanten -> ${verwijdering.status}), klant-rij bestaat niet meer in de database`);
     } finally {
       const pool = getPool();
       // sessions has no FK to klanten, so the row from the successful login survives the
@@ -744,6 +809,7 @@ describe('Account verwijderen (klant, zelfbediening)', () => {
       // The klant is already gone if the test succeeded; this only catches the case where
       // an assertion failed before the DELETE step ran.
       await pool.query('DELETE FROM klanten WHERE email = ?', [email]);
+      stap('Opgeruimd: sessie, klant (indien nog aanwezig).');
     }
   });
 });
@@ -780,6 +846,7 @@ describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
       );
       expect(onderwerpResponse.status).toBe(201);
       onderwerpId = (await onderwerpResponse.json()).id;
+      stap(`Inline aangemaakt: segment=${segmentId}, stijl=${stijlId}, onderwerp=${onderwerpId}`);
 
       const kunstwerkResponse = await postResource(
         req(
@@ -798,6 +865,7 @@ describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
       );
       expect(kunstwerkResponse.status).toBe(201);
       kunstwerkId = (await kunstwerkResponse.json()).id;
+      stap(`Kunstwerk aangemaakt met verwijzingen naar de 3 nieuwe stamgegevens (${kunstwerkId})`);
 
       // Staan de nieuwe stamgegevens echt in hun eigen tabel (niet alleen als losse id op
       // het kunstwerk)?
@@ -809,6 +877,7 @@ describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
         await listResource(req('GET'), { params: { resource: 'onderwerpen' } })
       ).json();
       expect(onderwerpenLijst.some((o: { id: string; omschrijving: string }) => o.id === onderwerpId && o.omschrijving === 'AUTOTEST Onderwerp Inline')).toBe(true);
+      stap(`Bevestigd: alle 3 staan echt als eigen rij in hun stamtabel (${segmentenLijst.length} segmenten, ${stijlenLijst.length} stijlen, ${onderwerpenLijst.length} onderwerpen totaal)`);
 
       // En staat de koppeling ook echt op het kunstwerk zelf?
       const [rows] = await getPool().query(
@@ -820,12 +889,14 @@ describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
       expect(parse(row.segmentIds)).toEqual([segmentId]);
       expect(parse(row.stijlIds)).toEqual([stijlId]);
       expect(parse(row.onderwerpIds)).toEqual([onderwerpId]);
+      stap('Bevestigd: de koppeling staat ook correct op het kunstwerk zelf.');
     } finally {
       const pool = getPool();
       if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
       if (segmentId) await pool.query('DELETE FROM segmenten WHERE id = ?', [segmentId]);
       if (stijlId) await pool.query('DELETE FROM stijlen WHERE id = ?', [stijlId]);
       if (onderwerpId) await pool.query('DELETE FROM onderwerpen WHERE id = ?', [onderwerpId]);
+      stap('Opgeruimd: kunstwerk, segment, stijl, onderwerp.');
     }
   });
 });
@@ -863,25 +934,30 @@ describe('Klant van een kunstenaar kan diens werk gewoon bestellen zonder exclus
       klantEmails.push(eigenKlant.email);
       const anderKlant = await maakKlant('eigen-werk-ander-klant');
       klantEmails.push(anderKlant.email);
+      stap(`2 klanten aangemaakt: ${eigenKlant.email} (wordt gekoppeld), ${anderKlant.email} (blijft los)`);
 
       const koppeling = await patchKlant(req('PATCH', { kunstenaarId }, staff), { params: { id: eigenKlant.id } });
       expect(koppeling.status).toBe(200);
+      stap(`eigenKlant gekoppeld aan de kunstenaar (kunstenaarId), geen exclusiviteit ingesteld`);
 
       const lijn = { kunstwerkId, maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 1, quantity: 1 };
       const bestellingEigenKlant = await createHeader(req('POST', { lines: [lijn] }, eigenKlant.cookie));
       expect(bestellingEigenKlant.status).toBe(201);
+      stap(`eigenKlant bestelt het werk -> ${bestellingEigenKlant.status}`);
 
       // Zonder exclusieveKlantIds op de kunstenaar is dit werk gewoon open voor iedereen --
       // koppelen van een klantaccount aan een kunstenaar is puur informatief/voor
       // prijsgroep-toewijzing, het beperkt niets vanzelf.
       const bestellingAnderKlant = await createHeader(req('POST', { lines: [lijn] }, anderKlant.cookie));
       expect(bestellingAnderKlant.status).toBe(201);
+      stap(`anderKlant (niet gekoppeld) bestelt hetzelfde werk -> ${bestellingAnderKlant.status} (verwacht: ook toegestaan, koppeling beperkt niets)`);
     } finally {
       await opruimenKlanten(klantEmails);
       const pool = getPool();
       if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
       if (kunstenaarId) await pool.query('DELETE FROM kunstenaars WHERE id = ?', [kunstenaarId]);
       if (fixture) await fixture.opruimen();
+      stap('Opgeruimd: klanten, kunstwerk, kunstenaar, maat/materiaal.');
     }
   });
 });
@@ -921,19 +997,23 @@ describe('Klant met alleenrecht voor één kunstenaar', () => {
       klantEmails.push(anderA.email);
       const anderB = await maakKlant('alleenrecht-ander-b');
       klantEmails.push(anderB.email);
+      stap(`3 klanten aangemaakt: ${bevoorrecht.email} (krijgt alleenrecht), 2x niet-bevoorrecht`);
 
       const alleenrecht = await patchKunstenaar(req('PATCH', { exclusieveKlantIds: [bevoorrecht.id] }, staff), {
         params: { id: kunstenaarId },
       });
       expect(alleenrecht.status).toBe(200);
+      stap(`Alleenrecht ingesteld op precies 1 klant (PATCH kunstenaars -> ${alleenrecht.status})`);
 
       const lijn = { kunstwerkId, maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 1, quantity: 1 };
       const bestellingBevoorrecht = await createHeader(req('POST', { lines: [lijn] }, bevoorrecht.cookie));
       expect(bestellingBevoorrecht.status).toBe(201);
+      stap(`Bevoorrechte klant bestelt -> ${bestellingBevoorrecht.status}`);
 
       for (const ander of [anderA, anderB]) {
         const bestelling = await createHeader(req('POST', { lines: [lijn] }, ander.cookie));
         expect(bestelling.status).toBe(403);
+        stap(`${ander.email} probeert te bestellen -> ${bestelling.status} (verwacht: geblokkeerd)`);
       }
     } finally {
       await opruimenKlanten(klantEmails);
@@ -941,6 +1021,7 @@ describe('Klant met alleenrecht voor één kunstenaar', () => {
       if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
       if (kunstenaarId) await pool.query('DELETE FROM kunstenaars WHERE id = ?', [kunstenaarId]);
       if (fixture) await fixture.opruimen();
+      stap('Opgeruimd: klanten, kunstwerk, kunstenaar, maat/materiaal.');
     }
   });
 });
@@ -962,6 +1043,7 @@ describe('Wachtwoord resetten (klant) -- aanvragen tot inloggen met het nieuwe w
 
       const aanvraag = await requestReset(req('POST', { email, userType: 'klant' }));
       expect(aanvraag.status).toBe(200);
+      stap(`Reset aangevraagd voor ${email} (sendResetEmail gemockt, dus geen echte mail)`);
 
       const [tokenRows] = await getPool().query(
         "SELECT token FROM passwordResetTokens WHERE userId = ? AND userType = 'klant'",
@@ -972,15 +1054,18 @@ describe('Wachtwoord resetten (klant) -- aanvragen tot inloggen met het nieuwe w
 
       const bevestiging = await confirmReset(req('POST', { token, newPassword: nieuwWachtwoord }));
       expect(bevestiging.status).toBe(200);
+      stap(`Token bevestigd, wachtwoord gewijzigd (-> ${bevestiging.status})`);
 
       // Hetzelfde token nogmaals gebruiken moet falen -- eenmalig geldig.
       const hergebruik = await confirmReset(req('POST', { token, newPassword: 'NogEenKeer1!' }));
       expect(hergebruik.status).toBe(400);
+      stap(`Hetzelfde token nogmaals gebruiken -> ${hergebruik.status} (eenmalig geldig)`);
 
       const loginOud = await loginKlant(req('POST', { email, password: oudWachtwoord }));
       expect(loginOud.status).toBe(401);
       const loginNieuw = await loginKlant(req('POST', { email, password: nieuwWachtwoord }));
       expect(loginNieuw.status).toBe(200);
+      stap(`Oud wachtwoord -> ${loginOud.status}, nieuw wachtwoord -> ${loginNieuw.status}`);
 
       // Verlopen token (expiresAt in het verleden) wordt geweigerd, ook al bestaat het echt.
       const verlopenToken = randomUUID();
@@ -990,6 +1075,7 @@ describe('Wachtwoord resetten (klant) -- aanvragen tot inloggen met het nieuwe w
       );
       const verlopenPoging = await confirmReset(req('POST', { token: verlopenToken, newPassword: 'x' }));
       expect(verlopenPoging.status).toBe(400);
+      stap(`Verlopen token (1 uur oud) gebruiken -> ${verlopenPoging.status}`);
       await getPool().query('DELETE FROM passwordResetTokens WHERE token = ?', [verlopenToken]);
     } finally {
       const pool = getPool();
@@ -998,6 +1084,7 @@ describe('Wachtwoord resetten (klant) -- aanvragen tot inloggen met het nieuwe w
         [email]
       );
       await opruimenKlanten([email]);
+      stap('Opgeruimd: reset-tokens, klant.');
     }
   });
 });
@@ -1016,9 +1103,11 @@ describe('Wachtwoord resetten (medewerker) -- zelfde flow via de staff-inlogrout
         naam: 'AUTOTEST Medewerker Reset',
       } as never);
       medewerkerId = medewerker.id;
+      stap(`Medewerker ${email} aangemaakt`);
 
       const aanvraag = await requestReset(req('POST', { email, userType: 'medewerker' }));
       expect(aanvraag.status).toBe(200);
+      stap(`Reset aangevraagd (userType: medewerker) -> ${aanvraag.status}`);
 
       const [tokenRows] = await getPool().query(
         "SELECT token FROM passwordResetTokens WHERE userId = ? AND userType = 'medewerker'",
@@ -1029,11 +1118,13 @@ describe('Wachtwoord resetten (medewerker) -- zelfde flow via de staff-inlogrout
 
       const bevestiging = await confirmReset(req('POST', { token, newPassword: nieuwWachtwoord }));
       expect(bevestiging.status).toBe(200);
+      stap(`Token bevestigd, wachtwoord gewijzigd (-> ${bevestiging.status})`);
 
       const loginOud = await medewerkerLogin(req('POST', { email, password: oudWachtwoord }));
       expect(loginOud.status).toBe(401);
       const loginNieuw = await medewerkerLogin(req('POST', { email, password: nieuwWachtwoord }));
       expect(loginNieuw.status).toBe(200);
+      stap(`Inloggen bij beheer: oud wachtwoord -> ${loginOud.status}, nieuw wachtwoord -> ${loginNieuw.status}`);
     } finally {
       const pool = getPool();
       if (medewerkerId) {
@@ -1041,6 +1132,7 @@ describe('Wachtwoord resetten (medewerker) -- zelfde flow via de staff-inlogrout
         await pool.query('DELETE FROM passwordResetTokens WHERE userId = ?', [medewerkerId]);
         await pool.query('DELETE FROM medewerkers WHERE id = ?', [medewerkerId]);
       }
+      stap('Opgeruimd: medewerker-sessie, reset-token, medewerker.');
     }
   });
 });
