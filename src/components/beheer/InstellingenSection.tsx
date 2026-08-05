@@ -178,22 +178,6 @@ export function InstellingenSection({
             {t('instellingenBtwToevoegen')}
           </button>
 
-          <label className="flex w-40 flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('instellingenBtwStandaardtarief')}
-            <input
-              type="number"
-              min={0}
-              step={0.1}
-              value={btwForm.standaardPercentage}
-              onChange={(event) =>
-                setBtwForm((current) =>
-                  current ? { ...current, standaardPercentage: Number(event.target.value) } : current
-                )
-              }
-              data-testid="instellingen-btw-standaard"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-            />
-          </label>
         </div>
       )}
 

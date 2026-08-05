@@ -5,5 +5,4 @@ export interface BtwTarief {
 
 export interface BtwTarieven {
   tarieven: BtwTarief[];
-  standaardPercentage: number;
 }

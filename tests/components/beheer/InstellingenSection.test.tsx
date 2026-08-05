@@ -25,7 +25,7 @@ beforeEach(() => {
 });
 
 const BESTELINSTELLINGEN: Bestelinstellingen = { minimaleAfname: 3 };
-const BTWTARIEVEN: BtwTarieven = { tarieven: [{ land: 'NL', percentage: 21 }], standaardPercentage: 21 };
+const BTWTARIEVEN: BtwTarieven = { tarieven: [{ land: 'NL', percentage: 21 }] };
 
 function renderSection(overrides: Partial<React.ComponentProps<typeof InstellingenSection>> = {}) {
   const onSave = vi.fn().mockResolvedValue(true);
@@ -122,7 +122,6 @@ describe('InstellingenSection', () => {
 
   it('falls back to the BTWTARIEVEN_SEED and renders the btw block when btwTarieven is null (fresh environment)', () => {
     renderSection({ btwTarieven: null });
-    expect(screen.getByTestId('instellingen-btw-standaard')).toHaveValue(21);
     expect(screen.getByTestId('instellingen-btw-percentage-0')).toHaveValue(21);
     expect(screen.getByTestId('instellingen-btw-land-0')).toHaveValue('Nederland');
   });
@@ -134,14 +133,12 @@ describe('InstellingenSection', () => {
     await waitFor(() =>
       expect(onSaveBtw).toHaveBeenCalledWith({
         tarieven: [{ land: 'NL', percentage: 20 }],
-        standaardPercentage: 21,
       })
     );
   });
 
-  it('pre-fills the btw-tarieven rows and the standaardtarief', () => {
+  it('pre-fills the btw-tarieven rows', () => {
     renderSection();
-    expect(screen.getByTestId('instellingen-btw-standaard')).toHaveValue(21);
     expect(screen.getByTestId('instellingen-btw-percentage-0')).toHaveValue(21);
     expect(screen.getByTestId('instellingen-btw-land-0')).toHaveValue('Nederland');
   });
@@ -164,7 +161,6 @@ describe('InstellingenSection', () => {
           { land: 'NL', percentage: 21 },
           { land: 'BE', percentage: 6 },
         ],
-        standaardPercentage: 21,
       },
     });
     expect(screen.getByTestId('instellingen-btw-land-1')).toBeInTheDocument();
@@ -179,7 +175,6 @@ describe('InstellingenSection', () => {
     await waitFor(() =>
       expect(onSaveBtw).toHaveBeenCalledWith({
         tarieven: [{ land: 'NL', percentage: 20 }],
-        standaardPercentage: 21,
       })
     );
     await waitFor(() =>

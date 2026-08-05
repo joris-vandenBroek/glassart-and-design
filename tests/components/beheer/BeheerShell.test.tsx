@@ -86,7 +86,7 @@ const BEDRIJFSGEGEVENS_FIXTURE = {
 };
 
 const BESTELINSTELLINGEN_FIXTURE = { minimaleAfname: 1 };
-const BTWTARIEVEN_FIXTURE = { tarieven: [{ land: 'NL', percentage: 21 }], standaardPercentage: 21 };
+const BTWTARIEVEN_FIXTURE = { tarieven: [{ land: 'NL', percentage: 21 }] };
 
 let collections: Record<string, unknown[]> = {};
 let klantenLoadFails = false;

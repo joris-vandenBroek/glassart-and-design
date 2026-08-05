@@ -12,7 +12,7 @@ let authUser: Record<string, unknown> | null = null;
 let ordersResponse: { ok: boolean; body?: unknown } = { ok: true, body: [] };
 let kunstwerkenResponse: unknown[] = [];
 let klantMeResponse: unknown = { land: 'NL', invoiceLand: '' };
-let btwTarievenResponse: unknown = { tarieven: [{ land: 'NL', percentage: 21 }], standaardPercentage: 21 };
+let btwTarievenResponse: unknown = { tarieven: [{ land: 'NL', percentage: 21 }] };
 
 function renderSection() {
   return render(
@@ -46,7 +46,7 @@ beforeEach(() => {
   ordersResponse = { ok: true, body: [] };
   kunstwerkenResponse = [];
   klantMeResponse = { land: 'NL', invoiceLand: '' };
-  btwTarievenResponse = { tarieven: [{ land: 'NL', percentage: 21 }], standaardPercentage: 21 };
+  btwTarievenResponse = { tarieven: [{ land: 'NL', percentage: 21 }] };
   fetchMock.mockReset();
   fetchMock.mockImplementation(async (url: string) => {
     if (url === '/api/auth/me?type=klant') {
@@ -324,7 +324,6 @@ describe('OrdersSection', () => {
         { land: 'NL', percentage: 21 },
         { land: 'BE', percentage: 6 },
       ],
-      standaardPercentage: 21,
     };
     signedInWithOneOrder();
     (ordersResponse.body as { lines: { prijs: number | null }[] }[])[0].lines[0].prijs = 100;
