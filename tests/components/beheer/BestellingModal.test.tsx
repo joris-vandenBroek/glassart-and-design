@@ -70,7 +70,7 @@ const KLANTEN: Klant[] = [
     kunstenaarId: null,
   },
 ];
-const BTWTARIEVEN: BtwTarieven = { tarieven: [{ land: 'NL', percentage: 21 }], standaardPercentage: 21 };
+const BTWTARIEVEN: BtwTarieven = { tarieven: [{ land: 'NL', percentage: 21 }] };
 
 const BESTELLING: Bestelling = {
   id: 'header-1',
@@ -460,7 +460,7 @@ describe('BestellingModal — btw', () => {
     expect(screen.getByTestId('bestelling-modal-totaal-incl')).toHaveTextContent('€ 544,50');
   });
 
-  it('falls back to standaardPercentage when the klant has no land set', () => {
+  it('shows no btw block when the klant has no land set', () => {
     const klantZonderLand = { ...KLANTEN[0], land: undefined };
     render(
       <NextIntlClientProvider locale="nl" messages={messages}>
@@ -471,7 +471,7 @@ describe('BestellingModal — btw', () => {
           maten={MATEN}
           materiaalsoorten={MATERIAALSOORTEN}
           klanten={[klantZonderLand]}
-          btwTarieven={{ tarieven: [{ land: 'DE', percentage: 19 }], standaardPercentage: 21 }}
+          btwTarieven={{ tarieven: [{ land: 'DE', percentage: 19 }] }}
           onClose={vi.fn()}
           onUpdated={vi.fn()}
           onLinePrijsVastgesteld={vi.fn()}
@@ -479,7 +479,8 @@ describe('BestellingModal — btw', () => {
         />
       </NextIntlClientProvider>
     );
-    expect(screen.getByTestId('bestelling-modal-btw')).toHaveTextContent('21');
+    expect(screen.queryByTestId('bestelling-modal-btw')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-totaal-incl')).not.toBeInTheDocument();
   });
 
   it('shows no btw block when the total itself is incomplete', () => {
@@ -504,7 +505,6 @@ describe('BestellingModal — btw', () => {
               { land: 'NL', percentage: 21 },
               { land: 'BE', percentage: 6 },
             ],
-            standaardPercentage: 21,
           }}
           onClose={vi.fn()}
           onUpdated={vi.fn()}

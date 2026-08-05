@@ -6,6 +6,7 @@ import { Modal } from '@/components/Modal';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import { formatCurrency } from '@/lib/formatCurrency';
+import { resolveBtwPercentage } from '@/lib/resolveBtw';
 import { ProductImage } from '@/components/ProductImage';
 import type { Bestelling, BestellingLine } from './BestellingenSection';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from './materiaalTypes';
@@ -93,8 +94,7 @@ export function BestellingModal({
       : null;
   const klant = bestelling ? (klanten ?? []).find((k) => k.id === bestelling.klantId) : undefined;
   const land = klant ? klant.invoiceLand || klant.land || null : null;
-  const btwPercentage =
-    btwTarieven && (btwTarieven.tarieven.find((t) => t.land === land)?.percentage ?? btwTarieven.standaardPercentage);
+  const btwPercentage = btwTarieven ? resolveBtwPercentage(btwTarieven.tarieven, land) : null;
   const btwBedrag =
     totaalExclBtwGetal !== null && btwPercentage != null ? totaalExclBtwGetal * (btwPercentage / 100) : null;
   const totaalInclBtw = totaalExclBtwGetal !== null && btwBedrag !== null ? totaalExclBtwGetal + btwBedrag : null;
