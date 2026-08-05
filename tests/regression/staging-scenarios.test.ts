@@ -32,10 +32,13 @@ import { hashPassword } from '@/lib/server/password';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { POST as createHeader } from '@/app/api/bestelheaders/route';
 import { PATCH as patchHeader } from '@/app/api/bestelheaders/[id]/route';
-import { PATCH as patchKlant } from '@/app/api/klanten/[id]/route';
+import { PATCH as patchLine } from '@/app/api/bestelheaders/[id]/bestellines/[lineId]/route';
+import { PATCH as patchKlant, DELETE as deleteKlant } from '@/app/api/klanten/[id]/route';
 import { PATCH as patchKunstenaar } from '@/app/api/kunstenaars/[id]/route';
 import { PUT as putKunstenaarAfspraken } from '@/app/api/kunstenaarAfspraken/[id]/route';
 import { POST as postZending, GET as listZendingen } from '@/app/api/drukkers/[id]/zendingen/route';
+import { POST as registerKlant } from '@/app/api/auth/register/route';
+import { POST as loginKlant } from '@/app/api/auth/login/route';
 import { buildDrukkerMail } from '@/lib/buildDrukkerMail';
 
 function req(method: string, body?: unknown, cookie?: string) {
@@ -417,6 +420,257 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
       if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
       if (fixture) await fixture.opruimen();
       if (drukkerIds.length > 0) await pool.query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]); // cascades drukkerZendingen
+    }
+  });
+});
+
+describe('Klant-levenscyclus -- registreren tot inloggen na goedkeuring', () => {
+  it('een nieuwe aanvraag start op "Beoordelen", kan pas na goedkeuring met een prijsgroep inloggen als "Goedgekeurd"', async () => {
+    const email = `autotest-lifecycle-${randomUUID()}@example.com`;
+    const wachtwoord = 'AutotestWachtwoord1!';
+    const prijsgroepIds: string[] = [];
+
+    try {
+      const registratie = await registerKlant(
+        req('POST', { email, password: wachtwoord, companyName: 'AUTOTEST Lifecycle BV', contactPerson: 'Jan Test' })
+      );
+      expect(registratie.status).toBe(201);
+
+      const [rowsNaRegistratie] = await getPool().query(
+        'SELECT id, status, prijsgroepId FROM klanten WHERE email = ?',
+        [email]
+      );
+      const klant = (rowsNaRegistratie as Array<{ id: string; status: string; prijsgroepId: string | null }>)[0];
+      expect(klant.status).toBe('Beoordelen');
+      expect(klant.prijsgroepId).toBeNull();
+
+      const loginNogTeBeoordelen = await loginKlant(req('POST', { email, password: wachtwoord }));
+      expect(loginNogTeBeoordelen.status).toBe(200);
+      expect((await loginNogTeBeoordelen.json()).status).toBe('Beoordelen');
+
+      const prijsgroep = await insertRow<{ id: string }>('prijsgroepen', {
+        naam: 'AUTOTEST Lifecycle Prijsgroep',
+        kortingspercentage: 10,
+        opslagpercentage: null,
+      } as never);
+      prijsgroepIds.push(prijsgroep.id);
+
+      const staff = await medewerkerCookie();
+      const goedkeuring = await patchKlant(
+        req('PATCH', { status: 'Goedgekeurd', prijsgroepId: prijsgroep.id }, staff),
+        { params: { id: klant.id } }
+      );
+      expect(goedkeuring.status).toBe(200);
+
+      const loginNaGoedkeuring = await loginKlant(req('POST', { email, password: wachtwoord }));
+      expect(loginNaGoedkeuring.status).toBe(200);
+      expect((await loginNaGoedkeuring.json()).status).toBe('Goedgekeurd');
+
+      // Goedkeuring wijzigt niets aan het wachtwoord -- een verkeerd wachtwoord blijft afgewezen.
+      const foutWachtwoord = await loginKlant(req('POST', { email, password: 'onjuist' }));
+      expect(foutWachtwoord.status).toBe(401);
+    } finally {
+      await opruimenKlanten([email]);
+      if (prijsgroepIds.length > 0) await getPool().query('DELETE FROM prijsgroepen WHERE id IN (?)', [prijsgroepIds]);
+    }
+  });
+});
+
+describe('Bestelling-levenscyclus -- plaatsen tot verstuurd naar drukker', () => {
+  it('een bestelling met een ongeprijsde eigen-maat-regel doorloopt Te beoordelen -> geprijsd -> Te versturen naar drukker -> Verstuurd naar drukker', async () => {
+    const klantEmails: string[] = [];
+    let kunstwerkId: string | null = null;
+    let fixture: Awaited<ReturnType<typeof maakMaatMateriaal>> | null = null;
+    const drukkerIds: string[] = [];
+
+    try {
+      const staff = await medewerkerCookie();
+      fixture = await maakMaatMateriaal('lifecycle-bestelling');
+      // fixture.maatId blijft ongebruikt in de bestelde lijn zelf -- we bestellen straks
+      // een "eigen maat" (maatId: '') op dit NIET-maatloze kunstwerk, wat altijd een NULL
+      // prijs (op-aanvraag) oplevert, net als in de praktijk -- zie bestelheaders.test.ts's
+      // "stores a null prijs for an eigen-maat line on a kunstwerk that is not maatloos".
+      const kunstwerk = await insertRow<{ id: string }>(
+        'kunstwerken',
+        { naam: 'AUTOTEST Kunstwerk Eigen Maat', materiaalIds: [fixture.materiaalId], maatIds: [fixture.maatId] } as never,
+        ['materiaalIds', 'maatIds']
+      );
+      kunstwerkId = kunstwerk.id;
+
+      const klant = await maakKlant('lifecycle-bestelling-klant');
+      klantEmails.push(klant.email);
+
+      const plaatsing = await createHeader(
+        req(
+          'POST',
+          {
+            lines: [
+              {
+                kunstwerkId,
+                maatId: '',
+                materiaalId: fixture.materiaalId,
+                prijs: 1,
+                quantity: 3,
+                breedte: 90,
+                hoogte: 45,
+              },
+            ],
+          },
+          klant.cookie
+        )
+      );
+      expect(plaatsing.status).toBe(201);
+      const header = await plaatsing.json();
+
+      const [headerNaPlaatsing] = await getPool().query('SELECT status FROM bestelheaders WHERE id = ?', [header.id]);
+      expect((headerNaPlaatsing as Array<{ status: string }>)[0].status).toBe('Te beoordelen');
+      const [lineRows] = await getPool().query('SELECT id, prijs FROM bestellines WHERE bestelheaderId = ?', [
+        header.id,
+      ]);
+      const line = (lineRows as Array<{ id: string; prijs: string | null }>)[0];
+      expect(line.prijs).toBeNull();
+
+      // NB: de UI blokkeert "Goedkeuren" clientside zolang een regel geen prijs heeft
+      // (BestellingModal.tsx) -- de API zelf handhaaft dat niet, dus dat is hier bewust
+      // geen server-side assertie. Zie de opmerking bij Deel C2/CLAUDE.md over vergelijkbare
+      // client-only regels (minimaleAfname).
+      const prijsVaststellen = await patchLine(req('PATCH', { prijs: 245 }, staff), {
+        params: { id: header.id, lineId: line.id },
+      });
+      expect(prijsVaststellen.status).toBe(200);
+
+      const goedkeuren = await patchHeader(req('PATCH', { status: 'Te versturen naar drukker' }, staff), {
+        params: { id: header.id },
+      });
+      expect(goedkeuren.status).toBe(200);
+
+      const drukker = await insertRow<{ id: string }>('drukkers', {
+        naam: 'AUTOTEST Drukker Levenscyclus',
+        email: 'autotest-levenscyclus-drukker@example.com',
+        standaard: false,
+      } as never);
+      drukkerIds.push(drukker.id);
+
+      const zending = await postZending(
+        req(
+          'POST',
+          { onderwerp: 'AUTOTEST', body: 'AUTOTEST', bestellingIds: [header.id], aantalKlanten: 1, aantalRegels: 1, verzondDoor: 'autotest' },
+          staff
+        ),
+        { params: { id: drukker.id } }
+      );
+      expect(zending.status).toBe(201);
+
+      const versturen = await patchHeader(req('PATCH', { status: 'Verstuurd naar drukker' }, staff), {
+        params: { id: header.id },
+      });
+      expect(versturen.status).toBe(200);
+
+      const [eindstatus] = await getPool().query('SELECT status FROM bestelheaders WHERE id = ?', [header.id]);
+      expect((eindstatus as Array<{ status: string }>)[0].status).toBe('Verstuurd naar drukker');
+      const [eindprijs] = await getPool().query('SELECT prijs FROM bestellines WHERE id = ?', [line.id]);
+      expect(Number((eindprijs as Array<{ prijs: string }>)[0].prijs)).toBe(245);
+    } finally {
+      await opruimenKlanten(klantEmails);
+      const pool = getPool();
+      if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
+      if (fixture) await fixture.opruimen();
+      if (drukkerIds.length > 0) await pool.query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]);
+    }
+  });
+});
+
+describe('Materiaalloos kunstwerk (prijs per m2) + prijsgroep', () => {
+  it('berekent de prijs uit breedte x hoogte x prijsPerM2, en past daarna de prijsgroep-korting toe', async () => {
+    const klantEmails: string[] = [];
+    let kunstwerkId: string | null = null;
+    const prijsgroepIds: string[] = [];
+
+    try {
+      const kunstwerk = await insertRow<{ id: string }>(
+        'kunstwerken',
+        { naam: 'AUTOTEST Maatloos Kunstwerk', materiaalIds: [], maatIds: [], prijsPerM2: 100 } as never,
+        ['materiaalIds', 'maatIds']
+      );
+      kunstwerkId = kunstwerk.id;
+
+      const prijsgroep = await insertRow<{ id: string }>('prijsgroepen', {
+        naam: 'AUTOTEST Maatloos Prijsgroep 25',
+        kortingspercentage: 25,
+        opslagpercentage: null,
+      } as never);
+      prijsgroepIds.push(prijsgroep.id);
+
+      const klant = await maakKlant('maatloos-prijsgroep', { prijsgroepId: prijsgroep.id });
+      klantEmails.push(klant.email);
+
+      const response = await createHeader(
+        req(
+          'POST',
+          {
+            lines: [
+              { kunstwerkId, maatId: '', materiaalId: '', prijs: 1, quantity: 1, breedte: 120, hoogte: 60 },
+            ],
+          },
+          klant.cookie
+        )
+      );
+      expect(response.status).toBe(201);
+      const body = await response.json();
+      const [lineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE bestelheaderId = ?', [body.id]);
+      // basisprijs = (120/100) * (60/100) * 100 = 72, x 0,75 (25% korting) = 54.
+      expect(Number((lineRows as Array<{ prijs: string }>)[0].prijs)).toBe(54);
+    } finally {
+      await opruimenKlanten(klantEmails);
+      const pool = getPool();
+      if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
+      if (prijsgroepIds.length > 0) await getPool().query('DELETE FROM prijsgroepen WHERE id IN (?)', [prijsgroepIds]);
+    }
+  });
+});
+
+describe('Account verwijderen (klant, zelfbediening)', () => {
+  it('blokkeert verwijderen bij een fout wachtwoord, verwijdert het account bij het juiste wachtwoord', async () => {
+    const email = `autotest-delete-${randomUUID()}@example.com`;
+    const wachtwoord = 'AutotestWachtwoord1!';
+    let klantId: string | null = null;
+
+    try {
+      const created = await insertRow<{ id: string }>('klanten', {
+        email,
+        wachtwoordHash: await hashPassword(wachtwoord),
+        companyName: 'AUTOTEST Delete BV',
+        status: 'Goedgekeurd',
+      } as never);
+      klantId = created.id; // capture now -- `created` itself is out of scope in `finally`
+
+      // Zo werkt de echte "Account verwijderen"-flow ook (SettingsSection.tsx): het
+      // wachtwoord wordt herbevestigd via een normale login-call, niet door de DELETE-route
+      // zelf -- die vertrouwt puur op de sessie. Bij een fout wachtwoord roept de client de
+      // DELETE-route dus nooit aan.
+      const foutWachtwoord = await loginKlant(req('POST', { email, password: 'fout-wachtwoord' }));
+      expect(foutWachtwoord.status).toBe(401);
+      const [nogSteedsAanwezig] = await getPool().query('SELECT id FROM klanten WHERE id = ?', [created.id]);
+      expect((nogSteedsAanwezig as unknown[]).length).toBe(1);
+
+      const juistWachtwoord = await loginKlant(req('POST', { email, password: wachtwoord }));
+      expect(juistWachtwoord.status).toBe(200);
+      const cookie = juistWachtwoord.headers.get('set-cookie')!;
+
+      const verwijdering = await deleteKlant(req('DELETE', undefined, cookie), { params: { id: created.id } });
+      expect(verwijdering.status).toBe(200);
+
+      const [naVerwijdering] = await getPool().query('SELECT id FROM klanten WHERE id = ?', [created.id]);
+      expect((naVerwijdering as unknown[]).length).toBe(0);
+    } finally {
+      const pool = getPool();
+      // sessions has no FK to klanten, so the row from the successful login survives the
+      // klant delete above -- clean it up by the id captured before the delete, not via a
+      // klanten-lookup (which would find nothing once the klant row is already gone).
+      if (klantId) await pool.query("DELETE FROM sessions WHERE userType = 'klant' AND userId = ?", [klantId]);
+      // The klant is already gone if the test succeeded; this only catches the case where
+      // an assertion failed before the DELETE step ran.
+      await pool.query('DELETE FROM klanten WHERE email = ?', [email]);
     }
   });
 });
