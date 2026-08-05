@@ -32,6 +32,9 @@ const createdLookupGuardPrijsgroepIds: string[] = [];
 const createdLookupGuardKlantEmails: string[] = [];
 
 afterEach(async () => {
+  // medewerkerCookie() uses a fixed fake userId (no real medewerker row exists for it), so
+  // every call leaves an orphaned `sessions` row nothing else in this file would clean up.
+  await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
   if (createdSegmentIds.length > 0) {
     await getPool().query('DELETE FROM segmenten WHERE id IN (?)', [createdSegmentIds]);
     createdSegmentIds.length = 0;

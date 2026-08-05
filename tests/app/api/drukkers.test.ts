@@ -15,6 +15,9 @@ import {
 const createdDrukkerIds: string[] = [];
 
 afterEach(async () => {
+  // medewerkerCookie() uses a fixed fake userId (no real medewerker row exists for it), so
+  // every call leaves an orphaned `sessions` row the drukker-scoped cleanup below never catches.
+  await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
   if (createdDrukkerIds.length > 0) {
     await getPool().query('DELETE FROM drukkers WHERE id IN (?)', [createdDrukkerIds]);
     createdDrukkerIds.length = 0;

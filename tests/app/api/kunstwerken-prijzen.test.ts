@@ -14,6 +14,9 @@ const createdKlantEmails: string[] = [];
 
 afterEach(async () => {
   const pool = getPool();
+  // medewerkerCookie() uses a fixed fake userId (no real medewerker row exists for it), so
+  // every call leaves an orphaned `sessions` row nothing else in this file would clean up.
+  await pool.query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
   if (createdKunstwerkIds.length > 0) {
     await pool.query('DELETE FROM kunstwerken WHERE id IN (?)', [createdKunstwerkIds]);
     createdKunstwerkIds.length = 0;

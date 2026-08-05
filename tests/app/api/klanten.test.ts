@@ -12,6 +12,9 @@ import { PATCH as patchKlant, DELETE as deleteKlant } from '@/app/api/klanten/[i
 const createdKlantIds: string[] = [];
 
 afterEach(async () => {
+  // medewerkerCookie() uses a fixed fake userId (no real medewerker row exists for it), so
+  // every call leaves an orphaned `sessions` row the klant-scoped cleanup below never catches.
+  await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
   if (createdKlantIds.length > 0) {
     await getPool().query('DELETE FROM klanten WHERE id IN (?)', [createdKlantIds]);
     createdKlantIds.length = 0;

@@ -19,6 +19,9 @@ const createdPrijsgroepIds: string[] = [];
 
 afterEach(async () => {
   const pool = getPool();
+  // medewerkerCookie() uses a fixed fake userId (no real medewerker row exists for it), so
+  // every call leaves an orphaned `sessions` row the klant-scoped cleanup below never catches.
+  await pool.query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
   if (createdKlantEmails.length > 0) {
     await pool.query(
       'DELETE FROM sessions WHERE userType = \'klant\' AND userId IN (SELECT id FROM klanten WHERE email IN (?))',

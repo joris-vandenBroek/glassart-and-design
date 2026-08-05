@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { getPool } from '@/lib/server/db';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { GET, PATCH } from '@/app/api/instellingen/[id]/route';
@@ -7,6 +7,12 @@ async function medewerkerCookie(): Promise<string> {
   const sessionId = await createSession('medewerker', 'staff-1');
   return `${SESSION_COOKIE_NAME}=${sessionId}`;
 }
+
+// medewerkerCookie() uses a fixed fake userId (no real medewerker row exists for it), so
+// every call leaves an orphaned `sessions` row nothing else in this file would clean up.
+afterEach(async () => {
+  await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
+});
 
 // A fixture-only id, never 'bedrijfsgegevens'/'bestelinstellingen' -- the real ids used
 // by the deployed app. Scoping cleanup to this one row (instead of the previous blanket

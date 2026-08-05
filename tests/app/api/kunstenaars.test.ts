@@ -21,6 +21,9 @@ const createdKunstenaarIds: string[] = [];
 const createdKunstwerkIds: string[] = [];
 
 afterEach(async () => {
+  // createSession('medewerker', 'staff-1') uses a fixed fake userId (no real medewerker
+  // row exists for it), so every call leaves an orphaned `sessions` row.
+  await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
   if (createdKunstwerkIds.length > 0) {
     await getPool().query('DELETE FROM kunstwerken WHERE id IN (?)', [createdKunstwerkIds]);
     createdKunstwerkIds.length = 0;

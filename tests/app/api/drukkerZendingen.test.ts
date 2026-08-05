@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { deleteRow, insertRow } from '@/lib/server/crud';
+import { getPool } from '@/lib/server/db';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { GET as listZendingen, POST as createZending } from '@/app/api/drukkers/[id]/zendingen/route';
 
@@ -15,6 +16,9 @@ describe('drukkerZendingen route', () => {
     while (createdDrukkerIds.length > 0) {
       await deleteRow('drukkers', createdDrukkerIds.pop()!);
     }
+    // createSession('medewerker', 'staff-1') uses a fixed fake userId (no real medewerker
+    // row exists for it), so every call leaves an orphaned `sessions` row.
+    await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
   });
 
   it('rejects listing without a medewerker session', async () => {
