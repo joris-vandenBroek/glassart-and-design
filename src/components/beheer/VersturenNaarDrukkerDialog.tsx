@@ -136,7 +136,13 @@ export function VersturenNaarDrukkerDialog({
         actorFromMedewerker(user),
         bestellingen.map((b) => b.bestelnr).join(', ')
       );
-      onVerstuurd(bestellingen.map((b) => ({ ...b, status: 'Verstuurd naar drukker' as const })));
+      onVerstuurd(
+        bestellingen.map((b) => ({
+          ...b,
+          status: 'Verstuurd naar drukker' as const,
+          verstuurdNaarDrukkerOp: b.verstuurdNaarDrukkerOp ?? new Date().toISOString(),
+        }))
+      );
       onClose();
     } catch {
       setError(t('drukkerVersturenStatusError'));

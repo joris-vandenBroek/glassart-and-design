@@ -48,6 +48,36 @@ function isCustomLine(line: BestellingLine): boolean {
   return !line.maatId;
 }
 
+interface StatusHistoryEntry {
+  key: string;
+  label: string;
+  datum: string;
+}
+
+function statusHistoryEntries(bestelling: Bestelling, t: (key: string) => string): StatusHistoryEntry[] {
+  const candidates: Array<{ key: string; label: string; iso: string | null }> = [
+    { key: 'te-beoordelen', label: t('bestellingenHistorieTeBeoordelen'), iso: bestelling.besteldatum },
+    {
+      key: 'te-versturen',
+      label: t('bestellingenHistorieTeVersturenNaarDrukker'),
+      iso: bestelling.teVersturenNaarDrukkerOp,
+    },
+    { key: 'verstuurd', label: t('bestellingenHistorieVerstuurdNaarDrukker'), iso: bestelling.verstuurdNaarDrukkerOp },
+    { key: 'afgerond', label: t('bestellingenHistorieAfgerond'), iso: bestelling.afgerondOp },
+    { key: 'afgewezen', label: t('bestellingenHistorieAfgewezen'), iso: bestelling.afgewezenOp },
+  ];
+  return candidates
+    .filter((entry) => entry.iso !== null)
+    .map((entry) => ({
+      key: entry.key,
+      label: entry.label,
+      // besteldatum already arrives pre-formatted (BeheerShell calls toLocaleDateString on
+      // it before it ever reaches this component) -- the other 3 fields are raw ISO strings
+      // straight from the API and need formatting here.
+      datum: entry.key === 'te-beoordelen' ? (entry.iso as string) : new Date(entry.iso as string).toLocaleString('nl-NL'),
+    }));
+}
+
 export function BestellingModal({
   bestelling,
   kunstwerken,
@@ -110,7 +140,11 @@ export function BestellingModal({
       });
       if (!response.ok) throw new Error('update failed');
       void logActiviteit('bestelling_goedgekeurd', actorFromMedewerker(user), bestelling.bestelnr);
-      onUpdated({ ...bestelling, status: 'Te versturen naar drukker' });
+      onUpdated({
+        ...bestelling,
+        status: 'Te versturen naar drukker',
+        teVersturenNaarDrukkerOp: bestelling.teVersturenNaarDrukkerOp ?? new Date().toISOString(),
+      });
     } catch {
       setError(t('bestellingenActionError'));
     }
@@ -126,7 +160,43 @@ export function BestellingModal({
       });
       if (!response.ok) throw new Error('update failed');
       void logActiviteit('bestelling_afgewezen', actorFromMedewerker(user), bestelling.bestelnr);
-      onUpdated({ ...bestelling, status: 'Afgewezen' });
+      onUpdated({
+        ...bestelling,
+        status: 'Afgewezen',
+        afgewezenOp: bestelling.afgewezenOp ?? new Date().toISOString(),
+      });
+    } catch {
+      setError(t('bestellingenActionError'));
+    }
+  }
+
+  async function handleAfronden() {
+    if (!bestelling) return;
+    try {
+      const response = await fetch(`/api/bestelheaders/${bestelling.id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status: 'Afgerond' }),
+      });
+      if (!response.ok) throw new Error('update failed');
+      void logActiviteit('bestelling_afgerond', actorFromMedewerker(user), bestelling.bestelnr);
+      onUpdated({ ...bestelling, status: 'Afgerond', afgerondOp: new Date().toISOString() });
+    } catch {
+      setError(t('bestellingenActionError'));
+    }
+  }
+
+  async function handleTerugzetten() {
+    if (!bestelling) return;
+    try {
+      const response = await fetch(`/api/bestelheaders/${bestelling.id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status: 'Verstuurd naar drukker' }),
+      });
+      if (!response.ok) throw new Error('update failed');
+      void logActiviteit('bestelling_afronding_teruggezet', actorFromMedewerker(user), bestelling.bestelnr);
+      onUpdated({ ...bestelling, status: 'Verstuurd naar drukker', afgerondOp: null });
     } catch {
       setError(t('bestellingenActionError'));
     }
@@ -272,7 +342,7 @@ export function BestellingModal({
         ) : undefined
       }
       footerActions={
-        bestelling ? (
+        bestelling && bestelling.status === 'Te beoordelen' ? (
           <>
             <button
               type="button"
@@ -292,6 +362,24 @@ export function BestellingModal({
               {t('bestellingenAfwijzen')}
             </button>
           </>
+        ) : bestelling && bestelling.status === 'Verstuurd naar drukker' ? (
+          <button
+            type="button"
+            onClick={handleAfronden}
+            data-testid="bestelling-modal-afronden"
+            className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+          >
+            {t('bestellingenAfronden')}
+          </button>
+        ) : bestelling && bestelling.status === 'Afgerond' ? (
+          <button
+            type="button"
+            onClick={handleTerugzetten}
+            data-testid="bestelling-modal-terugzetten"
+            className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+          >
+            {t('bestellingenTerugzetten')}
+          </button>
         ) : null
       }
     >
@@ -513,6 +601,18 @@ export function BestellingModal({
               );
             })}
           </ul>
+
+          <div className="flex flex-col gap-1 border-t border-white/10 pt-3 text-xs">
+            <span className="text-[0.65rem] uppercase tracking-wide text-white/40">{t('bestellingenHistorieTitel')}</span>
+            <ul data-testid="bestelling-modal-historie" className="flex flex-col gap-0.5">
+              {statusHistoryEntries(bestelling, t).map((entry) => (
+                <li key={entry.key} data-testid={`bestelling-modal-historie-${entry.key}`} className="flex justify-between gap-3 text-white/60">
+                  <span>{entry.label}</span>
+                  <span>{entry.datum}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
 
           {error && (
             <p data-testid="bestelling-modal-error" className="text-xs text-red-400">

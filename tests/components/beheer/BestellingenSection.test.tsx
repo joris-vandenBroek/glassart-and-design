@@ -187,7 +187,13 @@ describe('BestellingenSection', () => {
     fireEvent.click(screen.getByTestId('bestelling-modal-goedkeuren'));
 
     await waitFor(() =>
-      expect(onBestellingUpdated).toHaveBeenCalledWith({ ...BESTELLINGEN[0], status: 'Te versturen naar drukker' })
+      expect(onBestellingUpdated).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'header-1',
+          status: 'Te versturen naar drukker',
+          teVersturenNaarDrukkerOp: expect.any(String),
+        })
+      )
     );
     await waitFor(() => expect(screen.queryByTestId('bestelling-modal')).not.toBeInTheDocument());
   });
@@ -276,7 +282,13 @@ describe('BestellingenSection', () => {
       fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
 
       await waitFor(() => expect(onBestellingUpdated).toHaveBeenCalled());
-      expect(onBestellingUpdated.mock.calls[0][0]).toEqual({ ...bestellingen[0], status: 'Verstuurd naar drukker' });
+      expect(onBestellingUpdated.mock.calls[0][0]).toEqual(
+        expect.objectContaining({
+          id: bestellingen[0].id,
+          status: 'Verstuurd naar drukker',
+          verstuurdNaarDrukkerOp: expect.any(String),
+        })
+      );
       expect(screen.queryByTestId('drukker-versturen-drukker')).not.toBeInTheDocument();
       expect(screen.queryByTestId('bestellingen-selectie-balk')).not.toBeInTheDocument();
     });

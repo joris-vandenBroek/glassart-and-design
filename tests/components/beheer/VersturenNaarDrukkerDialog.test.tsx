@@ -198,7 +198,13 @@ describe('VersturenNaarDrukkerDialog', () => {
       { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'GD-00201'
     );
-    expect(onVerstuurd).toHaveBeenCalledWith([{ ...BESTELLING, status: 'Verstuurd naar drukker' }]);
+    expect(onVerstuurd).toHaveBeenCalledWith([
+      expect.objectContaining({
+        id: BESTELLING.id,
+        status: 'Verstuurd naar drukker',
+        verstuurdNaarDrukkerOp: expect.any(String),
+      }),
+    ]);
     expect(onClose).toHaveBeenCalled();
   });
 
