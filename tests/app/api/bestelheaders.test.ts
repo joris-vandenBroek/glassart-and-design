@@ -520,6 +520,59 @@ describe('bestelheaders routes', () => {
     expect((rows as Array<{ afgewezenOp: Date | null }>)[0].afgewezenOp).not.toBeNull();
   });
 
+  it('strips a client-supplied value for any of the 4 timestamp columns, with or without a status in the same PATCH', async () => {
+    const { cookie } = await klant('inject-tijdstip@example.com');
+    const created = await createHeader(postRequest({ lines: [] }, cookie));
+    const header = await created.json();
+    const staffCookie = await medewerkerCookie();
+
+    // No `status` at all in the body -- the derivation logic never runs, but the
+    // client-supplied afgewezenOp must still be stripped rather than written as-is.
+    await patchHeader(
+      new Request('http://localhost/api', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', cookie: staffCookie },
+        body: JSON.stringify({ afgewezenOp: '2020-01-01T00:00:00.000Z' }),
+      }),
+      { params: { id: header.id } }
+    );
+    const [noStatusRows] = await getPool().query('SELECT afgewezenOp FROM bestelheaders WHERE id = ?', [header.id]);
+    expect((noStatusRows as Array<{ afgewezenOp: Date | null }>)[0].afgewezenOp).toBeNull();
+
+    // `status` present but not the one mapped to afgewezenOp -- the guard is false, so
+    // the injected value must still be stripped rather than falling through untouched.
+    await patchHeader(
+      new Request('http://localhost/api', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', cookie: staffCookie },
+        body: JSON.stringify({ status: 'Te beoordelen', afgewezenOp: '2020-01-01T00:00:00.000Z' }),
+      }),
+      { params: { id: header.id } }
+    );
+    const [mismatchedStatusRows] = await getPool().query('SELECT afgewezenOp FROM bestelheaders WHERE id = ?', [
+      header.id,
+    ]);
+    expect((mismatchedStatusRows as Array<{ afgewezenOp: Date | null }>)[0].afgewezenOp).toBeNull();
+
+    // Same for a monotonic column when a different monotonic status is sent.
+    await patchHeader(
+      new Request('http://localhost/api', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', cookie: staffCookie },
+        body: JSON.stringify({
+          status: 'Te versturen naar drukker',
+          verstuurdNaarDrukkerOp: '2020-01-01T00:00:00.000Z',
+        }),
+      }),
+      { params: { id: header.id } }
+    );
+    const [monotoneRows] = await getPool().query(
+      'SELECT verstuurdNaarDrukkerOp FROM bestelheaders WHERE id = ?',
+      [header.id]
+    );
+    expect((monotoneRows as Array<{ verstuurdNaarDrukkerOp: Date | null }>)[0].verstuurdNaarDrukkerOp).toBeNull();
+  });
+
   it('rejects patching a header status or line price without a medewerker session', async () => {
     const { cookie } = await klant('unauth-patch@example.com');
     const maatId = await maakMaat(47, 67);

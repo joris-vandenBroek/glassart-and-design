@@ -26,6 +26,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
   try {
     const data = await request.json();
+    delete data.afgerondOp;
+    for (const col of Object.values(MONOTONE_STATUS_COLUMN)) {
+      delete data[col];
+    }
     if ('status' in data) {
       data.afgerondOp = data.status === 'Afgerond' ? new Date() : null;
 
