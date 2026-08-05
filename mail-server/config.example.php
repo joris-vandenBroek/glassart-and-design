@@ -14,5 +14,8 @@ return [
     'allowed_origins' => [
         'https://joris-vandenbroek.github.io',
         'https://glassartanddesign.com',
+        'https://staging.glassartanddesign.com',
+        // Add your local dev origin (e.g. 'http://localhost:3000') too, or
+        // "Versturen naar drukker" / order-confirmation mail will fail CORS locally.
     ],
 ];

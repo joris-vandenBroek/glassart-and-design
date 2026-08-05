@@ -63,10 +63,9 @@ jobs:
           NEXT_PUBLIC_UPLOAD_ENDPOINT_URL: ${{ vars.NEXT_PUBLIC_UPLOAD_ENDPOINT_URL }}
           NEXT_PUBLIC_UPLOAD_SECRET: ${{ secrets.NEXT_PUBLIC_UPLOAD_SECRET }}
         # No MIJNHOST_BUILD here: staging stays fully open (no Under Construction gate),
-        # unlike production. DB_HOST/PORT/USER/PASSWORD/NAME and
-        # MAIL_SERVER_RESET_ENDPOINT_URL are runtime-only (read by getPool() and
-        # sendResetEmail() at request time, not baked in at build time) and are already
-        # set directly in the Node.js app's DirectAdmin environment-variables panel --
+        # unlike production. DB_HOST/PORT/USER/PASSWORD/NAME are runtime-only (read by
+        # getPool() at request time, not baked in at build time) and are already set
+        # directly in the Node.js app's DirectAdmin environment-variables panel --
         # this workflow doesn't need to touch them.
 
       - name: Assemble deploy payload
