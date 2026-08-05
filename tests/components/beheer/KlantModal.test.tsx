@@ -5,6 +5,7 @@ import { KlantModal } from '@/components/beheer/KlantModal';
 import type { Klant } from '@/components/beheer/KlantenSection';
 import type { Prijsgroep } from '@/components/beheer/materiaalTypes';
 import type { Kunstenaar } from '@/components/beheer/kunstenaarTypes';
+import type { BtwTarieven } from '@/components/beheer/btwTarievenTypes';
 import messages from '../../../messages/nl.json';
 
 const fetchMock = vi.fn();
@@ -77,11 +78,14 @@ const KUNSTENAARS: Kunstenaar[] = [
   },
 ];
 
+const BTWTARIEVEN: BtwTarieven = { tarieven: [{ land: 'NL', percentage: 21 }] };
+
 function renderModal(
   klant: Klant | null,
   prijsgroepen: Prijsgroep[] | null = PRIJSGROEPEN,
   kunstenaars: Kunstenaar[] | null = KUNSTENAARS,
-  klanten: Klant[] | null = [KLANT, ANDERE_KLANT]
+  klanten: Klant[] | null = [KLANT, ANDERE_KLANT],
+  btwTarieven: BtwTarieven | null = BTWTARIEVEN
 ) {
   const onClose = vi.fn();
   const onUpdated = vi.fn();
@@ -92,6 +96,7 @@ function renderModal(
         prijsgroepen={prijsgroepen}
         kunstenaars={kunstenaars}
         klanten={klanten}
+        btwTarieven={btwTarieven}
         onClose={onClose}
         onUpdated={onUpdated}
       />
@@ -487,5 +492,38 @@ describe('KlantModal', () => {
   it('shows an invoiceLand Combobox inside the factuuradres block once it has a value', () => {
     renderModal({ ...KLANT, invoiceAddress: 'Factuurlaan 9', invoiceLand: 'DE' });
     expect(screen.getByTestId('klant-modal')).toHaveTextContent('Duitsland');
+  });
+
+  it('shows a btw warning and blocks Goedkeuren when the klant land has no matching tarief', () => {
+    renderModal({ ...KLANT, land: 'DE', prijsgroepId: 'pg-1' }, PRIJSGROEPEN, KUNSTENAARS, [KLANT, ANDERE_KLANT], {
+      tarieven: [{ land: 'NL', percentage: 21 }],
+    });
+    expect(screen.getByTestId('klant-modal-btw-waarschuwing')).toHaveTextContent('Duitsland');
+    expect(screen.getByTestId('klant-modal-goedkeuren')).toBeDisabled();
+  });
+
+  it('does not show a btw warning and does not block Goedkeuren when the klant land has a matching tarief', () => {
+    renderModal({ ...KLANT, land: 'NL', prijsgroepId: 'pg-1' });
+    expect(screen.queryByTestId('klant-modal-btw-waarschuwing')).not.toBeInTheDocument();
+    expect(screen.getByTestId('klant-modal-goedkeuren')).not.toBeDisabled();
+  });
+
+  it('resolves the btw warning against invoiceLand over land when both are set', () => {
+    renderModal(
+      { ...KLANT, land: 'NL', invoiceLand: 'DE', prijsgroepId: 'pg-1' },
+      PRIJSGROEPEN,
+      KUNSTENAARS,
+      [KLANT, ANDERE_KLANT],
+      { tarieven: [{ land: 'NL', percentage: 21 }] }
+    );
+    expect(screen.getByTestId('klant-modal-btw-waarschuwing')).toHaveTextContent('Duitsland');
+  });
+
+  it('still shows the btw warning for an already Goedgekeurd klant whose land tarief is missing', () => {
+    renderModal({ ...KLANT, land: 'DE', status: 'Goedgekeurd', prijsgroepId: 'pg-1' }, PRIJSGROEPEN, KUNSTENAARS, [
+      KLANT,
+      ANDERE_KLANT,
+    ], { tarieven: [{ land: 'NL', percentage: 21 }] });
+    expect(screen.getByTestId('klant-modal-btw-waarschuwing')).toBeInTheDocument();
   });
 });

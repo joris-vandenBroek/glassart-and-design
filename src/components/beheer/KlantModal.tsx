@@ -9,9 +9,11 @@ import { HelpHint } from '@/components/HelpHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import { LAND_OPTIONS, landNaam } from '@/data/landen';
+import { resolveBtwPercentage } from '@/lib/resolveBtw';
 import type { Klant } from './KlantenSection';
 import type { Prijsgroep } from './materiaalTypes';
 import type { Kunstenaar } from './kunstenaarTypes';
+import type { BtwTarieven } from './btwTarievenTypes';
 
 const STATUS_BADGE_CLASS: Record<Klant['status'], string> = {
   Beoordelen: 'bg-amber-400/10 text-amber-300',
@@ -66,6 +68,7 @@ interface KlantModalProps {
   prijsgroepen: Prijsgroep[] | null;
   kunstenaars: Kunstenaar[] | null;
   klanten: Klant[] | null;
+  btwTarieven: BtwTarieven | null;
   onClose: () => void;
   onUpdated: (klant: Klant) => void;
 }
@@ -75,6 +78,7 @@ export function KlantModal({
   prijsgroepen,
   kunstenaars,
   klanten,
+  btwTarieven,
   onClose,
   onUpdated,
 }: KlantModalProps) {
@@ -86,6 +90,10 @@ export function KlantModal({
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAdminAuth();
+
+  const land = fields ? fields.invoiceLand || fields.land || null : null;
+  const btwPercentage = btwTarieven ? resolveBtwPercentage(btwTarieven.tarieven, land) : null;
+  const heeftGeldigBtwTarief = btwPercentage !== null;
 
   useEffect(() => {
     if (klant) {
@@ -244,7 +252,7 @@ export function KlantModal({
               <button
                 type="button"
                 onClick={handleGoedkeuren}
-                disabled={!prijsgroepId}
+                disabled={!prijsgroepId || !heeftGeldigBtwTarief}
                 data-testid="klant-modal-goedkeuren"
                 className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
               >
@@ -285,6 +293,12 @@ export function KlantModal({
               </button>
             )}
           </div>
+
+          {!heeftGeldigBtwTarief && (
+            <p data-testid="klant-modal-btw-waarschuwing" className="text-xs text-amber-400">
+              {t('klantenBtwWaarschuwing', { land: landNaam(land) })}
+            </p>
+          )}
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Veld

@@ -6,6 +6,7 @@ import { DataTable, type Column } from '@/components/DataTable';
 import { KlantModal } from './KlantModal';
 import type { Prijsgroep } from './materiaalTypes';
 import type { Kunstenaar } from './kunstenaarTypes';
+import type { BtwTarieven } from './btwTarievenTypes';
 
 export interface Klant {
   id: string;
@@ -36,6 +37,7 @@ interface KlantenSectionProps {
   klanten: Klant[] | null;
   prijsgroepen: Prijsgroep[] | null;
   kunstenaars: Kunstenaar[] | null;
+  btwTarieven: BtwTarieven | null;
   loadError: string | null;
   onKlantUpdated: (klant: Klant) => void;
 }
@@ -44,6 +46,7 @@ export function KlantenSection({
   klanten,
   prijsgroepen,
   kunstenaars,
+  btwTarieven,
   loadError,
   onKlantUpdated,
 }: KlantenSectionProps) {
@@ -93,6 +96,7 @@ export function KlantenSection({
         prijsgroepen={prijsgroepen}
         kunstenaars={kunstenaars}
         klanten={klanten}
+        btwTarieven={btwTarieven}
         onClose={() => setSelectedKlant(null)}
         onUpdated={(updated) => {
           onKlantUpdated(updated);

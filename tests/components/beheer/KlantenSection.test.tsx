@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { KlantenSection, type Klant } from '@/components/beheer/KlantenSection';
 import type { Prijsgroep } from '@/components/beheer/materiaalTypes';
+import type { BtwTarieven } from '@/components/beheer/btwTarievenTypes';
 import messages from '../../../messages/nl.json';
 
 const fetchMock = vi.fn();
@@ -32,6 +33,8 @@ const KLANTEN: Klant[] = [
     address: 'Teststraat 1',
     postcode: '1234 AB',
     city: 'Teststad',
+    land: 'NL',
+    invoiceLand: '',
     deliveryAddress: '',
     deliveryPostcode: '',
     deliveryCity: '',
@@ -53,6 +56,8 @@ const KLANTEN: Klant[] = [
     address: 'Anderstraat 2',
     postcode: '4321 BA',
     city: 'Anderstad',
+    land: 'NL',
+    invoiceLand: '',
     deliveryAddress: '',
     deliveryPostcode: '',
     deliveryCity: '',
@@ -70,6 +75,8 @@ const PRIJSGROEPEN: Prijsgroep[] = [
   { id: 'pg-2', naam: 'Premium', kortingspercentage: 10, opslagpercentage: null },
 ];
 
+const BTWTARIEVEN: BtwTarieven = { tarieven: [{ land: 'NL', percentage: 21 }] };
+
 function renderSection(overrides: Partial<React.ComponentProps<typeof KlantenSection>> = {}) {
   const onKlantUpdated = vi.fn();
   render(
@@ -78,6 +85,7 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof KlantenSec
         klanten={KLANTEN}
         prijsgroepen={PRIJSGROEPEN}
         kunstenaars={[]}
+        btwTarieven={BTWTARIEVEN}
         loadError={null}
         onKlantUpdated={onKlantUpdated}
         {...overrides}

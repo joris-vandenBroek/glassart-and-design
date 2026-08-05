@@ -405,6 +405,7 @@
     "klantenLabelPostcode": "Postcode",
     "klantenLabelPlaats": "Plaats",
     "klantenLabelLand": "Land",
+    "klantenBtwWaarschuwing": "Geen btw-tarief ingesteld voor {land}. Voeg dit toe bij Instellingen voordat je deze klant kunt goedkeuren.",
     "klantenLabelAfleveradres": "Afleveradres",
     "klantenLabelFactuuradres": "Factuuradres",
     "klantenLabelGebruiktStandaardadres": "Gebruikt standaardadres",
