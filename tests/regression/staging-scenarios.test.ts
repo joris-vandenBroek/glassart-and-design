@@ -40,6 +40,7 @@ import { POST as postZending, GET as listZendingen } from '@/app/api/drukkers/[i
 import { POST as registerKlant } from '@/app/api/auth/register/route';
 import { POST as loginKlant } from '@/app/api/auth/login/route';
 import { GET as getInstelling } from '@/app/api/instellingen/[id]/route';
+import { POST as postResource, GET as listResource } from '@/app/api/[resource]/route';
 import { buildDrukkerMail } from '@/lib/buildDrukkerMail';
 import { resolveBtwPercentage } from '@/lib/resolveBtw';
 import type { BtwTarieven } from '@/components/beheer/btwTarievenTypes';
@@ -725,6 +726,203 @@ describe('Account verwijderen (klant, zelfbediening)', () => {
       // The klant is already gone if the test succeeded; this only catches the case where
       // an assertion failed before the DELETE step ran.
       await pool.query('DELETE FROM klanten WHERE email = ?', [email]);
+    }
+  });
+});
+
+describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
+  it('een segment/stijl/onderwerp dat vanuit het kunstwerk-formulier "erbij" wordt gemaakt, landt echt in de eigen stamtabel en wordt op het kunstwerk gekoppeld', async () => {
+    let kunstwerkId: string | null = null;
+    let segmentId: string | null = null;
+    let stijlId: string | null = null;
+    let onderwerpId: string | null = null;
+
+    try {
+      const staff = await medewerkerCookie();
+
+      // Zo werkt de inline "+ Toevoegen" in KunstwerkenSection ook: het nieuwe stamgegeven
+      // wordt meteen als los record aangemaakt (niet pas bij het opslaan van het kunstwerk),
+      // en pas daarna gekoppeld via de id in segmentIds/stijlIds/onderwerpIds.
+      const segmentResponse = await postResource(
+        req('POST', { omschrijving: 'AUTOTEST Segment Inline' }, staff),
+        { params: { resource: 'segmenten' } }
+      );
+      expect(segmentResponse.status).toBe(201);
+      segmentId = (await segmentResponse.json()).id;
+
+      const stijlResponse = await postResource(req('POST', { omschrijving: 'AUTOTEST Stijl Inline' }, staff), {
+        params: { resource: 'stijlen' },
+      });
+      expect(stijlResponse.status).toBe(201);
+      stijlId = (await stijlResponse.json()).id;
+
+      const onderwerpResponse = await postResource(
+        req('POST', { omschrijving: 'AUTOTEST Onderwerp Inline' }, staff),
+        { params: { resource: 'onderwerpen' } }
+      );
+      expect(onderwerpResponse.status).toBe(201);
+      onderwerpId = (await onderwerpResponse.json()).id;
+
+      const kunstwerkResponse = await postResource(
+        req(
+          'POST',
+          {
+            naam: 'AUTOTEST Kunstwerk Met Nieuwe Stamgegevens',
+            segmentIds: [segmentId],
+            stijlIds: [stijlId],
+            onderwerpIds: [onderwerpId],
+            materiaalIds: [],
+            maatIds: [],
+          },
+          staff
+        ),
+        { params: { resource: 'kunstwerken' } }
+      );
+      expect(kunstwerkResponse.status).toBe(201);
+      kunstwerkId = (await kunstwerkResponse.json()).id;
+
+      // Staan de nieuwe stamgegevens echt in hun eigen tabel (niet alleen als losse id op
+      // het kunstwerk)?
+      const segmentenLijst = await (await listResource(req('GET'), { params: { resource: 'segmenten' } })).json();
+      expect(segmentenLijst.some((s: { id: string; omschrijving: string }) => s.id === segmentId && s.omschrijving === 'AUTOTEST Segment Inline')).toBe(true);
+      const stijlenLijst = await (await listResource(req('GET'), { params: { resource: 'stijlen' } })).json();
+      expect(stijlenLijst.some((s: { id: string; omschrijving: string }) => s.id === stijlId && s.omschrijving === 'AUTOTEST Stijl Inline')).toBe(true);
+      const onderwerpenLijst = await (
+        await listResource(req('GET'), { params: { resource: 'onderwerpen' } })
+      ).json();
+      expect(onderwerpenLijst.some((o: { id: string; omschrijving: string }) => o.id === onderwerpId && o.omschrijving === 'AUTOTEST Onderwerp Inline')).toBe(true);
+
+      // En staat de koppeling ook echt op het kunstwerk zelf?
+      const [rows] = await getPool().query(
+        'SELECT segmentIds, stijlIds, onderwerpIds FROM kunstwerken WHERE id = ?',
+        [kunstwerkId]
+      );
+      const row = (rows as Array<{ segmentIds: string | string[]; stijlIds: string | string[]; onderwerpIds: string | string[] }>)[0];
+      const parse = (v: string | string[]) => (typeof v === 'string' ? JSON.parse(v) : v);
+      expect(parse(row.segmentIds)).toEqual([segmentId]);
+      expect(parse(row.stijlIds)).toEqual([stijlId]);
+      expect(parse(row.onderwerpIds)).toEqual([onderwerpId]);
+    } finally {
+      const pool = getPool();
+      if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
+      if (segmentId) await pool.query('DELETE FROM segmenten WHERE id = ?', [segmentId]);
+      if (stijlId) await pool.query('DELETE FROM stijlen WHERE id = ?', [stijlId]);
+      if (onderwerpId) await pool.query('DELETE FROM onderwerpen WHERE id = ?', [onderwerpId]);
+    }
+  });
+});
+
+describe('Klant van een kunstenaar kan diens werk gewoon bestellen zonder exclusiviteit', () => {
+  it('koppelen van een klant aan een kunstenaar (kunstenaarId) beperkt op zichzelf niets -- die klant én andere klanten kunnen het werk gewoon bestellen', async () => {
+    const klantEmails: string[] = [];
+    let kunstenaarId: string | null = null;
+    let kunstwerkId: string | null = null;
+    let fixture: Awaited<ReturnType<typeof maakMaatMateriaal>> | null = null;
+
+    try {
+      const staff = await medewerkerCookie();
+
+      const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+        naam: 'AUTOTEST Kunstenaar Eigen Werk',
+      } as never);
+      kunstenaarId = kunstenaar.id;
+
+      fixture = await maakMaatMateriaal('eigen-werk');
+      await zetMatrixPrijs(fixture.maatId, fixture.materiaalId, 60);
+      const kunstwerk = await insertRow<{ id: string }>(
+        'kunstwerken',
+        {
+          naam: 'AUTOTEST Kunstwerk Eigen Werk',
+          kunstenaarId,
+          materiaalIds: [fixture.materiaalId],
+          maatIds: [fixture.maatId],
+        } as never,
+        ['materiaalIds', 'maatIds']
+      );
+      kunstwerkId = kunstwerk.id;
+
+      const eigenKlant = await maakKlant('eigen-werk-klant');
+      klantEmails.push(eigenKlant.email);
+      const anderKlant = await maakKlant('eigen-werk-ander-klant');
+      klantEmails.push(anderKlant.email);
+
+      const koppeling = await patchKlant(req('PATCH', { kunstenaarId }, staff), { params: { id: eigenKlant.id } });
+      expect(koppeling.status).toBe(200);
+
+      const lijn = { kunstwerkId, maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 1, quantity: 1 };
+      const bestellingEigenKlant = await createHeader(req('POST', { lines: [lijn] }, eigenKlant.cookie));
+      expect(bestellingEigenKlant.status).toBe(201);
+
+      // Zonder exclusieveKlantIds op de kunstenaar is dit werk gewoon open voor iedereen --
+      // koppelen van een klantaccount aan een kunstenaar is puur informatief/voor
+      // prijsgroep-toewijzing, het beperkt niets vanzelf.
+      const bestellingAnderKlant = await createHeader(req('POST', { lines: [lijn] }, anderKlant.cookie));
+      expect(bestellingAnderKlant.status).toBe(201);
+    } finally {
+      await opruimenKlanten(klantEmails);
+      const pool = getPool();
+      if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
+      if (kunstenaarId) await pool.query('DELETE FROM kunstenaars WHERE id = ?', [kunstenaarId]);
+      if (fixture) await fixture.opruimen();
+    }
+  });
+});
+
+describe('Klant met alleenrecht voor één kunstenaar', () => {
+  it('geeft precies die ene klant bestelrecht en blokkeert alle andere klanten voor het werk van die kunstenaar', async () => {
+    const klantEmails: string[] = [];
+    let kunstenaarId: string | null = null;
+    let kunstwerkId: string | null = null;
+    let fixture: Awaited<ReturnType<typeof maakMaatMateriaal>> | null = null;
+
+    try {
+      const staff = await medewerkerCookie();
+
+      const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+        naam: 'AUTOTEST Kunstenaar Alleenrecht',
+      } as never);
+      kunstenaarId = kunstenaar.id;
+
+      fixture = await maakMaatMateriaal('alleenrecht');
+      await zetMatrixPrijs(fixture.maatId, fixture.materiaalId, 70);
+      const kunstwerk = await insertRow<{ id: string }>(
+        'kunstwerken',
+        {
+          naam: 'AUTOTEST Kunstwerk Alleenrecht',
+          kunstenaarId,
+          materiaalIds: [fixture.materiaalId],
+          maatIds: [fixture.maatId],
+        } as never,
+        ['materiaalIds', 'maatIds']
+      );
+      kunstwerkId = kunstwerk.id;
+
+      const bevoorrecht = await maakKlant('alleenrecht-bevoorrecht');
+      klantEmails.push(bevoorrecht.email);
+      const anderA = await maakKlant('alleenrecht-ander-a');
+      klantEmails.push(anderA.email);
+      const anderB = await maakKlant('alleenrecht-ander-b');
+      klantEmails.push(anderB.email);
+
+      const alleenrecht = await patchKunstenaar(req('PATCH', { exclusieveKlantIds: [bevoorrecht.id] }, staff), {
+        params: { id: kunstenaarId },
+      });
+      expect(alleenrecht.status).toBe(200);
+
+      const lijn = { kunstwerkId, maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 1, quantity: 1 };
+      const bestellingBevoorrecht = await createHeader(req('POST', { lines: [lijn] }, bevoorrecht.cookie));
+      expect(bestellingBevoorrecht.status).toBe(201);
+
+      for (const ander of [anderA, anderB]) {
+        const bestelling = await createHeader(req('POST', { lines: [lijn] }, ander.cookie));
+        expect(bestelling.status).toBe(403);
+      }
+    } finally {
+      await opruimenKlanten(klantEmails);
+      const pool = getPool();
+      if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
+      if (kunstenaarId) await pool.query('DELETE FROM kunstenaars WHERE id = ?', [kunstenaarId]);
+      if (fixture) await fixture.opruimen();
     }
   });
 });
