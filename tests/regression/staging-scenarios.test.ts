@@ -926,3 +926,85 @@ describe('Klant met alleenrecht voor één kunstenaar', () => {
     }
   });
 });
+
+describe('Bestelling afronden -- van plaatsing tot "Afgerond" met afgerondOp gezet', () => {
+  it('een bestelling die de volledige weg tot bij de drukker aflegt kan daarna door staff als "Afgerond" gemarkeerd worden, met afgerondOp gezet', async () => {
+    const klantEmails: string[] = [];
+    const drukkerIds: string[] = [];
+
+    try {
+      const staff = await medewerkerCookie();
+      const klant = await maakKlant('afronden-klant');
+      klantEmails.push(klant.email);
+
+      // Geen kunstwerk/materiaal/maat-fixture nodig -- een lege regelset is voldoende om
+      // de statusketen zelf te doorlopen (zie ook bestelheaders.test.ts's "sets afgerondOp"
+      // tests, die op dezelfde manier met `lines: []` werken).
+      const plaatsing = await createHeader(req('POST', { lines: [] }, klant.cookie));
+      expect(plaatsing.status).toBe(201);
+      const header = await plaatsing.json();
+
+      const [headerNaPlaatsing] = await getPool().query('SELECT status FROM bestelheaders WHERE id = ?', [
+        header.id,
+      ]);
+      expect((headerNaPlaatsing as Array<{ status: string }>)[0].status).toBe('Te beoordelen');
+
+      // Staff keurt goed ("Te versturen naar drukker"), net als Deel C3/de
+      // Bestelling-levenscyclus hierboven.
+      const goedkeuren = await patchHeader(req('PATCH', { status: 'Te versturen naar drukker' }, staff), {
+        params: { id: header.id },
+      });
+      expect(goedkeuren.status).toBe(200);
+
+      const drukker = await insertRow<{ id: string }>('drukkers', {
+        naam: 'AUTOTEST Drukker Afronden',
+        email: 'autotest-afronden-drukker@example.com',
+        standaard: false,
+      } as never);
+      drukkerIds.push(drukker.id);
+
+      // "Versturen naar drukker" -- server-side effect only, geen echte mail (zie de
+      // opmerking bovenin dit bestand).
+      const zending = await postZending(
+        req(
+          'POST',
+          {
+            onderwerp: 'AUTOTEST',
+            body: 'AUTOTEST',
+            bestellingIds: [header.id],
+            aantalKlanten: 1,
+            aantalRegels: 0,
+            verzondDoor: 'autotest',
+          },
+          staff
+        ),
+        { params: { id: drukker.id } }
+      );
+      expect(zending.status).toBe(201);
+
+      const versturen = await patchHeader(req('PATCH', { status: 'Verstuurd naar drukker' }, staff), {
+        params: { id: header.id },
+      });
+      expect(versturen.status).toBe(200);
+
+      // De eigenlijke scenario onder test: "Markeer zending als afgerond" (DrukkerModal) /
+      // "Afronden" (BestellingModal) patchen beide dezelfde route met status: 'Afgerond'.
+      const afronden = await patchHeader(req('PATCH', { status: 'Afgerond' }, staff), {
+        params: { id: header.id },
+      });
+      expect(afronden.status).toBe(200);
+
+      const [rows] = await getPool().query('SELECT status, afgerondOp FROM bestelheaders WHERE id = ?', [
+        header.id,
+      ]);
+      const row = (rows as Array<{ status: string; afgerondOp: Date | null }>)[0];
+      expect(row.status).toBe('Afgerond');
+      expect(row.afgerondOp).not.toBeNull();
+    } finally {
+      // opruimenKlanten verwijdert ook de bestelheader (via klantId IN (...)) -- geen
+      // apart headerId-cleanup nodig, zelfde patroon als de andere scenario's in dit bestand.
+      await opruimenKlanten(klantEmails);
+      if (drukkerIds.length > 0) await getPool().query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]); // cascades drukkerZendingen
+    }
+  });
+});
