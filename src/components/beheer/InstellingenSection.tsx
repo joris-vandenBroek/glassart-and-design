@@ -177,7 +177,6 @@ export function InstellingenSection({
           >
             {t('instellingenBtwToevoegen')}
           </button>
-
         </div>
       )}
 

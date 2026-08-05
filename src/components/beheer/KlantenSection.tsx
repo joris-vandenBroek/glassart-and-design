@@ -38,6 +38,7 @@ interface KlantenSectionProps {
   prijsgroepen: Prijsgroep[] | null;
   kunstenaars: Kunstenaar[] | null;
   btwTarieven: BtwTarieven | null;
+  btwLoadError: boolean;
   loadError: string | null;
   onKlantUpdated: (klant: Klant) => void;
 }
@@ -47,6 +48,7 @@ export function KlantenSection({
   prijsgroepen,
   kunstenaars,
   btwTarieven,
+  btwLoadError,
   loadError,
   onKlantUpdated,
 }: KlantenSectionProps) {
@@ -97,6 +99,7 @@ export function KlantenSection({
         kunstenaars={kunstenaars}
         klanten={klanten}
         btwTarieven={btwTarieven}
+        btwLoadError={btwLoadError}
         onClose={() => setSelectedKlant(null)}
         onUpdated={(updated) => {
           onKlantUpdated(updated);

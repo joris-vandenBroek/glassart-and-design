@@ -69,6 +69,7 @@ interface KlantModalProps {
   kunstenaars: Kunstenaar[] | null;
   klanten: Klant[] | null;
   btwTarieven: BtwTarieven | null;
+  btwLoadError: boolean;
   onClose: () => void;
   onUpdated: (klant: Klant) => void;
 }
@@ -79,6 +80,7 @@ export function KlantModal({
   kunstenaars,
   klanten,
   btwTarieven,
+  btwLoadError,
   onClose,
   onUpdated,
 }: KlantModalProps) {
@@ -93,9 +95,11 @@ export function KlantModal({
 
   const land = fields ? fields.invoiceLand || fields.land || null : null;
   const btwPercentage = btwTarieven ? resolveBtwPercentage(btwTarieven.tarieven, land) : null;
-  // While btwTarieven hasn't loaded yet (still null), don't treat that as "no matching tarief" —
-  // only flag a real mismatch once the data has actually loaded.
-  const heeftGeldigBtwTarief = btwTarieven === null || btwPercentage !== null;
+  // While btwTarieven hasn't loaded yet (still null) and no load error has occurred, don't treat
+  // that as "no matching tarief" — only flag a real mismatch once the data has actually loaded, or
+  // once we know for certain the load failed. Fail closed on error, not open: a load error must
+  // never silently disable this entire blockade.
+  const heeftGeldigBtwTarief = (btwTarieven === null && !btwLoadError) || btwPercentage !== null;
 
   useEffect(() => {
     if (klant) {
@@ -298,9 +302,11 @@ export function KlantModal({
 
           {!heeftGeldigBtwTarief && (
             <p data-testid="klant-modal-btw-waarschuwing" className="text-xs text-amber-400">
-              {land === null
-                ? t('klantenBtwWaarschuwingGeenLand')
-                : t('klantenBtwWaarschuwing', { land: landNaam(land) })}
+              {btwLoadError
+                ? t('klantenBtwWaarschuwingLaadfout')
+                : land === null
+                  ? t('klantenBtwWaarschuwingGeenLand')
+                  : t('klantenBtwWaarschuwing', { land: landNaam(land) })}
             </p>
           )}
 

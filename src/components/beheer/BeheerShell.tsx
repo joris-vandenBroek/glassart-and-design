@@ -319,6 +319,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             prijsgroepen={prijsgroepen.items}
             kunstenaars={kunstenaars.items}
             btwTarieven={btwtarieven.data}
+            btwLoadError={btwtarieven.error === 'load'}
             loadError={loadError}
             onKlantUpdated={handleKlantUpdated}
           />

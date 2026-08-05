@@ -86,6 +86,7 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof KlantenSec
         prijsgroepen={PRIJSGROEPEN}
         kunstenaars={[]}
         btwTarieven={BTWTARIEVEN}
+        btwLoadError={false}
         loadError={null}
         onKlantUpdated={onKlantUpdated}
         {...overrides}

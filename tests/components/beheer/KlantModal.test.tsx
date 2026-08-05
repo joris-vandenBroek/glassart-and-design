@@ -85,7 +85,8 @@ function renderModal(
   prijsgroepen: Prijsgroep[] | null = PRIJSGROEPEN,
   kunstenaars: Kunstenaar[] | null = KUNSTENAARS,
   klanten: Klant[] | null = [KLANT, ANDERE_KLANT],
-  btwTarieven: BtwTarieven | null = BTWTARIEVEN
+  btwTarieven: BtwTarieven | null = BTWTARIEVEN,
+  btwLoadError = false
 ) {
   const onClose = vi.fn();
   const onUpdated = vi.fn();
@@ -97,6 +98,7 @@ function renderModal(
         kunstenaars={kunstenaars}
         klanten={klanten}
         btwTarieven={btwTarieven}
+        btwLoadError={btwLoadError}
         onClose={onClose}
         onUpdated={onUpdated}
       />
@@ -531,6 +533,19 @@ describe('KlantModal', () => {
     renderModal({ ...KLANT, land: 'NL', prijsgroepId: 'pg-1' }, PRIJSGROEPEN, KUNSTENAARS, [KLANT, ANDERE_KLANT], null);
     expect(screen.queryByTestId('klant-modal-btw-waarschuwing')).not.toBeInTheDocument();
     expect(screen.getByTestId('klant-modal-goedkeuren')).not.toBeDisabled();
+  });
+
+  it('shows a btw warning and blocks Goedkeuren when btwTarieven failed to load (fail closed, not open)', () => {
+    renderModal(
+      { ...KLANT, land: 'NL', prijsgroepId: 'pg-1' },
+      PRIJSGROEPEN,
+      KUNSTENAARS,
+      [KLANT, ANDERE_KLANT],
+      null,
+      true
+    );
+    expect(screen.getByTestId('klant-modal-btw-waarschuwing')).toBeInTheDocument();
+    expect(screen.getByTestId('klant-modal-goedkeuren')).toBeDisabled();
   });
 
   it('shows a distinct "geen land" warning instead of an interpolated blank when the klant has no land set at all', () => {

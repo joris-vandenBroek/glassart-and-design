@@ -98,7 +98,8 @@ export function OrdersSection() {
         const klant = (await response.json()) as { land?: string | null; invoiceLand?: string | null };
         if (!cancelled) setOwnLand({ land: klant.land ?? null, invoiceLand: klant.invoiceLand ?? null });
       } catch {
-        // leave ownLand null — btw falls back to standaardtarief
+        // leave ownLand null — without a resolved land, no btw-tarief matches, so the
+        // btw rows are simply hidden further down instead of shown
       }
     })();
     return () => {
