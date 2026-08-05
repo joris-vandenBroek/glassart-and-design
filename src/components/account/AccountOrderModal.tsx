@@ -6,6 +6,7 @@ import { ProductImage } from '@/components/ProductImage';
 import { HelpHint } from '@/components/HelpHint';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
 import { formatCurrency } from '@/lib/formatCurrency';
+import { resolveBtwPercentage } from '@/lib/resolveBtw';
 import {
   toKlantBestellingStatus,
   KLANT_STATUS_BADGE_CLASS,
@@ -58,8 +59,7 @@ export function AccountOrderModal({
     heeftRegels && !heeftOngeprijsdeRegel
       ? order!.lines!.reduce((sum, line) => sum + (line.prijs ?? 0) * line.quantity, 0)
       : null;
-  const btwPercentage =
-    btwTarieven && (btwTarieven.tarieven.find((t) => t.land === land)?.percentage ?? btwTarieven.standaardPercentage);
+  const btwPercentage = btwTarieven ? resolveBtwPercentage(btwTarieven.tarieven, land) : null;
   const btwBedrag =
     totaalExclBtwGetal !== null && btwPercentage != null ? totaalExclBtwGetal * (btwPercentage / 100) : null;
   const totaalInclBtw = totaalExclBtwGetal !== null && btwBedrag !== null ? totaalExclBtwGetal + btwBedrag : null;

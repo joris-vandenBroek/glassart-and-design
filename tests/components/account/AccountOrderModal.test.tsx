@@ -26,7 +26,7 @@ const MATERIALEN: Materiaal[] = [
   { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Extra diepte en stevigheid.' },
 ];
 const MATEN: Maat[] = [{ id: 'maat-1', breedte: 40, hoogte: 60 }];
-const BTWTARIEVEN: BtwTarieven = { tarieven: [{ land: 'NL', percentage: 21 }], standaardPercentage: 21 };
+const BTWTARIEVEN: BtwTarieven = { tarieven: [{ land: 'NL', percentage: 21 }] };
 
 function renderModal(order: DisplayOrder | null, land: string | null = 'NL', btwTarieven: BtwTarieven | null = BTWTARIEVEN) {
   return render(
@@ -230,7 +230,7 @@ describe('AccountOrderModal', () => {
     expect(screen.getByTestId('account-order-modal-totaal-incl')).toHaveTextContent('€ 423,50');
   });
 
-  it('falls back to standaardPercentage when land is null', () => {
+  it('shows no btw block when land is null', () => {
     renderModal(
       {
         id: 'GD-00001',
@@ -241,9 +241,10 @@ describe('AccountOrderModal', () => {
         lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
       },
       null,
-      { tarieven: [{ land: 'DE', percentage: 19 }], standaardPercentage: 21 }
+      { tarieven: [{ land: 'DE', percentage: 19 }] }
     );
-    expect(screen.getByTestId('account-order-modal-btw')).toHaveTextContent('21');
+    expect(screen.queryByTestId('account-order-modal-btw')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('account-order-modal-totaal-incl')).not.toBeInTheDocument();
   });
 
   it('shows no btw block when the total itself is incomplete', () => {
