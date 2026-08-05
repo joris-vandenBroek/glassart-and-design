@@ -6,17 +6,20 @@ import { Modal } from '@/components/Modal';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
-import { useDrukkerZendingen } from '@/lib/useDrukkerZendingen';
+import { useDrukkerZendingen, type DrukkerZending } from '@/lib/useDrukkerZendingen';
 import type { Drukker } from './materiaalTypes';
+import type { Bestelling } from './BestellingenSection';
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; drukker: Drukker } | null;
 
 interface DrukkerModalProps {
   state: ModalState;
+  bestellingen: Bestelling[];
   onClose: () => void;
   onAdd: (data: Omit<Drukker, 'id'>) => Promise<boolean>;
   onUpdate: (id: string, data: Omit<Drukker, 'id'>) => Promise<boolean>;
   onRemove: (id: string) => Promise<boolean>;
+  onBestellingUpdated: (bestelling: Bestelling) => void;
 }
 
 interface FormFields {
@@ -31,12 +34,23 @@ interface FormFields {
 
 const EMPTY_FIELDS: FormFields = { naam: '', adres: '', postcode: '', plaats: '', email: '', prijsafspraken: '', standaard: false };
 
-export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: DrukkerModalProps) {
+export function DrukkerModal({
+  state,
+  bestellingen,
+  onClose,
+  onAdd,
+  onUpdate,
+  onRemove,
+  onBestellingUpdated,
+}: DrukkerModalProps) {
   const t = useTranslations('beheer');
   const { user } = useAdminAuth();
   const [fields, setFields] = useState<FormFields>(EMPTY_FIELDS);
   const [actionError, setActionError] = useState<string | null>(null);
   const [expandedZendingId, setExpandedZendingId] = useState<string | null>(null);
+  const [zendingActionError, setZendingActionError] = useState<{ zendingId: string; message: string } | null>(
+    null
+  );
   const drukkerId = state?.mode === 'edit' ? state.drukker.id : null;
   const { zendingen, error: zendingenError } = useDrukkerZendingen(drukkerId);
 
@@ -49,7 +63,42 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
     }
     setActionError(null);
     setExpandedZendingId(null);
+    setZendingActionError(null);
   }, [state]);
+
+  function afgerondCounts(zending: DrukkerZending): { afgerond: number; totaal: number } {
+    const orders = zending.bestellingIds
+      .map((id) => bestellingen.find((b) => b.id === id))
+      .filter((b): b is Bestelling => b != null);
+    return { afgerond: orders.filter((b) => b.status === 'Afgerond').length, totaal: zending.bestellingIds.length };
+  }
+
+  async function handleMarkeerZendingAlsAfgerond(zending: DrukkerZending) {
+    setZendingActionError(null);
+    const teAfronden = zending.bestellingIds
+      .map((id) => bestellingen.find((b) => b.id === id))
+      .filter((b): b is Bestelling => b != null && b.status === 'Verstuurd naar drukker');
+    let afgerond = 0;
+    for (const bestelling of teAfronden) {
+      try {
+        const response = await fetch(`/api/bestelheaders/${bestelling.id}`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ status: 'Afgerond' }),
+        });
+        if (!response.ok) throw new Error('update failed');
+        void logActiviteit('bestelling_afgerond', actorFromMedewerker(user), bestelling.bestelnr);
+        onBestellingUpdated({ ...bestelling, status: 'Afgerond', afgerondOp: new Date().toISOString() });
+        afgerond += 1;
+      } catch {
+        setZendingActionError({
+          zendingId: zending.id,
+          message: t('drukkersMarkeerZendingAlsAfgerondError', { afgerond, totaal: teAfronden.length }),
+        });
+        return;
+      }
+    }
+  }
 
   function setField<K extends keyof FormFields>(key: K, value: FormFields[K]) {
     setFields((current) => ({ ...current, [key]: value }));
@@ -216,34 +265,60 @@ export function DrukkerModal({ state, onClose, onAdd, onUpdate, onRemove }: Druk
               </p>
             ) : (
               <ul className="flex max-h-64 flex-col gap-2 overflow-y-auto">
-                {zendingen.map((zending) => (
-                  <li key={zending.id} data-testid={`drukker-zending-${zending.id}`} className="rounded-sm bg-black/30 p-2 text-xs">
-                    <div className="flex items-center justify-between gap-2">
-                      <span>
-                        {zending.verzondenOp ? zending.verzondenOp.toLocaleString('nl-NL') : ''} —{' '}
-                        {t('drukkersZendingenSamenvatting', {
-                          klanten: zending.aantalKlanten,
-                          regels: zending.aantalRegels,
-                        })}
-                      </span>
-                      <button
-                        type="button"
-                        data-testid={`drukker-zending-bekijken-${zending.id}`}
-                        onClick={() =>
-                          setExpandedZendingId((current) => (current === zending.id ? null : zending.id))
-                        }
-                        className="shrink-0 text-white/50 underline underline-offset-2 hover:text-white"
-                      >
-                        {expandedZendingId === zending.id
-                          ? t('drukkersZendingenVerbergen')
-                          : t('drukkersZendingenBekijken')}
-                      </button>
-                    </div>
-                    {expandedZendingId === zending.id && (
-                      <pre className="mt-2 whitespace-pre-wrap text-white/70">{zending.body}</pre>
-                    )}
-                  </li>
-                ))}
+                {zendingen.map((zending) => {
+                  const { afgerond, totaal } = afgerondCounts(zending);
+                  return (
+                    <li key={zending.id} data-testid={`drukker-zending-${zending.id}`} className="rounded-sm bg-black/30 p-2 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <span>
+                          {zending.verzondenOp ? zending.verzondenOp.toLocaleString('nl-NL') : ''} —{' '}
+                          {t('drukkersZendingenSamenvatting', {
+                            klanten: zending.aantalKlanten,
+                            regels: zending.aantalRegels,
+                          })}
+                        </span>
+                        <button
+                          type="button"
+                          data-testid={`drukker-zending-bekijken-${zending.id}`}
+                          onClick={() =>
+                            setExpandedZendingId((current) => (current === zending.id ? null : zending.id))
+                          }
+                          className="shrink-0 text-white/50 underline underline-offset-2 hover:text-white"
+                        >
+                          {expandedZendingId === zending.id
+                            ? t('drukkersZendingenVerbergen')
+                            : t('drukkersZendingenBekijken')}
+                        </button>
+                      </div>
+                      <div className="mt-1.5 flex items-center justify-between gap-2">
+                        <span
+                          data-testid={`drukker-zending-afgerond-badge-${zending.id}`}
+                          className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white/70"
+                        >
+                          {t('drukkersZendingAfgerondBadge', { afgerond, totaal })}
+                        </span>
+                        {afgerond < totaal && (
+                          <button
+                            type="button"
+                            data-testid={`drukker-zending-afronden-${zending.id}`}
+                            onClick={() => handleMarkeerZendingAlsAfgerond(zending)}
+                            className="shrink-0 text-white/50 underline underline-offset-2 hover:text-white"
+                          >
+                            {t('drukkersMarkeerZendingAlsAfgerond')}
+                          </button>
+                        )}
+                      </div>
+                      {zendingActionError?.zendingId === zending.id && (
+                        <p data-testid="drukker-zending-afronden-error" className="mt-1.5 text-red-400">
+                          {zendingActionError.message}
+                        </p>
+                      )}
+                      {expandedZendingId === zending.id && (
+                        <pre className="mt-2 whitespace-pre-wrap text-white/70">{zending.body}</pre>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

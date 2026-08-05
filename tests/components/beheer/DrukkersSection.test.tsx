@@ -37,19 +37,22 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof DrukkersSe
   const onAdd = vi.fn().mockResolvedValue(true);
   const onUpdate = vi.fn().mockResolvedValue(true);
   const onRemove = vi.fn().mockResolvedValue(true);
+  const onBestellingUpdated = vi.fn();
   render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <DrukkersSection
         drukkers={DRUKKERS}
+        bestellingen={[]}
         loadError={null}
         onAdd={onAdd}
         onUpdate={onUpdate}
         onRemove={onRemove}
+        onBestellingUpdated={onBestellingUpdated}
         {...overrides}
       />
     </NextIntlClientProvider>
   );
-  return { onAdd, onUpdate, onRemove };
+  return { onAdd, onUpdate, onRemove, onBestellingUpdated };
 }
 
 beforeEach(() => {

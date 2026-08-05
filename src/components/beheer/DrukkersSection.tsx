@@ -5,18 +5,29 @@ import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { DrukkerModal } from './DrukkerModal';
 import type { Drukker } from './materiaalTypes';
+import type { Bestelling } from './BestellingenSection';
 
 interface DrukkersSectionProps {
   drukkers: Drukker[] | null;
+  bestellingen: Bestelling[];
   loadError: string | null;
   onAdd: (data: Omit<Drukker, 'id'>) => Promise<boolean>;
   onUpdate: (id: string, data: Omit<Drukker, 'id'>) => Promise<boolean>;
   onRemove: (id: string) => Promise<boolean>;
+  onBestellingUpdated: (bestelling: Bestelling) => void;
 }
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; drukker: Drukker } | null;
 
-export function DrukkersSection({ drukkers, loadError, onAdd, onUpdate, onRemove }: DrukkersSectionProps) {
+export function DrukkersSection({
+  drukkers,
+  bestellingen,
+  loadError,
+  onAdd,
+  onUpdate,
+  onRemove,
+  onBestellingUpdated,
+}: DrukkersSectionProps) {
   const t = useTranslations('beheer');
   const [modalState, setModalState] = useState<ModalState>(null);
 
@@ -76,10 +87,12 @@ export function DrukkersSection({ drukkers, loadError, onAdd, onUpdate, onRemove
       />
       <DrukkerModal
         state={modalState}
+        bestellingen={bestellingen}
         onClose={() => setModalState(null)}
         onAdd={onAdd}
         onUpdate={onUpdate}
         onRemove={onRemove}
+        onBestellingUpdated={onBestellingUpdated}
       />
     </div>
   );
