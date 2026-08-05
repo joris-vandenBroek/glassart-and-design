@@ -12,6 +12,7 @@ npm run lint             # next lint
 npm test                 # vitest run (all tests, single run — not watch mode)
 npx vitest run tests/app/api/klanten.test.ts   # run a single test file
 npx vitest run -t "some test name"             # run tests matching a name
+npm run test:regression  # opt-in staging regression suite (tests/regression/**) — excluded from `npm test`, see below
 ```
 
 **Production builds for mijn.host must set `MIJNHOST_BUILD=true`** (PowerShell: `$env:MIJNHOST_BUILD='true'; npm run build`). `src/config/pageAvailability.ts` reads this flag to gate `collecties`/`word-klant`/`inloggen`/`account`/`contact` behind the Under Construction page; `beheer` is always live. A plain `npm run build` leaves those routes fully public.
@@ -21,6 +22,12 @@ npx vitest run -t "some test name"             # run tests matching a name
 Vitest is **not** mocking the database — `tests/setup.ts` loads `.env.local` and API-route tests connect to the real MySQL staging database (`getPool()` in `src/lib/server/db.ts`) configured there. `vitest.config.ts` sets `fileParallelism: false` deliberately: several API test files still do scoped `DELETE FROM <table> WHERE ...` cleanup in `beforeEach`/`afterEach`, and running files in parallel can cause one file's cleanup to race another's in-flight rows. Don't re-enable parallelism without addressing that.
 
 **Hard rule: test cleanup must never delete data added through the application, even a table that happens to be empty right now.** Staging holds real migrated/admin-entered data (catalog lookup tables, medewerker accounts, instellingen) — a blanket `DELETE FROM <table>` / `TRUNCATE` with no `WHERE` will silently destroy it on the next full-suite run, and did exactly that at least twice before this rule was written down. Every test that touches the real database must scope its own cleanup to exactly the row(s) it created (by captured id in `afterEach`, or by an obviously-fake marker like an `@example.com` email or a `test-`-prefixed literal id when the id can't be captured directly) — never assume the table is or should be empty, never resolve "the row I just made" via list-ordering (`list()[0]`), and never reset a real generated-sequence counter (e.g. an order-number counter) for determinism — compute the expected value relative to the counter's current state instead.
+
+### Opt-in staging regression suite (`tests/regression/`)
+
+`tests/regression/staging-scenarios.test.ts` automates the cross-cutting scenarios from the manual "Deel C" section of `Testscript-Staging-GlassartDesign.docx` (klant-kunstenaar exclusiviteit, kunstenaarsopslag + prijsgroep prijsopbouw, bestellingen van meerdere klanten combineren + niet-standaard drukker kiezen). It's excluded from the default `npm test` run (see `vitest.config.ts`'s `exclude`) and only runs via `npm run test:regression` (its own `vitest.regression.config.ts`), since it's heavier than the rest of the suite and worth running deliberately rather than on every save.
+
+It follows the same real-staging-database, no-production-possible, scoped-cleanup rules as the rest of the suite (see above), with two extra guarantees worth preserving if you extend it: every fixture it creates is prefixed `AUTOTEST`/`autotest-` and deleted by exact id in a `finally` block (not `afterEach`, so cleanup still runs even if an assertion throws mid-test), and it never triggers a real e-mail — "versturen naar drukker" in the real app is a client-side `fetch()` to an external mail relay (`VersturenNaarDrukkerDialog.tsx`), and this suite only exercises the server-side effects of that action (recording a `drukkerZending`, flipping bestelheader statuses) via the same API routes, never the mail relay itself. The one deliberate exception to "leaves staging exactly as it found it" is `counters.bestelnummer`, which — per the hard rule above — must never be reset, so each run permanently advances the real bestelnummer counter by a few numbers.
 
 ## Architecture
 
