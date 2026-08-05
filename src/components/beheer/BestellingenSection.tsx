@@ -27,7 +27,11 @@ export interface Bestelling {
   companyName: string;
   bestelnr: string;
   besteldatum: string;
-  status: 'Te beoordelen' | 'Te versturen naar drukker' | 'Verstuurd naar drukker' | 'Afgewezen';
+  status: 'Te beoordelen' | 'Te versturen naar drukker' | 'Verstuurd naar drukker' | 'Afgerond' | 'Afgewezen';
+  teVersturenNaarDrukkerOp: string | null;
+  verstuurdNaarDrukkerOp: string | null;
+  afgerondOp: string | null;
+  afgewezenOp: string | null;
   lineCount: number;
   totalQuantity: number;
   lines: BestellingLine[];

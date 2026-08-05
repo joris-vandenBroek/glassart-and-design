@@ -79,6 +79,10 @@ const BESTELLING: Bestelling = {
   bestelnr: 'GD-00101',
   besteldatum: '1-7-2026',
   status: 'Te beoordelen',
+  teVersturenNaarDrukkerOp: null,
+  verstuurdNaarDrukkerOp: null,
+  afgerondOp: null,
+  afgewezenOp: null,
   lineCount: 2,
   totalQuantity: 5,
   lines: [
@@ -233,6 +237,10 @@ const BESTELLING_MET_EIGEN_MAAT: Bestelling = {
   bestelnr: 'GD-00102',
   besteldatum: '3-7-2026',
   status: 'Te beoordelen',
+  teVersturenNaarDrukkerOp: null,
+  verstuurdNaarDrukkerOp: null,
+  afgerondOp: null,
+  afgewezenOp: null,
   lineCount: 1,
   totalQuantity: 1,
   lines: [
@@ -297,6 +305,10 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
       bestelnr: 'GD-00103',
       besteldatum: '5-7-2026',
       status: 'Te beoordelen',
+      teVersturenNaarDrukkerOp: null,
+      verstuurdNaarDrukkerOp: null,
+      afgerondOp: null,
+      afgewezenOp: null,
       lineCount: 2,
       totalQuantity: 2,
       lines: [

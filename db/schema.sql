@@ -187,7 +187,10 @@ CREATE TABLE bestelheaders (
   bestelnr VARCHAR(20) NOT NULL,
   besteldatum TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   status VARCHAR(50) NOT NULL DEFAULT 'Te beoordelen',
+  teVersturenNaarDrukkerOp DATETIME NULL,
+  verstuurdNaarDrukkerOp DATETIME NULL,
   afgerondOp DATETIME NULL,
+  afgewezenOp DATETIME NULL,
   FOREIGN KEY (klantId) REFERENCES klanten(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

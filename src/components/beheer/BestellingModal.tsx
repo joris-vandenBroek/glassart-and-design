@@ -17,6 +17,7 @@ const STATUS_BADGE_CLASS: Record<Bestelling['status'], string> = {
   'Te beoordelen': 'bg-amber-400/10 text-amber-300',
   'Te versturen naar drukker': 'bg-sky-400/10 text-sky-300',
   'Verstuurd naar drukker': 'bg-green-500/10 text-green-400',
+  Afgerond: 'bg-teal-400/10 text-teal-300',
   Afgewezen: 'bg-red-400/10 text-red-400',
 };
 

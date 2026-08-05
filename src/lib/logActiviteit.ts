@@ -51,6 +51,8 @@ export const ACTIVITEIT_TYPES = [
   'onderwerp_toegevoegd',
   'onderwerp_gewijzigd',
   'onderwerp_verwijderd',
+  'bestelling_afgerond',
+  'bestelling_afronding_teruggezet',
 ] as const;
 
 export type ActiviteitType = (typeof ACTIVITEIT_TYPES)[number];
