@@ -24,12 +24,20 @@
 // to what already happens every time the existing tests/app/api/bestelheaders.test.ts
 // suite runs).
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, afterEach } from 'vitest';
 import { randomUUID } from 'crypto';
 import { getPool } from '@/lib/server/db';
 import { insertRow } from '@/lib/server/crud';
 import { hashPassword } from '@/lib/server/password';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
+
+// The drukker-mail send is client-side (see the file header), but a wachtwoord-reset
+// e-mail is sent server-side from within the request-route itself (sendResetEmail.ts
+// does a real fetch() to the external mail relay) -- so calling that route directly, the
+// way this whole suite calls every other route, would otherwise send a real e-mail on
+// every run. Stub it out, same as the existing tests/app/api/auth/reset-password.test.ts.
+vi.mock('@/lib/server/sendResetEmail', () => ({ sendResetEmail: vi.fn().mockResolvedValue(undefined) }));
+
 import { POST as createHeader } from '@/app/api/bestelheaders/route';
 import { PATCH as patchHeader } from '@/app/api/bestelheaders/[id]/route';
 import { PATCH as patchLine } from '@/app/api/bestelheaders/[id]/bestellines/[lineId]/route';
@@ -39,6 +47,9 @@ import { PUT as putKunstenaarAfspraken } from '@/app/api/kunstenaarAfspraken/[id
 import { POST as postZending, GET as listZendingen } from '@/app/api/drukkers/[id]/zendingen/route';
 import { POST as registerKlant } from '@/app/api/auth/register/route';
 import { POST as loginKlant } from '@/app/api/auth/login/route';
+import { POST as medewerkerLogin } from '@/app/api/auth/medewerker-login/route';
+import { POST as requestReset } from '@/app/api/auth/reset-password/request/route';
+import { POST as confirmReset } from '@/app/api/auth/reset-password/confirm/route';
 import { GET as getInstelling } from '@/app/api/instellingen/[id]/route';
 import { POST as postResource, GET as listResource } from '@/app/api/[resource]/route';
 import { buildDrukkerMail } from '@/lib/buildDrukkerMail';
@@ -56,6 +67,13 @@ function req(method: string, body?: unknown, cookie?: string) {
 async function medewerkerCookie(): Promise<string> {
   return `${SESSION_COOKIE_NAME}=${await createSession('medewerker', 'autotest-staff')}`;
 }
+
+// medewerkerCookie() uses a fixed fake userId (there's no real AUTOTEST medewerker row to
+// attach it to), so every call leaves an orphaned `sessions` row that no klant/kunstwerk/
+// etc. cleanup above would ever catch. Sweep those up after every test.
+afterEach(async () => {
+  await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'autotest-staff'");
+});
 
 async function maakKlant(emailPrefix: string, extra: Record<string, unknown> = {}) {
   const email = `autotest-${emailPrefix}-${randomUUID()}@example.com`;
@@ -923,6 +941,106 @@ describe('Klant met alleenrecht voor één kunstenaar', () => {
       if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
       if (kunstenaarId) await pool.query('DELETE FROM kunstenaars WHERE id = ?', [kunstenaarId]);
       if (fixture) await fixture.opruimen();
+    }
+  });
+});
+
+
+describe('Wachtwoord resetten (klant) -- aanvragen tot inloggen met het nieuwe wachtwoord', () => {
+  it('een aangevraagde reset-token zet het wachtwoord om, werkt maar één keer, en een verlopen token wordt geweigerd', async () => {
+    const email = `autotest-reset-${randomUUID()}@example.com`;
+    const oudWachtwoord = 'OudWachtwoord1!';
+    const nieuwWachtwoord = 'NieuwWachtwoord1!';
+
+    try {
+      const klant = await insertRow<{ id: string }>('klanten', {
+        email,
+        wachtwoordHash: await hashPassword(oudWachtwoord),
+        companyName: 'AUTOTEST Reset BV',
+        status: 'Goedgekeurd',
+      } as never);
+
+      const aanvraag = await requestReset(req('POST', { email, userType: 'klant' }));
+      expect(aanvraag.status).toBe(200);
+
+      const [tokenRows] = await getPool().query(
+        "SELECT token FROM passwordResetTokens WHERE userId = ? AND userType = 'klant'",
+        [klant.id]
+      );
+      const token = (tokenRows as Array<{ token: string }>)[0].token;
+      expect(token).toBeTruthy();
+
+      const bevestiging = await confirmReset(req('POST', { token, newPassword: nieuwWachtwoord }));
+      expect(bevestiging.status).toBe(200);
+
+      // Hetzelfde token nogmaals gebruiken moet falen -- eenmalig geldig.
+      const hergebruik = await confirmReset(req('POST', { token, newPassword: 'NogEenKeer1!' }));
+      expect(hergebruik.status).toBe(400);
+
+      const loginOud = await loginKlant(req('POST', { email, password: oudWachtwoord }));
+      expect(loginOud.status).toBe(401);
+      const loginNieuw = await loginKlant(req('POST', { email, password: nieuwWachtwoord }));
+      expect(loginNieuw.status).toBe(200);
+
+      // Verlopen token (expiresAt in het verleden) wordt geweigerd, ook al bestaat het echt.
+      const verlopenToken = randomUUID();
+      await getPool().query(
+        "INSERT INTO passwordResetTokens (token, userType, userId, expiresAt) VALUES (?, 'klant', ?, DATE_SUB(NOW(), INTERVAL 1 HOUR))",
+        [verlopenToken, klant.id]
+      );
+      const verlopenPoging = await confirmReset(req('POST', { token: verlopenToken, newPassword: 'x' }));
+      expect(verlopenPoging.status).toBe(400);
+      await getPool().query('DELETE FROM passwordResetTokens WHERE token = ?', [verlopenToken]);
+    } finally {
+      const pool = getPool();
+      await pool.query(
+        "DELETE FROM passwordResetTokens WHERE userId IN (SELECT id FROM klanten WHERE email = ?)",
+        [email]
+      );
+      await opruimenKlanten([email]);
+    }
+  });
+});
+
+describe('Wachtwoord resetten (medewerker) -- zelfde flow via de staff-inlogroute', () => {
+  it('een medewerker kan met een reset-token een nieuw wachtwoord zetten en daarmee inloggen bij beheer', async () => {
+    const email = `autotest-medewerker-reset-${randomUUID()}@example.com`;
+    const oudWachtwoord = 'OudStaffWachtwoord1!';
+    const nieuwWachtwoord = 'NieuwStaffWachtwoord1!';
+    let medewerkerId: string | null = null;
+
+    try {
+      const medewerker = await insertRow<{ id: string }>('medewerkers', {
+        email,
+        wachtwoordHash: await hashPassword(oudWachtwoord),
+        naam: 'AUTOTEST Medewerker Reset',
+      } as never);
+      medewerkerId = medewerker.id;
+
+      const aanvraag = await requestReset(req('POST', { email, userType: 'medewerker' }));
+      expect(aanvraag.status).toBe(200);
+
+      const [tokenRows] = await getPool().query(
+        "SELECT token FROM passwordResetTokens WHERE userId = ? AND userType = 'medewerker'",
+        [medewerkerId]
+      );
+      const token = (tokenRows as Array<{ token: string }>)[0].token;
+      expect(token).toBeTruthy();
+
+      const bevestiging = await confirmReset(req('POST', { token, newPassword: nieuwWachtwoord }));
+      expect(bevestiging.status).toBe(200);
+
+      const loginOud = await medewerkerLogin(req('POST', { email, password: oudWachtwoord }));
+      expect(loginOud.status).toBe(401);
+      const loginNieuw = await medewerkerLogin(req('POST', { email, password: nieuwWachtwoord }));
+      expect(loginNieuw.status).toBe(200);
+    } finally {
+      const pool = getPool();
+      if (medewerkerId) {
+        await pool.query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = ?", [medewerkerId]);
+        await pool.query('DELETE FROM passwordResetTokens WHERE userId = ?', [medewerkerId]);
+        await pool.query('DELETE FROM medewerkers WHERE id = ?', [medewerkerId]);
+      }
     }
   });
 });
