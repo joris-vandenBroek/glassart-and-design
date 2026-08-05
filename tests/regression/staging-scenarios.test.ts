@@ -39,7 +39,10 @@ import { PUT as putKunstenaarAfspraken } from '@/app/api/kunstenaarAfspraken/[id
 import { POST as postZending, GET as listZendingen } from '@/app/api/drukkers/[id]/zendingen/route';
 import { POST as registerKlant } from '@/app/api/auth/register/route';
 import { POST as loginKlant } from '@/app/api/auth/login/route';
+import { GET as getInstelling } from '@/app/api/instellingen/[id]/route';
 import { buildDrukkerMail } from '@/lib/buildDrukkerMail';
+import { resolveBtwPercentage } from '@/lib/resolveBtw';
+import type { BtwTarieven } from '@/components/beheer/btwTarievenTypes';
 
 function req(method: string, body?: unknown, cookie?: string) {
   return new Request('http://localhost/api', {
@@ -469,6 +472,57 @@ describe('Klant-levenscyclus -- registreren tot inloggen na goedkeuring', () => 
       // Goedkeuring wijzigt niets aan het wachtwoord -- een verkeerd wachtwoord blijft afgewezen.
       const foutWachtwoord = await loginKlant(req('POST', { email, password: 'onjuist' }));
       expect(foutWachtwoord.status).toBe(401);
+    } finally {
+      await opruimenKlanten([email]);
+      if (prijsgroepIds.length > 0) await getPool().query('DELETE FROM prijsgroepen WHERE id IN (?)', [prijsgroepIds]);
+    }
+  });
+
+  it('een klant met een land zonder btw-tarief resolvet op een null btw-percentage (en de API blokkeert goedkeuren daar zelf niet op -- alleen de UI doet dat, zie KlantModal.tsx)', async () => {
+    const email = `autotest-lifecycle-geen-btw-${randomUUID()}@example.com`;
+    const wachtwoord = 'AutotestWachtwoord1!';
+    // 'XX' is in ISO 3166-1 gereserveerd als "user-assigned" en aan geen enkel echt land
+    // toegekend -- veilig genoeg om altijd afwezig te zijn in de echte btw-tarieven, maar we
+    // controleren dat hieronder ook expliciet tegen de actuele data i.p.v. het aan te nemen.
+    const landZonderTarief = 'XX';
+    const prijsgroepIds: string[] = [];
+
+    try {
+      const tarievenResponse = await getInstelling(req('GET'), { params: { id: 'btwtarieven' } });
+      expect(tarievenResponse.status).toBe(200);
+      const tarieven = (await tarievenResponse.json()) as BtwTarieven;
+      expect(tarieven.tarieven.some((t) => t.land === landZonderTarief)).toBe(false);
+      expect(resolveBtwPercentage(tarieven.tarieven, landZonderTarief)).toBeNull();
+
+      const klant = await insertRow<{ id: string }>('klanten', {
+        email,
+        wachtwoordHash: await hashPassword(wachtwoord),
+        companyName: 'AUTOTEST Lifecycle Geen Btw-tarief BV',
+        status: 'Beoordelen',
+        land: landZonderTarief,
+      } as never);
+
+      const prijsgroep = await insertRow<{ id: string }>('prijsgroepen', {
+        naam: 'AUTOTEST Lifecycle Geen Btw Prijsgroep',
+        kortingspercentage: 10,
+        opslagpercentage: null,
+      } as never);
+      prijsgroepIds.push(prijsgroep.id);
+
+      // KlantModal.tsx zet `disabled={!prijsgroepId || !heeftGeldigBtwTarief}` op de
+      // Goedkeuren-knop -- dat is puur een UI-gate. De PATCH-route zelf herhaalt die check
+      // niet, dus dit document het huidige (server-side ongeblokkeerde) gedrag i.p.v. een
+      // blokkade te veronderstellen die er niet is.
+      const staff = await medewerkerCookie();
+      const goedkeuring = await patchKlant(
+        req('PATCH', { status: 'Goedgekeurd', prijsgroepId: prijsgroep.id }, staff),
+        { params: { id: klant.id } }
+      );
+      expect(goedkeuring.status).toBe(200);
+      const [rows] = await getPool().query('SELECT status, land FROM klanten WHERE id = ?', [klant.id]);
+      const row = (rows as Array<{ status: string; land: string }>)[0];
+      expect(row.status).toBe('Goedgekeurd');
+      expect(row.land).toBe(landZonderTarief);
     } finally {
       await opruimenKlanten([email]);
       if (prijsgroepIds.length > 0) await getPool().query('DELETE FROM prijsgroepen WHERE id IN (?)', [prijsgroepIds]);
