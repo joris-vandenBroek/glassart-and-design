@@ -110,4 +110,31 @@ describe('drukkers routes', () => {
     const bAfter = await getDrukker(req('GET', undefined, cookie), { params: { id: drukkerB.id } });
     expect((await bAfter.json()).standaard).toBe(true);
   });
+
+  it('blocks deleting a drukker with verzonden zendingen, allows it once the zendingen are gone', async () => {
+    const cookie = await medewerkerCookie();
+    const drukker = await insertRow<{ id: string }>('drukkers', {
+      naam: 'Drukkerij Met Zending',
+      email: 'zending@example.com',
+    } as never);
+    createdDrukkerIds.push(drukker.id);
+    await getPool().query(
+      'INSERT INTO drukkerZendingen (id, drukkerId, onderwerp, body, bestellingIds, aantalKlanten, aantalRegels) VALUES (UUID(), ?, ?, ?, ?, 1, 1)',
+      [drukker.id, 'Test zending', 'Body', JSON.stringify(['header-1'])]
+    );
+
+    const blocked = await deleteDrukker(req('DELETE', undefined, cookie), { params: { id: drukker.id } });
+    expect(blocked.status).toBe(409);
+    const body = await blocked.json();
+    expect(body.error).toBe('in-use');
+    const stillThere = await getDrukker(req('GET', undefined, cookie), { params: { id: drukker.id } });
+    expect(stillThere.status).toBe(200);
+
+    // drukkerZendingen.drukkerId is ON DELETE CASCADE, so removing the zending directly is
+    // the only way to get back to an unreferenced state for the second half of this test.
+    await getPool().query('DELETE FROM drukkerZendingen WHERE drukkerId = ?', [drukker.id]);
+    const allowed = await deleteDrukker(req('DELETE', undefined, cookie), { params: { id: drukker.id } });
+    expect(allowed.status).toBe(200);
+    createdDrukkerIds.length = 0;
+  });
 });

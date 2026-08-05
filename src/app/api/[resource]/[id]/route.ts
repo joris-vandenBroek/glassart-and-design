@@ -10,6 +10,16 @@ const BESTELLING_REFERENCE_COLUMN: Record<string, string> = {
   materialen: 'materiaalId',
 };
 
+// Same "still in use" principle as BESTELLING_REFERENCE_COLUMN above, but against another
+// lookup table instead of real bestellingen -- materiaalsoorten/prijsgroepen previously had
+// no server-side guard at all (only a client-side pre-check against already-loaded data in
+// MateriaalsoortenSection.tsx/PrijsgroepenSection.tsx), so a direct API call or stale client
+// state could silently orphan the reference.
+const LOOKUP_REFERENCE: Record<string, { table: string; column: string }> = {
+  materiaalsoorten: { table: 'materialen', column: 'materiaalsoortId' },
+  prijsgroepen: { table: 'klanten', column: 'prijsgroepId' },
+};
+
 export const GET = withApiErrorHandling(
   'GET /api/[resource]/[id]',
   async (request: Request, { params }: { params: { resource: string; id: string } }) => {
@@ -57,6 +67,16 @@ export const DELETE = withApiErrorHandling(
       const [rows] = await getPool().query(`SELECT 1 FROM bestellines WHERE ${column} = ? LIMIT 1`, [params.id]);
       if ((rows as unknown[]).length > 0) {
         return NextResponse.json({ error: 'in-use-bestelling' }, { status: 409 });
+      }
+    }
+    const reference = LOOKUP_REFERENCE[params.resource];
+    if (reference) {
+      const [rows] = await getPool().query(
+        `SELECT 1 FROM \`${reference.table}\` WHERE \`${reference.column}\` = ? LIMIT 1`,
+        [params.id]
+      );
+      if ((rows as unknown[]).length > 0) {
+        return NextResponse.json({ error: 'in-use' }, { status: 409 });
       }
     }
     await deleteRow(params.resource, params.id);

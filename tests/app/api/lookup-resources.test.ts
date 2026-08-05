@@ -24,6 +24,12 @@ const createdSegmentIds: string[] = [];
 const createdBestellijnGuardKlantEmails: string[] = [];
 const createdBestellijnGuardHeaderIds: string[] = [];
 const createdBestellijnGuardMaatIds: string[] = [];
+// For the materiaalsoorten/prijsgroepen "still referenced by another lookup row" guard --
+// same "track exact ids, clean up in afterEach" discipline as everything else in this file.
+const createdLookupGuardMateriaalsoortIds: string[] = [];
+const createdLookupGuardMateriaalIds: string[] = [];
+const createdLookupGuardPrijsgroepIds: string[] = [];
+const createdLookupGuardKlantEmails: string[] = [];
 
 afterEach(async () => {
   if (createdSegmentIds.length > 0) {
@@ -43,6 +49,22 @@ afterEach(async () => {
   if (createdBestellijnGuardMaatIds.length > 0) {
     await getPool().query('DELETE FROM maten WHERE id IN (?)', [createdBestellijnGuardMaatIds]);
     createdBestellijnGuardMaatIds.length = 0;
+  }
+  if (createdLookupGuardMateriaalIds.length > 0) {
+    await getPool().query('DELETE FROM materialen WHERE id IN (?)', [createdLookupGuardMateriaalIds]);
+    createdLookupGuardMateriaalIds.length = 0;
+  }
+  if (createdLookupGuardMateriaalsoortIds.length > 0) {
+    await getPool().query('DELETE FROM materiaalsoorten WHERE id IN (?)', [createdLookupGuardMateriaalsoortIds]);
+    createdLookupGuardMateriaalsoortIds.length = 0;
+  }
+  if (createdLookupGuardKlantEmails.length > 0) {
+    await getPool().query('DELETE FROM klanten WHERE email IN (?)', [createdLookupGuardKlantEmails]);
+    createdLookupGuardKlantEmails.length = 0;
+  }
+  if (createdLookupGuardPrijsgroepIds.length > 0) {
+    await getPool().query('DELETE FROM prijsgroepen WHERE id IN (?)', [createdLookupGuardPrijsgroepIds]);
+    createdLookupGuardPrijsgroepIds.length = 0;
   }
 });
 
@@ -225,5 +247,67 @@ describe('generic lookup-resource routes', () => {
       params: { resource: 'maten', id: created.id },
     });
     expect(deleteResponse.status).toBe(200);
+  });
+
+  it('rejects deleting a materiaalsoort still referenced by a materiaal, allows it once unreferenced', async () => {
+    const cookie = await medewerkerCookie();
+    const soortResponse = await createResource(
+      jsonRequest('POST', { omschrijving: 'Guard soort' }, cookie),
+      { params: { resource: 'materiaalsoorten' } }
+    );
+    const soort = await soortResponse.json();
+    createdLookupGuardMateriaalsoortIds.push(soort.id);
+    const materiaalResponse = await createResource(
+      jsonRequest('POST', { materiaalsoortId: soort.id, materiaaldikte: 4, omschrijving: 'Guard materiaal' }, cookie),
+      { params: { resource: 'materialen' } }
+    );
+    const materiaal = await materiaalResponse.json();
+    createdLookupGuardMateriaalIds.push(materiaal.id);
+
+    const blocked = await deleteResource(jsonRequest('DELETE', undefined, cookie), {
+      params: { resource: 'materiaalsoorten', id: soort.id },
+    });
+    expect(blocked.status).toBe(409);
+    expect((await blocked.json()).error).toBe('in-use');
+
+    await getPool().query('DELETE FROM materialen WHERE id = ?', [materiaal.id]);
+    createdLookupGuardMateriaalIds.length = 0;
+    const allowed = await deleteResource(jsonRequest('DELETE', undefined, cookie), {
+      params: { resource: 'materiaalsoorten', id: soort.id },
+    });
+    expect(allowed.status).toBe(200);
+    createdLookupGuardMateriaalsoortIds.length = 0;
+  });
+
+  it('rejects deleting a prijsgroep still assigned to a klant, allows it once unassigned', async () => {
+    const cookie = await medewerkerCookie();
+    const prijsgroepResponse = await createResource(
+      jsonRequest('POST', { naam: 'Guard prijsgroep', kortingspercentage: 10 }, cookie),
+      { params: { resource: 'prijsgroepen' } }
+    );
+    const prijsgroep = await prijsgroepResponse.json();
+    createdLookupGuardPrijsgroepIds.push(prijsgroep.id);
+    const klantEmail = `lookup-guard-${prijsgroep.id}@example.com`;
+    await insertRow('klanten', {
+      email: klantEmail,
+      wachtwoordHash: await hashPassword('x'),
+      status: 'Goedgekeurd',
+      prijsgroepId: prijsgroep.id,
+    } as never);
+    createdLookupGuardKlantEmails.push(klantEmail);
+
+    const blocked = await deleteResource(jsonRequest('DELETE', undefined, cookie), {
+      params: { resource: 'prijsgroepen', id: prijsgroep.id },
+    });
+    expect(blocked.status).toBe(409);
+    expect((await blocked.json()).error).toBe('in-use');
+
+    await getPool().query('DELETE FROM klanten WHERE email = ?', [klantEmail]);
+    createdLookupGuardKlantEmails.length = 0;
+    const allowed = await deleteResource(jsonRequest('DELETE', undefined, cookie), {
+      params: { resource: 'prijsgroepen', id: prijsgroep.id },
+    });
+    expect(allowed.status).toBe(200);
+    createdLookupGuardPrijsgroepIds.length = 0;
   });
 });

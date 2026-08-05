@@ -80,6 +80,37 @@ describe('kunstenaars + kunstenaarAfspraken routes', () => {
     expect(afterDelete.status).toBe(404);
   });
 
+  it('blocks deleting a kunstenaar still referenced by a kunstwerk, allows it once unreferenced', async () => {
+    const sessionId = await createSession('medewerker', 'staff-1');
+    const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
+
+    const kunstenaar = await insertRow<{ id: string }>(
+      'kunstenaars',
+      { naam: 'Referenced Artiest', exclusieveKlantIds: [] } as never,
+      ['exclusieveKlantIds']
+    );
+    createdKunstenaarIds.push(kunstenaar.id);
+    const kunstwerk = await insertRow<{ id: string }>(
+      'kunstwerken',
+      { naam: 'Werk van Referenced Artiest', kunstenaarId: kunstenaar.id, materiaalIds: [], maatIds: [] } as never,
+      ['materiaalIds', 'maatIds']
+    );
+    createdKunstwerkIds.push(kunstwerk.id);
+
+    const blocked = await deleteKunstenaar(req('DELETE', undefined, cookie), { params: { id: kunstenaar.id } });
+    expect(blocked.status).toBe(409);
+    const body = await blocked.json();
+    expect(body.error).toBe('in-use');
+    const stillThere = await getKunstenaar(req('GET'), { params: { id: kunstenaar.id } });
+    expect(stillThere.status).toBe(200);
+
+    await getPool().query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerk.id]);
+    createdKunstwerkIds.length = 0;
+    const allowed = await deleteKunstenaar(req('DELETE', undefined, cookie), { params: { id: kunstenaar.id } });
+    expect(allowed.status).toBe(200);
+    createdKunstenaarIds.length = 0;
+  });
+
   it('round-trips exclusieveKlantIds as a JSON array, not a string', async () => {
     const sessionId = await createSession('medewerker', 'staff-1');
     const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
