@@ -406,6 +406,7 @@
     "klantenLabelPlaats": "Plaats",
     "klantenLabelLand": "Land",
     "klantenBtwWaarschuwing": "Geen btw-tarief ingesteld voor {land}. Voeg dit toe bij Instellingen voordat je deze klant kunt goedkeuren.",
+    "klantenBtwWaarschuwingGeenLand": "Geen land ingesteld voor deze klant. Voeg een land toe voordat je btw kunt bepalen.",
     "klantenLabelAfleveradres": "Afleveradres",
     "klantenLabelFactuuradres": "Factuuradres",
     "klantenLabelGebruiktStandaardadres": "Gebruikt standaardadres",

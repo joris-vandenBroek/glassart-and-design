@@ -526,4 +526,17 @@ describe('KlantModal', () => {
     ], { tarieven: [{ land: 'NL', percentage: 21 }] });
     expect(screen.getByTestId('klant-modal-btw-waarschuwing')).toBeInTheDocument();
   });
+
+  it('does not show a btw warning and does not block Goedkeuren while btwTarieven has not loaded yet', () => {
+    renderModal({ ...KLANT, land: 'NL', prijsgroepId: 'pg-1' }, PRIJSGROEPEN, KUNSTENAARS, [KLANT, ANDERE_KLANT], null);
+    expect(screen.queryByTestId('klant-modal-btw-waarschuwing')).not.toBeInTheDocument();
+    expect(screen.getByTestId('klant-modal-goedkeuren')).not.toBeDisabled();
+  });
+
+  it('shows a distinct "geen land" warning instead of an interpolated blank when the klant has no land set at all', () => {
+    renderModal({ ...KLANT, land: '', invoiceLand: '', prijsgroepId: 'pg-1' });
+    const waarschuwing = screen.getByTestId('klant-modal-btw-waarschuwing');
+    expect(waarschuwing).toHaveTextContent('Geen land ingesteld voor deze klant');
+    expect(waarschuwing).not.toHaveTextContent('Geen btw-tarief ingesteld voor .');
+  });
 });

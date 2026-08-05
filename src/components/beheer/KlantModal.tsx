@@ -93,7 +93,9 @@ export function KlantModal({
 
   const land = fields ? fields.invoiceLand || fields.land || null : null;
   const btwPercentage = btwTarieven ? resolveBtwPercentage(btwTarieven.tarieven, land) : null;
-  const heeftGeldigBtwTarief = btwPercentage !== null;
+  // While btwTarieven hasn't loaded yet (still null), don't treat that as "no matching tarief" —
+  // only flag a real mismatch once the data has actually loaded.
+  const heeftGeldigBtwTarief = btwTarieven === null || btwPercentage !== null;
 
   useEffect(() => {
     if (klant) {
@@ -296,7 +298,9 @@ export function KlantModal({
 
           {!heeftGeldigBtwTarief && (
             <p data-testid="klant-modal-btw-waarschuwing" className="text-xs text-amber-400">
-              {t('klantenBtwWaarschuwing', { land: landNaam(land) })}
+              {land === null
+                ? t('klantenBtwWaarschuwingGeenLand')
+                : t('klantenBtwWaarschuwing', { land: landNaam(land) })}
             </p>
           )}
 
