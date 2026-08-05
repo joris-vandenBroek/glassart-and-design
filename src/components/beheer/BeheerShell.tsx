@@ -94,6 +94,10 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
           bestelnr: string;
           besteldatum: string;
           status: string;
+          teVersturenNaarDrukkerOp: string | null;
+          verstuurdNaarDrukkerOp: string | null;
+          afgerondOp: string | null;
+          afgewezenOp: string | null;
           lines: BestellingLine[];
         }>;
         if (!cancelled) {
@@ -104,6 +108,10 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
               bestelnr: header.bestelnr ?? header.id,
               besteldatum: new Date(header.besteldatum).toLocaleDateString('nl-NL'),
               status: header.status,
+              teVersturenNaarDrukkerOp: header.teVersturenNaarDrukkerOp ?? null,
+              verstuurdNaarDrukkerOp: header.verstuurdNaarDrukkerOp ?? null,
+              afgerondOp: header.afgerondOp ?? null,
+              afgewezenOp: header.afgewezenOp ?? null,
               lineCount: header.lines.length,
               totalQuantity: header.lines.reduce((sum, line) => sum + (line.quantity ?? 0), 0),
               lines: header.lines,
@@ -199,7 +207,18 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
 
   function handleBestellingUpdated(updated: Bestelling) {
     setRawBestellingen((current) =>
-      (current ?? []).map((row) => (row.id === updated.id ? { ...row, status: updated.status } : row))
+      (current ?? []).map((row) =>
+        row.id === updated.id
+          ? {
+              ...row,
+              status: updated.status,
+              teVersturenNaarDrukkerOp: updated.teVersturenNaarDrukkerOp,
+              verstuurdNaarDrukkerOp: updated.verstuurdNaarDrukkerOp,
+              afgerondOp: updated.afgerondOp,
+              afgewezenOp: updated.afgewezenOp,
+            }
+          : row
+      )
     );
   }
 
