@@ -126,7 +126,7 @@ describe('KlantenSection', () => {
 
   it('shows only the "Beoordelen" klant after clicking the "te beoordelen" quick filter link', () => {
     renderSection();
-    fireEvent.click(screen.getByTestId('data-table-quick-active'));
+    fireEvent.click(screen.getByTestId('data-table-quick-te-beoordelen'));
     expect(screen.getByTestId('data-table-row-uid-1')).toBeInTheDocument();
     expect(screen.queryByTestId('data-table-row-uid-2')).not.toBeInTheDocument();
   });

@@ -66,6 +66,7 @@ export function BestellingenSection({
   const [selectedBestelling, setSelectedBestelling] = useState<Bestelling | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showVersturenDialog, setShowVersturenDialog] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('');
 
   useEffect(() => {
     if (bestellingen === null) return;
@@ -175,10 +176,21 @@ export function BestellingenSection({
         onRowClick={setSelectedBestelling}
         quickFilter={{
           key: 'status',
-          activeValue: 'Te versturen naar drukker',
-          activeLabel: t('bestellingenQuickTeVersturenNaarDrukker'),
-          allLabel: t('bestellingenQuickAlle'),
-          defaultActive: false,
+          value: statusFilter,
+          onChange: setStatusFilter,
+          options: [
+            {
+              value: 'Te versturen naar drukker',
+              label: t('bestellingenQuickTeVersturenNaarDrukker'),
+              testId: 'te-versturen',
+            },
+            {
+              value: 'Verstuurd naar drukker',
+              label: t('bestellingenQuickVerstuurdNaarDrukker'),
+              testId: 'verstuurd',
+            },
+            { value: '', label: t('bestellingenQuickAlle'), testId: 'alle' },
+          ],
         }}
         selection={{
           selectedIds,

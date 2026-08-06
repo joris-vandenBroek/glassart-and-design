@@ -161,7 +161,7 @@ describe('BestellingenSection', () => {
       BESTELLINGEN[1],
     ];
     renderSection({ bestellingen });
-    fireEvent.click(screen.getByTestId('data-table-quick-active'));
+    fireEvent.click(screen.getByTestId('data-table-quick-te-versturen'));
     expect(screen.getByTestId('data-table-row-header-1')).toBeInTheDocument();
     expect(screen.queryByTestId('data-table-row-header-2')).not.toBeInTheDocument();
   });
@@ -208,7 +208,7 @@ describe('BestellingenSection', () => {
         BESTELLINGEN[1],
       ];
       renderSection({ bestellingen });
-      fireEvent.click(screen.getByTestId('data-table-quick-all'));
+      fireEvent.click(screen.getByTestId('data-table-quick-alle'));
       expect(screen.getByTestId('data-table-row-select-header-1')).toBeInTheDocument();
       expect(screen.queryByTestId('data-table-row-select-header-2')).not.toBeInTheDocument();
     });

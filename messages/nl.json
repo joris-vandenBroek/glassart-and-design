@@ -521,6 +521,7 @@
     "bestellingenHistorieAfgerond": "Afgerond",
     "bestellingenHistorieAfgewezen": "Afgewezen",
     "bestellingenQuickTeVersturenNaarDrukker": "Te versturen naar drukker",
+    "bestellingenQuickVerstuurdNaarDrukker": "Verstuurd naar drukker",
     "bestellingenQuickAlle": "Alle bestellingen",
     "bestellingenGeselecteerd": "{count} bestellingen geselecteerd ({klanten} klanten)",
     "bestellingenVersturenNaarDrukker": "Versturen naar drukker",

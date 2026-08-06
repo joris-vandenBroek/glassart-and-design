@@ -138,31 +138,50 @@ describe('DataTable', () => {
     expect(screen.getByTestId('data-table-empty')).toHaveTextContent('Geen rijen gevonden.');
   });
 
-  describe('quickFilter', () => {
-    const quickFilter: StatusQuickFilter<Row> = {
-      key: 'status',
-      activeValue: 'Open',
-      activeLabel: 'Open rijen',
-      allLabel: 'Alle rijen',
-    };
+  describe('quick filter', () => {
+    function quickFilter(value: string, onChange = vi.fn()): StatusQuickFilter<Row> {
+      return {
+        key: 'status',
+        value,
+        onChange,
+        options: [
+          { value: 'Open', label: 'Open rijen', testId: 'open' },
+          { value: 'Gesloten', label: 'Gesloten rijen', testId: 'gesloten' },
+          { value: '', label: 'Alle rijen', testId: 'alle' },
+        ],
+      };
+    }
 
-    it('applies the quick filter to only the activeValue by default', () => {
-      renderTable({ quickFilter });
-      expect(screen.getByTestId('data-table-row-a')).toBeInTheDocument();
-      expect(screen.getByTestId('data-table-row-c')).toBeInTheDocument();
-      expect(screen.queryByTestId('data-table-row-b')).not.toBeInTheDocument();
+    it('renders one link per option', () => {
+      renderTable({ quickFilter: quickFilter('') });
+      expect(screen.getByTestId('data-table-quick-open')).toHaveTextContent('Open rijen');
+      expect(screen.getByTestId('data-table-quick-gesloten')).toHaveTextContent('Gesloten rijen');
+      expect(screen.getByTestId('data-table-quick-alle')).toHaveTextContent('Alle rijen');
     });
 
-    it('shows all rows after clicking the "all" quick filter link', () => {
-      renderTable({ quickFilter });
-      fireEvent.click(screen.getByTestId('data-table-quick-all'));
+    it('shows every row when the active value is the empty string', () => {
+      renderTable({ quickFilter: quickFilter('') });
       expect(screen.getByTestId('data-table-row-a')).toBeInTheDocument();
       expect(screen.getByTestId('data-table-row-b')).toBeInTheDocument();
       expect(screen.getByTestId('data-table-row-c')).toBeInTheDocument();
     });
 
+    it('shows only rows matching the active value', () => {
+      renderTable({ quickFilter: quickFilter('Open') });
+      expect(screen.getByTestId('data-table-row-a')).toBeInTheDocument();
+      expect(screen.getByTestId('data-table-row-c')).toBeInTheDocument();
+      expect(screen.queryByTestId('data-table-row-b')).not.toBeInTheDocument();
+    });
+
+    it('reports the clicked option through onChange instead of filtering itself', () => {
+      const onChange = vi.fn();
+      renderTable({ quickFilter: quickFilter('', onChange) });
+      fireEvent.click(screen.getByTestId('data-table-quick-gesloten'));
+      expect(onChange).toHaveBeenCalledWith('Gesloten');
+    });
+
     it('combines the quick filter with the global search', () => {
-      renderTable({ quickFilter });
+      renderTable({ quickFilter: quickFilter('Open') });
       fireEvent.change(screen.getByTestId('data-table-search'), { target: { value: 'Bravo' } });
       expect(screen.getByTestId('data-table-row-a')).toBeInTheDocument();
       expect(screen.queryByTestId('data-table-row-c')).not.toBeInTheDocument();
@@ -170,8 +189,7 @@ describe('DataTable', () => {
 
     it('does not render quick filter links when no quickFilter is passed', () => {
       renderTable();
-      expect(screen.queryByTestId('data-table-quick-active')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('data-table-quick-all')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('data-table-quick-alle')).not.toBeInTheDocument();
     });
   });
 

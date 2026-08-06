@@ -9,12 +9,17 @@ export interface Column<T> {
   render?: (row: T) => ReactNode;
 }
 
+export interface StatusQuickFilterOption {
+  value: string; // '' betekent: geen filter, alle rijen
+  label: string;
+  testId: string; // los van `value`, want statuswaarden bevatten spaties
+}
+
 export interface StatusQuickFilter<T> {
   key: keyof T & string;
-  activeValue: string;
-  activeLabel: string;
-  allLabel: string;
-  defaultActive?: boolean;
+  options: StatusQuickFilterOption[];
+  value: string;
+  onChange: (value: string) => void;
 }
 
 export interface RowSelection<T> {
@@ -71,13 +76,12 @@ export function DataTable<T extends object>({
   const initialSortKey =
     defaultSortKey !== undefined ? defaultSortKey : columns.find((column) => column.sortable !== false)?.key ?? null;
   const [search, setSearch] = useState('');
-  const [quickFilterActive, setQuickFilterActive] = useState(quickFilter?.defaultActive ?? quickFilter !== undefined);
   const [sortKey, setSortKey] = useState<string | null>(initialSortKey);
   const [sortDirection, setSortDirection] = useState<SortDirection>(initialSortKey ? defaultSortDirection : null);
 
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
-      if (quickFilter && quickFilterActive && String(row[quickFilter.key] ?? '') !== quickFilter.activeValue) {
+      if (quickFilter && quickFilter.value && String(row[quickFilter.key] ?? '') !== quickFilter.value) {
         return false;
       }
       if (!search) {
@@ -86,7 +90,7 @@ export function DataTable<T extends object>({
       const query = search.toLowerCase();
       return columns.some((column) => String(row[column.key] ?? '').toLowerCase().includes(query));
     });
-  }, [rows, columns, search, quickFilter, quickFilterActive]);
+  }, [rows, columns, search, quickFilter]);
 
   const sortedRows = useMemo(() => {
     if (!sortKey || !sortDirection) {
@@ -135,30 +139,21 @@ export function DataTable<T extends object>({
         />
         {quickFilter && (
           <div className="flex items-center gap-4 text-xs">
-            <button
-              type="button"
-              onClick={() => setQuickFilterActive(true)}
-              data-testid="data-table-quick-active"
-              className={
-                quickFilterActive
-                  ? 'text-white underline underline-offset-4'
-                  : 'text-white/50 hover:text-white'
-              }
-            >
-              {quickFilter.activeLabel}
-            </button>
-            <button
-              type="button"
-              onClick={() => setQuickFilterActive(false)}
-              data-testid="data-table-quick-all"
-              className={
-                !quickFilterActive
-                  ? 'text-white underline underline-offset-4'
-                  : 'text-white/50 hover:text-white'
-              }
-            >
-              {quickFilter.allLabel}
-            </button>
+            {quickFilter.options.map((option) => (
+              <button
+                key={option.testId}
+                type="button"
+                onClick={() => quickFilter.onChange(option.value)}
+                data-testid={`data-table-quick-${option.testId}`}
+                className={
+                  quickFilter.value === option.value
+                    ? 'text-white underline underline-offset-4'
+                    : 'text-white/50 hover:text-white'
+                }
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         )}
       </div>
