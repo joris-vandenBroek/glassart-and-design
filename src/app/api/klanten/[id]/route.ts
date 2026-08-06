@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getPool } from '@/lib/server/db';
 import { updateRow, deleteRow } from '@/lib/server/crud';
 import { requireMedewerker, requireKlant } from '@/lib/server/requireAuth';
 
@@ -18,13 +19,25 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 }
 
 // Staff can delete any klant; a klant can delete their own account (SettingsSection
-// re-verifies the password via /api/auth/login before calling this).
+// re-verifies the password via /api/auth/login before calling this). Self-service deletion
+// is additionally blocked whenever the klant has any bestelheaders row (open or closed) --
+// staff deletion is not subject to this check.
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   const medewerkerId = await requireMedewerker(request);
   const klantId = medewerkerId ? null : await requireKlant(request);
   if (!medewerkerId && klantId !== params.id) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
-  await deleteRow('klanten', params.id);
-  return NextResponse.json({ ok: true });
+  if (klantId) {
+    const [rows] = await getPool().query('SELECT 1 FROM bestelheaders WHERE klantId = ? LIMIT 1', [klantId]);
+    if ((rows as unknown[]).length > 0) {
+      return NextResponse.json({ error: 'heeft-bestellingen' }, { status: 409 });
+    }
+  }
+  try {
+    await deleteRow('klanten', params.id);
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: 'server-error' }, { status: 500 });
+  }
 }
