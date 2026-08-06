@@ -52,21 +52,13 @@ describe('useApiCollection', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('seeds via POST when the collection comes back empty and a seed is provided', async () => {
-    fetchMock
-      .mockResolvedValueOnce({ ok: true, json: async () => [] }) // initial GET: empty
-      .mockResolvedValueOnce({ ok: true }) // POST seed item
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => [{ id: '1', omschrijving: 'Hotel' }],
-      }); // refetch after seeding
-    const { result } = renderHook(() =>
-      useApiCollection<{ id: string; omschrijving: string }>('segmenten', {
-        seed: [{ omschrijving: 'Hotel' }],
-      })
-    );
-    await waitFor(() => expect(result.current.items).toEqual([{ id: '1', omschrijving: 'Hotel' }]));
-    expect(fetchMock).toHaveBeenCalledWith(
+  it('leaves an empty collection empty instead of writing placeholder rows', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => [] });
+    const { result } = renderHook(() => useApiCollection<{ id: string }>('segmenten'));
+    await waitFor(() => expect(result.current.items).toEqual([]));
+    expect(result.current.error).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).not.toHaveBeenCalledWith(
       '/api/segmenten',
       expect.objectContaining({ method: 'POST' })
     );

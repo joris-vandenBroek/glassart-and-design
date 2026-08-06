@@ -14,7 +14,6 @@ import {
 } from '@/lib/klantBestellingStatus';
 import type { Kunstwerk, Materiaal, Maat } from '@/components/beheer/materiaalTypes';
 import type { BtwTarieven } from '@/components/beheer/btwTarievenTypes';
-import { BTWTARIEVEN_SEED } from '@/data/btwTarievenSeed';
 import { AccountOrderModal } from './AccountOrderModal';
 
 const MAX_VISIBLE_THUMBNAILS = 3;
@@ -85,7 +84,7 @@ export function OrdersSection() {
   const kunstwerken = useApiCollection<Kunstwerk>('kunstwerken');
   const materialen = useApiCollection<Materiaal>('materialen');
   const maten = useApiCollection<Maat>('maten');
-  const btwtarieven = useApiRecord<BtwTarieven>('instellingen', 'btwtarieven', { seed: BTWTARIEVEN_SEED });
+  const btwtarieven = useApiRecord<BtwTarieven>('instellingen', 'btwtarieven');
   const [ownLand, setOwnLand] = useState<{ land: string | null; invoiceLand: string | null } | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<DisplayOrder | null>(null);
 

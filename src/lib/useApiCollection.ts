@@ -1,9 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-export interface UseApiCollectionOptions<T> {
-  seed?: Omit<T, 'id'>[];
+export interface UseApiCollectionOptions {
   skip?: boolean;
 }
 
@@ -18,31 +17,16 @@ export interface UseApiCollectionResult<T> {
 
 export function useApiCollection<T extends { id: string }>(
   resource: string,
-  options?: UseApiCollectionOptions<T>
+  options?: UseApiCollectionOptions
 ): UseApiCollectionResult<T> {
   const [items, setItems] = useState<T[] | null>(null);
   const [error, setError] = useState<'load' | 'action' | null>(null);
-  const seedRef = useRef(options?.seed);
-  seedRef.current = options?.seed;
 
   const fetchItems = useCallback(async () => {
     try {
       const response = await fetch(`/api/${resource}`);
       if (!response.ok) throw new Error('load failed');
-      let loaded = (await response.json()) as T[];
-      const seed = seedRef.current;
-      if (loaded.length === 0 && seed && seed.length > 0) {
-        for (const seedItem of seed) {
-          await fetch(`/api/${resource}`, {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify(seedItem),
-          });
-        }
-        const reseededResponse = await fetch(`/api/${resource}`);
-        loaded = (await reseededResponse.json()) as T[];
-      }
-      setItems(loaded);
+      setItems((await response.json()) as T[]);
       setError(null);
       return true;
     } catch {

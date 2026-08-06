@@ -1,10 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-
-export interface UseApiRecordOptions<T> {
-  seed?: T;
-}
+import { useCallback, useEffect, useState } from 'react';
 
 export interface UseApiRecordResult<T> {
   data: T | null;
@@ -12,32 +8,21 @@ export interface UseApiRecordResult<T> {
   save: (data: T) => Promise<boolean>;
 }
 
-export function useApiRecord<T>(
-  resource: string,
-  id: string,
-  options?: UseApiRecordOptions<T>
-): UseApiRecordResult<T> {
+export function useApiRecord<T>(resource: string, id: string): UseApiRecordResult<T> {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<'load' | 'action' | null>(null);
-  const seedRef = useRef(options?.seed);
-  seedRef.current = options?.seed;
 
   const fetchRecord = useCallback(async () => {
     try {
       const response = await fetch(`/api/${resource}/${id}`);
-      if (!response.ok) {
-        const seed = seedRef.current;
-        if (seed === undefined) throw new Error('load failed');
-        const seedResponse = await fetch(`/api/${resource}/${id}`, {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(seed),
-        });
-        if (!seedResponse.ok) throw new Error('seed failed');
-        setData(seed);
+      // A record that simply doesn't exist yet is an empty state, not a load failure:
+      // nothing writes it on our behalf anymore, so callers handle `data === null`.
+      if (response.status === 404) {
+        setData(null);
         setError(null);
         return true;
       }
+      if (!response.ok) throw new Error('load failed');
       setData(await response.json());
       setError(null);
       return true;

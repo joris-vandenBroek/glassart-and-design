@@ -37,8 +37,8 @@ describe('useApiRecord', () => {
     expect(result.current.data).toEqual({ bezoekadres: 'Nieuw adres' });
   });
 
-  it('sets a load error when the GET fails and no seed is provided', async () => {
-    fetchMock.mockResolvedValueOnce({ ok: false });
+  it('sets a load error when the GET fails', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 500 });
     const { result } = renderHook(() =>
       useApiRecord<{ bezoekadres: string }>('instellingen', 'bedrijfsgegevens')
     );
@@ -46,33 +46,17 @@ describe('useApiRecord', () => {
     expect(result.current.data).toBeNull();
   });
 
-  it('creates the record via PATCH with the seed when the GET fails and a seed is provided', async () => {
-    fetchMock
-      .mockResolvedValueOnce({ ok: false }) // initial GET: 404, record doesn't exist yet
-      .mockResolvedValueOnce({ ok: true }); // PATCH seed value
+  it('treats a 404 as an empty record instead of a load error, and writes nothing', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 404 });
     const { result } = renderHook(() =>
-      useApiRecord<{ tarieven: string[] }>('instellingen', 'btwtarieven', {
-        seed: { tarieven: ['NL'] },
-      })
+      useApiRecord<{ tarieven: string[] }>('instellingen', 'btwtarieven')
     );
-    await waitFor(() => expect(result.current.data).toEqual({ tarieven: ['NL'] }));
-    expect(result.current.error).toBeNull();
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/instellingen/btwtarieven',
-      expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ tarieven: ['NL'] }) })
-    );
-  });
-
-  it('sets a load error when the GET fails, a seed is provided, but persisting the seed also fails', async () => {
-    fetchMock
-      .mockResolvedValueOnce({ ok: false }) // initial GET: fails
-      .mockResolvedValueOnce({ ok: false }); // PATCH seed value: also fails
-    const { result } = renderHook(() =>
-      useApiRecord<{ tarieven: string[] }>('instellingen', 'btwtarieven', {
-        seed: { tarieven: ['NL'] },
-      })
-    );
-    await waitFor(() => expect(result.current.error).toBe('load'));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(result.current.data).toBeNull();
+    expect(result.current.error).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      '/api/instellingen/btwtarieven',
+      expect.objectContaining({ method: 'PATCH' })
+    );
   });
 });

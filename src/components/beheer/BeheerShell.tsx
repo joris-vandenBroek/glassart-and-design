@@ -28,11 +28,6 @@ import type { BtwTarieven } from './btwTarievenTypes';
 import type { ActiviteitType } from '@/lib/logActiviteit';
 import { useApiCollection } from '@/lib/useApiCollection';
 import { useApiRecord } from '@/lib/useApiRecord';
-import { MATERIAALSOORTEN_SEED, buildMaterialenSeed } from '@/data/materiaalsoortenSeed';
-import { SEGMENTEN_SEED, MATEN_SEED, buildKunstwerkenSeed } from '@/data/kunstwerkenSeed';
-import { BEDRIJFSGEGEVENS_SEED } from '@/data/bedrijfsgegevensSeed';
-import { BESTELINSTELLINGEN_SEED } from '@/data/bestelinstellingenSeed';
-import { BTWTARIEVEN_SEED } from '@/data/btwTarievenSeed';
 
 interface BeheerShellProps {
   email: string;
@@ -231,44 +226,22 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
     }));
   }, [rawBestellingen, klanten]);
 
-  const materiaalsoorten = useApiCollection<Materiaalsoort>('materiaalsoorten', {
-    seed: MATERIAALSOORTEN_SEED,
-  });
-  const materialenSeed = materiaalsoorten.items ? buildMaterialenSeed(materiaalsoorten.items) : undefined;
-  const materialen = useApiCollection<Materiaal>('materialen', {
-    seed: materialenSeed,
-    skip: materiaalsoorten.items === null,
-  });
-  const maten = useApiCollection<Maat>('maten', { seed: MATEN_SEED });
-  const segmenten = useApiCollection<Segment>('segmenten', { seed: SEGMENTEN_SEED });
+  // Nothing here is seeded: every collection and instellingen-record is real content that
+  // an admin enters, so an empty environment must stay empty instead of being refilled
+  // with placeholder rows behind the admin's back.
+  const materiaalsoorten = useApiCollection<Materiaalsoort>('materiaalsoorten');
+  const materialen = useApiCollection<Materiaal>('materialen');
+  const maten = useApiCollection<Maat>('maten');
+  const segmenten = useApiCollection<Segment>('segmenten');
   const stijlen = useApiCollection<Stijl>('stijlen');
   const onderwerpen = useApiCollection<Onderwerp>('onderwerpen');
-
-  const kunstwerkenReady = segmenten.items !== null && materialen.items !== null && maten.items !== null;
-  const kunstwerkenSeed = kunstwerkenReady
-    ? buildKunstwerkenSeed(segmenten.items!, materialen.items!, maten.items!)
-    : undefined;
-  // Seeding writes all 36 kunstwerken rows one at a time; if a write fails partway
-  // through, the collection is left partially seeded and useApiCollection will not
-  // retry the seed (its guard only fires when the collection comes back empty). Recovery
-  // in that case requires an admin manually deleting the partial rows so the
-  // collection is empty again before a reload can re-trigger the seed.
-  const kunstwerken = useApiCollection<Kunstwerk>('kunstwerken', {
-    seed: kunstwerkenSeed,
-    skip: !kunstwerkenReady,
-  });
+  const kunstwerken = useApiCollection<Kunstwerk>('kunstwerken');
   const prijsgroepen = useApiCollection<Prijsgroep>('prijsgroepen');
   const kunstenaars = useApiCollection<Kunstenaar>('kunstenaars');
   const drukkers = useApiCollection<Drukker>('drukkers');
-  const bedrijfsgegevens = useApiRecord<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens', {
-    seed: BEDRIJFSGEGEVENS_SEED,
-  });
-  const bestelinstellingen = useApiRecord<Bestelinstellingen>('instellingen', 'bestelinstellingen', {
-    seed: BESTELINSTELLINGEN_SEED,
-  });
-  const btwtarieven = useApiRecord<BtwTarieven>('instellingen', 'btwtarieven', {
-    seed: BTWTARIEVEN_SEED,
-  });
+  const bedrijfsgegevens = useApiRecord<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens');
+  const bestelinstellingen = useApiRecord<Bestelinstellingen>('instellingen', 'bestelinstellingen');
+  const btwtarieven = useApiRecord<BtwTarieven>('instellingen', 'btwtarieven');
 
   const klantenCount = (klanten ?? []).length;
   const bestellingenCount = (bestellingen ?? []).length;
