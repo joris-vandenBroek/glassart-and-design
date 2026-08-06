@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { BestellingenSection, type Bestelling } from '@/components/beheer/BestellingenSection';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort, Drukker } from '@/components/beheer/materiaalTypes';
 import type { Klant } from '@/components/beheer/KlantenSection';
+import { BEDRIJFSGEGEVENS_SEED } from '@/data/bedrijfsgegevensSeed';
 import messages from '../../../messages/nl.json';
 
 const fetchMock = vi.fn();
@@ -132,7 +133,10 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Bestelling
 
 beforeEach(() => {
   fetchMock.mockReset();
-  fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) });
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url === '/api/instellingen/bedrijfsgegevens') return { ok: true, json: async () => BEDRIJFSGEGEVENS_SEED };
+    return { ok: true, json: async () => ({}) };
+  });
   vi.stubEnv('NEXT_PUBLIC_MAIL_ENDPOINT_URL', 'https://example.com/mail.php');
   vi.stubEnv('NEXT_PUBLIC_MAIL_SECRET', 'test-secret');
 });

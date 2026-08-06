@@ -6,9 +6,12 @@ import { Modal } from '@/components/Modal';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
+import { useApiRecord } from '@/lib/useApiRecord';
+import { BEDRIJFSGEGEVENS_SEED } from '@/data/bedrijfsgegevensSeed';
 import { buildDrukkerMail } from '@/lib/buildDrukkerMail';
 import type { Bestelling } from './BestellingenSection';
 import type { Klant } from './KlantenSection';
+import type { Bedrijfsgegevens } from './bedrijfsgegevensTypes';
 import type { Drukker, Kunstwerk, Materiaal, Maat, Materiaalsoort } from './materiaalTypes';
 
 interface VersturenNaarDrukkerDialogProps {
@@ -38,6 +41,8 @@ export function VersturenNaarDrukkerDialog({
 }: VersturenNaarDrukkerDialogProps) {
   const t = useTranslations('beheer');
   const { user } = useAdminAuth();
+  const { data: bedrijfsgegevensData } = useApiRecord<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens');
+  const bedrijfsgegevens = bedrijfsgegevensData ?? BEDRIJFSGEGEVENS_SEED;
   const [drukkerId, setDrukkerId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
@@ -67,8 +72,8 @@ export function VersturenNaarDrukkerDialog({
   );
 
   const mail = useMemo(
-    () => buildDrukkerMail({ bestellingen, klanten, kunstwerken, materialen, maten, materiaalsoorten }),
-    [bestellingen, klanten, kunstwerken, materialen, maten, materiaalsoorten]
+    () => buildDrukkerMail({ bestellingen, klanten, kunstwerken, materialen, maten, materiaalsoorten, bedrijfsgegevens }),
+    [bestellingen, klanten, kunstwerken, materialen, maten, materiaalsoorten, bedrijfsgegevens]
   );
 
   function handleDialogClose() {

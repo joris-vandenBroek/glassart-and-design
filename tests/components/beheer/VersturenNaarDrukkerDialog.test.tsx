@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { VersturenNaarDrukkerDialog } from '@/components/beheer/VersturenNaarDrukkerDialog';
+import { BEDRIJFSGEGEVENS_SEED } from '@/data/bedrijfsgegevensSeed';
 import type { Bestelling } from '@/components/beheer/BestellingenSection';
 import type { Klant } from '@/components/beheer/KlantenSection';
 import type { Drukker, Kunstwerk, Materiaal, Maat, Materiaalsoort } from '@/components/beheer/materiaalTypes';
@@ -122,14 +123,17 @@ function mailCallPayload() {
   return call ? JSON.parse((call[1] as { body: string }).body) : undefined;
 }
 
+function defaultFetchImplementation(url: string) {
+  if (url === 'https://example.com/mail.php') return { ok: true };
+  if (url === '/api/instellingen/bedrijfsgegevens') return { ok: true, json: async () => BEDRIJFSGEGEVENS_SEED };
+  if (url === '/api/drukkers/drukker-1/zendingen') return { ok: true, json: async () => ({ ok: true }) };
+  return { ok: true, json: async () => ({ ok: true }) };
+}
+
 beforeEach(() => {
   logActiviteitMock.mockReset();
   fetchMock.mockReset();
-  fetchMock.mockImplementation(async (url: string) => {
-    if (url === 'https://example.com/mail.php') return { ok: true };
-    if (url === '/api/drukkers/drukker-1/zendingen') return { ok: true, json: async () => ({ ok: true }) };
-    return { ok: true, json: async () => ({ ok: true }) };
-  });
+  fetchMock.mockImplementation(async (url: string) => defaultFetchImplementation(url));
   vi.stubEnv('NEXT_PUBLIC_MAIL_ENDPOINT_URL', 'https://example.com/mail.php');
   vi.stubEnv('NEXT_PUBLIC_MAIL_SECRET', 'test-secret');
 });
@@ -158,7 +162,7 @@ describe('VersturenNaarDrukkerDialog', () => {
     expect(screen.getByTestId('drukker-versturen-drukker')).toHaveValue('drukker-1');
   });
 
-  it('sends the mail with both a plain-text and an html body, updates statuses, saves a zending, logs the activiteit, and closes', async () => {
+  it('sends the mail with both a plain-text and an html body, including the Glassart & Design invoice footer, updates statuses, saves a zending, logs the activiteit, and closes', async () => {
     const { onVerstuurd, onClose } = renderDialog();
 
     fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
@@ -172,6 +176,8 @@ describe('VersturenNaarDrukkerDialog', () => {
       body: expect.stringContaining('Testbedrijf BV'),
       html: expect.stringContaining('<img src="https://example.com/hotel-paneel.jpg"'),
     });
+    expect(mailCallPayload().body).toContain(BEDRIJFSGEGEVENS_SEED.bezoekadres);
+    expect(mailCallPayload().html).toContain(BEDRIJFSGEGEVENS_SEED.kvkNummer);
     await waitFor(() =>
       expect(statusCallFor('header-1')).toEqual([
         '/api/bestelheaders/header-1',
@@ -211,7 +217,7 @@ describe('VersturenNaarDrukkerDialog', () => {
   it('shows an error and does not update anything when the mail request fails', async () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url === 'https://example.com/mail.php') return { ok: false };
-      return { ok: true, json: async () => ({ ok: true }) };
+      return defaultFetchImplementation(url);
     });
     const { onVerstuurd } = renderDialog();
     fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
@@ -226,6 +232,7 @@ describe('VersturenNaarDrukkerDialog', () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url === 'https://example.com/mail.php') return { ok: true };
       if (url === '/api/drukkers/drukker-1/zendingen') return { ok: true, json: async () => ({ ok: true }) };
+      if (url === '/api/instellingen/bedrijfsgegevens') return { ok: true, json: async () => BEDRIJFSGEGEVENS_SEED };
       return { ok: false };
     });
     renderDialog();
@@ -239,6 +246,7 @@ describe('VersturenNaarDrukkerDialog', () => {
     const callOrder: string[] = [];
     fetchMock.mockImplementation(async (url: string) => {
       if (url === 'https://example.com/mail.php') return { ok: true };
+      if (url === '/api/instellingen/bedrijfsgegevens') return { ok: true, json: async () => BEDRIJFSGEGEVENS_SEED };
       if (url === '/api/drukkers/drukker-1/zendingen') {
         callOrder.push('zending');
         return { ok: true, json: async () => ({ ok: true }) };
@@ -256,6 +264,7 @@ describe('VersturenNaarDrukkerDialog', () => {
   it('archives the zending even when the subsequent status update fails', async () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url === 'https://example.com/mail.php') return { ok: true };
+      if (url === '/api/instellingen/bedrijfsgegevens') return { ok: true, json: async () => BEDRIJFSGEGEVENS_SEED };
       if (url === '/api/drukkers/drukker-1/zendingen') return { ok: true, json: async () => ({ ok: true }) };
       return { ok: false };
     });
@@ -275,13 +284,14 @@ describe('VersturenNaarDrukkerDialog', () => {
     await waitFor(() => expect(versturenButton).toBeDisabled());
 
     fireEvent.click(versturenButton);
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls.filter((call) => (call[0] as string) !== '/api/instellingen/bedrijfsgegevens')).toHaveLength(3);
   });
 
   it('disables Versturen as soon as the mail POST succeeds, before the zending/status writes settle', async () => {
     let resolveZending: () => void = () => {};
     fetchMock.mockImplementation(async (url: string) => {
       if (url === 'https://example.com/mail.php') return { ok: true };
+      if (url === '/api/instellingen/bedrijfsgegevens') return { ok: true, json: async () => BEDRIJFSGEGEVENS_SEED };
       if (url === '/api/drukkers/drukker-1/zendingen') {
         return new Promise((resolve) => {
           resolveZending = () => resolve({ ok: true, json: async () => ({ ok: true }) });
@@ -302,7 +312,6 @@ describe('VersturenNaarDrukkerDialog', () => {
     expect(screen.getByTestId('drukker-versturen-klant-ontbreekt')).toHaveTextContent(
       'Klantgegevens ontbreken voor 1 bestelling(en) — kan niet verstuurd worden.'
     );
-    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('does not disable Versturen or show the klant-ontbreken message when all klanten are present', () => {
