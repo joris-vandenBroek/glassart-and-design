@@ -1422,7 +1422,7 @@ Expected: alle tests groen. Deze wijziging raakt de gedeelde `Klant`-vorm en bei
 npx tsc --noEmit
 ```
 
-Expected: geen fouten.
+Expected: exact zes fouten, allemaal `TS2339: Property 'naam' does not exist on type '{ id: string; }'` in `tests/regression/staging-scenarios.test.ts` (regels 414, 450, 465, 471, 690). Die bestaan al op `master` en staan los van dit werk — laat ze staan, ze horen niet bij deze taak. Elke andere fout is wél van jou.
 
 ```bash
 npm run lint
