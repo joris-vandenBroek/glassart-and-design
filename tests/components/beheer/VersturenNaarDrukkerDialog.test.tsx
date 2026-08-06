@@ -4,8 +4,22 @@ import { NextIntlClientProvider } from 'next-intl';
 import { VersturenNaarDrukkerDialog } from '@/components/beheer/VersturenNaarDrukkerDialog';
 import type { Bestelling } from '@/components/beheer/BestellingenSection';
 import type { Klant } from '@/components/beheer/KlantenSection';
+import type { Bedrijfsgegevens } from '@/components/beheer/bedrijfsgegevensTypes';
 import type { Drukker, Kunstwerk, Materiaal, Maat, Materiaalsoort } from '@/components/beheer/materiaalTypes';
 import messages from '../../../messages/nl.json';
+
+const BEDRIJFSGEGEVENS_SEED: Bedrijfsgegevens = {
+  bezoekadres: 'Den Heuvel 21, 5688 EM Oirschot',
+  email: 'info@glassartanddesign.com',
+  whatsappNummer: '31600000000',
+  tenaamstelling: 'Glassart & Design',
+  bic: 'BANKNL2A',
+  iban: 'NL00 BANK 0123 4567 89',
+  kvkNummer: '12345678',
+  btwNummer: 'NL123456789B01',
+  openingstijden: { nl: '', en: '', fr: '', de: '' },
+  contactpersonen: [],
+};
 
 const logActiviteitMock = vi.fn();
 const fetchMock = vi.fn();
@@ -109,6 +123,15 @@ function renderDialog(overrides: Partial<React.ComponentProps<typeof VersturenNa
   return { onClose, onVerstuurd };
 }
 
+// Renders and waits for the bedrijfsgegevens fetch to resolve, so `mail` is
+// populated and Versturen is only disabled for reasons the test cares about
+// (not the transient loading window every test would otherwise race against).
+async function renderReadyDialog(overrides: Partial<React.ComponentProps<typeof VersturenNaarDrukkerDialog>> = {}) {
+  const result = renderDialog(overrides);
+  await waitFor(() => expect(screen.getByTestId('drukker-versturen-preview')).toHaveTextContent('Testbedrijf BV'));
+  return result;
+}
+
 function zendingCall() {
   return fetchMock.mock.calls.find((call) => (call[0] as string) === '/api/drukkers/drukker-1/zendingen');
 }
@@ -122,23 +145,26 @@ function mailCallPayload() {
   return call ? JSON.parse((call[1] as { body: string }).body) : undefined;
 }
 
+function defaultFetchImplementation(url: string) {
+  if (url === 'https://example.com/mail.php') return { ok: true };
+  if (url === '/api/instellingen/bedrijfsgegevens') return { ok: true, json: async () => BEDRIJFSGEGEVENS_SEED };
+  if (url === '/api/drukkers/drukker-1/zendingen') return { ok: true, json: async () => ({ ok: true }) };
+  return { ok: true, json: async () => ({ ok: true }) };
+}
+
 beforeEach(() => {
   logActiviteitMock.mockReset();
   fetchMock.mockReset();
-  fetchMock.mockImplementation(async (url: string) => {
-    if (url === 'https://example.com/mail.php') return { ok: true };
-    if (url === '/api/drukkers/drukker-1/zendingen') return { ok: true, json: async () => ({ ok: true }) };
-    return { ok: true, json: async () => ({ ok: true }) };
-  });
+  fetchMock.mockImplementation(async (url: string) => defaultFetchImplementation(url));
   vi.stubEnv('NEXT_PUBLIC_MAIL_ENDPOINT_URL', 'https://example.com/mail.php');
   vi.stubEnv('NEXT_PUBLIC_MAIL_SECRET', 'test-secret');
 });
 
 describe('VersturenNaarDrukkerDialog', () => {
-  it('pre-selects the only drukker and shows the full e-mail preview, including a line thumbnail', () => {
+  it('pre-selects the only drukker and shows the full e-mail preview, including a line thumbnail', async () => {
     renderDialog();
     expect(screen.getByTestId('drukker-versturen-drukker')).toHaveValue('drukker-1');
-    expect(screen.getByTestId('drukker-versturen-preview')).toHaveTextContent('Testbedrijf BV');
+    await waitFor(() => expect(screen.getByTestId('drukker-versturen-preview')).toHaveTextContent('Testbedrijf BV'));
     expect(screen.getByTestId('drukker-versturen-preview')).toHaveTextContent('Hotel paneel');
     expect(screen.getByTestId('drukker-versturen-preview').querySelector('img')).toHaveAttribute(
       'src',
@@ -158,8 +184,8 @@ describe('VersturenNaarDrukkerDialog', () => {
     expect(screen.getByTestId('drukker-versturen-drukker')).toHaveValue('drukker-1');
   });
 
-  it('sends the mail with both a plain-text and an html body, updates statuses, saves a zending, logs the activiteit, and closes', async () => {
-    const { onVerstuurd, onClose } = renderDialog();
+  it('sends the mail with both a plain-text and an html body, including the Glassart & Design invoice footer, updates statuses, saves a zending, logs the activiteit, and closes', async () => {
+    const { onVerstuurd, onClose } = await renderReadyDialog();
 
     fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
 
@@ -172,6 +198,8 @@ describe('VersturenNaarDrukkerDialog', () => {
       body: expect.stringContaining('Testbedrijf BV'),
       html: expect.stringContaining('<img src="https://example.com/hotel-paneel.jpg"'),
     });
+    expect(mailCallPayload().body).toContain(BEDRIJFSGEGEVENS_SEED.bezoekadres);
+    expect(mailCallPayload().html).toContain(BEDRIJFSGEGEVENS_SEED.kvkNummer);
     await waitFor(() =>
       expect(statusCallFor('header-1')).toEqual([
         '/api/bestelheaders/header-1',
@@ -195,7 +223,7 @@ describe('VersturenNaarDrukkerDialog', () => {
   });
 
   it('joins bestelnummers with a comma when sending a batch of multiple bestellingen', async () => {
-    renderDialog({ bestellingen: [BESTELLING, BESTELLING_2] });
+    await renderReadyDialog({ bestellingen: [BESTELLING, BESTELLING_2] });
 
     fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
 
@@ -211,9 +239,9 @@ describe('VersturenNaarDrukkerDialog', () => {
   it('shows an error and does not update anything when the mail request fails', async () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url === 'https://example.com/mail.php') return { ok: false };
-      return { ok: true, json: async () => ({ ok: true }) };
+      return defaultFetchImplementation(url);
     });
-    const { onVerstuurd } = renderDialog();
+    const { onVerstuurd } = await renderReadyDialog();
     fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
     expect(await screen.findByTestId('drukker-versturen-error')).toHaveTextContent(
       'Het versturen van de e-mail is mislukt. Probeer het opnieuw.'
@@ -226,9 +254,10 @@ describe('VersturenNaarDrukkerDialog', () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url === 'https://example.com/mail.php') return { ok: true };
       if (url === '/api/drukkers/drukker-1/zendingen') return { ok: true, json: async () => ({ ok: true }) };
+      if (url === '/api/instellingen/bedrijfsgegevens') return { ok: true, json: async () => BEDRIJFSGEGEVENS_SEED };
       return { ok: false };
     });
-    renderDialog();
+    await renderReadyDialog();
     fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
     expect(await screen.findByTestId('drukker-versturen-error')).toHaveTextContent(
       'De e-mail is verzonden, maar het bijwerken van de bestellingen is mislukt. Verstuur niet opnieuw — controleer de statussen handmatig.'
@@ -239,6 +268,7 @@ describe('VersturenNaarDrukkerDialog', () => {
     const callOrder: string[] = [];
     fetchMock.mockImplementation(async (url: string) => {
       if (url === 'https://example.com/mail.php') return { ok: true };
+      if (url === '/api/instellingen/bedrijfsgegevens') return { ok: true, json: async () => BEDRIJFSGEGEVENS_SEED };
       if (url === '/api/drukkers/drukker-1/zendingen') {
         callOrder.push('zending');
         return { ok: true, json: async () => ({ ok: true }) };
@@ -246,7 +276,7 @@ describe('VersturenNaarDrukkerDialog', () => {
       callOrder.push('status');
       return { ok: true, json: async () => ({ ok: true }) };
     });
-    renderDialog();
+    await renderReadyDialog();
     fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
 
     await waitFor(() => expect(callOrder).toContain('status'));
@@ -256,10 +286,11 @@ describe('VersturenNaarDrukkerDialog', () => {
   it('archives the zending even when the subsequent status update fails', async () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url === 'https://example.com/mail.php') return { ok: true };
+      if (url === '/api/instellingen/bedrijfsgegevens') return { ok: true, json: async () => BEDRIJFSGEGEVENS_SEED };
       if (url === '/api/drukkers/drukker-1/zendingen') return { ok: true, json: async () => ({ ok: true }) };
       return { ok: false };
     });
-    renderDialog();
+    await renderReadyDialog();
     fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
 
     await screen.findByTestId('drukker-versturen-error');
@@ -267,7 +298,7 @@ describe('VersturenNaarDrukkerDialog', () => {
   });
 
   it('disables Versturen once a mail has been sent, even if the dialog stays open, preventing a duplicate send', async () => {
-    renderDialog();
+    await renderReadyDialog();
     const versturenButton = screen.getByTestId('drukker-versturen-versturen');
     fireEvent.click(versturenButton);
 
@@ -275,13 +306,14 @@ describe('VersturenNaarDrukkerDialog', () => {
     await waitFor(() => expect(versturenButton).toBeDisabled());
 
     fireEvent.click(versturenButton);
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls.filter((call) => (call[0] as string) !== '/api/instellingen/bedrijfsgegevens')).toHaveLength(3);
   });
 
   it('disables Versturen as soon as the mail POST succeeds, before the zending/status writes settle', async () => {
     let resolveZending: () => void = () => {};
     fetchMock.mockImplementation(async (url: string) => {
       if (url === 'https://example.com/mail.php') return { ok: true };
+      if (url === '/api/instellingen/bedrijfsgegevens') return { ok: true, json: async () => BEDRIJFSGEGEVENS_SEED };
       if (url === '/api/drukkers/drukker-1/zendingen') {
         return new Promise((resolve) => {
           resolveZending = () => resolve({ ok: true, json: async () => ({ ok: true }) });
@@ -289,7 +321,7 @@ describe('VersturenNaarDrukkerDialog', () => {
       }
       return { ok: true, json: async () => ({ ok: true }) };
     });
-    renderDialog();
+    await renderReadyDialog();
     fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
 
     await waitFor(() => expect(screen.getByTestId('drukker-versturen-versturen')).toBeDisabled());
@@ -302,18 +334,32 @@ describe('VersturenNaarDrukkerDialog', () => {
     expect(screen.getByTestId('drukker-versturen-klant-ontbreekt')).toHaveTextContent(
       'Klantgegevens ontbreken voor 1 bestelling(en) — kan niet verstuurd worden.'
     );
-    expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('does not disable Versturen or show the klant-ontbreken message when all klanten are present', () => {
+  it('disables Versturen and shows an error when the bedrijfsgegevens fail to load', async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/instellingen/bedrijfsgegevens') return { ok: false };
+      return defaultFetchImplementation(url);
+    });
     renderDialog();
+    await waitFor(() => expect(screen.getByTestId('drukker-versturen-versturen')).toBeDisabled());
+    expect(screen.getByTestId('drukker-versturen-bedrijfsgegevens-fout')).toHaveTextContent(
+      'Bedrijfsgegevens van Glassart & Design konden niet worden geladen — kan niet verstuurd worden.'
+    );
+  });
+
+  it('does not disable Versturen or show the klant-ontbreken message when all klanten are present', async () => {
+    await renderReadyDialog();
     expect(screen.queryByTestId('drukker-versturen-klant-ontbreekt')).not.toBeInTheDocument();
     expect(screen.getByTestId('drukker-versturen-versturen')).not.toBeDisabled();
   });
 
   it('cannot be dismissed via Annuleren while a send is in flight', async () => {
-    fetchMock.mockImplementation(() => new Promise(() => {}));
-    const { onClose } = renderDialog();
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/instellingen/bedrijfsgegevens') return { ok: true, json: async () => BEDRIJFSGEGEVENS_SEED };
+      return new Promise(() => {});
+    });
+    const { onClose } = await renderReadyDialog();
     fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
 
     await waitFor(() => expect(screen.getByTestId('drukker-versturen-annuleren')).toBeDisabled());

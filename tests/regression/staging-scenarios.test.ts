@@ -55,6 +55,20 @@ import { POST as postResource, GET as listResource } from '@/app/api/[resource]/
 import { buildDrukkerMail } from '@/lib/buildDrukkerMail';
 import { resolveBtwPercentage } from '@/lib/resolveBtw';
 import type { BtwTarieven } from '@/components/beheer/btwTarievenTypes';
+import type { Bedrijfsgegevens } from '@/components/beheer/bedrijfsgegevensTypes';
+
+const BEDRIJFSGEGEVENS_SEED: Bedrijfsgegevens = {
+  bezoekadres: 'Den Heuvel 21, 5688 EM Oirschot',
+  email: 'info@glassartanddesign.com',
+  whatsappNummer: '31600000000',
+  tenaamstelling: 'Glassart & Design',
+  bic: 'BANKNL2A',
+  iban: 'NL00 BANK 0123 4567 89',
+  kvkNummer: '12345678',
+  btwNummer: 'NL123456789B01',
+  openingstijden: { nl: '', en: '', fr: '', de: '' },
+  contactpersonen: [],
+};
 
 // Narrates each meaningful step to the terminal while the suite runs, so a human running
 // `npm run test:regression` sees what's actually happening (which klant/kunstenaar/bedrag/
@@ -424,6 +438,7 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
         materialen: [{ id: fixture.materiaalId, materiaalsoortId: 'x', materiaaldikte: 6, omschrijving: 'AUTOTEST' }],
         maten: [{ id: fixture.maatId, breedte: 40, hoogte: 60 }],
         materiaalsoorten: [{ id: 'x', omschrijving: 'AUTOTEST soort' }],
+        bedrijfsgegevens: BEDRIJFSGEGEVENS_SEED,
       });
       // companyName fallback ("Onbekend klant" resolution) still yields one section per klant.
       expect(mail.text).toContain(klantX.email);

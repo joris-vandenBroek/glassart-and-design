@@ -531,6 +531,7 @@
     "drukkerVersturenMailError": "Het versturen van de e-mail is mislukt. Probeer het opnieuw.",
     "drukkerVersturenStatusError": "De e-mail is verzonden, maar het bijwerken van de bestellingen is mislukt. Verstuur niet opnieuw — controleer de statussen handmatig.",
     "drukkerVersturenKlantgegevensOntbreken": "Klantgegevens ontbreken voor {n} bestelling(en) — kan niet verstuurd worden.",
+    "drukkerVersturenBedrijfsgegevensFout": "Bedrijfsgegevens van Glassart & Design konden niet worden geladen — kan niet verstuurd worden.",
     "navSegmenten": "Segmenten",
     "segmentenLoadError": "Kon de segmenten niet laden. Probeer de pagina te verversen.",
     "segmentenActionError": "Er is iets misgegaan. Probeer het opnieuw.",
