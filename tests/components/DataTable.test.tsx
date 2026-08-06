@@ -52,19 +52,57 @@ describe('DataTable', () => {
     expect(onRowClick).toHaveBeenCalledWith(ROWS[1]);
   });
 
-  it('sorts a column ascending, then descending, then back to unsorted on repeated header clicks', () => {
+  it('sorts a column ascending, then descending, then back to the default sort on repeated header clicks', () => {
     renderTable();
-    const header = screen.getByTestId('data-table-sort-name');
+    const header = screen.getByTestId('data-table-sort-status');
     const rowOrder = () => screen.getAllByTestId(/^data-table-row-/).map((row) => row.textContent);
 
     fireEvent.click(header);
     expect(rowOrder()[0]).toContain('Alpha');
 
     fireEvent.click(header);
-    expect(rowOrder()[0]).toContain('Charlie');
+    expect(rowOrder()[0]).toContain('Bravo');
 
     fireEvent.click(header);
-    expect(rowOrder()[0]).toContain('Bravo');
+    expect(rowOrder()[0]).toContain('Alpha');
+  });
+
+  it('sorts alphabetically on the first sortable column by default', () => {
+    renderTable();
+    const rowOrder = () => screen.getAllByTestId(/^data-table-row-/).map((row) => row.getAttribute('data-testid'));
+    expect(rowOrder()).toEqual(['data-table-row-b', 'data-table-row-a', 'data-table-row-c']);
+  });
+
+  it('skips a non-sortable first column when picking the default sort column', () => {
+    renderTable({
+      columns: [{ key: 'status', label: 'Status', sortable: false }, ...COLUMNS],
+    });
+    const rowOrder = () => screen.getAllByTestId(/^data-table-row-/).map((row) => row.getAttribute('data-testid'));
+    expect(rowOrder()).toEqual(['data-table-row-b', 'data-table-row-a', 'data-table-row-c']);
+  });
+
+  it('sorts case- and diacritics-insensitively so ö sorts next to o, not after z', () => {
+    renderTable({
+      rows: [
+        { id: 'a', name: 'zebra', amount: 1, status: 'Open' },
+        { id: 'b', name: 'Öl', amount: 2, status: 'Open' },
+        { id: 'c', name: 'appel', amount: 3, status: 'Open' },
+      ],
+    });
+    const rowOrder = () => screen.getAllByTestId(/^data-table-row-/).map((row) => row.getAttribute('data-testid'));
+    expect(rowOrder()).toEqual(['data-table-row-c', 'data-table-row-b', 'data-table-row-a']);
+  });
+
+  it('keeps the given row order when defaultSortKey is null', () => {
+    renderTable({ defaultSortKey: null });
+    const rowOrder = () => screen.getAllByTestId(/^data-table-row-/).map((row) => row.getAttribute('data-testid'));
+    expect(rowOrder()).toEqual(['data-table-row-a', 'data-table-row-b', 'data-table-row-c']);
+  });
+
+  it('honours an explicit defaultSortKey and defaultSortDirection', () => {
+    renderTable({ defaultSortKey: 'amount', defaultSortDirection: 'desc' });
+    const rowOrder = () => screen.getAllByTestId(/^data-table-row-/).map((row) => row.getAttribute('data-testid'));
+    expect(rowOrder()).toEqual(['data-table-row-a', 'data-table-row-c', 'data-table-row-b']);
   });
 
   it('sorts a numeric column numerically, not lexicographically', () => {

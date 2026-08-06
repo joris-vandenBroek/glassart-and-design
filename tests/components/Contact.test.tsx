@@ -62,11 +62,11 @@ describe('Contact', () => {
     ).toHaveAttribute('href', 'tel:+31651404089');
   });
 
-  it('renders the seed data immediately as a fallback while the real record is still loading', () => {
+  it('keeps the #contact anchor but shows no placeholder details while the record is still loading', () => {
     fetchMock.mockReturnValue(new Promise(() => {}));
     renderWithIntl(<Contact />, 'nl', messages);
-    expect(
-      screen.getByRole('link', { name: 'info@glassartanddesign.com' })
-    ).toBeInTheDocument();
+    expect(screen.getByTestId('glass-panel')).toHaveAttribute('id', 'contact');
+    expect(screen.queryByRole('link', { name: /@/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^\+31/ })).not.toBeInTheDocument();
   });
 });

@@ -125,6 +125,9 @@ export function ActiviteitSection({ activiteiten, loadError }: ActiviteitSection
         columns={columns}
         rows={rows}
         getRowId={(row) => row.id}
+        // Het activiteitenlog komt al nieuwste-eerst uit de API; die volgorde
+        // houden we aan in plaats van alfabetisch op het opgemaakte tijdstip.
+        defaultSortKey={null}
         onRowClick={() => {}}
         emptyLabel={t('activiteitEmpty')}
         searchPlaceholder={t('dataTableSearchPlaceholder')}

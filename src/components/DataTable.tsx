@@ -33,9 +33,28 @@ interface DataTableProps<T> {
   selection?: RowSelection<T>;
   emptyLabel: string;
   searchPlaceholder: string;
+  /**
+   * Kolom waarop de tabel bij het openen gesorteerd staat. Standaard de eerste
+   * sorteerbare kolom; geef `null` door om te starten in de volgorde waarin de
+   * rijen worden aangeleverd.
+   */
+  defaultSortKey?: (keyof T & string) | null;
+  defaultSortDirection?: 'asc' | 'desc';
 }
 
 type SortDirection = 'asc' | 'desc' | null;
+
+const collator = new Intl.Collator('nl', { numeric: true, sensitivity: 'base' });
+
+function compareValues(aValue: unknown, bValue: unknown): number {
+  if (typeof aValue === 'number' && typeof bValue === 'number') {
+    return aValue - bValue;
+  }
+  if (typeof aValue === 'boolean' && typeof bValue === 'boolean') {
+    return Number(aValue) - Number(bValue);
+  }
+  return collator.compare(String(aValue ?? ''), String(bValue ?? ''));
+}
 
 export function DataTable<T extends object>({
   columns,
@@ -46,11 +65,15 @@ export function DataTable<T extends object>({
   selection,
   emptyLabel,
   searchPlaceholder,
+  defaultSortKey,
+  defaultSortDirection = 'asc',
 }: DataTableProps<T>) {
+  const initialSortKey =
+    defaultSortKey !== undefined ? defaultSortKey : columns.find((column) => column.sortable !== false)?.key ?? null;
   const [search, setSearch] = useState('');
   const [quickFilterActive, setQuickFilterActive] = useState(quickFilter?.defaultActive ?? quickFilter !== undefined);
-  const [sortKey, setSortKey] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [sortKey, setSortKey] = useState<string | null>(initialSortKey);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(initialSortKey ? defaultSortDirection : null);
 
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
@@ -69,13 +92,10 @@ export function DataTable<T extends object>({
     if (!sortKey || !sortDirection) {
       return filteredRows;
     }
-    const sorted = [...filteredRows].sort((a, b) => {
-      const aValue = a[sortKey as keyof T];
-      const bValue = b[sortKey as keyof T];
-      if (aValue === bValue) return 0;
-      return (aValue as never) > (bValue as never) ? 1 : -1;
-    });
-    return sortDirection === 'asc' ? sorted : sorted.reverse();
+    const factor = sortDirection === 'asc' ? 1 : -1;
+    return [...filteredRows].sort(
+      (a, b) => factor * compareValues(a[sortKey as keyof T], b[sortKey as keyof T])
+    );
   }, [filteredRows, sortKey, sortDirection]);
 
   const selectableVisibleIds = useMemo(() => {
@@ -95,11 +115,10 @@ export function DataTable<T extends object>({
       setSortDirection('asc');
     } else if (sortDirection === 'asc') {
       setSortDirection('desc');
-    } else if (sortDirection === 'desc') {
-      setSortKey(null);
-      setSortDirection(null);
     } else {
-      setSortDirection('asc');
+      // Derde klik: terug naar de standaardsortering van deze tabel.
+      setSortKey(initialSortKey);
+      setSortDirection(initialSortKey ? defaultSortDirection : null);
     }
   }
 

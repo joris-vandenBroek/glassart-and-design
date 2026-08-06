@@ -2,7 +2,6 @@
 
 import { useLocale, useTranslations } from 'next-intl';
 import { useApiRecord } from '@/lib/useApiRecord';
-import { BEDRIJFSGEGEVENS_SEED } from '@/data/bedrijfsgegevensSeed';
 import type { Bedrijfsgegevens, Taal } from './beheer/bedrijfsgegevensTypes';
 
 function vertaling(tekst: Record<Taal, string>, locale: string): string {
@@ -13,8 +12,13 @@ function vertaling(tekst: Record<Taal, string>, locale: string): string {
 export function ContactInfo() {
   const t = useTranslations('contactPage');
   const locale = useLocale();
-  const { data } = useApiRecord<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens');
-  const bedrijfsgegevens = data ?? BEDRIJFSGEGEVENS_SEED;
+  const { data: bedrijfsgegevens } = useApiRecord<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens');
+
+  // See Contact.tsx: no placeholder address, phone numbers or bank details on a
+  // public page — render nothing until the real bedrijfsgegevens are loaded.
+  if (!bedrijfsgegevens) {
+    return null;
+  }
 
   const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
     bedrijfsgegevens.bezoekadres

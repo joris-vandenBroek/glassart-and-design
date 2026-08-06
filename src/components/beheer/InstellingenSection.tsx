@@ -6,9 +6,12 @@ import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import { Combobox } from '@/components/Combobox';
 import { LAND_OPTIONS } from '@/data/landen';
-import { BTWTARIEVEN_SEED } from '@/data/btwTarievenSeed';
 import type { Bestelinstellingen } from './bestelinstellingenTypes';
 import type { BtwTarief, BtwTarieven } from './btwTarievenTypes';
+
+// A fresh environment has no btwtarieven record yet. The form then starts out empty
+// instead of with a pre-filled country, so nothing gets saved that nobody entered.
+const LEGE_BTW_TARIEVEN: BtwTarieven = { tarieven: [] };
 
 interface InstellingenSectionProps {
   bestelinstellingen: Bestelinstellingen | null;
@@ -30,7 +33,7 @@ export function InstellingenSection({
   const t = useTranslations('beheer');
   const { user } = useAdminAuth();
   const [form, setForm] = useState<Bestelinstellingen | null>(bestelinstellingen);
-  const [btwForm, setBtwForm] = useState<BtwTarieven | null>(btwTarieven ?? BTWTARIEVEN_SEED);
+  const [btwForm, setBtwForm] = useState<BtwTarieven | null>(btwTarieven ?? LEGE_BTW_TARIEVEN);
   const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,7 +41,7 @@ export function InstellingenSection({
   }, [bestelinstellingen]);
 
   useEffect(() => {
-    setBtwForm(btwTarieven ?? BTWTARIEVEN_SEED);
+    setBtwForm(btwTarieven ?? LEGE_BTW_TARIEVEN);
   }, [btwTarieven]);
 
   if (loadError) {
@@ -92,7 +95,7 @@ export function InstellingenSection({
       setForm(clamped);
     }
 
-    const currentBtw = btwTarieven ?? BTWTARIEVEN_SEED;
+    const currentBtw = btwTarieven ?? LEGE_BTW_TARIEVEN;
     const btwDirty = btwForm && JSON.stringify(btwForm) !== JSON.stringify(currentBtw);
     if (btwDirty) {
       const btwSuccess = await onSaveBtw(btwForm);

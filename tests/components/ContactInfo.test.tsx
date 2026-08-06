@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { renderWithIntl } from '../test-utils';
 import { ContactInfo } from '@/components/ContactInfo';
 import messages from '../../messages/nl.json';
@@ -121,12 +121,19 @@ describe('ContactInfo', () => {
     expect(screen.getByText(/IBAN/)).toBeInTheDocument();
   });
 
-  it('renders the seed data immediately as a fallback while the real record is still loading', () => {
+  it('renders no placeholder address, phone number or bank details while the record is still loading', () => {
     fetchMock.mockReturnValue(new Promise(() => {}));
     renderWithIntl(<ContactInfo />, 'nl', messages);
-    expect(screen.getByTestId('contact-address')).toHaveTextContent(
-      BEDRIJFSGEGEVENS.bezoekadres
-    );
+    expect(screen.queryByTestId('contact-address')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('contact-phone-0')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('contact-email')).not.toBeInTheDocument();
+  });
+
+  it('renders nothing instead of placeholder data when the record does not exist yet', async () => {
+    fetchMock.mockResolvedValue({ ok: false, status: 404 });
+    const { container } = renderWithIntl(<ContactInfo />, 'nl', messages);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('never writes to the record from the public contact page', async () => {

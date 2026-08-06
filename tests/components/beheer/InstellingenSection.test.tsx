@@ -120,19 +120,21 @@ describe('InstellingenSection', () => {
     expect(logActiviteitMock).not.toHaveBeenCalledWith('bestelinstellingen_gewijzigd', expect.anything());
   });
 
-  it('falls back to the BTWTARIEVEN_SEED and renders the btw block when btwTarieven is null (fresh environment)', () => {
+  it('renders the btw block with no pre-filled rows when btwTarieven is null (fresh environment)', () => {
     renderSection({ btwTarieven: null });
-    expect(screen.getByTestId('instellingen-btw-percentage-0')).toHaveValue(21);
-    expect(screen.getByTestId('instellingen-btw-land-0')).toHaveValue('Nederland');
+    expect(screen.getByTestId('instellingen-btw-toevoegen')).toBeInTheDocument();
+    expect(screen.queryByTestId('instellingen-btw-percentage-0')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('instellingen-btw-land-0')).not.toBeInTheDocument();
   });
 
-  it('saves an edit made on top of the seeded btw-tarieven when btwTarieven started out null, creating the row', async () => {
+  it('saves a manually added btw-tarief when btwTarieven started out null, creating the row', async () => {
     const { onSaveBtw } = renderSection({ btwTarieven: null });
+    fireEvent.click(screen.getByTestId('instellingen-btw-toevoegen'));
     fireEvent.change(screen.getByTestId('instellingen-btw-percentage-0'), { target: { value: '20' } });
     fireEvent.click(screen.getByTestId('instellingen-opslaan'));
     await waitFor(() =>
       expect(onSaveBtw).toHaveBeenCalledWith({
-        tarieven: [{ land: 'NL', percentage: 20 }],
+        tarieven: [{ land: '', percentage: 20 }],
       })
     );
   });
