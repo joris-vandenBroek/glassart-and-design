@@ -69,10 +69,6 @@ const BESTELLING: Bestelling = {
   bestelnr: 'GD-00201',
   besteldatum: '1-7-2026',
   status: 'Te versturen naar drukker',
-  teVersturenNaarDrukkerOp: null,
-  verstuurdNaarDrukkerOp: null,
-  afgerondOp: null,
-  afgewezenOp: null,
   lineCount: 1,
   totalQuantity: 2,
   lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
@@ -85,10 +81,6 @@ const BESTELLING_2: Bestelling = {
   bestelnr: 'GD-00202',
   besteldatum: '2-7-2026',
   status: 'Te versturen naar drukker',
-  teVersturenNaarDrukkerOp: null,
-  verstuurdNaarDrukkerOp: null,
-  afgerondOp: null,
-  afgewezenOp: null,
   lineCount: 1,
   totalQuantity: 1,
   lines: [{ id: 'line-2', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
@@ -198,13 +190,7 @@ describe('VersturenNaarDrukkerDialog', () => {
       { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'GD-00201'
     );
-    expect(onVerstuurd).toHaveBeenCalledWith([
-      expect.objectContaining({
-        id: BESTELLING.id,
-        status: 'Verstuurd naar drukker',
-        verstuurdNaarDrukkerOp: expect.any(String),
-      }),
-    ]);
+    expect(onVerstuurd).toHaveBeenCalledWith([{ ...BESTELLING, status: 'Verstuurd naar drukker' }]);
     expect(onClose).toHaveBeenCalled();
   });
 

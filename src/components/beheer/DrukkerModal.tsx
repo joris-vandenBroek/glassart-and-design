@@ -88,7 +88,7 @@ export function DrukkerModal({
         });
         if (!response.ok) throw new Error('update failed');
         void logActiviteit('bestelling_afgerond', actorFromMedewerker(user), bestelling.bestelnr);
-        onBestellingUpdated({ ...bestelling, status: 'Afgerond', afgerondOp: new Date().toISOString() });
+        onBestellingUpdated({ ...bestelling, status: 'Afgerond' });
         afgerond += 1;
       } catch {
         setZendingActionError({

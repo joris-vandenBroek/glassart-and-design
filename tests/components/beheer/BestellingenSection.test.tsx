@@ -79,10 +79,6 @@ const BESTELLINGEN: Bestelling[] = [
     bestelnr: 'GD-00301',
     besteldatum: '1-7-2026',
     status: 'Te beoordelen',
-    teVersturenNaarDrukkerOp: null,
-    verstuurdNaarDrukkerOp: null,
-    afgerondOp: null,
-    afgewezenOp: null,
     lineCount: 1,
     totalQuantity: 3,
     lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 3 }],
@@ -94,10 +90,6 @@ const BESTELLINGEN: Bestelling[] = [
     bestelnr: 'GD-00302',
     besteldatum: '2-7-2026',
     status: 'Verstuurd naar drukker',
-    teVersturenNaarDrukkerOp: null,
-    verstuurdNaarDrukkerOp: null,
-    afgerondOp: null,
-    afgewezenOp: null,
     lineCount: 1,
     totalQuantity: 1,
     lines: [{ id: 'line-2', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
@@ -187,13 +179,7 @@ describe('BestellingenSection', () => {
     fireEvent.click(screen.getByTestId('bestelling-modal-goedkeuren'));
 
     await waitFor(() =>
-      expect(onBestellingUpdated).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'header-1',
-          status: 'Te versturen naar drukker',
-          teVersturenNaarDrukkerOp: expect.any(String),
-        })
-      )
+      expect(onBestellingUpdated).toHaveBeenCalledWith({ ...BESTELLINGEN[0], status: 'Te versturen naar drukker' })
     );
     await waitFor(() => expect(screen.queryByTestId('bestelling-modal')).not.toBeInTheDocument());
   });
@@ -282,13 +268,7 @@ describe('BestellingenSection', () => {
       fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
 
       await waitFor(() => expect(onBestellingUpdated).toHaveBeenCalled());
-      expect(onBestellingUpdated.mock.calls[0][0]).toEqual(
-        expect.objectContaining({
-          id: bestellingen[0].id,
-          status: 'Verstuurd naar drukker',
-          verstuurdNaarDrukkerOp: expect.any(String),
-        })
-      );
+      expect(onBestellingUpdated.mock.calls[0][0]).toEqual({ ...bestellingen[0], status: 'Verstuurd naar drukker' });
       expect(screen.queryByTestId('drukker-versturen-drukker')).not.toBeInTheDocument();
       expect(screen.queryByTestId('bestellingen-selectie-balk')).not.toBeInTheDocument();
     });
