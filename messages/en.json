@@ -299,6 +299,7 @@
     },
     "settings": {
       "labelCompanyName": "Company name",
+      "labelBtwNummer": "VAT number",
       "labelContactPerson": "Contact person",
       "labelEmail": "Email address",
       "labelPhone": "Phone number",
@@ -315,6 +316,7 @@
       "labelPasswordConfirm": "Confirm password",
       "passwordMismatch": "Passwords do not match.",
       "passwordTooShort": "The password must be at least 8 characters long.",
+      "btwNummerOngeldig": "This VAT number does not match the format for the selected country.",
       "save": "Save",
       "saved": "Saved!",
       "saveError": "Saving failed. Please try again.",

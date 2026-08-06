@@ -269,6 +269,7 @@
     },
     "settings": {
       "labelCompanyName": "Bedrijfsnaam",
+      "labelBtwNummer": "Btw-nummer",
       "labelContactPerson": "Contactpersoon",
       "labelEmail": "E-mailadres",
       "labelPhone": "Telefoonnummer",
@@ -285,6 +286,7 @@
       "labelPasswordConfirm": "Wachtwoord opnieuw",
       "passwordMismatch": "Wachtwoorden komen niet overeen.",
       "passwordTooShort": "Het wachtwoord moet minimaal 8 tekens lang zijn.",
+      "btwNummerOngeldig": "Dit btw-nummer heeft niet het juiste formaat voor het gekozen land.",
       "save": "Opslaan",
       "saved": "Opgeslagen!",
       "saveError": "Opslaan is niet gelukt. Probeer het opnieuw.",

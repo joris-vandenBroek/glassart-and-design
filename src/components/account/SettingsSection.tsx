@@ -7,6 +7,7 @@ import { usePathname, useRouter } from '@/i18n/navigation';
 import { LOCALE_META } from '@/lib/localeMeta';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
+import { normaliseerBtwNummer, valideerBtwNummer } from '@/lib/btwNummer';
 import { PasswordInput } from '@/components/PasswordInput';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { Combobox } from '@/components/Combobox';
@@ -16,6 +17,7 @@ type ContactPreference = 'email' | 'phone' | 'whatsapp';
 
 interface KlantProfile {
   companyName: string;
+  btwNummer: string;
   contactPerson: string;
   email: string;
   phone: string;
@@ -28,6 +30,7 @@ interface KlantProfile {
 
 const EMPTY_PROFILE: KlantProfile = {
   companyName: '',
+  btwNummer: '',
   contactPerson: '',
   email: '',
   phone: '',
@@ -51,6 +54,7 @@ export function SettingsSection() {
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [btwNummerError, setBtwNummerError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -65,6 +69,7 @@ export function SettingsSection() {
       if (cancelled) return;
       setProfile({
         companyName: klant.companyName ?? '',
+        btwNummer: klant.btwNummer ?? '',
         contactPerson: klant.contactPerson ?? '',
         email: klant.email ?? '',
         phone: klant.phone ?? '',
@@ -99,11 +104,24 @@ export function SettingsSection() {
     }
     setPasswordError(null);
 
+    // Format only -- empty stays allowed, so an existing EU klant without a VAT number
+    // can still save the rest of their profile. See the spec, section D.
+    const genormaliseerdBtwNummer = normaliseerBtwNummer(profile.btwNummer);
+    if (valideerBtwNummer(genormaliseerdBtwNummer, profile.land) === 'ongeldig') {
+      setBtwNummerError(t('btwNummerOngeldig'));
+      return;
+    }
+    setBtwNummerError(null);
+
     try {
       const response = await fetch('/api/klanten/me', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ ...profile, ...(password ? { password } : {}) }),
+        body: JSON.stringify({
+          ...profile,
+          btwNummer: genormaliseerdBtwNummer,
+          ...(password ? { password } : {}),
+        }),
       });
       if (!response.ok) {
         setSaveError(t('saveError'));
@@ -183,6 +201,24 @@ export function SettingsSection() {
           className={fieldClassName}
         />
       </label>
+
+      <label className={labelClassName}>
+        <span>{t('labelBtwNummer')}</span>
+        <input
+          type="text"
+          value={profile.btwNummer}
+          onChange={(e) => setField('btwNummer', e.target.value)}
+          data-testid="settings-btwnummer"
+          className={fieldClassName}
+        />
+      </label>
+
+      {btwNummerError && (
+        <p data-testid="settings-btwnummer-error" className="text-xs text-red-400">
+          {btwNummerError}
+        </p>
+      )}
+
       <label className={labelClassName}>
         <span>
           {t('labelContactPerson')}
