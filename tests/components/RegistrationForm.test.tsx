@@ -44,6 +44,12 @@ function fillRequiredFields() {
   fireEvent.change(screen.getByTestId('word-klant-city'), { target: { value: 'Teststad' } });
 }
 
+function kiesLand(naam: string, code: string) {
+  fireEvent.focus(screen.getByTestId('word-klant-land'));
+  fireEvent.change(screen.getByTestId('word-klant-land'), { target: { value: naam } });
+  fireEvent.click(screen.getByTestId(`word-klant-land-option-${code}`));
+}
+
 beforeEach(() => {
   fetchMock.mockReset();
   logActiviteitMock.mockReset();
@@ -137,6 +143,7 @@ describe('RegistrationForm', () => {
           password: 'geheim123',
           companyName: 'Testbedrijf BV',
           kvk: '12345678',
+          btwNummer: '',
           contactPerson: 'Jan Jansen',
           phone: '0612345678',
           contactPreference: '',
@@ -260,5 +267,61 @@ describe('RegistrationForm', () => {
     const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body);
     expect(body.land).toBe('NL');
     expect(body.invoiceLand).toBe('DE');
+  });
+
+  it('marks btwNummer as required for an EU country other than NL', () => {
+    renderForm();
+    kiesLand('België', 'BE');
+    expect(screen.getByTestId('word-klant-btwnummer')).toBeRequired();
+  });
+
+  it('does not mark btwNummer as required for NL', () => {
+    renderForm();
+    expect(screen.getByTestId('word-klant-btwnummer')).not.toBeRequired();
+  });
+
+  it('does not mark btwNummer as required outside the EU', () => {
+    renderForm();
+    kiesLand('Zwitserland', 'CH');
+    expect(screen.getByTestId('word-klant-btwnummer')).not.toBeRequired();
+  });
+
+  it('blocks submission with an empty btwNummer for an EU country other than NL', () => {
+    renderForm();
+    fillRequiredFields();
+    kiesLand('België', 'BE');
+    fireEvent.submit(screen.getByTestId('word-klant-submit').closest('form')!);
+    expect(screen.getByTestId('word-klant-btwnummer-error')).toHaveTextContent(
+      'Voor zakelijke klanten binnen de EU is een btw-nummer verplicht.'
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('blocks submission with a wrongly formatted btwNummer', () => {
+    renderForm();
+    fillRequiredFields();
+    kiesLand('België', 'BE');
+    fireEvent.change(screen.getByTestId('word-klant-btwnummer'), {
+      target: { value: 'NL123456789B01' },
+    });
+    fireEvent.submit(screen.getByTestId('word-klant-submit').closest('form')!);
+    expect(screen.getByTestId('word-klant-btwnummer-error')).toHaveTextContent(
+      'Dit btw-nummer heeft niet het juiste formaat voor het gekozen land.'
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('submits the normalised btwNummer', async () => {
+    fetchMock.mockResolvedValue({ ok: true });
+    renderForm();
+    fillRequiredFields();
+    kiesLand('België', 'BE');
+    fireEvent.change(screen.getByTestId('word-klant-btwnummer'), {
+      target: { value: 'be 0411.905.847' },
+    });
+    fireEvent.submit(screen.getByTestId('word-klant-submit').closest('form')!);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body);
+    expect(body.btwNummer).toBe('BE0411905847');
   });
 });
