@@ -1,6 +1,7 @@
 import type { Bestelling, BestellingLine } from '@/components/beheer/BestellingenSection';
 import type { Klant } from '@/components/beheer/KlantenSection';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from '@/components/beheer/materiaalTypes';
+import type { Bedrijfsgegevens } from '@/components/beheer/bedrijfsgegevensTypes';
 
 export interface DrukkerMailInput {
   bestellingen: Bestelling[];
@@ -9,6 +10,7 @@ export interface DrukkerMailInput {
   materialen: Materiaal[];
   maten: Maat[];
   materiaalsoorten: Materiaalsoort[];
+  bedrijfsgegevens: Bedrijfsgegevens;
 }
 
 export interface DrukkerMail {
@@ -24,6 +26,24 @@ function escapeHtml(value: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function buildFactuurvoetjeText(bedrijfsgegevens: Bedrijfsgegevens): string {
+  return `--\nGlassart & Design\n${bedrijfsgegevens.bezoekadres}\nKVK-nummer: ${bedrijfsgegevens.kvkNummer}\nBtw-nummer: ${bedrijfsgegevens.btwNummer}\nE-mailadres (voor facturen): ${bedrijfsgegevens.email}`;
+}
+
+function buildFactuurvoetjeHtml(bedrijfsgegevens: Bedrijfsgegevens): string {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:24px;border-top:1px solid #e5e5e5;">
+  <tr>
+    <td style="padding-top:12px;font-family:Arial,sans-serif;font-size:12px;color:#666666;">
+      <div style="font-weight:bold;color:#333333;margin-bottom:2px;">Glassart &amp; Design</div>
+      <div>${escapeHtml(bedrijfsgegevens.bezoekadres)}</div>
+      <div>KVK-nummer: ${escapeHtml(bedrijfsgegevens.kvkNummer)}</div>
+      <div>Btw-nummer: ${escapeHtml(bedrijfsgegevens.btwNummer)}</div>
+      <div>E-mailadres (voor facturen): ${escapeHtml(bedrijfsgegevens.email)}</div>
+    </td>
+  </tr>
+</table>`;
 }
 
 function formatAfleveradres(klant: Klant): string {
@@ -132,6 +152,7 @@ export function buildDrukkerMail({
   materialen,
   maten,
   materiaalsoorten,
+  bedrijfsgegevens,
 }: DrukkerMailInput): DrukkerMail {
   const datum = new Date().toLocaleDateString('nl-NL');
   const klantIds = Array.from(new Set(bestellingen.map((b) => b.klantId)));
@@ -172,7 +193,7 @@ export function buildDrukkerMail({
 
   return {
     subject: `Nieuwe order(s) voor de drukker – ${datum}`,
-    text: secties.map((sectie) => sectie.text).join('\n\n'),
-    html: `<html><body style="margin:0;padding:16px;background:#ffffff;">${secties.map((sectie) => sectie.html).join('')}</body></html>`,
+    text: `${secties.map((sectie) => sectie.text).join('\n\n')}\n\n${buildFactuurvoetjeText(bedrijfsgegevens)}`,
+    html: `<html><body style="margin:0;padding:16px;background:#ffffff;">${secties.map((sectie) => sectie.html).join('')}${buildFactuurvoetjeHtml(bedrijfsgegevens)}</body></html>`,
   };
 }
