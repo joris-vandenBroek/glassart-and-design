@@ -215,8 +215,9 @@ hebben.
 
 ## Vertalingen
 
-Nieuwe sleutels in `messages/nl.json`, `en.json`, `de.json`, `fr.json` onder
-`beheer`:
+Alleen `messages/nl.json`. De `beheer`-namespace bestaat niet in `en.json`,
+`de.json` of `fr.json` — de beheeromgeving is enkel Nederlands, en dat blijft
+zo. Nieuwe sleutels onder `beheer`:
 
 | Sleutel                                | Nederlands (richting)                                |
 | -------------------------------------- | ---------------------------------------------------- |
