@@ -207,12 +207,34 @@ export function GlassartDesignSection({ bedrijfsgegevens, loadError, onSave }: G
       </label>
 
       <label className={LABEL_CLASS}>
+        {t('glassartDesignLabelTenaamstelling')}
+        <input
+          type="text"
+          value={form.tenaamstelling}
+          onChange={(event) => updateField('tenaamstelling', event.target.value)}
+          data-testid="glassart-design-tenaamstelling"
+          className={INPUT_CLASS}
+        />
+      </label>
+
+      <label className={LABEL_CLASS}>
         {t('glassartDesignLabelIban')}
         <input
           type="text"
           value={form.iban}
           onChange={(event) => updateField('iban', event.target.value)}
           data-testid="glassart-design-iban"
+          className={INPUT_CLASS}
+        />
+      </label>
+
+      <label className={LABEL_CLASS}>
+        {t('glassartDesignLabelBic')}
+        <input
+          type="text"
+          value={form.bic}
+          onChange={(event) => updateField('bic', event.target.value)}
+          data-testid="glassart-design-bic"
           className={INPUT_CLASS}
         />
       </label>

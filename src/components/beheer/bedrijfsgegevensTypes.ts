@@ -13,6 +13,8 @@ export interface Bedrijfsgegevens {
   bezoekadres: string;
   email: string;
   whatsappNummer: string;
+  tenaamstelling: string;
+  bic: string;
   iban: string;
   kvkNummer: string;
   btwNummer: string;
