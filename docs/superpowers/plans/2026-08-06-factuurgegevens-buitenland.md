@@ -150,9 +150,11 @@ describe('valideerBtwNummer', () => {
     }
   });
 
-  it('rejects a wrong-length number for every EU country', () => {
+  // Four extra digits, not two: BG, CZ and RO have variable-length patterns where a
+  // two-digit suffix can still land inside the allowed range and stay valid.
+  it('rejects an over-long number for every EU country', () => {
     for (const [code, nummer] of Object.entries(GELDIG)) {
-      expect(valideerBtwNummer(`${nummer}99`, code), `${code} te lang`).toBe('ongeldig');
+      expect(valideerBtwNummer(`${nummer}0000`, code), `${code} te lang`).toBe('ongeldig');
     }
   });
 
@@ -646,11 +648,30 @@ In `db/schema.sql`, in `CREATE TABLE klanten`, direct ná de `kvk`-regel:
 
 De testsuite praat met de gedeelde staging-database, dus de kolom moet daar bestaan voordat de tests kunnen slagen.
 
+Schrijf het scriptje naar een bestand in plaats van `node -e` — het bevat aanhalingstekens die in een shell-oneliner sneuvelen.
+
 ```bash
-node -e "require('dotenv').config({path:'.env.local'});const m=require('mysql2/promise');(async()=>{const c=await m.createConnection({host:process.env.DB_HOST,port:process.env.DB_PORT,user:process.env.DB_USER,password:process.env.DB_PASSWORD,database:process.env.DB_NAME});await c.query('ALTER TABLE klanten ADD COLUMN btwNummer VARCHAR(20) AFTER kvk');const [r]=await c.query('SHOW COLUMNS FROM klanten LIKE \"btwNummer\"');console.log(r);await c.end();})()"
+cat > /tmp/migrate-btwnummer.js <<'EOF'
+require('dotenv').config({ path: '.env.local' });
+const mysql = require('mysql2/promise');
+(async () => {
+  const c = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+  });
+  await c.query('ALTER TABLE klanten ADD COLUMN btwNummer VARCHAR(20) AFTER kvk');
+  const [rows] = await c.query("SHOW COLUMNS FROM klanten LIKE 'btwNummer'");
+  console.log(rows);
+  await c.end();
+})();
+EOF
+node /tmp/migrate-btwnummer.js
 ```
 
-Expected: één rij met `Field: 'btwNummer'`, `Type: 'varchar(20)'`, `Null: 'YES'`.
+Expected: één rij met `Field: 'btwNummer'`, `Type: 'varchar(20)'`, `Null: 'YES'`. Draai dit één keer — een tweede run faalt met `Duplicate column name 'btwNummer'`, wat betekent dat de migratie al gelukt is.
 
 Dit is **staging**. De productiedatabase blijft in dit plan ongemoeid — zie de laatste stap van deze taak.
 
