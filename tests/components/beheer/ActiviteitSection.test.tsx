@@ -42,6 +42,12 @@ describe('ActiviteitSection', () => {
     expect(screen.getByTestId('data-table-row-log-2')).toHaveTextContent('Onbekend');
   });
 
+  it('keeps the newest-first order it gets from the API instead of sorting alphabetically', () => {
+    renderSection();
+    const rowOrder = screen.getAllByTestId(/^data-table-row-/).map((row) => row.getAttribute('data-testid'));
+    expect(rowOrder).toEqual(['data-table-row-log-1', 'data-table-row-log-2']);
+  });
+
   it('shows the omschrijving when present, and no stray "undefined" text when absent', () => {
     renderSection([
       {

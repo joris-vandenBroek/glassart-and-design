@@ -75,7 +75,11 @@ describe('DataTable', () => {
 
   it('skips a non-sortable first column when picking the default sort column', () => {
     renderTable({
-      columns: [{ key: 'status', label: 'Status', sortable: false }, ...COLUMNS],
+      columns: [
+        { key: 'status', label: 'Status', sortable: false },
+        { key: 'name', label: 'Naam' },
+        { key: 'amount', label: 'Bedrag' },
+      ],
     });
     const rowOrder = () => screen.getAllByTestId(/^data-table-row-/).map((row) => row.getAttribute('data-testid'));
     expect(rowOrder()).toEqual(['data-table-row-b', 'data-table-row-a', 'data-table-row-c']);
