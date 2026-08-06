@@ -28,6 +28,7 @@ const KLANT: Klant = {
   id: 'uid-1',
   companyName: 'Testbedrijf BV',
   kvk: '12345678',
+  btwNummer: 'NL123456789B01',
   contactPerson: 'Jan Jansen',
   email: 'jan@example.com',
   phone: '0612345678',
@@ -133,6 +134,62 @@ describe('KlantModal', () => {
     expect(screen.getByTestId('klant-modal')).toHaveTextContent('Testbedrijf BV');
     expect(screen.getByTestId('klant-modal')).toHaveTextContent('12345678');
     expect(screen.getByTestId('klant-modal-prijsgroep')).toHaveValue('pg-1');
+  });
+
+  it('shows the btwNummer', () => {
+    renderModal(KLANT);
+    expect(screen.getByTestId('klant-modal')).toHaveTextContent('NL123456789B01');
+  });
+
+  it('saves an edited btwNummer in normalised form', async () => {
+    renderModal(KLANT);
+    fireEvent.click(screen.getByTestId('klant-modal-bewerken'));
+    fireEvent.change(screen.getByTestId('klant-modal-btwNummer'), {
+      target: { value: 'nl 9876.543.21 b02' },
+    });
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
+    await waitFor(() => expect(patchCall()).toBeDefined());
+    expect(patchBody().btwNummer).toBe('NL987654321B02');
+  });
+
+  it('refuses to save a btwNummer that does not match the country format', async () => {
+    renderModal(KLANT);
+    fireEvent.click(screen.getByTestId('klant-modal-bewerken'));
+    fireEvent.change(screen.getByTestId('klant-modal-btwNummer'), {
+      target: { value: 'BE0411905847' },
+    });
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
+    expect(await screen.findByTestId('klant-modal-error')).toHaveTextContent(
+      'Dit btw-nummer heeft niet het juiste formaat voor het gekozen land.'
+    );
+    expect(patchCall()).toBeUndefined();
+  });
+
+  it('saves an existing EU klant whose btwNummer is still empty', async () => {
+    renderModal({ ...KLANT, land: 'BE', btwNummer: '' });
+    fireEvent.click(screen.getByTestId('klant-modal-bewerken'));
+    fireEvent.change(screen.getByTestId('klant-modal-phone'), { target: { value: '+3211223344' } });
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
+    await waitFor(() => expect(patchCall()).toBeDefined());
+  });
+
+  it('still blocks the save when land changes to a country the stored btwNummer does not match', async () => {
+    renderModal(KLANT); // NL123456789B01 / land NL, both valid until land changes below
+    fireEvent.click(screen.getByTestId('klant-modal-bewerken'));
+    fireEvent.focus(screen.getByTestId('klant-modal-land'));
+    fireEvent.click(screen.getByTestId('klant-modal-land-option-BE'));
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
+    expect(await screen.findByTestId('klant-modal-error')).toHaveTextContent(
+      'Dit btw-nummer heeft niet het juiste formaat voor het gekozen land.'
+    );
+    expect(patchCall()).toBeUndefined();
+  });
+
+  it('does not block a save that touches neither btwNummer nor land, even with a mismatched stored pair', async () => {
+    renderModal({ ...KLANT, land: 'BE', btwNummer: 'NL123456789B01', status: 'Goedgekeurd', prijsgroepId: 'pg-1' });
+    fireEvent.change(screen.getByTestId('klant-modal-prijsgroep'), { target: { value: 'pg-2' } });
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
+    await waitFor(() => expect(patchCall()).toBeDefined());
   });
 
   it('shows the required-field legend', () => {
@@ -245,6 +302,7 @@ describe('KlantModal', () => {
     expect(patchBody()).toEqual({
       companyName: 'Testbedrijf BV',
       kvk: '12345678',
+      btwNummer: 'NL123456789B01',
       contactPerson: 'Piet Pietersen',
       contactPreference: 'email',
       email: 'jan@example.com',
@@ -298,6 +356,7 @@ describe('KlantModal', () => {
     expect(patchBody()).toEqual({
       companyName: 'Testbedrijf BV',
       kvk: '12345678',
+      btwNummer: 'NL123456789B01',
       contactPerson: 'Jan Jansen',
       contactPreference: 'email',
       email: 'jan@example.com',
@@ -462,7 +521,9 @@ describe('KlantModal', () => {
   });
 
   it('includes land and invoiceLand in the Opslaan diff when changed', async () => {
-    const { onUpdated } = renderModal({ ...KLANT, land: 'NL' });
+    // btwNummer is cleared here: the fixture's NL-format number would fail validation
+    // once the land changes to BE, which is unrelated to what this test verifies.
+    const { onUpdated } = renderModal({ ...KLANT, land: 'NL', btwNummer: '' });
     fireEvent.click(screen.getByTestId('klant-modal-bewerken'));
     fireEvent.focus(screen.getByTestId('klant-modal-land'));
     fireEvent.click(screen.getByTestId('klant-modal-land-option-BE'));
@@ -472,6 +533,7 @@ describe('KlantModal', () => {
     expect(patchBody()).toEqual({
       companyName: 'Testbedrijf BV',
       kvk: '12345678',
+      btwNummer: '',
       contactPerson: 'Jan Jansen',
       contactPreference: 'email',
       email: 'jan@example.com',
@@ -488,7 +550,9 @@ describe('KlantModal', () => {
       invoiceCity: '',
       invoiceLand: '',
     });
-    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, land: 'BE' }));
+    await waitFor(() =>
+      expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, land: 'BE', btwNummer: '' })
+    );
   });
 
   it('shows an invoiceLand Combobox inside the factuuradres block once it has a value', () => {

@@ -160,4 +160,60 @@ describe('customer auth routes', () => {
     const meBody2 = await meResponse2.json();
     expect(meBody2.user.prijsgroep).toBeNull();
   });
+
+  it('refuses to register an EU klant outside NL without a btwNummer', async () => {
+    const response = await register(
+      jsonRequest({
+        email: 'geen-btw@example.com',
+        password: 'geheim123',
+        companyName: 'Brussels Hotel',
+        land: 'BE',
+      })
+    );
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'btwnummer-verplicht' });
+  });
+
+  it('refuses to register a btwNummer in the wrong format', async () => {
+    const response = await register(
+      jsonRequest({
+        email: 'fout-btw@example.com',
+        password: 'geheim123',
+        companyName: 'Brussels Hotel',
+        land: 'BE',
+        btwNummer: 'NL123456789B01',
+      })
+    );
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'btwnummer-ongeldig' });
+  });
+
+  it('registers a klant outside the EU without a btwNummer', async () => {
+    const response = await register(
+      jsonRequest({
+        email: 'zwitser@example.com',
+        password: 'geheim123',
+        companyName: 'Zürich Hotel',
+        land: 'CH',
+      })
+    );
+    expect(response.status).toBe(201);
+  });
+
+  it('stores the registered btwNummer in normalised form', async () => {
+    const response = await register(
+      jsonRequest({
+        email: 'belg@example.com',
+        password: 'geheim123',
+        companyName: 'Brussels Hotel',
+        land: 'BE',
+        btwNummer: 'be 0411.905.847',
+      })
+    );
+    expect(response.status).toBe(201);
+    const [rows] = await getPool().query('SELECT btwNummer FROM klanten WHERE email = ?', [
+      'belg@example.com',
+    ]);
+    expect((rows as Array<{ btwNummer: string }>)[0].btwNummer).toBe('BE0411905847');
+  });
 });

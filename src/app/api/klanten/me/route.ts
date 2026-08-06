@@ -3,6 +3,7 @@ import { getRow, updateRow } from '@/lib/server/crud';
 import { requireKlant } from '@/lib/server/requireAuth';
 import { hashPassword } from '@/lib/server/password';
 import { SELF_EDITABLE_KLANT_FIELDS } from '@/lib/server/klantFields';
+import { checkBtwNummerUpdate } from '@/lib/server/btwNummerCheck';
 
 // email isn't in the shared registration allowlist (register/route.ts handles it
 // separately via a uniqueness check) but a klant editing their own profile may change it.
@@ -31,6 +32,10 @@ export async function PATCH(request: Request) {
   const updates: Record<string, unknown> = {};
   for (const field of SELF_EDITABLE_FIELDS) {
     if (field in body) updates[field] = body[field];
+  }
+
+  if ((await checkBtwNummerUpdate(updates, klantId)) === 'ongeldig') {
+    return NextResponse.json({ error: 'btwnummer-ongeldig' }, { status: 400 });
   }
 
   if (typeof body.password === 'string' && body.password.length > 0) {

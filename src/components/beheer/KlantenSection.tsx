@@ -12,6 +12,7 @@ export interface Klant {
   id: string;
   companyName: string;
   kvk: string;
+  btwNummer?: string | null;
   contactPerson: string;
   email: string;
   phone: string;
@@ -70,6 +71,7 @@ export function KlantenSection({
   const columns: Column<Klant>[] = [
     { key: 'companyName', label: t('klantenColCompanyName') },
     { key: 'kvk', label: t('klantenColKvk') },
+    { key: 'btwNummer', label: t('klantenColBtwNummer') },
     { key: 'contactPerson', label: t('klantenColContactPerson') },
     { key: 'email', label: t('klantenColEmail') },
     { key: 'phone', label: t('klantenColPhone') },

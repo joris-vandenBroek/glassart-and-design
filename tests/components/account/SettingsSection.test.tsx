@@ -12,6 +12,7 @@ vi.stubGlobal('fetch', fetchMock);
 
 const KLANT_PROFILE = {
   companyName: 'Hotel De Zilveren Zwaan',
+  btwNummer: 'NL123456789B01',
   contactPerson: 'Anne de Vries',
   email: 'anne@dezilverenzwaan.nl',
   phone: '0612345678',
@@ -76,6 +77,61 @@ describe('SettingsSection', () => {
     expect(screen.getByTestId('settings-email')).toHaveValue('anne@dezilverenzwaan.nl');
     expect(screen.getByTestId('settings-contact-preference')).toHaveValue('email');
     expect(screen.getByTestId('settings-language-preference')).toHaveValue('nl');
+  });
+
+  it('loads the btwNummer into the form', async () => {
+    renderSection();
+    await waitFor(() =>
+      expect(screen.getByTestId('settings-btwnummer')).toHaveValue('NL123456789B01')
+    );
+  });
+
+  it('saves the btwNummer in normalised form', async () => {
+    renderSection();
+    await waitFor(() => expect(screen.getByTestId('settings-submit')).toBeInTheDocument());
+    fireEvent.change(screen.getByTestId('settings-btwnummer'), {
+      target: { value: 'nl 9876.543.21 b02' },
+    });
+    fireEvent.click(screen.getByTestId('settings-submit'));
+    await waitFor(() => expect(screen.getByTestId('settings-saved')).toBeInTheDocument());
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/klanten/me',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ ...KLANT_PROFILE, btwNummer: 'NL987654321B02' }),
+      })
+    );
+  });
+
+  it('refuses to save a btwNummer that does not match the country format', async () => {
+    renderSection();
+    await waitFor(() => expect(screen.getByTestId('settings-submit')).toBeInTheDocument());
+    fireEvent.change(screen.getByTestId('settings-btwnummer'), {
+      target: { value: 'BE0411905847' },
+    });
+    fireEvent.click(screen.getByTestId('settings-submit'));
+    expect(await screen.findByTestId('settings-btwnummer-error')).toHaveTextContent(
+      'Dit btw-nummer heeft niet het juiste formaat voor het gekozen land.'
+    );
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      '/api/klanten/me',
+      expect.objectContaining({ method: 'PATCH' })
+    );
+  });
+
+  it('saves fine with an empty btwNummer', async () => {
+    renderSection();
+    await waitFor(() => expect(screen.getByTestId('settings-submit')).toBeInTheDocument());
+    fireEvent.change(screen.getByTestId('settings-btwnummer'), { target: { value: '' } });
+    fireEvent.click(screen.getByTestId('settings-submit'));
+    await waitFor(() => expect(screen.getByTestId('settings-saved')).toBeInTheDocument());
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/klanten/me',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ ...KLANT_PROFILE, btwNummer: '' }),
+      })
+    );
   });
 
   it('shows a password-mismatch error and does not save when passwords differ', async () => {

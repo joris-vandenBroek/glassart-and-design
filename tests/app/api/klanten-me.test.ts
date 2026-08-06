@@ -146,4 +146,39 @@ describe('klanten self-service route', () => {
     expect(row.land).toBe('BE');
     expect(row.invoiceLand).toBe('DE');
   });
+
+  it('accepts and stores a valid btwNummer in normalised form', async () => {
+    const { klant, cookie } = await createKlantWithCookie({ land: 'BE' });
+    const response = await patchMe(req('PATCH', { btwNummer: 'BE 0411.905.847' }, cookie));
+    expect(response.status).toBe(200);
+    const [rows] = await getPool().query('SELECT btwNummer FROM klanten WHERE id = ?', [klant.id]);
+    expect((rows as Array<{ btwNummer: string }>)[0].btwNummer).toBe('BE0411905847');
+  });
+
+  it('rejects a btwNummer that does not match the country format', async () => {
+    const { cookie } = await createKlantWithCookie({ land: 'BE' });
+    const response = await patchMe(req('PATCH', { btwNummer: 'NL123456789B01' }, cookie));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'btwnummer-ongeldig' });
+  });
+
+  it('validates against the land in the same request when it is being changed too', async () => {
+    const { cookie } = await createKlantWithCookie({ land: 'NL' });
+    const response = await patchMe(
+      req('PATCH', { land: 'BE', btwNummer: 'NL123456789B01' }, cookie)
+    );
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'btwnummer-ongeldig' });
+  });
+
+  it('stores an empty btwNummer as null, so an existing EU klant stays saveable', async () => {
+    const { klant, cookie } = await createKlantWithCookie({
+      land: 'BE',
+      btwNummer: 'BE0411905847',
+    });
+    const response = await patchMe(req('PATCH', { btwNummer: '' }, cookie));
+    expect(response.status).toBe(200);
+    const [rows] = await getPool().query('SELECT btwNummer FROM klanten WHERE id = ?', [klant.id]);
+    expect((rows as Array<{ btwNummer: string | null }>)[0].btwNummer).toBeNull();
+  });
 });

@@ -27,6 +27,8 @@ const BEDRIJFSGEGEVENS: Bedrijfsgegevens = {
   bezoekadres: 'Den Heuvel 21, 5688 EM Oirschot',
   email: 'info@glassartdesign.nl',
   whatsappNummer: '31600000000',
+  tenaamstelling: 'Glassart & Design',
+  bic: 'BANKNL2A',
   iban: 'NL00 BANK 0123 4567 89',
   kvkNummer: '12345678',
   btwNummer: 'NL123456789B01',
@@ -73,6 +75,8 @@ describe('GlassartDesignSection', () => {
     expect(screen.getByTestId('glassart-design-bezoekadres')).toHaveValue('Den Heuvel 21, 5688 EM Oirschot');
     expect(screen.getByTestId('glassart-design-email')).toHaveValue('info@glassartdesign.nl');
     expect(screen.getByTestId('glassart-design-whatsapp')).toHaveValue('31600000000');
+    expect(screen.getByTestId('glassart-design-tenaamstelling')).toHaveValue('Glassart & Design');
+    expect(screen.getByTestId('glassart-design-bic')).toHaveValue('BANKNL2A');
     expect(screen.getByTestId('glassart-design-iban')).toHaveValue('NL00 BANK 0123 4567 89');
     expect(screen.getByTestId('glassart-design-kvk')).toHaveValue('12345678');
     expect(screen.getByTestId('glassart-design-btw')).toHaveValue('NL123456789B01');
@@ -134,5 +138,21 @@ describe('GlassartDesignSection', () => {
       'Er is iets misgegaan. Probeer het opnieuw.'
     );
     expect(logActiviteitMock).not.toHaveBeenCalled();
+  });
+
+  it('saves an edited tenaamstelling and bic', async () => {
+    const { onSave } = renderSection();
+    fireEvent.change(screen.getByTestId('glassart-design-tenaamstelling'), {
+      target: { value: 'Glassart & Design B.V.' },
+    });
+    fireEvent.change(screen.getByTestId('glassart-design-bic'), {
+      target: { value: 'RABONL2U' },
+    });
+    fireEvent.click(screen.getByTestId('glassart-design-opslaan'));
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({ tenaamstelling: 'Glassart & Design B.V.', bic: 'RABONL2U' })
+      )
+    );
   });
 });

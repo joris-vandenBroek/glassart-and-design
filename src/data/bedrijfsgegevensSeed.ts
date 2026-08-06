@@ -4,6 +4,8 @@ export const BEDRIJFSGEGEVENS_SEED: Bedrijfsgegevens = {
   bezoekadres: 'Den Heuvel 21, 5688 EM Oirschot',
   email: 'info@glassartanddesign.com',
   whatsappNummer: '31600000000',
+  tenaamstelling: 'Glassart & Design',
+  bic: 'BANKNL2A',
   iban: 'NL00 BANK 0123 4567 89',
   kvkNummer: '12345678',
   btwNummer: 'NL123456789B01',

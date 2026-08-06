@@ -209,3 +209,12 @@ export function landNaam(code: string | null | undefined): string {
   if (!code) return '';
   return LANDEN.find((land) => land.code === code)?.naam ?? code;
 }
+
+// The 27 EU member states, by ISO 3166-1 alpha-2 code. Used to decide whether a klant
+// needs a VAT number and which format to validate it against. Note that the VAT prefix
+// is not always the ISO code -- Greece is GR here but EL on a VAT number (see BTW_PREFIX
+// in src/lib/btwNummer.ts). Keep in sync with BTW_PATRONEN: every code here needs a pattern.
+export const EU_LANDCODES: ReadonlySet<string> = new Set([
+  'AT', 'BE', 'BG', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GR', 'HR', 'HU',
+  'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'NL', 'PL', 'PT', 'RO', 'SE', 'SI', 'SK',
+]);

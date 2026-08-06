@@ -5,6 +5,7 @@ CREATE TABLE klanten (
   wachtwoordHash VARCHAR(255) NOT NULL,
   companyName VARCHAR(255),
   kvk VARCHAR(50),
+  btwNummer VARCHAR(20),
   contactPerson VARCHAR(255),
   phone VARCHAR(50),
   contactPreference VARCHAR(50),

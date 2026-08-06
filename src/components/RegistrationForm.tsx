@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { logActiviteit, ONBEKENDE_ACTOR } from '@/lib/logActiviteit';
+import { isBtwNummerVerplicht, normaliseerBtwNummer, valideerBtwNummer } from '@/lib/btwNummer';
 import { PasswordInput } from '@/components/PasswordInput';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { Combobox } from '@/components/Combobox';
@@ -17,6 +18,7 @@ export function RegistrationForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [btwNummerError, setBtwNummerError] = useState<string | null>(null);
   const hasLoggedVisit = useRef(false);
 
   useEffect(() => {
@@ -36,6 +38,18 @@ export function RegistrationForm() {
     setPasswordError(null);
     setSubmitError(null);
 
+    const btwNummerRuw = (formData.get('btwNummer') as string) ?? '';
+    const btwNummer = normaliseerBtwNummer(btwNummerRuw);
+    if (btwNummer === '' && isBtwNummerVerplicht(land)) {
+      setBtwNummerError(t('btwNummerVerplicht'));
+      return;
+    }
+    if (btwNummer !== '' && valideerBtwNummer(btwNummer, land) === 'ongeldig') {
+      setBtwNummerError(t('btwNummerOngeldig'));
+      return;
+    }
+    setBtwNummerError(null);
+
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
     const companyName = formData.get('companyName') as string;
@@ -49,6 +63,7 @@ export function RegistrationForm() {
           password,
           companyName,
           kvk: formData.get('kvk') as string,
+          btwNummer,
           contactPerson: formData.get('contactPerson') as string,
           phone: formData.get('phone') as string,
           contactPreference: formData.get('contactPreference') as string,
@@ -112,6 +127,26 @@ export function RegistrationForm() {
         </span>
         <input type="text" name="kvk" required data-testid="word-klant-kvk" className={fieldClassName} />
       </label>
+
+      <label className={labelClassName}>
+        <span>
+          {t('labelBtwNummer')}
+          {isBtwNummerVerplicht(land) && <RequiredMark />}
+        </span>
+        <input
+          type="text"
+          name="btwNummer"
+          required={isBtwNummerVerplicht(land)}
+          data-testid="word-klant-btwnummer"
+          className={fieldClassName}
+        />
+      </label>
+
+      {btwNummerError && (
+        <p data-testid="word-klant-btwnummer-error" className="text-xs text-red-400">
+          {btwNummerError}
+        </p>
+      )}
 
       <label className={labelClassName}>
         <span>

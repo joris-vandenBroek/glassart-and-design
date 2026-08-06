@@ -150,9 +150,11 @@ describe('valideerBtwNummer', () => {
     }
   });
 
-  it('rejects a wrong-length number for every EU country', () => {
+  // Four extra digits, not two: BG, CZ and RO have variable-length patterns where a
+  // two-digit suffix can still land inside the allowed range and stay valid.
+  it('rejects an over-long number for every EU country', () => {
     for (const [code, nummer] of Object.entries(GELDIG)) {
-      expect(valideerBtwNummer(`${nummer}99`, code), `${code} te lang`).toBe('ongeldig');
+      expect(valideerBtwNummer(`${nummer}0000`, code), `${code} te lang`).toBe('ongeldig');
     }
   });
 
@@ -646,11 +648,30 @@ In `db/schema.sql`, in `CREATE TABLE klanten`, direct ná de `kvk`-regel:
 
 De testsuite praat met de gedeelde staging-database, dus de kolom moet daar bestaan voordat de tests kunnen slagen.
 
+Schrijf het scriptje naar een bestand in plaats van `node -e` — het bevat aanhalingstekens die in een shell-oneliner sneuvelen.
+
 ```bash
-node -e "require('dotenv').config({path:'.env.local'});const m=require('mysql2/promise');(async()=>{const c=await m.createConnection({host:process.env.DB_HOST,port:process.env.DB_PORT,user:process.env.DB_USER,password:process.env.DB_PASSWORD,database:process.env.DB_NAME});await c.query('ALTER TABLE klanten ADD COLUMN btwNummer VARCHAR(20) AFTER kvk');const [r]=await c.query('SHOW COLUMNS FROM klanten LIKE \"btwNummer\"');console.log(r);await c.end();})()"
+cat > /tmp/migrate-btwnummer.js <<'EOF'
+require('dotenv').config({ path: '.env.local' });
+const mysql = require('mysql2/promise');
+(async () => {
+  const c = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+  });
+  await c.query('ALTER TABLE klanten ADD COLUMN btwNummer VARCHAR(20) AFTER kvk');
+  const [rows] = await c.query("SHOW COLUMNS FROM klanten LIKE 'btwNummer'");
+  console.log(rows);
+  await c.end();
+})();
+EOF
+node /tmp/migrate-btwnummer.js
 ```
 
-Expected: één rij met `Field: 'btwNummer'`, `Type: 'varchar(20)'`, `Null: 'YES'`.
+Expected: één rij met `Field: 'btwNummer'`, `Type: 'varchar(20)'`, `Null: 'YES'`. Draai dit één keer — een tweede run faalt met `Duplicate column name 'btwNummer'`, wat betekent dat de migratie al gelukt is.
 
 Dit is **staging**. De productiedatabase blijft in dit plan ongemoeid — zie de laatste stap van deze taak.
 
@@ -1401,7 +1422,7 @@ Expected: alle tests groen. Deze wijziging raakt de gedeelde `Klant`-vorm en bei
 npx tsc --noEmit
 ```
 
-Expected: geen fouten.
+Expected: exact zes fouten, allemaal `TS2339: Property 'naam' does not exist on type '{ id: string; }'` in `tests/regression/staging-scenarios.test.ts` (regels 414, 450, 465, 471, 690). Die bestaan al op `master` en staan los van dit werk — laat ze staan, ze horen niet bij deze taak. Elke andere fout is wél van jou.
 
 ```bash
 npm run lint
@@ -1420,6 +1441,6 @@ git commit -m "feat: let klanten manage their own VAT number on the account page
 
 ## Na afloop
 
-- `db/migrations/2026-08-06-klant-btwnummer.sql` is op **staging** uitgevoerd (Task 3, stap 4) en moet nog op **productie** draaien. Vraag daar expliciet toestemming voor op het moment dat deze code naar productie gaat — niet eerder.
+- `db/migrations/2026-08-06-klant-btwnummer.sql` is op **staging** uitgevoerd (Task 3, stap 4) en moet nog op **productie** draaien. Vraag daar expliciet toestemming voor zodra deze code richting productie gaat, en laat de migratie vóór de productie-deploy draaien, nooit erna: `POST /api/auth/register` zet `fields.btwNummer` altijd, en `insertRow` bouwt zijn kolomlijst uit de object-keys, dus zonder de kolom faalt elke registratie en elke klant-profielwijziging op productie met "Unknown column 'btwNummer'". Een nullable kolom toevoegen is voor de nu draaiende productiecode onschadelijk, dus er is geen reden om de migratie uit te stellen tot na de deploy.
 - Niet in dit plan, bewust: verleggen/reverse charge op bestellingen, VIES-controle, blokkade bij klantgoedkeuring, een facturenmodule.
 - `kvk` blijft afwezig op de accountpagina terwijl `btwNummer` er wél staat. Dat is een bewuste keuze (spec, sectie E), geen omissie.
