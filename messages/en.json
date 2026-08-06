@@ -250,8 +250,9 @@
     "orders": {
       "lineSummary": "{lines, plural, one {# order line} other {# order lines}}, totaling {quantity, plural, one {# piece} other {# pieces}}",
       "statusInBehandeling": "In progress",
+      "statusAfgerond": "Completed",
       "statusAfgewezen": "Rejected",
-      "statusHelp": "In progress means we're still processing your order. Rejected means we weren't able to fulfil the order — feel free to contact us if you have any questions.",
+      "statusHelp": "In progress means we're still processing your order. Completed means the order has been delivered. Rejected means we weren't able to fulfil the order — feel free to contact us if you have any questions.",
       "modalClose": "Close",
       "modalLineUnknown": "Unknown item",
       "modalLinePriceOnRequest": "Price on request",

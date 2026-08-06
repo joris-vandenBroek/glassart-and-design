@@ -22,13 +22,19 @@ describe('toKlantBestellingStatus', () => {
     expect(toKlantBestellingStatus('Afgewezen')).toBe('afgewezen');
   });
 
-  it('provides a badge class for both klant statuses', () => {
-    expect(KLANT_STATUS_BADGE_CLASS.inBehandeling).toBe('bg-sky-400/10 text-sky-300');
-    expect(KLANT_STATUS_BADGE_CLASS.afgewezen).toBe('bg-red-400/10 text-red-400');
+  it('maps "Afgerond" to afgerond', () => {
+    expect(toKlantBestellingStatus('Afgerond')).toBe('afgerond');
   });
 
-  it('provides a translation key for both klant statuses', () => {
+  it('provides a badge class for all 3 klant statuses', () => {
+    expect(KLANT_STATUS_BADGE_CLASS.inBehandeling).toBe('bg-sky-400/10 text-sky-300');
+    expect(KLANT_STATUS_BADGE_CLASS.afgewezen).toBe('bg-red-400/10 text-red-400');
+    expect(KLANT_STATUS_BADGE_CLASS.afgerond).toBe('bg-teal-400/10 text-teal-300');
+  });
+
+  it('provides a translation key for all 3 klant statuses', () => {
     expect(KLANT_STATUS_TRANSLATION_KEY.inBehandeling).toBe('statusInBehandeling');
     expect(KLANT_STATUS_TRANSLATION_KEY.afgewezen).toBe('statusAfgewezen');
+    expect(KLANT_STATUS_TRANSLATION_KEY.afgerond).toBe('statusAfgerond');
   });
 });

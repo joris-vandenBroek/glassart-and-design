@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { DrukkersSection } from '@/components/beheer/DrukkersSection';
 import type { Drukker } from '@/components/beheer/materiaalTypes';
@@ -37,19 +37,22 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof DrukkersSe
   const onAdd = vi.fn().mockResolvedValue(true);
   const onUpdate = vi.fn().mockResolvedValue(true);
   const onRemove = vi.fn().mockResolvedValue(true);
+  const onBestellingUpdated = vi.fn();
   render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <DrukkersSection
         drukkers={DRUKKERS}
+        bestellingen={[]}
         loadError={null}
         onAdd={onAdd}
         onUpdate={onUpdate}
         onRemove={onRemove}
+        onBestellingUpdated={onBestellingUpdated}
         {...overrides}
       />
     </NextIntlClientProvider>
   );
-  return { onAdd, onUpdate, onRemove };
+  return { onAdd, onUpdate, onRemove, onBestellingUpdated };
 }
 
 beforeEach(() => {
@@ -68,6 +71,29 @@ describe('DrukkersSection', () => {
   it('renders nothing while drukkers is null and there is no error', () => {
     renderSection({ drukkers: null });
     expect(screen.queryByTestId('drukkers-section')).not.toBeInTheDocument();
+  });
+
+  it('renders no afgerond badge and no afronden button in DrukkerModal while bestellingen is still loading (null)', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => [
+        {
+          id: 'zending-1',
+          verzondenOp: null,
+          onderwerp: 'x',
+          body: 'x',
+          bestellingIds: ['header-1'],
+          aantalKlanten: 1,
+          aantalRegels: 1,
+          verzondDoor: 'x',
+        },
+      ],
+    });
+    renderSection({ bestellingen: null });
+    fireEvent.click(screen.getByTestId('data-table-row-drukker-1'));
+    const zendingRow = await screen.findByTestId('drukker-zending-zending-1');
+    expect(within(zendingRow).queryByTestId('drukker-zending-afgerond-badge-zending-1')).not.toBeInTheDocument();
+    expect(within(zendingRow).queryByTestId('drukker-zending-afronden-zending-1')).not.toBeInTheDocument();
   });
 
   it('lists the drukkers in the table', () => {

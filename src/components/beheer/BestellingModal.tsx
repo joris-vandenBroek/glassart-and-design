@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Modal } from '@/components/Modal';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
+import { useBestellingHistorie } from '@/lib/useBestellingHistorie';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { resolveBtwPercentage } from '@/lib/resolveBtw';
 import { ProductImage } from '@/components/ProductImage';
@@ -17,6 +18,7 @@ const STATUS_BADGE_CLASS: Record<Bestelling['status'], string> = {
   'Te beoordelen': 'bg-amber-400/10 text-amber-300',
   'Te versturen naar drukker': 'bg-sky-400/10 text-sky-300',
   'Verstuurd naar drukker': 'bg-green-500/10 text-green-400',
+  Afgerond: 'bg-teal-400/10 text-teal-300',
   Afgewezen: 'bg-red-400/10 text-red-400',
 };
 
@@ -47,6 +49,14 @@ function isCustomLine(line: BestellingLine): boolean {
   return !line.maatId;
 }
 
+const HISTORIE_LABEL_KEY: Record<string, string> = {
+  'Te beoordelen': 'bestellingenHistorieTeBeoordelen',
+  'Te versturen naar drukker': 'bestellingenHistorieTeVersturenNaarDrukker',
+  'Verstuurd naar drukker': 'bestellingenHistorieVerstuurdNaarDrukker',
+  Afgerond: 'bestellingenHistorieAfgerond',
+  Afgewezen: 'bestellingenHistorieAfgewezen',
+};
+
 export function BestellingModal({
   bestelling,
   kunstwerken,
@@ -66,6 +76,7 @@ export function BestellingModal({
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
   const [lineDraft, setLineDraft] = useState<LineDraft | null>(null);
   const { user } = useAdminAuth();
+  const { historie } = useBestellingHistorie(bestelling?.id ?? null);
 
   useEffect(() => {
     if (bestelling) {
@@ -126,6 +137,38 @@ export function BestellingModal({
       if (!response.ok) throw new Error('update failed');
       void logActiviteit('bestelling_afgewezen', actorFromMedewerker(user), bestelling.bestelnr);
       onUpdated({ ...bestelling, status: 'Afgewezen' });
+    } catch {
+      setError(t('bestellingenActionError'));
+    }
+  }
+
+  async function handleAfronden() {
+    if (!bestelling) return;
+    try {
+      const response = await fetch(`/api/bestelheaders/${bestelling.id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status: 'Afgerond' }),
+      });
+      if (!response.ok) throw new Error('update failed');
+      void logActiviteit('bestelling_afgerond', actorFromMedewerker(user), bestelling.bestelnr);
+      onUpdated({ ...bestelling, status: 'Afgerond' });
+    } catch {
+      setError(t('bestellingenActionError'));
+    }
+  }
+
+  async function handleTerugzetten() {
+    if (!bestelling) return;
+    try {
+      const response = await fetch(`/api/bestelheaders/${bestelling.id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status: 'Verstuurd naar drukker' }),
+      });
+      if (!response.ok) throw new Error('update failed');
+      void logActiviteit('bestelling_afronding_teruggezet', actorFromMedewerker(user), bestelling.bestelnr);
+      onUpdated({ ...bestelling, status: 'Verstuurd naar drukker' });
     } catch {
       setError(t('bestellingenActionError'));
     }
@@ -271,7 +314,7 @@ export function BestellingModal({
         ) : undefined
       }
       footerActions={
-        bestelling ? (
+        bestelling && bestelling.status === 'Te beoordelen' ? (
           <>
             <button
               type="button"
@@ -291,6 +334,24 @@ export function BestellingModal({
               {t('bestellingenAfwijzen')}
             </button>
           </>
+        ) : bestelling && bestelling.status === 'Verstuurd naar drukker' ? (
+          <button
+            type="button"
+            onClick={handleAfronden}
+            data-testid="bestelling-modal-afronden"
+            className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+          >
+            {t('bestellingenAfronden')}
+          </button>
+        ) : bestelling && bestelling.status === 'Afgerond' ? (
+          <button
+            type="button"
+            onClick={handleTerugzetten}
+            data-testid="bestelling-modal-terugzetten"
+            className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+          >
+            {t('bestellingenTerugzetten')}
+          </button>
         ) : null
       }
     >
@@ -512,6 +573,24 @@ export function BestellingModal({
               );
             })}
           </ul>
+
+          <div className="flex flex-col gap-1 border-t border-white/10 pt-3 text-xs">
+            <span className="text-[0.65rem] uppercase tracking-wide text-white/40">{t('bestellingenHistorieTitel')}</span>
+            <ul data-testid="bestelling-modal-historie" className="flex flex-col gap-0.5">
+              {(historie ?? []).map((entry, index) => (
+                <li
+                  key={index}
+                  data-testid={`bestelling-modal-historie-item-${index}`}
+                  className="flex justify-between gap-3 text-white/60"
+                >
+                  <span>
+                    {HISTORIE_LABEL_KEY[entry.status] ? t(HISTORIE_LABEL_KEY[entry.status]) : entry.status}
+                  </span>
+                  <span>{entry.tijdstip.toLocaleString('nl-NL')}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
 
           {error && (
             <p data-testid="bestelling-modal-error" className="text-xs text-red-400">

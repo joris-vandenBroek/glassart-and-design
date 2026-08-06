@@ -1,19 +1,22 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { DrukkerModal } from '@/components/beheer/DrukkerModal';
 import type { Drukker } from '@/components/beheer/materiaalTypes';
+import type { Bestelling } from '@/components/beheer/BestellingenSection';
 import messages from '../../../messages/nl.json';
 
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
+
+const logActiviteitMock = vi.fn();
 
 vi.mock('@/lib/useAdminAuth', () => ({
   useAdminAuth: () => ({ user: { uid: 'staff-1', email: 'paul@glassartanddesign.com' } }),
 }));
 
 vi.mock('@/lib/logActiviteit', () => ({
-  logActiviteit: vi.fn(),
+  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
   actorFromMedewerker: () => ({ id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' }),
 }));
 
@@ -27,21 +30,34 @@ const DRUKKER: Drukker = {
   prijsafspraken: '',
 };
 
-function renderModal(state: { mode: 'edit'; drukker: Drukker } | { mode: 'add' } | null) {
+function renderModal(
+  state: { mode: 'edit'; drukker: Drukker } | { mode: 'add' } | null,
+  overrides: { bestellingen?: Bestelling[] | null; onBestellingUpdated?: (b: Bestelling) => void } = {}
+) {
   const onClose = vi.fn();
   const onAdd = vi.fn().mockResolvedValue(true);
   const onUpdate = vi.fn().mockResolvedValue(true);
   const onRemove = vi.fn().mockResolvedValue(true);
+  const onBestellingUpdated = overrides.onBestellingUpdated ?? vi.fn();
   render(
     <NextIntlClientProvider locale="nl" messages={messages}>
-      <DrukkerModal state={state} onClose={onClose} onAdd={onAdd} onUpdate={onUpdate} onRemove={onRemove} />
+      <DrukkerModal
+        state={state}
+        bestellingen={'bestellingen' in overrides ? overrides.bestellingen ?? null : []}
+        onClose={onClose}
+        onAdd={onAdd}
+        onUpdate={onUpdate}
+        onRemove={onRemove}
+        onBestellingUpdated={onBestellingUpdated}
+      />
     </NextIntlClientProvider>
   );
-  return { onClose, onAdd, onUpdate, onRemove };
+  return { onClose, onAdd, onUpdate, onRemove, onBestellingUpdated };
 }
 
 beforeEach(() => {
   fetchMock.mockReset();
+  logActiviteitMock.mockReset();
 });
 
 describe('DrukkerModal verplichte velden', () => {
@@ -140,10 +156,12 @@ describe('DrukkerModal zendingen', () => {
       <NextIntlClientProvider locale="nl" messages={messages}>
         <DrukkerModal
           state={{ mode: 'edit', drukker: DRUKKER }}
+          bestellingen={[]}
           onClose={vi.fn()}
           onAdd={vi.fn()}
           onUpdate={vi.fn().mockResolvedValue(true)}
           onRemove={onRemove}
+          onBestellingUpdated={vi.fn()}
         />
       </NextIntlClientProvider>
     );
@@ -176,5 +194,119 @@ describe('DrukkerModal zendingen', () => {
     const list = zendingRow.closest('ul');
     expect(list?.className).toMatch(/max-h-64/);
     expect(list?.className).toMatch(/overflow-y-auto/);
+  });
+});
+
+describe('DrukkerModal — zending afronden', () => {
+  const BESTELLING_1: Bestelling = {
+    id: 'header-1',
+    klantId: 'uid-1',
+    companyName: 'Testbedrijf BV',
+    bestelnr: 'GD-00201',
+    besteldatum: '1-7-2026',
+    status: 'Verstuurd naar drukker',
+    lineCount: 1,
+    totalQuantity: 1,
+    lines: [],
+  };
+  const BESTELLING_2: Bestelling = { ...BESTELLING_1, id: 'header-2', bestelnr: 'GD-00202' };
+
+  function mockZending(bestellingIds: string[]) {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => [
+        {
+          id: 'zending-1',
+          verzondenOp: '2026-07-24T10:00:00Z',
+          onderwerp: 'x',
+          body: 'x',
+          bestellingIds,
+          aantalKlanten: 1,
+          aantalRegels: bestellingIds.length,
+          verzondDoor: 'paul@glassartanddesign.com',
+        },
+      ],
+    });
+  }
+
+  it('shows "0 / 2 afgerond" and the afronden button when none of the zending\'s bestellingen are done', async () => {
+    mockZending(['header-1', 'header-2']);
+    renderModal({ mode: 'edit', drukker: DRUKKER }, { bestellingen: [BESTELLING_1, BESTELLING_2] });
+    const zendingRow = await screen.findByTestId('drukker-zending-zending-1');
+    expect(zendingRow).toHaveTextContent('0 / 2 afgerond');
+    expect(screen.getByTestId('drukker-zending-afronden-zending-1')).toBeInTheDocument();
+  });
+
+  it('hides the afronden button once every bestelling in the zending is Afgerond', async () => {
+    mockZending(['header-1', 'header-2']);
+    renderModal(
+      { mode: 'edit', drukker: DRUKKER },
+      {
+        bestellingen: [
+          { ...BESTELLING_1, status: 'Afgerond' },
+          { ...BESTELLING_2, status: 'Afgerond' },
+        ],
+      }
+    );
+    const zendingRow = await screen.findByTestId('drukker-zending-zending-1');
+    expect(zendingRow).toHaveTextContent('2 / 2 afgerond');
+    expect(screen.queryByTestId('drukker-zending-afronden-zending-1')).not.toBeInTheDocument();
+  });
+
+  it('marks every Verstuurd-naar-drukker bestelling in the zending as Afgerond, sequentially, and logs each one', async () => {
+    mockZending(['header-1', 'header-2']);
+    const { onBestellingUpdated } = renderModal(
+      { mode: 'edit', drukker: DRUKKER },
+      { bestellingen: [BESTELLING_1, BESTELLING_2] }
+    );
+    await screen.findByTestId('drukker-zending-zending-1');
+    fetchMock.mockResolvedValue({ ok: true });
+    fireEvent.click(screen.getByTestId('drukker-zending-afronden-zending-1'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-1',
+        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'Afgerond' }) })
+      )
+    );
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-2',
+        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'Afgerond' }) })
+      )
+    );
+    await waitFor(() => expect(onBestellingUpdated).toHaveBeenCalledTimes(2));
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'bestelling_afgerond',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'GD-00201'
+    );
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'bestelling_afgerond',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'GD-00202'
+    );
+  });
+
+  it('stops on the first failing PATCH and reports how many succeeded', async () => {
+    mockZending(['header-1', 'header-2']);
+    renderModal({ mode: 'edit', drukker: DRUKKER }, { bestellingen: [BESTELLING_1, BESTELLING_2] });
+    await screen.findByTestId('drukker-zending-zending-1');
+    let call = 0;
+    fetchMock.mockImplementation(() => {
+      call += 1;
+      return call === 1 ? Promise.resolve({ ok: true }) : Promise.reject(new Error('offline'));
+    });
+    fireEvent.click(screen.getByTestId('drukker-zending-afronden-zending-1'));
+
+    expect(await screen.findByTestId('drukker-zending-afronden-error')).toHaveTextContent('1');
+  });
+
+  it('renders no afgerond badge and no afronden button while bestellingen is still loading (null)', async () => {
+    mockZending(['header-1', 'header-2']);
+    renderModal({ mode: 'edit', drukker: DRUKKER }, { bestellingen: null });
+    const zendingRow = await screen.findByTestId('drukker-zending-zending-1');
+    expect(within(zendingRow).queryByTestId('drukker-zending-afgerond-badge-zending-1')).not.toBeInTheDocument();
+    expect(within(zendingRow).queryByTestId('drukker-zending-afronden-zending-1')).not.toBeInTheDocument();
   });
 });

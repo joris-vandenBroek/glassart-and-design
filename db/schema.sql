@@ -203,6 +203,14 @@ CREATE TABLE bestellines (
   FOREIGN KEY (bestelheaderId) REFERENCES bestelheaders(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE bestelstatusHistorie (
+  id CHAR(36) PRIMARY KEY,
+  bestelheaderId CHAR(36) NOT NULL,
+  status VARCHAR(50) NOT NULL,
+  tijdstip TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  FOREIGN KEY (bestelheaderId) REFERENCES bestelheaders(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE activiteitenlog (
   id CHAR(36) PRIMARY KEY,
   type VARCHAR(100) NOT NULL,

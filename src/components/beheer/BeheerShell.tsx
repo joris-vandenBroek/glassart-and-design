@@ -446,10 +446,12 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
         ) : activeSection === 'drukkers' ? (
           <DrukkersSection
             drukkers={drukkers.items}
+            bestellingen={bestellingen}
             loadError={drukkers.error === 'load' ? t('drukkersLoadError') : null}
             onAdd={drukkers.add}
             onUpdate={drukkers.update}
             onRemove={drukkers.remove}
+            onBestellingUpdated={handleBestellingUpdated}
           />
         ) : activeSection === 'glassartDesign' ? (
           <GlassartDesignSection

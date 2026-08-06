@@ -6,6 +6,7 @@ import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { POST as createHeader, GET as listHeaders } from '@/app/api/bestelheaders/route';
 import { PATCH as patchHeader } from '@/app/api/bestelheaders/[id]/route';
 import { PATCH as patchLine } from '@/app/api/bestelheaders/[id]/bestellines/[lineId]/route';
+import { GET as getStatusHistorie } from '@/app/api/bestelheaders/[id]/statushistorie/route';
 
 const BESTELNR_PADDING = 5;
 
@@ -418,6 +419,146 @@ describe('bestelheaders routes', () => {
     expect((headerRows as Array<{ status: string }>)[0].status).toBe('Te versturen naar drukker');
     const [updatedLineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE id = ?', [lineId]);
     expect(Number((updatedLineRows as Array<{ prijs: string }>)[0].prijs)).toBe(199);
+  });
+
+  it('records the initial Te beoordelen status in bestelstatusHistorie when a bestelling is created', async () => {
+    const { cookie } = await klant('historie-creatie@example.com');
+    const created = await createHeader(postRequest({ lines: [] }, cookie));
+    const header = await created.json();
+
+    const [rows] = await getPool().query(
+      'SELECT status FROM bestelstatusHistorie WHERE bestelheaderId = ? ORDER BY tijdstip ASC',
+      [header.id]
+    );
+    expect((rows as Array<{ status: string }>).map((r) => r.status)).toEqual(['Te beoordelen']);
+  });
+
+  it('records a new bestelstatusHistorie row each time a medewerker PATCHes a genuinely new status, in order', async () => {
+    const { cookie } = await klant('historie-keten@example.com');
+    const created = await createHeader(postRequest({ lines: [] }, cookie));
+    const header = await created.json();
+    const staffCookie = await medewerkerCookie();
+
+    for (const status of ['Te versturen naar drukker', 'Verstuurd naar drukker', 'Afgerond']) {
+      await patchHeader(
+        new Request('http://localhost/api', {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json', cookie: staffCookie },
+          body: JSON.stringify({ status }),
+        }),
+        { params: { id: header.id } }
+      );
+    }
+
+    const [rows] = await getPool().query(
+      'SELECT status FROM bestelstatusHistorie WHERE bestelheaderId = ? ORDER BY tijdstip ASC',
+      [header.id]
+    );
+    expect((rows as Array<{ status: string }>).map((r) => r.status)).toEqual([
+      'Te beoordelen',
+      'Te versturen naar drukker',
+      'Verstuurd naar drukker',
+      'Afgerond',
+    ]);
+  });
+
+  it('does not record a duplicate row when PATCHed with the same status it already has', async () => {
+    const { cookie } = await klant('historie-geen-duplicaat@example.com');
+    const created = await createHeader(postRequest({ lines: [] }, cookie));
+    const header = await created.json();
+    const staffCookie = await medewerkerCookie();
+
+    async function patchStatus(status: string) {
+      await patchHeader(
+        new Request('http://localhost/api', {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json', cookie: staffCookie },
+          body: JSON.stringify({ status }),
+        }),
+        { params: { id: header.id } }
+      );
+    }
+    await patchStatus('Te versturen naar drukker');
+    await patchStatus('Te versturen naar drukker'); // same status again -- must not add a row
+
+    const [rows] = await getPool().query(
+      'SELECT status FROM bestelstatusHistorie WHERE bestelheaderId = ? ORDER BY tijdstip ASC',
+      [header.id]
+    );
+    expect((rows as Array<{ status: string }>).map((r) => r.status)).toEqual([
+      'Te beoordelen',
+      'Te versturen naar drukker',
+    ]);
+  });
+
+  it('records a full history across Afgerond -> Terugzetten -> Afgerond again -- both completions are kept', async () => {
+    const { cookie } = await klant('historie-hergebruik@example.com');
+    const created = await createHeader(postRequest({ lines: [] }, cookie));
+    const header = await created.json();
+    const staffCookie = await medewerkerCookie();
+
+    async function patchStatus(status: string) {
+      await patchHeader(
+        new Request('http://localhost/api', {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json', cookie: staffCookie },
+          body: JSON.stringify({ status }),
+        }),
+        { params: { id: header.id } }
+      );
+    }
+    await patchStatus('Te versturen naar drukker');
+    await patchStatus('Verstuurd naar drukker');
+    await patchStatus('Afgerond');
+    await patchStatus('Verstuurd naar drukker'); // Terugzetten
+    await patchStatus('Afgerond'); // Afgerond again
+
+    const [rows] = await getPool().query(
+      'SELECT status FROM bestelstatusHistorie WHERE bestelheaderId = ? ORDER BY tijdstip ASC',
+      [header.id]
+    );
+    expect((rows as Array<{ status: string }>).map((r) => r.status)).toEqual([
+      'Te beoordelen',
+      'Te versturen naar drukker',
+      'Verstuurd naar drukker',
+      'Afgerond',
+      'Verstuurd naar drukker',
+      'Afgerond',
+    ]);
+  });
+
+  it('rejects reading statushistorie without a medewerker session', async () => {
+    const { cookie } = await klant('historie-unauth@example.com');
+    const created = await createHeader(postRequest({ lines: [] }, cookie));
+    const header = await created.json();
+
+    const response = await getStatusHistorie(new Request('http://localhost/api'), {
+      params: { id: header.id },
+    });
+    expect(response.status).toBe(401);
+  });
+
+  it('returns the statushistorie for one bestelling via GET, oldest first', async () => {
+    const { cookie } = await klant('historie-get@example.com');
+    const created = await createHeader(postRequest({ lines: [] }, cookie));
+    const header = await created.json();
+    const staffCookie = await medewerkerCookie();
+    await patchHeader(
+      new Request('http://localhost/api', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', cookie: staffCookie },
+        body: JSON.stringify({ status: 'Te versturen naar drukker' }),
+      }),
+      { params: { id: header.id } }
+    );
+
+    const response = await getStatusHistorie(
+      new Request('http://localhost/api', { headers: { cookie: staffCookie } }),
+      { params: { id: header.id } }
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as Array<{ status: string; tijdstip: string }>;
+    expect(body.map((row) => row.status)).toEqual(['Te beoordelen', 'Te versturen naar drukker']);
   });
 
   it('rejects patching a header status or line price without a medewerker session', async () => {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { BestellingModal } from '@/components/beheer/BestellingModal';
 import type { Bestelling } from '@/components/beheer/BestellingenSection';
@@ -114,6 +114,10 @@ function renderModal(bestelling: Bestelling | null) {
 
 beforeEach(() => {
   fetchMock.mockReset();
+  // Default: every fetch (including BestellingModal's mount-time historie GET) resolves
+  // cleanly with an empty history unless a test overrides it. Tests that only care about
+  // a PATCH call's arguments rely on this default for the historie GET they don't mock.
+  fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
   logActiviteitMock.mockReset();
 });
 
@@ -150,7 +154,7 @@ describe('BestellingModal', () => {
   });
 
   it('approves the bestelling and calls onUpdated with status Te versturen naar drukker', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     const { onUpdated } = renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-goedkeuren'));
 
@@ -169,7 +173,7 @@ describe('BestellingModal', () => {
   });
 
   it('rejects the bestelling and calls onUpdated with status Afgewezen', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     const { onUpdated } = renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen'));
 
@@ -192,7 +196,7 @@ describe('BestellingModal', () => {
   });
 
   it('logs bestelling_goedgekeurd with the logged-in medewerker on approval', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-goedkeuren'));
     await waitFor(() =>
@@ -205,7 +209,7 @@ describe('BestellingModal', () => {
   });
 
   it('logs bestelling_afgewezen with the logged-in medewerker on rejection', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen'));
     await waitFor(() =>
@@ -253,7 +257,7 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
   });
 
   it('sets a price on an unpriced line via "Prijs vaststellen", updates the order, logs the event, and re-enables Goedkeuren', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     const { onLinePrijsVastgesteld } = renderModal(BESTELLING_MET_EIGEN_MAAT);
     fireEvent.change(screen.getByTestId('bestelling-modal-prijs-input-line-3'), { target: { value: '275' } });
     fireEvent.click(screen.getByTestId('bestelling-modal-prijs-vaststellen-line-3'));
@@ -288,7 +292,7 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
   });
 
   it('keeps the draft price of a still-unpriced line after submitting another line\'s price in the same order', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
 
     const BESTELLING_MET_TWEE_ONGEPRIJSDE_REGELS: Bestelling = {
       id: 'header-3',
@@ -363,7 +367,7 @@ describe('BestellingModal — regel bewerken', () => {
   });
 
   it('edits a standard-maat line and saves materiaal/maat/prijs/aantal', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     const { onLineUpdated } = renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-1'));
     fireEvent.change(screen.getByTestId('bestelling-modal-regel-prijs-line-1'), { target: { value: '180' } });
@@ -396,17 +400,22 @@ describe('BestellingModal — regel bewerken', () => {
   });
 
   it('discards edits when Annuleren is clicked', () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-1'));
     fireEvent.change(screen.getByTestId('bestelling-modal-regel-aantal-line-1'), { target: { value: '9' } });
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-annuleren-line-1'));
     expect(screen.queryByTestId('bestelling-modal-regel-materiaal-line-1')).not.toBeInTheDocument();
     expect(screen.getByTestId('bestelling-modal-line-line-1')).toHaveTextContent('3 × € 150,00');
-    expect(fetchMock).not.toHaveBeenCalled();
+    // Annuleren must not PATCH the line -- the component's mount-time historie GET is unrelated.
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      '/api/bestelheaders/header-1/bestellines/line-1',
+      expect.anything()
+    );
   });
 
   it('shows breedte/hoogte inputs instead of a maat select for a custom-size line', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     const { onLineUpdated } = renderModal(BESTELLING_MET_EIGEN_MAAT);
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-3'));
     expect(screen.queryByTestId('bestelling-modal-regel-maat-line-3')).not.toBeInTheDocument();
@@ -516,5 +525,140 @@ describe('BestellingModal — btw', () => {
     const btw = screen.getByTestId('bestelling-modal-btw');
     expect(btw).toHaveTextContent('6');
     expect(btw).not.toHaveTextContent('21');
+  });
+});
+
+const BESTELLING_VERSTUURD: Bestelling = {
+  id: 'header-4',
+  klantId: 'uid-1',
+  companyName: 'Testbedrijf BV',
+  bestelnr: 'GD-00104',
+  besteldatum: '4-7-2026',
+  status: 'Verstuurd naar drukker',
+  lineCount: 1,
+  totalQuantity: 1,
+  lines: [{ id: 'line-6', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
+};
+
+const BESTELLING_AFGEROND: Bestelling = {
+  ...BESTELLING_VERSTUURD,
+  id: 'header-5',
+  bestelnr: 'GD-00105',
+  status: 'Afgerond',
+};
+
+describe('BestellingModal — afronden/terugzetten', () => {
+  it('shows only Afronden for a bestelling that is Verstuurd naar drukker', () => {
+    renderModal(BESTELLING_VERSTUURD);
+    expect(screen.getByTestId('bestelling-modal-afronden')).toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-goedkeuren')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-afwijzen')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-terugzetten')).not.toBeInTheDocument();
+  });
+
+  it('shows only Terugzetten for a bestelling that is Afgerond', () => {
+    renderModal(BESTELLING_AFGEROND);
+    expect(screen.getByTestId('bestelling-modal-terugzetten')).toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-afronden')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-goedkeuren')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-afwijzen')).not.toBeInTheDocument();
+  });
+
+  it('shows no action buttons for a bestelling that is Te versturen naar drukker or Afgewezen', () => {
+    renderModal({ ...BESTELLING_VERSTUURD, status: 'Te versturen naar drukker' });
+    expect(screen.queryByTestId('bestelling-modal-goedkeuren')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-afwijzen')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-afronden')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-terugzetten')).not.toBeInTheDocument();
+
+    renderModal({ ...BESTELLING_VERSTUURD, status: 'Afgewezen' });
+    expect(screen.queryAllByTestId('bestelling-modal-goedkeuren')).toHaveLength(0);
+    expect(screen.queryAllByTestId('bestelling-modal-afronden')).toHaveLength(0);
+    expect(screen.queryAllByTestId('bestelling-modal-terugzetten')).toHaveLength(0);
+  });
+
+  it('marks the bestelling as Afgerond, logs bestelling_afgerond, and calls onUpdated', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    const { onUpdated } = renderModal(BESTELLING_VERSTUURD);
+    fireEvent.click(screen.getByTestId('bestelling-modal-afronden'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-4',
+        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'Afgerond' }) })
+      )
+    );
+    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith(expect.objectContaining({ status: 'Afgerond' })));
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'bestelling_afgerond',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'GD-00104'
+    );
+  });
+
+  it('calls onUpdated with the status reverted to Verstuurd naar drukker when terugzetten, logs bestelling_afronding_teruggezet', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    const { onUpdated } = renderModal(BESTELLING_AFGEROND);
+    fireEvent.click(screen.getByTestId('bestelling-modal-terugzetten'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-5',
+        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'Verstuurd naar drukker' }) })
+      )
+    );
+    await waitFor(() =>
+      expect(onUpdated).toHaveBeenCalledWith({ ...BESTELLING_AFGEROND, status: 'Verstuurd naar drukker' })
+    );
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'bestelling_afronding_teruggezet',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'GD-00105'
+    );
+  });
+
+  it('shows an error and does not call onUpdated when afronden fails', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
+    const { onUpdated } = renderModal(BESTELLING_VERSTUURD);
+    fireEvent.click(screen.getByTestId('bestelling-modal-afronden'));
+    expect(await screen.findByTestId('bestelling-modal-error')).toBeInTheDocument();
+    expect(onUpdated).not.toHaveBeenCalled();
+    expect(logActiviteitMock).not.toHaveBeenCalled();
+  });
+
+  it('fetches and shows the status history from the API, in the order the server returned it', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { status: 'Te beoordelen', tijdstip: '2026-07-04T08:00:00.000Z' },
+        { status: 'Te versturen naar drukker', tijdstip: '2026-07-04T09:00:00.000Z' },
+        { status: 'Verstuurd naar drukker', tijdstip: '2026-07-05T08:00:00.000Z' },
+        { status: 'Afgerond', tijdstip: '2026-08-05T09:00:00.000Z' },
+      ],
+    });
+    renderModal(BESTELLING_AFGEROND);
+    const historie = await screen.findByTestId('bestelling-modal-historie');
+    expect(historie).toHaveTextContent('Te beoordelen');
+    expect(historie).toHaveTextContent('Goedgekeurd');
+    expect(historie).toHaveTextContent('Verstuurd naar drukker');
+    expect(historie).toHaveTextContent('Afgerond');
+    expect(fetchMock).toHaveBeenCalledWith('/api/bestelheaders/header-5/statushistorie');
+  });
+
+  it('shows the same status twice if it was reached twice (Afgerond -> Terugzetten -> Afgerond again)', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { status: 'Te beoordelen', tijdstip: '2026-07-04T08:00:00.000Z' },
+        { status: 'Verstuurd naar drukker', tijdstip: '2026-07-05T08:00:00.000Z' },
+        { status: 'Afgerond', tijdstip: '2026-07-06T08:00:00.000Z' },
+        { status: 'Verstuurd naar drukker', tijdstip: '2026-07-07T08:00:00.000Z' },
+        { status: 'Afgerond', tijdstip: '2026-08-05T09:00:00.000Z' },
+      ],
+    });
+    renderModal(BESTELLING_AFGEROND);
+    const historie = await screen.findByTestId('bestelling-modal-historie');
+    expect(within(historie).getAllByText('Afgerond')).toHaveLength(2);
+    expect(within(historie).getAllByText('Verstuurd naar drukker')).toHaveLength(2);
   });
 });
