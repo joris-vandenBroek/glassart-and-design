@@ -6,6 +6,7 @@ import { SettingsSection } from '@/components/account/SettingsSection';
 import messages from '../../../messages/nl.json';
 
 const replaceMock = vi.fn();
+const logActiviteitMock = vi.fn();
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
 
@@ -24,6 +25,16 @@ const KLANT_PROFILE = {
 vi.mock('@/i18n/navigation', () => ({
   usePathname: () => '/account',
   useRouter: () => ({ replace: replaceMock }),
+}));
+
+vi.mock('@/lib/logActiviteit', () => ({
+  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
+  actorFromCustomer: (
+    user: { uid: string; email: string | null; companyName: string | null; contactPerson: string | null } | null
+  ) =>
+    user
+      ? { id: user.uid, email: user.email ?? 'Onbekend', naam: user.companyName ?? user.contactPerson ?? 'Onbekend' }
+      : { id: null, email: 'Onbekend', naam: 'Onbekend' },
 }));
 
 function renderSection() {
@@ -52,6 +63,7 @@ function renderSection() {
 
 beforeEach(() => {
   replaceMock.mockClear();
+  logActiviteitMock.mockReset();
   fetchMock.mockReset();
 });
 
@@ -192,7 +204,7 @@ describe('SettingsSection', () => {
     fireEvent.click(screen.getByTestId('delete-account-submit'));
 
     expect(await screen.findByTestId('delete-account-error')).toHaveTextContent(
-      'Uw gegevens zijn verwijderd, maar er ging iets mis bij het volledig verwijderen van uw account. Neem contact met ons op.'
+      'Uw account kon niet volledig verwijderd worden. Neem contact met ons op.'
     );
     expect(replaceMock).not.toHaveBeenCalled();
   });
@@ -216,6 +228,11 @@ describe('SettingsSection', () => {
       'Uw account kan niet verwijderd worden omdat u nog bestellingen bij ons heeft staan. Neem contact met ons op als u toch verwijderd wilt worden.'
     );
     expect(replaceMock).not.toHaveBeenCalled();
+    expect(logActiviteitMock).toHaveBeenCalledWith('account_verwijderen_geblokkeerd', {
+      id: 'uid-1',
+      email: 'klant@example.com',
+      naam: 'Onbekend',
+    });
   });
 
   it('re-authenticates, deletes the klant record, logs out and redirects home', async () => {
@@ -237,6 +254,11 @@ describe('SettingsSection', () => {
     );
     expect(fetchMock).toHaveBeenCalledWith('/api/klanten/uid-1', { method: 'DELETE' });
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/logout', expect.objectContaining({ method: 'POST' }));
+    expect(logActiviteitMock).toHaveBeenCalledWith('account_verwijderd', {
+      id: 'uid-1',
+      email: 'klant@example.com',
+      naam: 'Onbekend',
+    });
   });
 
   it('marks the seven profile fields as required', async () => {

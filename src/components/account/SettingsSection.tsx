@@ -6,6 +6,7 @@ import { routing } from '@/i18n/routing';
 import { usePathname, useRouter } from '@/i18n/navigation';
 import { LOCALE_META } from '@/lib/localeMeta';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
+import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
 import { PasswordInput } from '@/components/PasswordInput';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { Combobox } from '@/components/Combobox';
@@ -141,6 +142,7 @@ export function SettingsSection() {
           const body = (await deleteResponse.json().catch(() => null)) as { error?: string } | null;
           if (body?.error === 'heeft-bestellingen') {
             setDeleteError(t('deleteAccountHasOrdersError'));
+            void logActiviteit('account_verwijderen_geblokkeerd', actorFromCustomer(user));
             return;
           }
         }
@@ -152,6 +154,7 @@ export function SettingsSection() {
       return;
     }
 
+    void logActiviteit('account_verwijderd', actorFromCustomer(user));
     await logout();
     router.replace('/');
   }

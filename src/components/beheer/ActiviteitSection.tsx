@@ -34,6 +34,8 @@ const TYPE_LABEL_KEYS: Record<ActiviteitType, string> = {
   mandje_eigen_maat_toegevoegd: 'activiteitTypeMandjeEigenMaatToegevoegd',
   bestelling_geplaatst: 'activiteitTypeBestellingGeplaatst',
   account_bezocht: 'activiteitTypeAccountBezocht',
+  account_verwijderd: 'activiteitTypeAccountVerwijderd',
+  account_verwijderen_geblokkeerd: 'activiteitTypeAccountVerwijderenGeblokkeerd',
   word_klant_bezocht: 'activiteitTypeWordKlantBezocht',
   word_klant_aanvraag: 'activiteitTypeWordKlantAanvraag',
   klant_goedgekeurd: 'activiteitTypeKlantGoedgekeurd',

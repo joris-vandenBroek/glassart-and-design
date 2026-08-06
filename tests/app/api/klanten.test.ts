@@ -17,6 +17,7 @@ afterEach(async () => {
   // every call leaves an orphaned `sessions` row the klant-scoped cleanup below never catches.
   await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
   if (createdKlantIds.length > 0) {
+    await getPool().query("DELETE FROM sessions WHERE userType = 'klant' AND userId IN (?)", [createdKlantIds]);
     await getPool().query('DELETE FROM klanten WHERE id IN (?)', [createdKlantIds]);
     createdKlantIds.length = 0;
   }
@@ -141,7 +142,7 @@ describe('klanten admin routes', () => {
     await getPool().query('INSERT INTO bestelheaders (id, klantId, bestelnr, status) VALUES (?, ?, ?, ?)', [
       headerId,
       klant.id,
-      'GD-BLOCK-1',
+      'AUTOTEST-BLOCK-1',
       'Afgerond',
     ]);
     const sessionId = await createSession('klant', klant.id);
@@ -165,6 +166,7 @@ describe('klanten admin routes', () => {
       wachtwoordHash: await hashPassword('x'),
       status: 'Goedgekeurd',
     } as never);
+    createdKlantIds.push(klant.id);
     const sessionId = await createSession('klant', klant.id);
     const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
 
@@ -184,7 +186,7 @@ describe('klanten admin routes', () => {
     await getPool().query('INSERT INTO bestelheaders (id, klantId, bestelnr, status) VALUES (?, ?, ?, ?)', [
       headerId,
       klant.id,
-      'GD-BLOCK-2',
+      'AUTOTEST-BLOCK-2',
       'Afgerond',
     ]);
 
