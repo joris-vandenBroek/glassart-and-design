@@ -210,7 +210,7 @@ export function GlassartDesignSection({ bedrijfsgegevens, loadError, onSave }: G
         {t('glassartDesignLabelTenaamstelling')}
         <input
           type="text"
-          value={form.tenaamstelling}
+          value={form.tenaamstelling ?? ''}
           onChange={(event) => updateField('tenaamstelling', event.target.value)}
           data-testid="glassart-design-tenaamstelling"
           className={INPUT_CLASS}
@@ -232,7 +232,7 @@ export function GlassartDesignSection({ bedrijfsgegevens, loadError, onSave }: G
         {t('glassartDesignLabelBic')}
         <input
           type="text"
-          value={form.bic}
+          value={form.bic ?? ''}
           onChange={(event) => updateField('bic', event.target.value)}
           data-testid="glassart-design-bic"
           className={INPUT_CLASS}
