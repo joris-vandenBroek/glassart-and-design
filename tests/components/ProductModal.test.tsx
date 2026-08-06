@@ -351,12 +351,14 @@ describe('ProductModal', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('adds the chosen kunstwerk/materiaal/maat/price/quantity to the cart, shows confirmed state, then closes', () => {
+  it('adds the chosen kunstwerk/materiaal/maat/price/quantity to the cart, shows confirmed state, then closes', async () => {
     const onClose = vi.fn();
 
     function Probe() {
-      const { items } = useCart();
-      return <div data-testid="probe">{JSON.stringify(items)}</div>;
+      const { items, isHydrated } = useCart();
+      // Het mandje hoort bij een klant en wordt pas geladen als /api/auth/me terug is;
+      // eerder toevoegen landt in het mandje van niemand.
+      return isHydrated ? <div data-testid="probe">{JSON.stringify(items)}</div> : null;
     }
 
     render(
@@ -380,6 +382,15 @@ describe('ProductModal', () => {
         </CustomerAuthProvider>
       </NextIntlClientProvider>
     );
+
+    // Het mandje wordt pas geladen als /api/auth/me terug is, dus die fetch eerst laten
+    // afwikkelen met echte timers -- daarna weer fake timers voor de sluit-timer onderaan.
+    vi.useRealTimers();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    vi.useFakeTimers();
+    expect(screen.getByTestId('probe')).toBeInTheDocument();
 
     fireEvent.change(screen.getByTestId('product-modal-maat'), { target: { value: 'maat-2' } });
     fireEvent.click(screen.getByTestId('product-modal-quantity-plus'));
