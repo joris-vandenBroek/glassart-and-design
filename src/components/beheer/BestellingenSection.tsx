@@ -70,14 +70,18 @@ export function BestellingenSection({
 
   useEffect(() => {
     if (bestellingen === null) return;
+    // Houdt alleen ids over die nog bestaan én nog de status van het actieve
+    // filter hebben. Dit dekt in één keer drie gevallen af: een bestelling die
+    // verdwijnt, een bestelling waarvan de status verandert (bijvoorbeeld nadat
+    // hij is verstuurd of afgerond), en het wisselen van filter.
     const stillSelectable = new Set(
-      bestellingen.filter((b) => b.status === 'Te versturen naar drukker').map((b) => b.id)
+      bestellingen.filter((b) => b.status === statusFilter).map((b) => b.id)
     );
     setSelectedIds((current) => {
       const next = new Set(Array.from(current).filter((id) => stillSelectable.has(id)));
       return next.size === current.size ? current : next;
     });
-  }, [bestellingen]);
+  }, [bestellingen, statusFilter]);
 
   function handleToggle(id: string) {
     setSelectedIds((current) => {
@@ -130,6 +134,9 @@ export function BestellingenSection({
     return null;
   }
 
+  const selectieActief =
+    statusFilter === 'Te versturen naar drukker' || statusFilter === 'Verstuurd naar drukker';
+
   const columns: Column<Bestelling>[] = [
     { key: 'companyName', label: t('bestellingenColKlant') },
     { key: 'besteldatum', label: t('bestellingenColDatum') },
@@ -156,14 +163,24 @@ export function BestellingenSection({
               ).size,
             })}
           </span>
-          <button
-            type="button"
-            onClick={() => setShowVersturenDialog(true)}
-            data-testid="bestellingen-versturen-naar-drukker"
-            className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
-          >
-            {t('bestellingenVersturenNaarDrukker')}
-          </button>
+          {statusFilter === 'Verstuurd naar drukker' ? (
+            <button
+              type="button"
+              data-testid="bestellingen-afronden"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+            >
+              {t('bestellingenAfronden')}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowVersturenDialog(true)}
+              data-testid="bestellingen-versturen-naar-drukker"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+            >
+              {t('bestellingenVersturenNaarDrukker')}
+            </button>
+          )}
         </div>
       )}
       <div className="mb-3 flex items-center justify-end">
@@ -192,12 +209,16 @@ export function BestellingenSection({
             { value: '', label: t('bestellingenQuickAlle'), testId: 'alle' },
           ],
         }}
-        selection={{
-          selectedIds,
-          onToggle: handleToggle,
-          onToggleAll: handleToggleAll,
-          isSelectable: (row) => row.status === 'Te versturen naar drukker',
-        }}
+        selection={
+          selectieActief
+            ? {
+                selectedIds,
+                onToggle: handleToggle,
+                onToggleAll: handleToggleAll,
+                isSelectable: (row) => row.status === statusFilter,
+              }
+            : undefined
+        }
         emptyLabel={t('bestellingenEmpty')}
         searchPlaceholder={t('dataTableSearchPlaceholder')}
       />

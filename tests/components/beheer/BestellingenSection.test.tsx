@@ -202,20 +202,31 @@ describe('BestellingenSection', () => {
   });
 
   describe('bulk selection', () => {
-    it('shows a checkbox only for bestellingen with status "Te versturen naar drukker"', () => {
-      const bestellingen = [
-        { ...BESTELLINGEN[0], status: 'Te versturen naar drukker' as const },
-        BESTELLINGEN[1],
-      ];
-      renderSection({ bestellingen });
-      fireEvent.click(screen.getByTestId('data-table-quick-alle'));
+    const TE_VERSTUREN = { ...BESTELLINGEN[0], status: 'Te versturen naar drukker' as const };
+
+    it('shows no selection column while the "alle bestellingen" filter is active', () => {
+      renderSection({ bestellingen: [TE_VERSTUREN, BESTELLINGEN[1]] });
+      expect(screen.queryByTestId('data-table-select-all')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('data-table-row-select-header-1')).not.toBeInTheDocument();
+    });
+
+    it('shows checkboxes for every row once the "te versturen" filter is active', () => {
+      renderSection({ bestellingen: [TE_VERSTUREN, BESTELLINGEN[1]] });
+      fireEvent.click(screen.getByTestId('data-table-quick-te-versturen'));
       expect(screen.getByTestId('data-table-row-select-header-1')).toBeInTheDocument();
       expect(screen.queryByTestId('data-table-row-select-header-2')).not.toBeInTheDocument();
     });
 
+    it('shows checkboxes once the "verstuurd naar drukker" filter is active', () => {
+      renderSection({ bestellingen: [TE_VERSTUREN, BESTELLINGEN[1]] });
+      fireEvent.click(screen.getByTestId('data-table-quick-verstuurd'));
+      expect(screen.getByTestId('data-table-row-select-header-2')).toBeInTheDocument();
+      expect(screen.queryByTestId('data-table-row-select-header-1')).not.toBeInTheDocument();
+    });
+
     it('shows the selection bar with a count once a bestelling is selected, and hides it when deselected', () => {
-      const bestellingen = [{ ...BESTELLINGEN[0], status: 'Te versturen naar drukker' as const }];
-      renderSection({ bestellingen });
+      renderSection({ bestellingen: [TE_VERSTUREN] });
+      fireEvent.click(screen.getByTestId('data-table-quick-te-versturen'));
       expect(screen.queryByTestId('bestellingen-selectie-balk')).not.toBeInTheDocument();
       fireEvent.click(screen.getByTestId('data-table-row-select-header-1'));
       expect(screen.getByTestId('bestellingen-selectie-balk')).toHaveTextContent('1 bestellingen geselecteerd (1 klanten)');
@@ -224,31 +235,52 @@ describe('BestellingenSection', () => {
     });
 
     it('counts distinct klanten in the selection bar', () => {
-      const bestellingen = [
-        { ...BESTELLINGEN[0], status: 'Te versturen naar drukker' as const },
-        { ...BESTELLINGEN[1], id: 'header-3', status: 'Te versturen naar drukker' as const },
-      ];
+      const bestellingen = [TE_VERSTUREN, { ...BESTELLINGEN[1], id: 'header-3', status: 'Te versturen naar drukker' as const }];
       renderSection({ bestellingen });
+      fireEvent.click(screen.getByTestId('data-table-quick-te-versturen'));
       fireEvent.click(screen.getByTestId('data-table-row-select-header-1'));
       fireEvent.click(screen.getByTestId('data-table-row-select-header-3'));
       expect(screen.getByTestId('bestellingen-selectie-balk')).toHaveTextContent('2 bestellingen geselecteerd (2 klanten)');
     });
 
-    it('clears the selection when the underlying bestellingen list changes to no longer include a selected id', () => {
-      const bestellingen = [{ ...BESTELLINGEN[0], status: 'Te versturen naar drukker' as const }];
-      const { rerender } = renderSection({ bestellingen });
+    it('clears the selection when the filter changes', () => {
+      renderSection({ bestellingen: [TE_VERSTUREN] });
+      fireEvent.click(screen.getByTestId('data-table-quick-te-versturen'));
       fireEvent.click(screen.getByTestId('data-table-row-select-header-1'));
       expect(screen.getByTestId('bestellingen-selectie-balk')).toBeInTheDocument();
-      rerender(bestellingen.map((b) => ({ ...b, status: 'Verstuurd naar drukker' as const })));
+      fireEvent.click(screen.getByTestId('data-table-quick-alle'));
       expect(screen.queryByTestId('bestellingen-selectie-balk')).not.toBeInTheDocument();
     });
 
+    it('clears the selection when the underlying bestelling no longer has the filtered status', () => {
+      const { rerender } = renderSection({ bestellingen: [TE_VERSTUREN] });
+      fireEvent.click(screen.getByTestId('data-table-quick-te-versturen'));
+      fireEvent.click(screen.getByTestId('data-table-row-select-header-1'));
+      expect(screen.getByTestId('bestellingen-selectie-balk')).toBeInTheDocument();
+      rerender([{ ...TE_VERSTUREN, status: 'Verstuurd naar drukker' as const }]);
+      expect(screen.queryByTestId('bestellingen-selectie-balk')).not.toBeInTheDocument();
+    });
+
+    it('shows the "versturen naar drukker" button under the "te versturen" filter', () => {
+      renderSection({ bestellingen: [TE_VERSTUREN] });
+      fireEvent.click(screen.getByTestId('data-table-quick-te-versturen'));
+      fireEvent.click(screen.getByTestId('data-table-row-select-header-1'));
+      expect(screen.getByTestId('bestellingen-versturen-naar-drukker')).toBeInTheDocument();
+      expect(screen.queryByTestId('bestellingen-afronden')).not.toBeInTheDocument();
+    });
+
+    it('shows the "afronden" button under the "verstuurd naar drukker" filter', () => {
+      renderSection({ bestellingen: [BESTELLINGEN[1]] });
+      fireEvent.click(screen.getByTestId('data-table-quick-verstuurd'));
+      fireEvent.click(screen.getByTestId('data-table-row-select-header-2'));
+      expect(screen.getByTestId('bestellingen-afronden')).toHaveTextContent('Afronden');
+      expect(screen.queryByTestId('bestellingen-versturen-naar-drukker')).not.toBeInTheDocument();
+    });
+
     it('opens the VersturenNaarDrukkerDialog with only the selected bestellingen when the button is clicked', () => {
-      const bestellingen = [
-        { ...BESTELLINGEN[0], status: 'Te versturen naar drukker' as const },
-        { ...BESTELLINGEN[1], id: 'header-3', status: 'Te versturen naar drukker' as const },
-      ];
+      const bestellingen = [TE_VERSTUREN, { ...BESTELLINGEN[1], id: 'header-3', status: 'Te versturen naar drukker' as const }];
       renderSection({ bestellingen });
+      fireEvent.click(screen.getByTestId('data-table-quick-te-versturen'));
       fireEvent.click(screen.getByTestId('data-table-row-select-header-1'));
       expect(screen.queryByTestId('drukker-versturen-drukker')).not.toBeInTheDocument();
 
@@ -260,15 +292,15 @@ describe('BestellingenSection', () => {
     });
 
     it('reports each verstuurde bestelling, clears the selection, and closes the dialog on a successful send', async () => {
-      const bestellingen = [{ ...BESTELLINGEN[0], status: 'Te versturen naar drukker' as const }];
-      const { onBestellingUpdated } = renderSection({ bestellingen });
+      const { onBestellingUpdated } = renderSection({ bestellingen: [TE_VERSTUREN] });
+      fireEvent.click(screen.getByTestId('data-table-quick-te-versturen'));
       fireEvent.click(screen.getByTestId('data-table-row-select-header-1'));
       fireEvent.click(screen.getByTestId('bestellingen-versturen-naar-drukker'));
 
       fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
 
       await waitFor(() => expect(onBestellingUpdated).toHaveBeenCalled());
-      expect(onBestellingUpdated.mock.calls[0][0]).toEqual({ ...bestellingen[0], status: 'Verstuurd naar drukker' });
+      expect(onBestellingUpdated.mock.calls[0][0]).toEqual({ ...TE_VERSTUREN, status: 'Verstuurd naar drukker' });
       expect(screen.queryByTestId('drukker-versturen-drukker')).not.toBeInTheDocument();
       expect(screen.queryByTestId('bestellingen-selectie-balk')).not.toBeInTheDocument();
     });
