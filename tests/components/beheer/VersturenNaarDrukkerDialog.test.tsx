@@ -314,6 +314,18 @@ describe('VersturenNaarDrukkerDialog', () => {
     );
   });
 
+  it('disables Versturen and shows an error when the bedrijfsgegevens fail to load', async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/instellingen/bedrijfsgegevens') return { ok: false };
+      return defaultFetchImplementation(url);
+    });
+    renderDialog();
+    await waitFor(() => expect(screen.getByTestId('drukker-versturen-versturen')).toBeDisabled());
+    expect(screen.getByTestId('drukker-versturen-bedrijfsgegevens-fout')).toHaveTextContent(
+      'Bedrijfsgegevens van Glassart & Design konden niet worden geladen — kan niet verstuurd worden.'
+    );
+  });
+
   it('does not disable Versturen or show the klant-ontbreken message when all klanten are present', () => {
     renderDialog();
     expect(screen.queryByTestId('drukker-versturen-klant-ontbreekt')).not.toBeInTheDocument();

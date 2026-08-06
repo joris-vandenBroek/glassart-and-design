@@ -41,8 +41,9 @@ export function VersturenNaarDrukkerDialog({
 }: VersturenNaarDrukkerDialogProps) {
   const t = useTranslations('beheer');
   const { user } = useAdminAuth();
-  const { data: bedrijfsgegevensData } = useApiRecord<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens');
+  const { data: bedrijfsgegevensData, error: bedrijfsgegevensError } = useApiRecord<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens');
   const bedrijfsgegevens = bedrijfsgegevensData ?? BEDRIJFSGEGEVENS_SEED;
+  const heeftBedrijfsgegevensFout = bedrijfsgegevensError === 'load';
   const [drukkerId, setDrukkerId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
@@ -161,7 +162,7 @@ export function VersturenNaarDrukkerDialog({
           <button
             type="button"
             onClick={handleVersturen}
-            disabled={isSending || !drukkerId || mailSent || heeftOntbrekendeKlantgegevens}
+            disabled={isSending || !drukkerId || mailSent || heeftOntbrekendeKlantgegevens || heeftBedrijfsgegevensFout}
             data-testid="drukker-versturen-versturen"
             className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
           >
@@ -214,6 +215,12 @@ export function VersturenNaarDrukkerDialog({
         {heeftOntbrekendeKlantgegevens && (
           <p data-testid="drukker-versturen-klant-ontbreekt" className="text-xs text-red-400">
             {t('drukkerVersturenKlantgegevensOntbreken', { n: aantalBestellingenMetOntbrekendeKlant })}
+          </p>
+        )}
+
+        {heeftBedrijfsgegevensFout && (
+          <p data-testid="drukker-versturen-bedrijfsgegevens-fout" className="text-xs text-red-400">
+            {t('drukkerVersturenBedrijfsgegevensFout')}
           </p>
         )}
 

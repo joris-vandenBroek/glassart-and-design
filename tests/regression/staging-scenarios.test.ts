@@ -53,6 +53,7 @@ import { POST as confirmReset } from '@/app/api/auth/reset-password/confirm/rout
 import { GET as getInstelling } from '@/app/api/instellingen/[id]/route';
 import { POST as postResource, GET as listResource } from '@/app/api/[resource]/route';
 import { buildDrukkerMail } from '@/lib/buildDrukkerMail';
+import { BEDRIJFSGEGEVENS_SEED } from '@/data/bedrijfsgegevensSeed';
 import { resolveBtwPercentage } from '@/lib/resolveBtw';
 import type { BtwTarieven } from '@/components/beheer/btwTarievenTypes';
 
@@ -424,6 +425,7 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
         materialen: [{ id: fixture.materiaalId, materiaalsoortId: 'x', materiaaldikte: 6, omschrijving: 'AUTOTEST' }],
         maten: [{ id: fixture.maatId, breedte: 40, hoogte: 60 }],
         materiaalsoorten: [{ id: 'x', omschrijving: 'AUTOTEST soort' }],
+        bedrijfsgegevens: BEDRIJFSGEGEVENS_SEED,
       });
       // companyName fallback ("Onbekend klant" resolution) still yields one section per klant.
       expect(mail.text).toContain(klantX.email);
