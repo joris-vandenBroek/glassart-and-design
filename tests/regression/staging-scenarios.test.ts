@@ -53,9 +53,22 @@ import { POST as confirmReset } from '@/app/api/auth/reset-password/confirm/rout
 import { GET as getInstelling } from '@/app/api/instellingen/[id]/route';
 import { POST as postResource, GET as listResource } from '@/app/api/[resource]/route';
 import { buildDrukkerMail } from '@/lib/buildDrukkerMail';
-import { BEDRIJFSGEGEVENS_SEED } from '@/data/bedrijfsgegevensSeed';
 import { resolveBtwPercentage } from '@/lib/resolveBtw';
 import type { BtwTarieven } from '@/components/beheer/btwTarievenTypes';
+import type { Bedrijfsgegevens } from '@/components/beheer/bedrijfsgegevensTypes';
+
+const BEDRIJFSGEGEVENS_SEED: Bedrijfsgegevens = {
+  bezoekadres: 'Den Heuvel 21, 5688 EM Oirschot',
+  email: 'info@glassartanddesign.com',
+  whatsappNummer: '31600000000',
+  tenaamstelling: 'Glassart & Design',
+  bic: 'BANKNL2A',
+  iban: 'NL00 BANK 0123 4567 89',
+  kvkNummer: '12345678',
+  btwNummer: 'NL123456789B01',
+  openingstijden: { nl: '', en: '', fr: '', de: '' },
+  contactpersonen: [],
+};
 
 // Narrates each meaningful step to the terminal while the suite runs, so a human running
 // `npm run test:regression` sees what's actually happening (which klant/kunstenaar/bedrag/

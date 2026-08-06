@@ -7,7 +7,6 @@ import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import { useApiRecord } from '@/lib/useApiRecord';
-import { BEDRIJFSGEGEVENS_SEED } from '@/data/bedrijfsgegevensSeed';
 import { buildDrukkerMail } from '@/lib/buildDrukkerMail';
 import type { Bestelling } from './BestellingenSection';
 import type { Klant } from './KlantenSection';
@@ -41,8 +40,7 @@ export function VersturenNaarDrukkerDialog({
 }: VersturenNaarDrukkerDialogProps) {
   const t = useTranslations('beheer');
   const { user } = useAdminAuth();
-  const { data: bedrijfsgegevensData, error: bedrijfsgegevensError } = useApiRecord<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens');
-  const bedrijfsgegevens = bedrijfsgegevensData ?? BEDRIJFSGEGEVENS_SEED;
+  const { data: bedrijfsgegevens, error: bedrijfsgegevensError } = useApiRecord<Bedrijfsgegevens>('instellingen', 'bedrijfsgegevens');
   const heeftBedrijfsgegevensFout = bedrijfsgegevensError === 'load';
   const [drukkerId, setDrukkerId] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +71,10 @@ export function VersturenNaarDrukkerDialog({
   );
 
   const mail = useMemo(
-    () => buildDrukkerMail({ bestellingen, klanten, kunstwerken, materialen, maten, materiaalsoorten, bedrijfsgegevens }),
+    () =>
+      bedrijfsgegevens
+        ? buildDrukkerMail({ bestellingen, klanten, kunstwerken, materialen, maten, materiaalsoorten, bedrijfsgegevens })
+        : null,
     [bestellingen, klanten, kunstwerken, materialen, maten, materiaalsoorten, bedrijfsgegevens]
   );
 
@@ -86,7 +87,7 @@ export function VersturenNaarDrukkerDialog({
     const drukker = drukkers.find((d) => d.id === drukkerId);
     const endpoint = process.env.NEXT_PUBLIC_MAIL_ENDPOINT_URL;
     const secret = process.env.NEXT_PUBLIC_MAIL_SECRET;
-    if (!drukker || !endpoint || !secret || heeftOntbrekendeKlantgegevens) {
+    if (!drukker || !endpoint || !secret || !mail || heeftOntbrekendeKlantgegevens) {
       setError(t('drukkerVersturenMailError'));
       return;
     }
@@ -162,7 +163,7 @@ export function VersturenNaarDrukkerDialog({
           <button
             type="button"
             onClick={handleVersturen}
-            disabled={isSending || !drukkerId || mailSent || heeftOntbrekendeKlantgegevens || heeftBedrijfsgegevensFout}
+            disabled={isSending || !drukkerId || mailSent || heeftOntbrekendeKlantgegevens || !mail}
             data-testid="drukker-versturen-versturen"
             className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
           >
@@ -204,11 +205,11 @@ export function VersturenNaarDrukkerDialog({
 
         <div className="flex flex-col gap-1">
           <span className="text-xs uppercase tracking-wide text-white/60">{t('drukkerVersturenLabelPreview')}</span>
-          <p className="text-xs text-white/70">{mail.subject}</p>
+          <p className="text-xs text-white/70">{mail?.subject}</p>
           <div
             data-testid="drukker-versturen-preview"
             className="max-h-64 overflow-y-auto rounded-sm bg-white p-3 text-xs"
-            dangerouslySetInnerHTML={{ __html: mail.html }}
+            dangerouslySetInnerHTML={{ __html: mail?.html ?? '' }}
           />
         </div>
 

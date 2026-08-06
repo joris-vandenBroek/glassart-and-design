@@ -4,8 +4,21 @@ import { NextIntlClientProvider } from 'next-intl';
 import { BestellingenSection, type Bestelling } from '@/components/beheer/BestellingenSection';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort, Drukker } from '@/components/beheer/materiaalTypes';
 import type { Klant } from '@/components/beheer/KlantenSection';
-import { BEDRIJFSGEGEVENS_SEED } from '@/data/bedrijfsgegevensSeed';
+import type { Bedrijfsgegevens } from '@/components/beheer/bedrijfsgegevensTypes';
 import messages from '../../../messages/nl.json';
+
+const BEDRIJFSGEGEVENS_SEED: Bedrijfsgegevens = {
+  bezoekadres: 'Den Heuvel 21, 5688 EM Oirschot',
+  email: 'info@glassartanddesign.com',
+  whatsappNummer: '31600000000',
+  tenaamstelling: 'Glassart & Design',
+  bic: 'BANKNL2A',
+  iban: 'NL00 BANK 0123 4567 89',
+  kvkNummer: '12345678',
+  btwNummer: 'NL123456789B01',
+  openingstijden: { nl: '', en: '', fr: '', de: '' },
+  contactpersonen: [],
+};
 
 const fetchMock = vi.fn();
 
@@ -247,7 +260,7 @@ describe('BestellingenSection', () => {
       expect(screen.queryByTestId('bestellingen-selectie-balk')).not.toBeInTheDocument();
     });
 
-    it('opens the VersturenNaarDrukkerDialog with only the selected bestellingen when the button is clicked', () => {
+    it('opens the VersturenNaarDrukkerDialog with only the selected bestellingen when the button is clicked', async () => {
       const bestellingen = [
         { ...BESTELLINGEN[0], status: 'Te versturen naar drukker' as const },
         { ...BESTELLINGEN[1], id: 'header-3', status: 'Te versturen naar drukker' as const },
@@ -259,7 +272,7 @@ describe('BestellingenSection', () => {
       fireEvent.click(screen.getByTestId('bestellingen-versturen-naar-drukker'));
 
       expect(screen.getByTestId('drukker-versturen-drukker')).toHaveValue('drukker-1');
-      expect(screen.getByTestId('drukker-versturen-preview')).toHaveTextContent('Testbedrijf BV');
+      await waitFor(() => expect(screen.getByTestId('drukker-versturen-preview')).toHaveTextContent('Testbedrijf BV'));
       expect(screen.getByTestId('drukker-versturen-preview')).not.toHaveTextContent('Ander Bedrijf');
     });
 
@@ -269,6 +282,7 @@ describe('BestellingenSection', () => {
       fireEvent.click(screen.getByTestId('data-table-row-select-header-1'));
       fireEvent.click(screen.getByTestId('bestellingen-versturen-naar-drukker'));
 
+      await waitFor(() => expect(screen.getByTestId('drukker-versturen-preview')).toHaveTextContent('Testbedrijf BV'));
       fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
 
       await waitFor(() => expect(onBestellingUpdated).toHaveBeenCalled());
