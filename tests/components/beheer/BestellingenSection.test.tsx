@@ -313,4 +313,128 @@ describe('BestellingenSection', () => {
     fireEvent.click(screen.getByTestId('bestellingen-help'));
     expect(screen.getByTestId('bestellingen-help-popover')).toHaveTextContent('drukker');
   });
+
+  describe('afronden', () => {
+    const VERSTUURD = BESTELLINGEN[1];
+
+    function mockLookup(zendingen: unknown[]) {
+      fetchMock.mockImplementation((url: string) => {
+        if (typeof url === 'string' && url.startsWith('/api/drukkerzendingen')) {
+          return Promise.resolve({ ok: true, json: async () => zendingen });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      });
+    }
+
+    it('rondt direct af zonder dialoog wanneer er geen openstaande zendinggenoten zijn', async () => {
+      mockLookup([]);
+      const { onBestellingUpdated } = renderSection({ bestellingen: [VERSTUURD] });
+      fireEvent.click(screen.getByTestId('data-table-quick-verstuurd'));
+      fireEvent.click(screen.getByTestId('data-table-row-select-header-2'));
+      fireEvent.click(screen.getByTestId('bestellingen-afronden'));
+
+      await waitFor(() =>
+        expect(onBestellingUpdated).toHaveBeenCalledWith({ ...VERSTUURD, status: 'Afgerond' })
+      );
+      expect(screen.queryByTestId('afronden-bevestiging')).not.toBeInTheDocument();
+    });
+
+    it('toont de dialoog met de openstaande genoot en rondt bij "alleen deze" alleen de selectie af', async () => {
+      const genoot = { ...BESTELLINGEN[1], id: 'header-9', bestelnr: 'GD-00309' };
+      mockLookup([
+        {
+          id: 'z1',
+          drukkerId: 'drukker-1',
+          drukkerNaam: 'Drukkerij Janssen',
+          verzondenOp: '2026-08-03T10:00:00Z',
+          bestellingIds: ['header-2', 'header-9'],
+        },
+      ]);
+      const { onBestellingUpdated } = renderSection({ bestellingen: [VERSTUURD, genoot] });
+      fireEvent.click(screen.getByTestId('data-table-quick-verstuurd'));
+      fireEvent.click(screen.getByTestId('data-table-row-select-header-2'));
+      fireEvent.click(screen.getByTestId('bestellingen-afronden'));
+
+      await waitFor(() => expect(screen.getByTestId('afronden-bevestiging')).toBeInTheDocument());
+      expect(screen.getByTestId('afronden-bevestiging')).toHaveTextContent('GD-00309');
+
+      fireEvent.click(screen.getByTestId('afronden-bevestiging-alleen-deze'));
+
+      await waitFor(() => expect(onBestellingUpdated).toHaveBeenCalledTimes(1));
+      expect(onBestellingUpdated).toHaveBeenCalledWith({ ...VERSTUURD, status: 'Afgerond' });
+    });
+
+    it('rondt bij "ook deze" de selectie én de genoten af', async () => {
+      const genoot = { ...BESTELLINGEN[1], id: 'header-9', bestelnr: 'GD-00309' };
+      mockLookup([
+        {
+          id: 'z1',
+          drukkerId: 'drukker-1',
+          drukkerNaam: 'Drukkerij Janssen',
+          verzondenOp: '2026-08-03T10:00:00Z',
+          bestellingIds: ['header-2', 'header-9'],
+        },
+      ]);
+      const { onBestellingUpdated } = renderSection({ bestellingen: [VERSTUURD, genoot] });
+      fireEvent.click(screen.getByTestId('data-table-quick-verstuurd'));
+      fireEvent.click(screen.getByTestId('data-table-row-select-header-2'));
+      fireEvent.click(screen.getByTestId('bestellingen-afronden'));
+
+      await waitFor(() => expect(screen.getByTestId('afronden-bevestiging')).toBeInTheDocument());
+      fireEvent.click(screen.getByTestId('afronden-bevestiging-ook-deze'));
+
+      await waitFor(() => expect(onBestellingUpdated).toHaveBeenCalledTimes(2));
+      const afgerondeIds = onBestellingUpdated.mock.calls.map((call) => call[0].id).sort();
+      expect(afgerondeIds).toEqual(['header-2', 'header-9']);
+    });
+
+    it('rondt gewoon af wanneer de zending-lookup faalt', async () => {
+      fetchMock.mockImplementation((url: string) => {
+        if (typeof url === 'string' && url.startsWith('/api/drukkerzendingen')) {
+          return Promise.resolve({ ok: false, json: async () => ({}) });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      });
+      const { onBestellingUpdated } = renderSection({ bestellingen: [VERSTUURD] });
+      fireEvent.click(screen.getByTestId('data-table-quick-verstuurd'));
+      fireEvent.click(screen.getByTestId('data-table-row-select-header-2'));
+      fireEvent.click(screen.getByTestId('bestellingen-afronden'));
+
+      await waitFor(() =>
+        expect(onBestellingUpdated).toHaveBeenCalledWith({ ...VERSTUURD, status: 'Afgerond' })
+      );
+      expect(screen.queryByTestId('afronden-bevestiging')).not.toBeInTheDocument();
+    });
+
+    it('meldt hoeveel bestellingen niet konden worden afgerond', async () => {
+      fetchMock.mockImplementation((url: string) => {
+        if (typeof url === 'string' && url.startsWith('/api/drukkerzendingen')) {
+          return Promise.resolve({ ok: true, json: async () => [] });
+        }
+        if (typeof url === 'string' && url.startsWith('/api/bestelheaders/')) {
+          return Promise.resolve({ ok: false });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      });
+      const { onBestellingUpdated } = renderSection({ bestellingen: [VERSTUURD] });
+      fireEvent.click(screen.getByTestId('data-table-quick-verstuurd'));
+      fireEvent.click(screen.getByTestId('data-table-row-select-header-2'));
+      fireEvent.click(screen.getByTestId('bestellingen-afronden'));
+
+      await waitFor(() => expect(screen.getByTestId('bestellingen-afronden-fout')).toBeInTheDocument());
+      expect(onBestellingUpdated).not.toHaveBeenCalled();
+    });
+
+    it('rondt een losse bestelling af via de modal en sluit die', async () => {
+      mockLookup([]);
+      const { onBestellingUpdated } = renderSection({ bestellingen: [VERSTUURD] });
+      fireEvent.click(screen.getByTestId('data-table-row-header-2'));
+      fireEvent.click(screen.getByTestId('bestelling-modal-afronden'));
+
+      await waitFor(() =>
+        expect(onBestellingUpdated).toHaveBeenCalledWith({ ...VERSTUURD, status: 'Afgerond' })
+      );
+      await waitFor(() => expect(screen.queryByTestId('bestelling-modal')).not.toBeInTheDocument());
+    });
+  });
 });

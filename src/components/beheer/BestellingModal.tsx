@@ -41,6 +41,7 @@ interface BestellingModalProps {
   btwTarieven: BtwTarieven | null;
   onClose: () => void;
   onUpdated: (bestelling: Bestelling) => void;
+  onAfronden: (bestelling: Bestelling) => void;
   onLinePrijsVastgesteld: (bestellingId: string, lineId: string, prijs: number) => void;
   onLineUpdated: (bestellingId: string, lineId: string, updates: Partial<BestellingLine>) => void;
 }
@@ -67,6 +68,7 @@ export function BestellingModal({
   btwTarieven,
   onClose,
   onUpdated,
+  onAfronden,
   onLinePrijsVastgesteld,
   onLineUpdated,
 }: BestellingModalProps) {
@@ -142,20 +144,9 @@ export function BestellingModal({
     }
   }
 
-  async function handleAfronden() {
+  function handleAfronden() {
     if (!bestelling) return;
-    try {
-      const response = await fetch(`/api/bestelheaders/${bestelling.id}`, {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ status: 'Afgerond' }),
-      });
-      if (!response.ok) throw new Error('update failed');
-      void logActiviteit('bestelling_afgerond', actorFromMedewerker(user), bestelling.bestelnr);
-      onUpdated({ ...bestelling, status: 'Afgerond' });
-    } catch {
-      setError(t('bestellingenActionError'));
-    }
+    onAfronden(bestelling);
   }
 
   async function handleTerugzetten() {

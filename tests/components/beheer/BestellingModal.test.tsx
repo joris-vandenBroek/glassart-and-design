@@ -90,6 +90,7 @@ const BESTELLING: Bestelling = {
 function renderModal(bestelling: Bestelling | null) {
   const onClose = vi.fn();
   const onUpdated = vi.fn();
+  const onAfronden = vi.fn();
   const onLinePrijsVastgesteld = vi.fn();
   const onLineUpdated = vi.fn();
   render(
@@ -104,12 +105,13 @@ function renderModal(bestelling: Bestelling | null) {
         btwTarieven={BTWTARIEVEN}
         onClose={onClose}
         onUpdated={onUpdated}
+        onAfronden={onAfronden}
         onLinePrijsVastgesteld={onLinePrijsVastgesteld}
         onLineUpdated={onLineUpdated}
       />
     </NextIntlClientProvider>
   );
-  return { onClose, onUpdated, onLinePrijsVastgesteld, onLineUpdated };
+  return { onClose, onUpdated, onAfronden, onLinePrijsVastgesteld, onLineUpdated };
 }
 
 beforeEach(() => {
@@ -326,6 +328,7 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
             btwTarieven={BTWTARIEVEN}
             onClose={vi.fn()}
             onUpdated={vi.fn()}
+            onAfronden={vi.fn()}
             onLinePrijsVastgesteld={(_bestellingId, lineId, prijs) => {
               setBestelling((current) => ({
                 ...current,
@@ -483,6 +486,7 @@ describe('BestellingModal — btw', () => {
           btwTarieven={{ tarieven: [{ land: 'DE', percentage: 19 }] }}
           onClose={vi.fn()}
           onUpdated={vi.fn()}
+          onAfronden={vi.fn()}
           onLinePrijsVastgesteld={vi.fn()}
           onLineUpdated={vi.fn()}
         />
@@ -517,6 +521,7 @@ describe('BestellingModal — btw', () => {
           }}
           onClose={vi.fn()}
           onUpdated={vi.fn()}
+          onAfronden={vi.fn()}
           onLinePrijsVastgesteld={vi.fn()}
           onLineUpdated={vi.fn()}
         />
@@ -577,22 +582,21 @@ describe('BestellingModal — afronden/terugzetten', () => {
     expect(screen.queryAllByTestId('bestelling-modal-terugzetten')).toHaveLength(0);
   });
 
-  it('marks the bestelling as Afgerond, logs bestelling_afgerond, and calls onUpdated', async () => {
+  it('delegates afronden to onAfronden instead of patching the bestelling itself', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
-    const { onUpdated } = renderModal(BESTELLING_VERSTUURD);
+    const { onAfronden, onUpdated } = renderModal(BESTELLING_VERSTUURD);
     fireEvent.click(screen.getByTestId('bestelling-modal-afronden'));
 
-    await waitFor(() =>
-      expect(fetchMock).toHaveBeenCalledWith(
-        '/api/bestelheaders/header-4',
-        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'Afgerond' }) })
-      )
-    );
-    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith(expect.objectContaining({ status: 'Afgerond' })));
-    expect(logActiviteitMock).toHaveBeenCalledWith(
+    expect(onAfronden).toHaveBeenCalledWith(BESTELLING_VERSTUURD);
+    expect(onUpdated).not.toHaveBeenCalled();
+    expect(logActiviteitMock).not.toHaveBeenCalledWith(
       'bestelling_afgerond',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
-      'GD-00104'
+      expect.anything(),
+      expect.anything()
+    );
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      '/api/bestelheaders/header-4',
+      expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'Afgerond' }) })
     );
   });
 
@@ -615,15 +619,6 @@ describe('BestellingModal — afronden/terugzetten', () => {
       { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'GD-00105'
     );
-  });
-
-  it('shows an error and does not call onUpdated when afronden fails', async () => {
-    fetchMock.mockRejectedValue(new Error('offline'));
-    const { onUpdated } = renderModal(BESTELLING_VERSTUURD);
-    fireEvent.click(screen.getByTestId('bestelling-modal-afronden'));
-    expect(await screen.findByTestId('bestelling-modal-error')).toBeInTheDocument();
-    expect(onUpdated).not.toHaveBeenCalled();
-    expect(logActiviteitMock).not.toHaveBeenCalled();
   });
 
   it('fetches and shows the status history from the API, in the order the server returned it', async () => {
