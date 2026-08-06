@@ -187,10 +187,6 @@ CREATE TABLE bestelheaders (
   bestelnr VARCHAR(20) NOT NULL,
   besteldatum TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   status VARCHAR(50) NOT NULL DEFAULT 'Te beoordelen',
-  teVersturenNaarDrukkerOp DATETIME NULL,
-  verstuurdNaarDrukkerOp DATETIME NULL,
-  afgerondOp DATETIME NULL,
-  afgewezenOp DATETIME NULL,
   FOREIGN KEY (klantId) REFERENCES klanten(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -204,6 +200,14 @@ CREATE TABLE bestellines (
   quantity INT NOT NULL DEFAULT 1,
   breedte INT,
   hoogte INT,
+  FOREIGN KEY (bestelheaderId) REFERENCES bestelheaders(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE bestelstatusHistorie (
+  id CHAR(36) PRIMARY KEY,
+  bestelheaderId CHAR(36) NOT NULL,
+  status VARCHAR(50) NOT NULL,
+  tijdstip TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (bestelheaderId) REFERENCES bestelheaders(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
