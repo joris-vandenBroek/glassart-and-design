@@ -10,6 +10,7 @@ import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import { LAND_OPTIONS, landNaam } from '@/data/landen';
 import { resolveBtwPercentage } from '@/lib/resolveBtw';
+import { normaliseerBtwNummer, valideerBtwNummer } from '@/lib/btwNummer';
 import type { Klant } from './KlantenSection';
 import type { Prijsgroep } from './materiaalTypes';
 import type { Kunstenaar } from './kunstenaarTypes';
@@ -24,6 +25,7 @@ const STATUS_BADGE_CLASS: Record<Klant['status'], string> = {
 interface EditableFields {
   companyName: string;
   kvk: string;
+  btwNummer: string;
   contactPerson: string;
   contactPreference: string;
   email: string;
@@ -45,6 +47,7 @@ function fieldsFromKlant(klant: Klant): EditableFields {
   return {
     companyName: klant.companyName,
     kvk: klant.kvk,
+    btwNummer: klant.btwNummer ?? '',
     contactPerson: klant.contactPerson,
     contactPreference: klant.contactPreference,
     email: klant.email,
@@ -145,6 +148,15 @@ export function KlantModal({
     if (!klant || !fields) return;
     setError(null);
 
+    // Format only -- an empty value stays allowed here, because existing EU klanten have
+    // no VAT number yet and would otherwise be impossible to save at all. See the spec, section D.
+    const genormaliseerdBtwNummer = normaliseerBtwNummer(fields.btwNummer);
+    if (valideerBtwNummer(genormaliseerdBtwNummer, fields.land) === 'ongeldig') {
+      setError(t('klantenBtwNummerOngeldig'));
+      return;
+    }
+    const teBewarenFields = { ...fields, btwNummer: genormaliseerdBtwNummer };
+
     const origineleFields = fieldsFromKlant(klant);
     const veldenGewijzigd =
       isEditing && (Object.keys(origineleFields) as (keyof EditableFields)[]).some((key) => fields[key] !== origineleFields[key]);
@@ -163,7 +175,7 @@ export function KlantModal({
 
     try {
       const updates: Partial<Klant> = {};
-      if (veldenGewijzigd) Object.assign(updates, fields);
+      if (veldenGewijzigd) Object.assign(updates, teBewarenFields);
       if (prijsgroepGewijzigd) updates.prijsgroepId = prijsgroepId;
       if (kunstenaarIdGewijzigd) updates.kunstenaarId = kunstenaarId;
       if (minimaleAfnameGewijzigd) updates.minimaleAfname = parsedMinimaleAfname;
@@ -324,6 +336,13 @@ export function KlantModal({
               editing={isEditing}
               testId="klant-modal-kvk"
               onChange={(value) => setField('kvk', value)}
+            />
+            <Veld
+              label={t('klantenColBtwNummer')}
+              value={fields.btwNummer}
+              editing={isEditing}
+              testId="klant-modal-btwNummer"
+              onChange={(value) => setField('btwNummer', value)}
             />
             <Veld
               label={t('klantenColContactPerson')}

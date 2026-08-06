@@ -113,6 +113,11 @@ describe('KlantenSection', () => {
     expect(screen.queryByTestId('klanten-section')).not.toBeInTheDocument();
   });
 
+  it('shows a btwNummer column', () => {
+    renderSection();
+    expect(screen.getByText('Btw-nummer')).toBeInTheDocument();
+  });
+
   it('shows all klanten by default (status filter defaults to "alle klanten")', () => {
     renderSection();
     expect(screen.getByTestId('data-table-row-uid-1')).toBeInTheDocument();
