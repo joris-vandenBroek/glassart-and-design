@@ -61,7 +61,7 @@ Nullable: bestaande klanten hebben geen waarde, en niet-EU-klanten hebben geen b
 
 Toegevoegd aan `SELF_EDITABLE_KLANT_FIELDS` in `src/lib/server/klantFields.ts`, zodat registratie (`POST /api/auth/register`) en profielbewerking (`PATCH /api/klanten/me`) het meenemen. Het is een gegeven over de klant zelf, geen staf-beslissing zoals `status` of `prijsgroepId`, dus het hoort in die lijst.
 
-Deze wijziging raakt ook de productiedatabase. Die migratie (`ALTER TABLE klanten ADD COLUMN btwNummer VARCHAR(20) AFTER kvk;`) wordt pas uitgevoerd na expliciete toestemming, en pas wanneer de bijbehorende code naar productie gaat — een nullable kolom toevoegen is voor de nu draaiende productiecode onschadelijk, maar de volgorde blijft: staging eerst.
+Deze wijziging raakt ook de productiedatabase. Die migratie (`ALTER TABLE klanten ADD COLUMN btwNummer VARCHAR(20) AFTER kvk;`) wordt pas uitgevoerd na expliciete toestemming, en moet vóór de deploy van deze code naar productie draaien, nooit erna. `insertRow` bouwt zijn kolomlijst uit de keys van het object, en `POST /api/auth/register` zet `fields.btwNummer` altijd (op `null` of een waarde) — draait de nieuwe code tegen een productiedatabase die de kolom nog niet heeft, dan faalt elke registratie én elke klant-profielwijziging met "Unknown column 'btwNummer'". Een nullable kolom toevoegen is voor de nu draaiende (oude) productiecode zelf onschadelijk, dus er is geen reden om de migratie uit te stellen tot na de deploy: staging eerst, dan de migratie op productie, dan pas de productie-deploy.
 
 ## C. Formaatvalidatie
 
@@ -69,9 +69,15 @@ Nieuwe module `src/lib/btwNummer.ts`, gebruikt door zowel client als server zoda
 
 ```ts
 export function normaliseerBtwNummer(waarde: string): string
-export function isEuLand(landcode: string): boolean
-export function valideerBtwNummer(waarde: string, landcode: string): 'ok' | 'verplicht' | 'ongeldig'
+export function isEuLand(landcode: string | null | undefined): boolean
+export function isBtwNummerVerplicht(landcode: string | null | undefined): boolean
+export function valideerBtwNummer(
+  waarde: string | null | undefined,
+  landcode: string | null | undefined
+): 'ok' | 'leeg' | 'ongeldig'
 ```
+
+`valideerBtwNummer` beslist zelf niet of een leeg nummer een fout is — dat hangt af van de plek (zie sectie D) en het land, dus die beslissing ligt bij de aanroeper. De functie meldt alleen `'leeg'`; `isBtwNummerVerplicht(landcode)` is de functie die vastlegt of leeg op die plek geoorloofd is of niet.
 
 **Normalisatie.** Spaties, punten en streepjes eruit, alles naar hoofdletters, vóór het matchen. Dit gebeurt bij validatie én bij opslaan, zodat de opgeslagen waarde altijd genormaliseerd is.
 
@@ -123,10 +129,14 @@ De verplichting geldt **alleen bij registratie**, niet bij bewerken. Dit is de b
 | Plek | Verplicht bij EU-land ≠ NL | Formaatcheck |
 |---|---|---|
 | Registratie (`RegistrationForm` + `POST /api/auth/register`) | ja | ja |
-| Beheer (`KlantModal` + `PATCH /api/klanten/[id]`) | nee | ja |
-| Accountpagina (`SettingsSection` + `PATCH /api/klanten/me`) | nee | ja |
+| Beheer (`KlantModal` + `PATCH /api/klanten/[id]`) | nee | alleen als `btwNummer` of `land` onderdeel is van deze save |
+| Accountpagina (`SettingsSection` + `PATCH /api/klanten/me`) | nee | ja, onvoorwaardelijk |
 
 De regel kijkt naar `land` (het vestigingsland), niet naar `invoiceLand`. Het btw-nummer hoort bij waar de klant gevestigd is, niet bij waar de factuur heen gaat.
+
+**Beheer: formaatcheck alleen als `btwNummer` of `land` daadwerkelijk wijzigt.** De prijsgroep-`<select>` en de kunstenaar-`<Combobox>` in `KlantModal` zitten niet achter bewerkmodus (`isEditing`) — een medewerker kan die altijd aanpassen. Zou de formaatcheck bij elke save opnieuw het opgeslagen `btwNummer`/`land`-paar toetsen, dan blokkeert een save die alleen de prijsgroep of de kunstenaar-koppeling wijzigt op een record met een bestaande niet-matchende combinatie — dezelfde val als "bestaande data maakt een record onopslaanbaar" die de leeg-is-altijd-toegestaan-regel al voorkomt. De check wordt daarom pas uitgevoerd wanneer `fields.btwNummer` of `fields.land` afwijkt van de waarde waarmee het record geladen is. Wijzigt `land` naar een land waarvan het opgeslagen nummer het formaat niet meer matcht, dan blokkeert de save nog steeds — dat is bewust: een medewerker die het land actief verandert, moet het bijpassende nummer ook meteen corrigeren.
+
+**Accountpagina: onvoorwaardelijk, met opzet anders dan beheer.** Op de accountpagina is elk veld altijd bewerkbaar — er is geen "niet-bewerkmodus" waarin een klant per ongeluk tegen oude data aanloopt die hij niet zelf kan repareren. Een klant die de check tegenkomt, kan het btw-nummer altijd zelf meteen corrigeren, dus de val die de gating in beheer nodig maakt, bestaat hier niet. Dat is de reden dat deze plek bewust van beheer afwijkt.
 
 Validatie gebeurt zowel client- als serverside — de serverside check is de echte, de clientside voorkomt een mislukte round-trip. Beide roepen `valideerBtwNummer` aan.
 
@@ -155,7 +165,7 @@ Alle vier de talen krijgen een echte vertaling, geen Nederlandse tekst als plaat
 
 ## Tests
 
-- **`tests/lib/btwNummer.test.ts`** (nieuw) — het zwaartepunt. Per EU-land minstens één geldig en één ongeldig nummer; expliciete gevallen voor de GR/EL-prefix, voor invoer zónder prefix, voor invoer met spaties en punten, voor leeg-bij-NL (toegestaan), leeg-bij-EU-land (`'verplicht'`), leeg-bij-niet-EU (toegestaan), en de consistentiecheck tussen `EU_LANDCODES` en de regex-map.
+- **`tests/lib/btwNummer.test.ts`** (nieuw) — het zwaartepunt. Per EU-land minstens één geldig en één ongeldig nummer; expliciete gevallen voor de GR/EL-prefix, voor invoer zónder prefix, voor invoer met spaties en punten, voor leeg-bij-NL, leeg-bij-EU-land en leeg-bij-niet-EU (`valideerBtwNummer` geeft in alle drie de gevallen `'leeg'` terug; of dat toegestaan is, wordt bepaald door `isBtwNummerVerplicht`, niet door deze functie), en de consistentiecheck tussen `EU_LANDCODES` en de regex-map.
 - **`tests/components/beheer/GlassartDesignSection.test.tsx`** — tenaamstelling en BIC zijn zichtbaar, bewerkbaar en gaan mee in `onSave`.
 - **`tests/components/RegistrationForm.test.tsx`** — btw-nummer verplicht bij een EU-land ≠ NL, niet verplicht bij NL, niet verplicht bij een niet-EU-land, en foutmelding bij een ongeldig formaat.
 - **`tests/components/beheer/KlantModal.test.tsx`** en **`KlantenSection.test.tsx`** — veld respectievelijk kolom aanwezig, bewerken slaat op; een bestaande EU-klant zónder btw-nummer is opslaanbaar (bewaakt de keuze uit sectie D).

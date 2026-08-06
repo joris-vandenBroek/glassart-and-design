@@ -1441,6 +1441,6 @@ git commit -m "feat: let klanten manage their own VAT number on the account page
 
 ## Na afloop
 
-- `db/migrations/2026-08-06-klant-btwnummer.sql` is op **staging** uitgevoerd (Task 3, stap 4) en moet nog op **productie** draaien. Vraag daar expliciet toestemming voor op het moment dat deze code naar productie gaat — niet eerder.
+- `db/migrations/2026-08-06-klant-btwnummer.sql` is op **staging** uitgevoerd (Task 3, stap 4) en moet nog op **productie** draaien. Vraag daar expliciet toestemming voor zodra deze code richting productie gaat, en laat de migratie vóór de productie-deploy draaien, nooit erna: `POST /api/auth/register` zet `fields.btwNummer` altijd, en `insertRow` bouwt zijn kolomlijst uit de object-keys, dus zonder de kolom faalt elke registratie en elke klant-profielwijziging op productie met "Unknown column 'btwNummer'". Een nullable kolom toevoegen is voor de nu draaiende productiecode onschadelijk, dus er is geen reden om de migratie uit te stellen tot na de deploy.
 - Niet in dit plan, bewust: verleggen/reverse charge op bestellingen, VIES-controle, blokkade bij klantgoedkeuring, een facturenmodule.
 - `kvk` blijft afwezig op de accountpagina terwijl `btwNummer` er wél staat. Dat is een bewuste keuze (spec, sectie E), geen omissie.

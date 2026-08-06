@@ -83,7 +83,7 @@ describe('valideerBtwNummer', () => {
     }
   });
 
-  // Four extra digits, not two: BG, CZ and RO have variable-length patterns where a
+  // Four extra digits, not two: CZ and RO have variable-length patterns where a
   // two-digit suffix can still land inside the allowed range and stay valid.
   it('rejects an over-long number for every EU country', () => {
     for (const [code, nummer] of Object.entries(GELDIG)) {
