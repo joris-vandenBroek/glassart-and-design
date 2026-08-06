@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { BestellingModal } from '@/components/beheer/BestellingModal';
 import type { Bestelling } from '@/components/beheer/BestellingenSection';
@@ -79,10 +79,6 @@ const BESTELLING: Bestelling = {
   bestelnr: 'GD-00101',
   besteldatum: '1-7-2026',
   status: 'Te beoordelen',
-  teVersturenNaarDrukkerOp: null,
-  verstuurdNaarDrukkerOp: null,
-  afgerondOp: null,
-  afgewezenOp: null,
   lineCount: 2,
   totalQuantity: 5,
   lines: [
@@ -118,6 +114,10 @@ function renderModal(bestelling: Bestelling | null) {
 
 beforeEach(() => {
   fetchMock.mockReset();
+  // Default: every fetch (including BestellingModal's mount-time historie GET) resolves
+  // cleanly with an empty history unless a test overrides it. Tests that only care about
+  // a PATCH call's arguments rely on this default for the historie GET they don't mock.
+  fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
   logActiviteitMock.mockReset();
 });
 
@@ -154,7 +154,7 @@ describe('BestellingModal', () => {
   });
 
   it('approves the bestelling and calls onUpdated with status Te versturen naar drukker', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     const { onUpdated } = renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-goedkeuren'));
 
@@ -168,18 +168,12 @@ describe('BestellingModal', () => {
       )
     );
     await waitFor(() =>
-      expect(onUpdated).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'header-1',
-          status: 'Te versturen naar drukker',
-          teVersturenNaarDrukkerOp: expect.any(String),
-        })
-      )
+      expect(onUpdated).toHaveBeenCalledWith({ ...BESTELLING, status: 'Te versturen naar drukker' })
     );
   });
 
   it('rejects the bestelling and calls onUpdated with status Afgewezen', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     const { onUpdated } = renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen'));
 
@@ -189,11 +183,7 @@ describe('BestellingModal', () => {
         expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'Afgewezen' }) })
       )
     );
-    await waitFor(() =>
-      expect(onUpdated).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'header-1', status: 'Afgewezen', afgewezenOp: expect.any(String) })
-      )
-    );
+    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...BESTELLING, status: 'Afgewezen' }));
   });
 
   it('shows an error and does not call onUpdated when the update request fails', async () => {
@@ -206,7 +196,7 @@ describe('BestellingModal', () => {
   });
 
   it('logs bestelling_goedgekeurd with the logged-in medewerker on approval', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-goedkeuren'));
     await waitFor(() =>
@@ -219,7 +209,7 @@ describe('BestellingModal', () => {
   });
 
   it('logs bestelling_afgewezen with the logged-in medewerker on rejection', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen'));
     await waitFor(() =>
@@ -247,10 +237,6 @@ const BESTELLING_MET_EIGEN_MAAT: Bestelling = {
   bestelnr: 'GD-00102',
   besteldatum: '3-7-2026',
   status: 'Te beoordelen',
-  teVersturenNaarDrukkerOp: null,
-  verstuurdNaarDrukkerOp: null,
-  afgerondOp: null,
-  afgewezenOp: null,
   lineCount: 1,
   totalQuantity: 1,
   lines: [
@@ -271,7 +257,7 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
   });
 
   it('sets a price on an unpriced line via "Prijs vaststellen", updates the order, logs the event, and re-enables Goedkeuren', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     const { onLinePrijsVastgesteld } = renderModal(BESTELLING_MET_EIGEN_MAAT);
     fireEvent.change(screen.getByTestId('bestelling-modal-prijs-input-line-3'), { target: { value: '275' } });
     fireEvent.click(screen.getByTestId('bestelling-modal-prijs-vaststellen-line-3'));
@@ -306,7 +292,7 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
   });
 
   it('keeps the draft price of a still-unpriced line after submitting another line\'s price in the same order', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
 
     const BESTELLING_MET_TWEE_ONGEPRIJSDE_REGELS: Bestelling = {
       id: 'header-3',
@@ -315,10 +301,6 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
       bestelnr: 'GD-00103',
       besteldatum: '5-7-2026',
       status: 'Te beoordelen',
-      teVersturenNaarDrukkerOp: null,
-      verstuurdNaarDrukkerOp: null,
-      afgerondOp: null,
-      afgewezenOp: null,
       lineCount: 2,
       totalQuantity: 2,
       lines: [
@@ -385,7 +367,7 @@ describe('BestellingModal — regel bewerken', () => {
   });
 
   it('edits a standard-maat line and saves materiaal/maat/prijs/aantal', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     const { onLineUpdated } = renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-1'));
     fireEvent.change(screen.getByTestId('bestelling-modal-regel-prijs-line-1'), { target: { value: '180' } });
@@ -418,17 +400,22 @@ describe('BestellingModal — regel bewerken', () => {
   });
 
   it('discards edits when Annuleren is clicked', () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-1'));
     fireEvent.change(screen.getByTestId('bestelling-modal-regel-aantal-line-1'), { target: { value: '9' } });
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-annuleren-line-1'));
     expect(screen.queryByTestId('bestelling-modal-regel-materiaal-line-1')).not.toBeInTheDocument();
     expect(screen.getByTestId('bestelling-modal-line-line-1')).toHaveTextContent('3 × € 150,00');
-    expect(fetchMock).not.toHaveBeenCalled();
+    // Annuleren must not PATCH the line -- the component's mount-time historie GET is unrelated.
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      '/api/bestelheaders/header-1/bestellines/line-1',
+      expect.anything()
+    );
   });
 
   it('shows breedte/hoogte inputs instead of a maat select for a custom-size line', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     const { onLineUpdated } = renderModal(BESTELLING_MET_EIGEN_MAAT);
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-3'));
     expect(screen.queryByTestId('bestelling-modal-regel-maat-line-3')).not.toBeInTheDocument();
@@ -548,10 +535,6 @@ const BESTELLING_VERSTUURD: Bestelling = {
   bestelnr: 'GD-00104',
   besteldatum: '4-7-2026',
   status: 'Verstuurd naar drukker',
-  teVersturenNaarDrukkerOp: '2026-07-04T08:00:00.000Z',
-  verstuurdNaarDrukkerOp: '2026-07-05T08:00:00.000Z',
-  afgerondOp: null,
-  afgewezenOp: null,
   lineCount: 1,
   totalQuantity: 1,
   lines: [{ id: 'line-6', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
@@ -562,7 +545,6 @@ const BESTELLING_AFGEROND: Bestelling = {
   id: 'header-5',
   bestelnr: 'GD-00105',
   status: 'Afgerond',
-  afgerondOp: '2026-08-05T09:00:00.000Z',
 };
 
 describe('BestellingModal — afronden/terugzetten', () => {
@@ -596,7 +578,7 @@ describe('BestellingModal — afronden/terugzetten', () => {
   });
 
   it('marks the bestelling as Afgerond, logs bestelling_afgerond, and calls onUpdated', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     const { onUpdated } = renderModal(BESTELLING_VERSTUURD);
     fireEvent.click(screen.getByTestId('bestelling-modal-afronden'));
 
@@ -615,7 +597,7 @@ describe('BestellingModal — afronden/terugzetten', () => {
   });
 
   it('sets afgerondOp to null in onUpdated when terugzetten, logs bestelling_afronding_teruggezet', async () => {
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     const { onUpdated } = renderModal(BESTELLING_AFGEROND);
     fireEvent.click(screen.getByTestId('bestelling-modal-terugzetten'));
 
@@ -626,11 +608,7 @@ describe('BestellingModal — afronden/terugzetten', () => {
       )
     );
     await waitFor(() =>
-      expect(onUpdated).toHaveBeenCalledWith({
-        ...BESTELLING_AFGEROND,
-        status: 'Verstuurd naar drukker',
-        afgerondOp: null,
-      })
+      expect(onUpdated).toHaveBeenCalledWith({ ...BESTELLING_AFGEROND, status: 'Verstuurd naar drukker' })
     );
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'bestelling_afronding_teruggezet',
@@ -648,13 +626,39 @@ describe('BestellingModal — afronden/terugzetten', () => {
     expect(logActiviteitMock).not.toHaveBeenCalled();
   });
 
-  it('shows only the status transitions that actually happened, in order, with their dates', () => {
+  it('fetches and shows the status history from the API, in the order the server returned it', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { status: 'Te beoordelen', tijdstip: '2026-07-04T08:00:00.000Z' },
+        { status: 'Te versturen naar drukker', tijdstip: '2026-07-04T09:00:00.000Z' },
+        { status: 'Verstuurd naar drukker', tijdstip: '2026-07-05T08:00:00.000Z' },
+        { status: 'Afgerond', tijdstip: '2026-08-05T09:00:00.000Z' },
+      ],
+    });
     renderModal(BESTELLING_AFGEROND);
-    const historie = screen.getByTestId('bestelling-modal-historie');
+    const historie = await screen.findByTestId('bestelling-modal-historie');
     expect(historie).toHaveTextContent('Te beoordelen');
     expect(historie).toHaveTextContent('Goedgekeurd');
     expect(historie).toHaveTextContent('Verstuurd naar drukker');
     expect(historie).toHaveTextContent('Afgerond');
-    expect(screen.queryByTestId('bestelling-modal-historie-afgewezen')).not.toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith('/api/bestelheaders/header-5/statushistorie');
+  });
+
+  it('shows the same status twice if it was reached twice (Afgerond -> Terugzetten -> Afgerond again)', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { status: 'Te beoordelen', tijdstip: '2026-07-04T08:00:00.000Z' },
+        { status: 'Verstuurd naar drukker', tijdstip: '2026-07-05T08:00:00.000Z' },
+        { status: 'Afgerond', tijdstip: '2026-07-06T08:00:00.000Z' },
+        { status: 'Verstuurd naar drukker', tijdstip: '2026-07-07T08:00:00.000Z' },
+        { status: 'Afgerond', tijdstip: '2026-08-05T09:00:00.000Z' },
+      ],
+    });
+    renderModal(BESTELLING_AFGEROND);
+    const historie = await screen.findByTestId('bestelling-modal-historie');
+    expect(within(historie).getAllByText('Afgerond')).toHaveLength(2);
+    expect(within(historie).getAllByText('Verstuurd naar drukker')).toHaveLength(2);
   });
 });
