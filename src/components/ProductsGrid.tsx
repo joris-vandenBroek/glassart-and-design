@@ -19,6 +19,29 @@ import { LinkifiedText } from './LinkifiedText';
 import type { Segment, Kunstwerk, Materiaal, Maat, Materiaalsoort, KunstwerkFormaat, Stijl, Onderwerp } from './beheer/materiaalTypes';
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
 
+const CARD_ASPECT_CLASS: Record<Exclude<KunstwerkFormaat, 'alle'>, string> = {
+  vierkant: 'aspect-square',
+  staand: 'aspect-[3/4]',
+  liggend: 'aspect-[4/3]',
+};
+
+function resolveCardAspectClass(formaat: KunstwerkFormaat | null | undefined): string {
+  if (formaat && formaat in CARD_ASPECT_CLASS) {
+    return CARD_ASPECT_CLASS[formaat as Exclude<KunstwerkFormaat, 'alle'>];
+  }
+  return CARD_ASPECT_CLASS.vierkant;
+}
+
+const CARDS_PER_ROW = 3;
+
+function chunkIntoRows<T>(items: T[], size: number): T[][] {
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    rows.push(items.slice(i, i + size));
+  }
+  return rows;
+}
+
 export function ProductsGrid() {
   const locale = useLocale();
   const tCollections = useTranslations('collectionsPage');
@@ -291,37 +314,45 @@ export function ProductsGrid() {
         </div>
       )}
 
-      <div data-testid="products-grid" className="grid grid-cols-3 gap-3">
-        {visibleKunstwerken.map((kunstwerk) => {
-          const omschrijving = resolveKunstwerkOmschrijving(kunstwerk, locale);
-          return (
-            <div
-              key={kunstwerk.id}
-              data-testid="product-card"
-              role="button"
-              tabIndex={0}
-              aria-label={omschrijving}
-              onClick={() => handleSelect(kunstwerk)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  if (event.key === ' ') {
-                    event.preventDefault();
-                  }
-                  handleSelect(kunstwerk);
-                }
-              }}
-              className="group relative aspect-square cursor-pointer overflow-hidden rounded border border-gold/50 bg-white transition duration-300 hover:-translate-y-1 hover:border-gold hover:shadow-[0_8px_24px_rgba(212,175,55,0.25)] focus-visible:-translate-y-1 focus-visible:border-gold focus-visible:outline-none"
-            >
-              <ProductImage src={kunstwerk.foto} alt={omschrijving} className="h-full w-full" fit="contain" />
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0 flex items-end bg-gradient-to-t from-black/80 via-black/10 to-transparent p-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100"
-              >
-                <p className="font-head text-xs italic leading-snug text-white line-clamp-3">{omschrijving}</p>
-              </div>
-            </div>
-          );
-        })}
+      <div data-testid="products-grid" className="flex flex-col gap-3">
+        {chunkIntoRows(visibleKunstwerken, CARDS_PER_ROW).map((row, rowIndex) => (
+          <div key={rowIndex} className="flex items-center gap-3">
+            {row.map((kunstwerk) => {
+              const omschrijving = resolveKunstwerkOmschrijving(kunstwerk, locale);
+              return (
+                <div
+                  key={kunstwerk.id}
+                  data-testid="product-card"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={omschrijving}
+                  onClick={() => handleSelect(kunstwerk)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      if (event.key === ' ') {
+                        event.preventDefault();
+                      }
+                      handleSelect(kunstwerk);
+                    }
+                  }}
+                  className={`group relative flex-1 cursor-pointer overflow-hidden rounded border-2 border-gold/80 transition duration-300 hover:-translate-y-1 hover:border-gold hover:shadow-[0_8px_24px_rgba(212,175,55,0.25)] focus-visible:-translate-y-1 focus-visible:border-gold focus-visible:outline-none ${resolveCardAspectClass(kunstwerk.formaat)}`}
+                >
+                  <ProductImage src={kunstwerk.foto} alt={omschrijving} className="h-full w-full" fit="cover" />
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 flex items-end bg-gradient-to-t from-black/80 via-black/10 to-transparent p-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100"
+                  >
+                    <p className="font-head text-xs italic leading-snug text-white line-clamp-3">{omschrijving}</p>
+                  </div>
+                </div>
+              );
+            })}
+            {row.length < CARDS_PER_ROW &&
+              Array.from({ length: CARDS_PER_ROW - row.length }).map((_, placeholderIndex) => (
+                <div key={`placeholder-${placeholderIndex}`} aria-hidden="true" className="flex-1" />
+              ))}
+          </div>
+        ))}
       </div>
     </>
   );
