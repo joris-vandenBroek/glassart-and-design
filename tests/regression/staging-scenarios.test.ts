@@ -927,8 +927,8 @@ describe('Klant met alleenrecht voor één kunstenaar', () => {
   });
 });
 
-describe('Bestelling afronden -- van plaatsing tot "Afgerond" met afgerondOp gezet', () => {
-  it('een bestelling die de volledige weg tot bij de drukker aflegt kan daarna door staff als "Afgerond" gemarkeerd worden, met afgerondOp gezet', async () => {
+describe('Bestelling afronden -- van plaatsing tot "Afgerond" met bestelstatusHistorie bijgehouden', () => {
+  it('een bestelling die de volledige weg tot bij de drukker aflegt kan daarna door staff als "Afgerond" gemarkeerd worden, met de statusovergang in bestelstatusHistorie', async () => {
     const klantEmails: string[] = [];
     const drukkerIds: string[] = [];
 
@@ -938,8 +938,8 @@ describe('Bestelling afronden -- van plaatsing tot "Afgerond" met afgerondOp gez
       klantEmails.push(klant.email);
 
       // Geen kunstwerk/materiaal/maat-fixture nodig -- een lege regelset is voldoende om
-      // de statusketen zelf te doorlopen (zie ook bestelheaders.test.ts's "sets afgerondOp"
-      // tests, die op dezelfde manier met `lines: []` werken).
+      // de statusketen zelf te doorlopen (zie ook bestelheaders.test.ts's
+      // bestelstatusHistorie-tests, die op dezelfde manier met `lines: []` werken).
       const plaatsing = await createHeader(req('POST', { lines: [] }, klant.cookie));
       expect(plaatsing.status).toBe(201);
       const header = await plaatsing.json();
@@ -994,12 +994,14 @@ describe('Bestelling afronden -- van plaatsing tot "Afgerond" met afgerondOp gez
       });
       expect(afronden.status).toBe(200);
 
-      const [rows] = await getPool().query('SELECT status, afgerondOp FROM bestelheaders WHERE id = ?', [
-        header.id,
-      ]);
-      const row = (rows as Array<{ status: string; afgerondOp: Date | null }>)[0];
-      expect(row.status).toBe('Afgerond');
-      expect(row.afgerondOp).not.toBeNull();
+      const [headerRows] = await getPool().query('SELECT status FROM bestelheaders WHERE id = ?', [header.id]);
+      expect((headerRows as Array<{ status: string }>)[0].status).toBe('Afgerond');
+
+      const [historieRows] = await getPool().query(
+        'SELECT status FROM bestelstatusHistorie WHERE bestelheaderId = ? ORDER BY tijdstip ASC',
+        [header.id]
+      );
+      expect((historieRows as Array<{ status: string }>).map((r) => r.status)).toContain('Afgerond');
     } finally {
       // opruimenKlanten verwijdert ook de bestelheader (via klantId IN (...)) -- geen
       // apart headerId-cleanup nodig, zelfde patroon als de andere scenario's in dit bestand.
