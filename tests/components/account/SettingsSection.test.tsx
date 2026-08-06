@@ -197,6 +197,27 @@ describe('SettingsSection', () => {
     expect(replaceMock).not.toHaveBeenCalled();
   });
 
+  it('shows a dedicated message and stays on the page when deletion is blocked by existing bestellingen', async () => {
+    renderSection();
+    await waitFor(() => expect(screen.getByTestId('delete-account-submit')).toBeInTheDocument());
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/auth/login') return { ok: true };
+      if (url === '/api/klanten/uid-1') {
+        return { ok: false, status: 409, json: async () => ({ error: 'heeft-bestellingen' }) };
+      }
+      return { ok: true, json: async () => KLANT_PROFILE };
+    });
+    fireEvent.change(screen.getByTestId('delete-account-password'), {
+      target: { value: 'geheim123' },
+    });
+    fireEvent.click(screen.getByTestId('delete-account-submit'));
+
+    expect(await screen.findByTestId('delete-account-error')).toHaveTextContent(
+      'Uw account kan niet verwijderd worden omdat u nog bestellingen bij ons heeft staan. Neem contact met ons op als u toch verwijderd wilt worden.'
+    );
+    expect(replaceMock).not.toHaveBeenCalled();
+  });
+
   it('re-authenticates, deletes the klant record, logs out and redirects home', async () => {
     renderSection();
     await waitFor(() => expect(screen.getByTestId('delete-account-submit')).toBeInTheDocument());

@@ -289,6 +289,7 @@
       "deleteAccountSubmit": "Definitief verwijderen",
       "deleteAccountError": "Wachtwoord onjuist, account niet verwijderd.",
       "deleteAccountPartialError": "Uw gegevens zijn verwijderd, maar er ging iets mis bij het volledig verwijderen van uw account. Neem contact met ons op.",
+      "deleteAccountHasOrdersError": "Uw account kan niet verwijderd worden omdat u nog bestellingen bij ons heeft staan. Neem contact met ons op als u toch verwijderd wilt worden.",
       "verplichtVeldLegende": "* verplicht veld"
     }
   },

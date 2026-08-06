@@ -137,6 +137,13 @@ export function SettingsSection() {
       }
       const deleteResponse = await fetch(`/api/klanten/${user?.uid ?? ''}`, { method: 'DELETE' });
       if (!deleteResponse.ok) {
+        if (deleteResponse.status === 409) {
+          const body = (await deleteResponse.json().catch(() => null)) as { error?: string } | null;
+          if (body?.error === 'heeft-bestellingen') {
+            setDeleteError(t('deleteAccountHasOrdersError'));
+            return;
+          }
+        }
         setDeleteError(t('deleteAccountPartialError'));
         return;
       }
