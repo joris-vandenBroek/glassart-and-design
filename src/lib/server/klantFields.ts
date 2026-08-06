@@ -6,6 +6,7 @@
 export const SELF_EDITABLE_KLANT_FIELDS = [
   'companyName',
   'kvk',
+  'btwNummer',
   'contactPerson',
   'contactPreference',
   'phone',

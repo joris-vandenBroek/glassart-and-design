@@ -3,6 +3,7 @@ import { getPool } from '@/lib/server/db';
 import { updateRow, deleteRow } from '@/lib/server/crud';
 import { requireMedewerker, requireKlant } from '@/lib/server/requireAuth';
 import { withApiErrorHandling } from '@/lib/server/apiRoute';
+import { checkBtwNummerUpdate } from '@/lib/server/btwNummerCheck';
 
 // Full-field admin edit (status, prijsgroepId, kunstenaarId, ...) -- staff only.
 // A klant's own self-service edit goes through the narrowly-scoped /api/klanten/me instead.
@@ -13,6 +14,9 @@ export const PATCH = withApiErrorHandling(
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
     const data = await request.json();
+    if ((await checkBtwNummerUpdate(data, params.id)) === 'ongeldig') {
+      return NextResponse.json({ error: 'btwnummer-ongeldig' }, { status: 400 });
+    }
     await updateRow('klanten', params.id, data);
     return NextResponse.json({ ok: true });
   }

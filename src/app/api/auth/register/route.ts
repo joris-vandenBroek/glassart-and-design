@@ -3,6 +3,7 @@ import { getPool } from '@/lib/server/db';
 import { insertRow } from '@/lib/server/crud';
 import { hashPassword } from '@/lib/server/password';
 import { SELF_EDITABLE_KLANT_FIELDS } from '@/lib/server/klantFields';
+import { isBtwNummerVerplicht, normaliseerBtwNummer, valideerBtwNummer } from '@/lib/btwNummer';
 
 export async function POST(request: Request) {
   const body = (await request.json()) as { email: string; password: string } & Record<
@@ -22,6 +23,23 @@ export async function POST(request: Request) {
   const fields: Record<string, unknown> = {};
   for (const field of SELF_EDITABLE_KLANT_FIELDS) {
     if (field in body) fields[field] = body[field];
+  }
+
+  // Registration is the one place where a missing VAT number is fatal: an EU business
+  // customer outside NL cannot be invoiced correctly without one. Editing an existing
+  // klant deliberately does not enforce this -- see the spec, section D.
+  const land = typeof fields.land === 'string' ? fields.land : null;
+  const btwNummer = normaliseerBtwNummer(typeof fields.btwNummer === 'string' ? fields.btwNummer : '');
+  if (btwNummer === '') {
+    if (isBtwNummerVerplicht(land)) {
+      return NextResponse.json({ error: 'btwnummer-verplicht' }, { status: 400 });
+    }
+    fields.btwNummer = null;
+  } else {
+    if (valideerBtwNummer(btwNummer, land) === 'ongeldig') {
+      return NextResponse.json({ error: 'btwnummer-ongeldig' }, { status: 400 });
+    }
+    fields.btwNummer = btwNummer;
   }
 
   try {
