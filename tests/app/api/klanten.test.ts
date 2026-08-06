@@ -109,6 +109,7 @@ describe('klanten admin routes', () => {
       wachtwoordHash: await hashPassword('x'),
       status: 'Goedgekeurd',
     } as never);
+    createdKlantIds.push(klant.id);
     const other = await insertRow<{ id: string }>('klanten', {
       email: 'g@example.com',
       wachtwoordHash: await hashPassword('x'),
