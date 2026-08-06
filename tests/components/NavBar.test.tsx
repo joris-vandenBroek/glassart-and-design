@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { NavBar } from '@/components/NavBar';
 import messages from '../../messages/nl.json';
@@ -65,15 +65,13 @@ describe('NavBar', () => {
     expect(screen.queryByTestId('account-icon')).not.toBeInTheDocument();
   });
 
-  it('renders Collecties as a link, with a dropdown available on hover once segments load', async () => {
+  it('renders Collecties as a plain link to /collecties, with no dropdown', async () => {
     signedOut();
-    fetchMock.mockResolvedValue({ ok: true, json: async () => [{ id: 'seg-hotel', omschrijving: 'Hotel' }] });
     renderNavBar();
     await waitFor(() => expect(screen.getByTestId('nav-become-client')).toBeInTheDocument());
     expect(screen.getByTestId('nav-collections')).toHaveAttribute('href', '/collecties');
+    expect(screen.queryByTestId('collections-dropdown-trigger')).not.toBeInTheDocument();
     expect(screen.queryByTestId('collections-dropdown')).not.toBeInTheDocument();
-    fireEvent.mouseEnter(screen.getByTestId('collections-dropdown-trigger'));
-    await waitFor(() => expect(screen.getByTestId('collections-dropdown-item-seg-hotel')).toBeInTheDocument());
   });
 
   it('shows the "Inloggen" link pointing to /inloggen when logged out', async () => {

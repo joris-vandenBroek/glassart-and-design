@@ -351,6 +351,11 @@ export function ProductModal({
                 <dt className="font-head text-[10px] uppercase tracking-wide text-gold/90">{t('artistLabel')}</dt>
                 <dd data-testid="product-modal-artiest" className="text-white/75">
                   {artiestNaam}
+                  {kunstwerk.naam && (
+                    <span data-testid="product-modal-artiest-kunstwerknaam" className="block text-[0.7rem] text-white/50">
+                      {kunstwerk.naam}
+                    </span>
+                  )}
                 </dd>
               </>
             )}

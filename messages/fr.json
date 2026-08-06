@@ -22,8 +22,7 @@
     "login": "Connexion",
     "logout": "Déconnexion",
     "myOrders": "Mes commandes",
-    "myAccount": "Mon compte",
-    "allCollectionsLink": "Toutes les collections"
+    "myAccount": "Mon compte"
   },
   "underConstruction": {
     "eyebrow": "Bientôt",

@@ -7,7 +7,6 @@ import { getKlantInitials } from '@/lib/getKlantInitials';
 import { Logo } from './Logo';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { CartPanel } from './CartPanel';
-import { CollectiesDropdown } from './CollectiesDropdown';
 
 export function NavBar() {
   const t = useTranslations('nav');
@@ -30,7 +29,9 @@ export function NavBar() {
           <Link href="/" data-testid="nav-home" className="hover:text-gold">
             {t('home')}
           </Link>
-          <CollectiesDropdown />
+          <Link href="/collecties" data-testid="nav-collections" className="hover:text-gold">
+            {t('collections')}
+          </Link>
           <Link href="/contact" data-testid="nav-contact" className="hover:text-gold">
             {t('contact')}
           </Link>

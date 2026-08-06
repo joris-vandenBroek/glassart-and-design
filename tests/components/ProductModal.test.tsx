@@ -1088,6 +1088,7 @@ describe('ProductModal', () => {
       onderwerpIds: ['onderwerp-1'],
     });
     expect(screen.getByTestId('product-modal-artiest')).toHaveTextContent('Open Artiest');
+    expect(screen.getByTestId('product-modal-artiest-kunstwerknaam')).toHaveTextContent('Hotel paneel');
     expect(screen.getByTestId('product-modal-collecties')).toHaveTextContent('Hotel');
     expect(screen.getByTestId('product-modal-stijl')).toHaveTextContent('Abstract');
     expect(screen.getByTestId('product-modal-onderwerp')).toHaveTextContent('Bloemen');
