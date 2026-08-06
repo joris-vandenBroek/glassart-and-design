@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { DrukkerModal } from '@/components/beheer/DrukkerModal';
 import type { Drukker } from '@/components/beheer/materiaalTypes';
@@ -32,7 +32,7 @@ const DRUKKER: Drukker = {
 
 function renderModal(
   state: { mode: 'edit'; drukker: Drukker } | { mode: 'add' } | null,
-  overrides: { bestellingen?: Bestelling[]; onBestellingUpdated?: (b: Bestelling) => void } = {}
+  overrides: { bestellingen?: Bestelling[] | null; onBestellingUpdated?: (b: Bestelling) => void } = {}
 ) {
   const onClose = vi.fn();
   const onAdd = vi.fn().mockResolvedValue(true);
@@ -43,7 +43,7 @@ function renderModal(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <DrukkerModal
         state={state}
-        bestellingen={overrides.bestellingen ?? []}
+        bestellingen={'bestellingen' in overrides ? overrides.bestellingen ?? null : []}
         onClose={onClose}
         onAdd={onAdd}
         onUpdate={onUpdate}
@@ -300,5 +300,13 @@ describe('DrukkerModal — zending afronden', () => {
     fireEvent.click(screen.getByTestId('drukker-zending-afronden-zending-1'));
 
     expect(await screen.findByTestId('drukker-zending-afronden-error')).toHaveTextContent('1');
+  });
+
+  it('renders no afgerond badge and no afronden button while bestellingen is still loading (null)', async () => {
+    mockZending(['header-1', 'header-2']);
+    renderModal({ mode: 'edit', drukker: DRUKKER }, { bestellingen: null });
+    const zendingRow = await screen.findByTestId('drukker-zending-zending-1');
+    expect(within(zendingRow).queryByTestId('drukker-zending-afgerond-badge-zending-1')).not.toBeInTheDocument();
+    expect(within(zendingRow).queryByTestId('drukker-zending-afronden-zending-1')).not.toBeInTheDocument();
   });
 });

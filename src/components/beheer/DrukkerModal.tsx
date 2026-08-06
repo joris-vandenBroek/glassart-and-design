@@ -14,7 +14,7 @@ type ModalState = { mode: 'add' } | { mode: 'edit'; drukker: Drukker } | null;
 
 interface DrukkerModalProps {
   state: ModalState;
-  bestellingen: Bestelling[];
+  bestellingen: Bestelling[] | null;
   onClose: () => void;
   onAdd: (data: Omit<Drukker, 'id'>) => Promise<boolean>;
   onUpdate: (id: string, data: Omit<Drukker, 'id'>) => Promise<boolean>;
@@ -66,7 +66,8 @@ export function DrukkerModal({
     setZendingActionError(null);
   }, [state]);
 
-  function afgerondCounts(zending: DrukkerZending): { afgerond: number; totaal: number } {
+  function afgerondCounts(zending: DrukkerZending): { afgerond: number; totaal: number } | null {
+    if (bestellingen === null) return null;
     const orders = zending.bestellingIds
       .map((id) => bestellingen.find((b) => b.id === id))
       .filter((b): b is Bestelling => b != null);
@@ -75,9 +76,27 @@ export function DrukkerModal({
 
   async function handleMarkeerZendingAlsAfgerond(zending: DrukkerZending) {
     setZendingActionError(null);
-    const teAfronden = zending.bestellingIds
+    if (bestellingen === null) {
+      setZendingActionError({
+        zendingId: zending.id,
+        message: t('drukkersMarkeerZendingAlsAfgerondError', { afgerond: 0, totaal: zending.bestellingIds.length }),
+      });
+      return;
+    }
+    const orders = zending.bestellingIds
       .map((id) => bestellingen.find((b) => b.id === id))
-      .filter((b): b is Bestelling => b != null && b.status === 'Verstuurd naar drukker');
+      .filter((b): b is Bestelling => b != null);
+    const teAfronden = orders.filter((b) => b.status === 'Verstuurd naar drukker');
+    if (teAfronden.length === 0) {
+      const alleAfgerond = orders.length === zending.bestellingIds.length && orders.every((b) => b.status === 'Afgerond');
+      if (!alleAfgerond) {
+        setZendingActionError({
+          zendingId: zending.id,
+          message: t('drukkersMarkeerZendingAlsAfgerondError', { afgerond: 0, totaal: zending.bestellingIds.length }),
+        });
+      }
+      return;
+    }
     let afgerond = 0;
     for (const bestelling of teAfronden) {
       try {
@@ -266,7 +285,7 @@ export function DrukkerModal({
             ) : (
               <ul className="flex max-h-64 flex-col gap-2 overflow-y-auto">
                 {zendingen.map((zending) => {
-                  const { afgerond, totaal } = afgerondCounts(zending);
+                  const counts = afgerondCounts(zending);
                   return (
                     <li key={zending.id} data-testid={`drukker-zending-${zending.id}`} className="rounded-sm bg-black/30 p-2 text-xs">
                       <div className="flex items-center justify-between gap-2">
@@ -291,21 +310,25 @@ export function DrukkerModal({
                         </button>
                       </div>
                       <div className="mt-1.5 flex items-center justify-between gap-2">
-                        <span
-                          data-testid={`drukker-zending-afgerond-badge-${zending.id}`}
-                          className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white/70"
-                        >
-                          {t('drukkersZendingAfgerondBadge', { afgerond, totaal })}
-                        </span>
-                        {afgerond < totaal && (
-                          <button
-                            type="button"
-                            data-testid={`drukker-zending-afronden-${zending.id}`}
-                            onClick={() => handleMarkeerZendingAlsAfgerond(zending)}
-                            className="shrink-0 text-white/50 underline underline-offset-2 hover:text-white"
-                          >
-                            {t('drukkersMarkeerZendingAlsAfgerond')}
-                          </button>
+                        {counts && (
+                          <>
+                            <span
+                              data-testid={`drukker-zending-afgerond-badge-${zending.id}`}
+                              className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white/70"
+                            >
+                              {t('drukkersZendingAfgerondBadge', { afgerond: counts.afgerond, totaal: counts.totaal })}
+                            </span>
+                            {counts.afgerond < counts.totaal && (
+                              <button
+                                type="button"
+                                data-testid={`drukker-zending-afronden-${zending.id}`}
+                                onClick={() => handleMarkeerZendingAlsAfgerond(zending)}
+                                className="shrink-0 text-white/50 underline underline-offset-2 hover:text-white"
+                              >
+                                {t('drukkersMarkeerZendingAlsAfgerond')}
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                       {zendingActionError?.zendingId === zending.id && (

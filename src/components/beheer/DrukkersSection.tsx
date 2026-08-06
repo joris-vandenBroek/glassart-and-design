@@ -9,7 +9,7 @@ import type { Bestelling } from './BestellingenSection';
 
 interface DrukkersSectionProps {
   drukkers: Drukker[] | null;
-  bestellingen: Bestelling[];
+  bestellingen: Bestelling[] | null;
   loadError: string | null;
   onAdd: (data: Omit<Drukker, 'id'>) => Promise<boolean>;
   onUpdate: (id: string, data: Omit<Drukker, 'id'>) => Promise<boolean>;

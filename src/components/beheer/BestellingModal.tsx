@@ -583,7 +583,9 @@ export function BestellingModal({
                   data-testid={`bestelling-modal-historie-item-${index}`}
                   className="flex justify-between gap-3 text-white/60"
                 >
-                  <span>{t(HISTORIE_LABEL_KEY[entry.status] ?? entry.status)}</span>
+                  <span>
+                    {HISTORIE_LABEL_KEY[entry.status] ? t(HISTORIE_LABEL_KEY[entry.status]) : entry.status}
+                  </span>
                   <span>{entry.tijdstip.toLocaleString('nl-NL')}</span>
                 </li>
               ))}

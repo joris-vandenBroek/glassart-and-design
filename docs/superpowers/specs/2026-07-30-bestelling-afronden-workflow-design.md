@@ -50,6 +50,11 @@ lijst aansluit.
 
 ## Sectie B: Datamodel
 
+> **Superseded**: het hieronder beschreven datamodel (`afgerondOp` + 3 vergelijkbare
+> timestamp-kolommen op `bestelheaders`) is vervangen door de `bestelstatusHistorie`-tabel.
+> Zie `docs/superpowers/plans/2026-08-06-bestelstatushistorie-refactor.md` voor het huidige
+> ontwerp.
+
 Nieuwe kolom op `bestelheaders` (`db/schema.sql`):
 
 ```sql

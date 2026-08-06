@@ -596,7 +596,7 @@ describe('BestellingModal — afronden/terugzetten', () => {
     );
   });
 
-  it('sets afgerondOp to null in onUpdated when terugzetten, logs bestelling_afronding_teruggezet', async () => {
+  it('calls onUpdated with the status reverted to Verstuurd naar drukker when terugzetten, logs bestelling_afronding_teruggezet', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     const { onUpdated } = renderModal(BESTELLING_AFGEROND);
     fireEvent.click(screen.getByTestId('bestelling-modal-terugzetten'));

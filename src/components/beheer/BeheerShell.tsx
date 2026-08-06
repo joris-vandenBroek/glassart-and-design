@@ -446,7 +446,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
         ) : activeSection === 'drukkers' ? (
           <DrukkersSection
             drukkers={drukkers.items}
-            bestellingen={bestellingen ?? []}
+            bestellingen={bestellingen}
             loadError={drukkers.error === 'load' ? t('drukkersLoadError') : null}
             onAdd={drukkers.add}
             onUpdate={drukkers.update}
