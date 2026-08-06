@@ -120,17 +120,28 @@ function Seed() {
   );
 }
 
-function renderCartPanel() {
-  return render(
+// Het mandje hoort bij een klant, dus het wordt pas geladen als /api/auth/me terug is.
+// Seeden vóór dat moment landt in het mandje van niemand -- vandaar dit baken om op te
+// wachten voordat een test items toevoegt.
+function CartReady() {
+  const { isHydrated } = useCart();
+  return isHydrated ? <span data-testid="cart-ready" /> : null;
+}
+
+async function renderCartPanel() {
+  const rendered = render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <CustomerAuthProvider>
         <CartProvider>
+          <CartReady />
           <Seed />
           <CartPanel />
         </CartProvider>
       </CustomerAuthProvider>
     </NextIntlClientProvider>
   );
+  await screen.findByTestId('cart-ready');
+  return rendered;
 }
 
 function signedOut() {
@@ -166,15 +177,15 @@ afterEach(() => {
 });
 
 describe('CartPanel', () => {
-  it('shows no badge when the cart is empty, and an empty message when opened', () => {
-    renderCartPanel();
+  it('shows no badge when the cart is empty, and an empty message when opened', async () => {
+    await renderCartPanel();
     expect(screen.queryByTestId('cart-badge')).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId('cart-icon'));
     expect(screen.getByTestId('cart-empty')).toBeInTheDocument();
   });
 
-  it('shows a badge with the total quantity and lists cart items with materiaal/maat/price once seeded', () => {
-    renderCartPanel();
+  it('shows a badge with the total quantity and lists cart items with materiaal/maat/price once seeded', async () => {
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     expect(screen.getByTestId('cart-badge')).toHaveTextContent('2');
     fireEvent.click(screen.getByTestId('cart-icon'));
@@ -183,22 +194,22 @@ describe('CartPanel', () => {
     expect(screen.getByText('4mm — Veiligheidsglas · 60×90 cm · ×2')).toBeInTheDocument();
   });
 
-  it('shows the total price of all cart items', () => {
-    renderCartPanel();
+  it('shows the total price of all cart items', async () => {
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     expect(screen.getByTestId('cart-total')).toHaveTextContent('€ 300,00');
   });
 
-  it('shows the photo for each cart item', () => {
-    renderCartPanel();
+  it('shows the photo for each cart item', async () => {
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     expect(screen.getByTestId('product-image')).toBeInTheDocument();
   });
 
-  it('removes an item when its remove button is clicked', () => {
-    renderCartPanel();
+  it('removes an item when its remove button is clicked', async () => {
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     const removeButtons = screen.getAllByLabelText('Verwijderen');
@@ -209,7 +220,7 @@ describe('CartPanel', () => {
 
   it('shows a login link instead of the place-order button when not logged in', async () => {
     signedOut();
-    renderCartPanel();
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     await waitFor(() => expect(screen.getByTestId('cart-login-to-order')).toBeInTheDocument());
@@ -218,7 +229,7 @@ describe('CartPanel', () => {
   });
 
   it('creates a bestelheader via /api/bestelheaders with the real kunstwerk/materiaal/maat/prijs per cart item, clears the cart and shows a confirmation message', async () => {
-    renderCartPanel();
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     await waitFor(() => expect(screen.getByTestId('cart-place-order')).not.toBeDisabled());
@@ -253,7 +264,7 @@ describe('CartPanel', () => {
         { id: 'ka-1', naam: 'Solo Artiest', exclusieveKlantIds: ['andere-uid'] },
       ],
     });
-    renderCartPanel();
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     // De knop komt pas vrij als kunstwerken én kunstenaars geladen zijn, dus dit
@@ -273,7 +284,7 @@ describe('CartPanel', () => {
       kunstwerken: [{ id: 'kw-1', kunstenaarId: 'ka-1' }],
       kunstenaars: [{ id: 'ka-1', naam: 'Open Artiest', exclusieveKlantIds: [] }],
     });
-    renderCartPanel();
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     await waitFor(() => expect(screen.getByTestId('cart-place-order')).not.toBeDisabled());
@@ -285,7 +296,7 @@ describe('CartPanel', () => {
 
   it('does not fetch the kunstwerken/kunstenaars collections for a visitor who is not a customer', async () => {
     signedOut();
-    renderCartPanel();
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     await waitFor(() => expect(screen.getByTestId('cart-login-to-order')).toBeInTheDocument());
@@ -295,7 +306,7 @@ describe('CartPanel', () => {
 
   it('keeps the place-order button disabled until the pre-check collections have loaded', async () => {
     collectionsPending = 'kunstwerken';
-    renderCartPanel();
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     await waitFor(() => expect(screen.getByTestId('cart-place-order')).toBeInTheDocument());
@@ -306,7 +317,7 @@ describe('CartPanel', () => {
 
   it('keeps the place-order button disabled when loading the pre-check collections fails', async () => {
     collectionsShouldError = true;
-    renderCartPanel();
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     await waitFor(() => expect(screen.getByTestId('cart-place-order')).toBeInTheDocument());
@@ -317,7 +328,7 @@ describe('CartPanel', () => {
   it('sends a confirmation email via fetch when the order succeeds and mail env vars are set', async () => {
     vi.stubEnv('NEXT_PUBLIC_MAIL_ENDPOINT_URL', 'https://example.com/mail.php');
     vi.stubEnv('NEXT_PUBLIC_MAIL_SECRET', 'test-secret');
-    renderCartPanel();
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     await waitFor(() => expect(screen.getByTestId('cart-place-order')).not.toBeDisabled());
@@ -341,7 +352,7 @@ describe('CartPanel', () => {
   it('does not call fetch when the mail endpoint/secret env vars are not set', async () => {
     vi.stubEnv('NEXT_PUBLIC_MAIL_ENDPOINT_URL', '');
     vi.stubEnv('NEXT_PUBLIC_MAIL_SECRET', '');
-    renderCartPanel();
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     await waitFor(() => expect(screen.getByTestId('cart-place-order')).not.toBeDisabled());
@@ -355,7 +366,7 @@ describe('CartPanel', () => {
     vi.stubEnv('NEXT_PUBLIC_MAIL_ENDPOINT_URL', 'https://example.com/mail.php');
     vi.stubEnv('NEXT_PUBLIC_MAIL_SECRET', 'test-secret');
     mailRejects = true;
-    renderCartPanel();
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     await waitFor(() => expect(screen.getByTestId('cart-place-order')).not.toBeDisabled());
@@ -371,7 +382,7 @@ describe('CartPanel', () => {
     vi.stubEnv('NEXT_PUBLIC_MAIL_ENDPOINT_URL', 'https://example.com/mail.php');
     vi.stubEnv('NEXT_PUBLIC_MAIL_SECRET', 'test-secret');
     mailResponse = { ok: false };
-    renderCartPanel();
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     await waitFor(() => expect(screen.getByTestId('cart-place-order')).not.toBeDisabled());
@@ -381,7 +392,7 @@ describe('CartPanel', () => {
   });
 
   it('clears the confirmation message once the panel is closed and reopened', async () => {
-    renderCartPanel();
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     await waitFor(() => expect(screen.getByTestId('cart-place-order')).not.toBeDisabled());
@@ -397,7 +408,7 @@ describe('CartPanel', () => {
 
   it('shows an error and keeps the cart intact when the order request fails', async () => {
     orderResponse = { ok: false };
-    renderCartPanel();
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     await waitFor(() => expect(screen.getByTestId('cart-place-order')).not.toBeDisabled());
@@ -411,29 +422,29 @@ describe('CartPanel', () => {
   });
 
   it('disables the place-order button when the cart is empty', async () => {
-    renderCartPanel();
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('cart-icon'));
     await waitFor(() => expect(screen.getByTestId('cart-place-order')).toBeInTheDocument());
     expect(screen.getByTestId('cart-place-order')).toBeDisabled();
   });
 
-  it('closes the panel when Escape is pressed', () => {
-    renderCartPanel();
+  it('closes the panel when Escape is pressed', async () => {
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('cart-icon'));
     expect(screen.getByTestId('cart-panel')).toBeInTheDocument();
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByTestId('cart-panel')).not.toBeInTheDocument();
   });
 
-  it('closes the panel when the backdrop is clicked', () => {
-    renderCartPanel();
+  it('closes the panel when the backdrop is clicked', async () => {
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('cart-icon'));
     fireEvent.click(screen.getByTestId('cart-backdrop'));
     expect(screen.queryByTestId('cart-panel')).not.toBeInTheDocument();
   });
 
-  it('empties the cart via "Bestelling leegmaken" without writing an order, and keeps the panel open', () => {
-    renderCartPanel();
+  it('empties the cart via "Bestelling leegmaken" without writing an order, and keeps the panel open', async () => {
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     fireEvent.click(screen.getByTestId('cart-clear'));
@@ -444,14 +455,14 @@ describe('CartPanel', () => {
     expect(fetchMock).not.toHaveBeenCalledWith('/api/bestelheaders', expect.anything());
   });
 
-  it('disables "Bestelling leegmaken" when the cart is empty', () => {
-    renderCartPanel();
+  it('disables "Bestelling leegmaken" when the cart is empty', async () => {
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('cart-icon'));
     expect(screen.getByTestId('cart-clear')).toBeDisabled();
   });
 
   it('logs bestelling_geplaatst with the logged-in klant when the order succeeds', async () => {
-    renderCartPanel();
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     await waitFor(() => expect(screen.getByTestId('cart-place-order')).not.toBeDisabled());
@@ -467,7 +478,7 @@ describe('CartPanel', () => {
 
   it('does not log bestelling_geplaatst when the order request fails', async () => {
     orderResponse = { ok: false };
-    renderCartPanel();
+    await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     await waitFor(() => expect(screen.getByTestId('cart-place-order')).not.toBeDisabled());
@@ -477,7 +488,7 @@ describe('CartPanel', () => {
     expect(logActiviteitMock).not.toHaveBeenCalled();
   });
 
-  it('shows the unpriced-items note and excludes a custom-size item from the total', () => {
+  it('shows the unpriced-items note and excludes a custom-size item from the total', async () => {
     function SeedCustom() {
       const { addItem } = useCart();
       return (
@@ -508,12 +519,15 @@ describe('CartPanel', () => {
       <NextIntlClientProvider locale="nl" messages={messages}>
         <CustomerAuthProvider>
           <CartProvider>
+            <CartReady />
+
             <SeedCustom />
             <CartPanel />
           </CartProvider>
         </CustomerAuthProvider>
       </NextIntlClientProvider>
     );
+    await screen.findByTestId('cart-ready');
     fireEvent.click(screen.getByTestId('seed-custom-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
 
@@ -553,12 +567,15 @@ describe('CartPanel', () => {
       <NextIntlClientProvider locale="nl" messages={messages}>
         <CustomerAuthProvider>
           <CartProvider>
+            <CartReady />
+
             <SeedCustom />
             <CartPanel />
           </CartProvider>
         </CustomerAuthProvider>
       </NextIntlClientProvider>
     );
+    await screen.findByTestId('cart-ready');
     fireEvent.click(screen.getByTestId('seed-custom-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
     await waitFor(() => expect(screen.getByTestId('cart-place-order')).not.toBeDisabled());

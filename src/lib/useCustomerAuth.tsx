@@ -59,12 +59,17 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    loadMe().then((loaded) => {
-      if (cancelled) return;
-      setUser(loaded.user);
-      setIsCustomer(loaded.isCustomer);
-      setIsHydrated(true);
-    });
+    // Een mislukte /api/auth/me mag niet in "nog aan het laden" blijven hangen: er hangen
+    // schermen aan isHydrated (o.a. het mandje, dat per klant geladen wordt) die dan nooit
+    // meer verschijnen. Niet kunnen vaststellen wie er inlogt = niet ingelogd.
+    loadMe()
+      .catch(() => ({ user: null, isCustomer: false }))
+      .then((loaded) => {
+        if (cancelled) return;
+        setUser(loaded.user);
+        setIsCustomer(loaded.isCustomer);
+        setIsHydrated(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -111,4 +116,11 @@ export function useCustomerAuth(): CustomerAuthValue {
     throw new Error('useCustomerAuth must be used within a CustomerAuthProvider');
   }
   return context;
+}
+
+// Voor providers die de ingelogde klant nodig hebben maar ook zonder CustomerAuthProvider
+// erboven moeten kunnen draaien, en dan als "geen ingelogde klant" verdergaan -- zie
+// CartProvider, dat in tests los gemonteerd wordt.
+export function useOptionalCustomerAuth(): CustomerAuthValue | null {
+  return useContext(CustomerAuthContext);
 }
