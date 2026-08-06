@@ -288,7 +288,8 @@
       "deleteAccountLabelPassword": "Passwort (zur Bestätigung)",
       "deleteAccountSubmit": "Endgültig löschen",
       "deleteAccountError": "Falsches Passwort, Konto wurde nicht gelöscht.",
-      "deleteAccountPartialError": "Ihre Daten wurden gelöscht, aber beim vollständigen Löschen Ihres Kontos ist etwas schiefgelaufen. Bitte kontaktieren Sie uns.",
+      "deleteAccountPartialError": "Ihr Konto konnte nicht vollständig gelöscht werden. Bitte kontaktieren Sie uns.",
+      "deleteAccountHasOrdersError": "Ihr Konto kann nicht gelöscht werden, da bei uns noch Bestellungen von Ihnen vorliegen. Bitte kontaktieren Sie uns, falls Sie Ihr Konto trotzdem löschen möchten.",
       "verplichtVeldLegende": "* Pflichtfeld"
     }
   },

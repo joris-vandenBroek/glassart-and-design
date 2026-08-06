@@ -1,4 +1,5 @@
 import { describe, expect, it, afterEach } from 'vitest';
+import { randomUUID } from 'crypto';
 import { getPool } from '@/lib/server/db';
 import { insertRow } from '@/lib/server/crud';
 import { hashPassword } from '@/lib/server/password';
@@ -16,6 +17,7 @@ afterEach(async () => {
   // every call leaves an orphaned `sessions` row the klant-scoped cleanup below never catches.
   await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
   if (createdKlantIds.length > 0) {
+    await getPool().query("DELETE FROM sessions WHERE userType = 'klant' AND userId IN (?)", [createdKlantIds]);
     await getPool().query('DELETE FROM klanten WHERE id IN (?)', [createdKlantIds]);
     createdKlantIds.length = 0;
   }
@@ -107,6 +109,7 @@ describe('klanten admin routes', () => {
       wachtwoordHash: await hashPassword('x'),
       status: 'Goedgekeurd',
     } as never);
+    createdKlantIds.push(klant.id);
     const other = await insertRow<{ id: string }>('klanten', {
       email: 'g@example.com',
       wachtwoordHash: await hashPassword('x'),
@@ -127,6 +130,84 @@ describe('klanten admin routes', () => {
     expect(allowed.status).toBe(200);
     const [rows] = await getPool().query('SELECT id FROM klanten WHERE id = ?', [klant.id]);
     expect((rows as unknown[]).length).toBe(0);
+  });
+
+  it('blocks a klant from deleting their own account while they have any bestelheaders row, open or closed', async () => {
+    const klant = await insertRow<{ id: string }>('klanten', {
+      email: 'k@example.com',
+      wachtwoordHash: await hashPassword('x'),
+      status: 'Goedgekeurd',
+    } as never);
+    createdKlantIds.push(klant.id);
+    const headerId = randomUUID();
+    await getPool().query('INSERT INTO bestelheaders (id, klantId, bestelnr, status) VALUES (?, ?, ?, ?)', [
+      headerId,
+      klant.id,
+      'AUTOTEST-BLOCK-1',
+      'Afgerond',
+    ]);
+    const sessionId = await createSession('klant', klant.id);
+    const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
+
+    try {
+      const response = await deleteKlant(req('DELETE', undefined, cookie), { params: { id: klant.id } });
+      expect(response.status).toBe(409);
+      const body = await response.json();
+      expect(body.error).toBe('heeft-bestellingen');
+      const [rows] = await getPool().query('SELECT id FROM klanten WHERE id = ?', [klant.id]);
+      expect((rows as unknown[]).length).toBe(1);
+    } finally {
+      await getPool().query('DELETE FROM bestelheaders WHERE id = ?', [headerId]);
+    }
+  });
+
+  it('allows a klant to delete their own account when they have no bestelheaders rows at all', async () => {
+    const klant = await insertRow<{ id: string }>('klanten', {
+      email: 'l@example.com',
+      wachtwoordHash: await hashPassword('x'),
+      status: 'Goedgekeurd',
+    } as never);
+    createdKlantIds.push(klant.id);
+    const sessionId = await createSession('klant', klant.id);
+    const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
+
+    const response = await deleteKlant(req('DELETE', undefined, cookie), { params: { id: klant.id } });
+    expect(response.status).toBe(200);
+    const [rows] = await getPool().query('SELECT id FROM klanten WHERE id = ?', [klant.id]);
+    expect((rows as unknown[]).length).toBe(0);
+  });
+
+  it('lets a medewerker delete a klant that has a bestelheaders row (staff branch is unaffected by the klant-side block)', async () => {
+    const klant = await insertRow<{ id: string }>('klanten', {
+      email: 'm@example.com',
+      wachtwoordHash: await hashPassword('x'),
+      status: 'Goedgekeurd',
+    } as never);
+    const headerId = randomUUID();
+    await getPool().query('INSERT INTO bestelheaders (id, klantId, bestelnr, status) VALUES (?, ?, ?, ?)', [
+      headerId,
+      klant.id,
+      'AUTOTEST-BLOCK-2',
+      'Afgerond',
+    ]);
+
+    try {
+      // Confirmed pre-existing, unrelated bug (tracked separately, not fixed by this plan):
+      // deleting a klant with any bestelheaders row currently throws ER_ROW_IS_REFERENCED_2
+      // regardless of who deletes them, because bestelheaders.klantId has no ON DELETE
+      // CASCADE. This test documents that the staff branch is reached (not blocked by this
+      // plan's new klant-side check) -- it still fails at the DB level for a different,
+      // pre-existing reason, which is why this test expects a 500, not 200.
+      const response = await deleteKlant(req('DELETE', undefined, await medewerkerCookie()), {
+        params: { id: klant.id },
+      });
+      expect(response.status).toBe(500);
+      const [rows] = await getPool().query('SELECT id FROM klanten WHERE id = ?', [klant.id]);
+      expect((rows as unknown[]).length).toBe(1);
+    } finally {
+      await getPool().query('DELETE FROM bestelheaders WHERE id = ?', [headerId]);
+      await getPool().query('DELETE FROM klanten WHERE id = ?', [klant.id]);
+    }
   });
 
   it('rejects a DELETE without any session', async () => {

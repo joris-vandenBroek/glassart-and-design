@@ -288,7 +288,8 @@
       "deleteAccountLabelPassword": "Mot de passe (pour confirmer)",
       "deleteAccountSubmit": "Supprimer définitivement",
       "deleteAccountError": "Mot de passe incorrect, compte non supprimé.",
-      "deleteAccountPartialError": "Vos données ont été supprimées, mais un problème est survenu lors de la suppression complète de votre compte. Veuillez nous contacter.",
+      "deleteAccountPartialError": "Votre compte n'a pas pu être entièrement supprimé. Veuillez nous contacter.",
+      "deleteAccountHasOrdersError": "Votre compte ne peut pas être supprimé car vous avez encore des commandes chez nous. Veuillez nous contacter si vous souhaitez tout de même supprimer votre compte.",
       "verplichtVeldLegende": "* champ obligatoire"
     }
   },

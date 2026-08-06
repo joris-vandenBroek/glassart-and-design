@@ -3,6 +3,8 @@ export const ACTIVITEIT_TYPES = [
   'mandje_toegevoegd',
   'bestelling_geplaatst',
   'account_bezocht',
+  'account_verwijderd',
+  'account_verwijderen_geblokkeerd',
   'word_klant_bezocht',
   'word_klant_aanvraag',
   'klant_goedgekeurd',

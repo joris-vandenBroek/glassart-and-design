@@ -288,7 +288,8 @@
       "deleteAccountLabelPassword": "Wachtwoord (ter bevestiging)",
       "deleteAccountSubmit": "Definitief verwijderen",
       "deleteAccountError": "Wachtwoord onjuist, account niet verwijderd.",
-      "deleteAccountPartialError": "Uw gegevens zijn verwijderd, maar er ging iets mis bij het volledig verwijderen van uw account. Neem contact met ons op.",
+      "deleteAccountPartialError": "Uw account kon niet volledig verwijderd worden. Neem contact met ons op.",
+      "deleteAccountHasOrdersError": "Uw account kan niet verwijderd worden omdat u nog bestellingen bij ons heeft staan. Neem contact met ons op als u toch verwijderd wilt worden.",
       "verplichtVeldLegende": "* verplicht veld"
     }
   },
@@ -328,6 +329,8 @@
     "activiteitTypeMandjeEigenMaatToegevoegd": "Eigen maat toegevoegd aan mandje",
     "activiteitTypeBestellingGeplaatst": "Bestelling geplaatst",
     "activiteitTypeAccountBezocht": "Accountpagina bezocht",
+    "activiteitTypeAccountVerwijderd": "Account verwijderd",
+    "activiteitTypeAccountVerwijderenGeblokkeerd": "Account verwijderen geblokkeerd (openstaande bestelling)",
     "activiteitTypeWordKlantBezocht": "Word-klantpagina bezocht",
     "activiteitTypeWordKlantAanvraag": "Aanvraag verstuurd",
     "activiteitTypeKlantGoedgekeurd": "Klant goedgekeurd",
