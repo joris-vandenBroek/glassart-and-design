@@ -178,6 +178,11 @@ export async function POST(request: Request) {
       'INSERT INTO bestelheaders (id, klantId, bestelnr, status) VALUES (?, ?, ?, ?)',
       [headerId, klantId, bestelnr, 'Te beoordelen']
     );
+    await connection.query('INSERT INTO bestelstatusHistorie (id, bestelheaderId, status) VALUES (?, ?, ?)', [
+      randomUUID(),
+      headerId,
+      'Te beoordelen',
+    ]);
 
     for (const line of resolvedLines) {
       await connection.query(

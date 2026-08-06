@@ -1,44 +1,23 @@
 import { NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { getRow, updateRow } from '@/lib/server/crud';
+import { getPool } from '@/lib/server/db';
 import { requireMedewerker } from '@/lib/server/requireAuth';
 
-interface Tijdstippen {
-  teVersturenNaarDrukkerOp: Date | null;
-  verstuurdNaarDrukkerOp: Date | null;
-  afgewezenOp: Date | null;
-}
-
-const MONOTONE_STATUS_COLUMN: Record<string, keyof Tijdstippen> = {
-  'Te versturen naar drukker': 'teVersturenNaarDrukkerOp',
-  'Verstuurd naar drukker': 'verstuurdNaarDrukkerOp',
-  Afgewezen: 'afgewezenOp',
-};
-
-// None of these timestamps are ever trusted from the client -- they're derived from
-// `status` here. afgerondOp is symmetric (set on entering Afgerond, cleared on leaving
-// it, so Terugzetten works). The other 3 are set-once/monotonic: a status can only
-// acquire its timestamp the first time it's reached, and Terugzetten (Afgerond ->
-// Verstuurd naar drukker) must not re-stamp verstuurdNaarDrukkerOp -- the order was
-// never actually un-sent, only its completion was corrected.
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   if (!(await requireMedewerker(request))) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
   try {
     const data = await request.json();
-    delete data.afgerondOp;
-    for (const col of Object.values(MONOTONE_STATUS_COLUMN)) {
-      delete data[col];
-    }
     if ('status' in data) {
-      data.afgerondOp = data.status === 'Afgerond' ? new Date() : null;
-
-      const column = MONOTONE_STATUS_COLUMN[data.status];
-      if (column) {
-        const current = await getRow<Tijdstippen>('bestelheaders', params.id);
-        if (!current?.[column]) {
-          data[column] = new Date();
-        }
+      const current = await getRow<{ status: string }>('bestelheaders', params.id);
+      if (current && current.status !== data.status) {
+        await getPool().query('INSERT INTO bestelstatusHistorie (id, bestelheaderId, status) VALUES (?, ?, ?)', [
+          randomUUID(),
+          params.id,
+          data.status,
+        ]);
       }
     }
     await updateRow('bestelheaders', params.id, data);
