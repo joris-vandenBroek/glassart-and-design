@@ -173,6 +173,25 @@ describe('KlantModal', () => {
     await waitFor(() => expect(patchCall()).toBeDefined());
   });
 
+  it('still blocks the save when land changes to a country the stored btwNummer does not match', async () => {
+    renderModal(KLANT); // NL123456789B01 / land NL, both valid until land changes below
+    fireEvent.click(screen.getByTestId('klant-modal-bewerken'));
+    fireEvent.focus(screen.getByTestId('klant-modal-land'));
+    fireEvent.click(screen.getByTestId('klant-modal-land-option-BE'));
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
+    expect(await screen.findByTestId('klant-modal-error')).toHaveTextContent(
+      'Dit btw-nummer heeft niet het juiste formaat voor het gekozen land.'
+    );
+    expect(patchCall()).toBeUndefined();
+  });
+
+  it('does not block a save that touches neither btwNummer nor land, even with a mismatched stored pair', async () => {
+    renderModal({ ...KLANT, land: 'BE', btwNummer: 'NL123456789B01', status: 'Goedgekeurd', prijsgroepId: 'pg-1' });
+    fireEvent.change(screen.getByTestId('klant-modal-prijsgroep'), { target: { value: 'pg-2' } });
+    fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
+    await waitFor(() => expect(patchCall()).toBeDefined());
+  });
+
   it('shows the required-field legend', () => {
     renderModal(KLANT);
     expect(screen.getByTestId('klant-modal-verplicht-legende')).toHaveTextContent('* verplicht veld');

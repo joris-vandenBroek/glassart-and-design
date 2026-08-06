@@ -148,16 +148,23 @@ export function KlantModal({
     if (!klant || !fields) return;
     setError(null);
 
+    const origineleFields = fieldsFromKlant(klant);
+
     // Format only -- an empty value stays allowed here, because existing EU klanten have
     // no VAT number yet and would otherwise be impossible to save at all. See the spec, section D.
+    // Only checked when btwNummer or land is actually part of this save: the prijsgroep <select>
+    // and kunstenaar <Combobox> below aren't gated behind isEditing, so re-validating an untouched,
+    // already-stored btwNummer/land pair on every save would block a staff member from e.g. just
+    // linking a kunstenaar on a record that happens to have a mismatched legacy VAT number.
     const genormaliseerdBtwNummer = normaliseerBtwNummer(fields.btwNummer);
-    if (valideerBtwNummer(genormaliseerdBtwNummer, fields.land) === 'ongeldig') {
+    const btwOfLandGewijzigd =
+      fields.btwNummer !== origineleFields.btwNummer || fields.land !== origineleFields.land;
+    if (btwOfLandGewijzigd && valideerBtwNummer(genormaliseerdBtwNummer, fields.land) === 'ongeldig') {
       setError(t('klantenBtwNummerOngeldig'));
       return;
     }
     const teBewarenFields = { ...fields, btwNummer: genormaliseerdBtwNummer };
 
-    const origineleFields = fieldsFromKlant(klant);
     const veldenGewijzigd =
       isEditing && (Object.keys(origineleFields) as (keyof EditableFields)[]).some((key) => fields[key] !== origineleFields[key]);
     const prijsgroepGewijzigd =
