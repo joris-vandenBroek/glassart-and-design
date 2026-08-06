@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { PasswordInput } from '@/components/PasswordInput';
+import { BEDRIJFS_EMAIL_DOMEIN, completeerBedrijfsEmail } from '@/lib/emailDomein';
 
 export function AdminLoginForm() {
   const t = useTranslations('beheer');
@@ -17,7 +18,7 @@ export function AdminLoginForm() {
     event.preventDefault();
     setLoginError(null);
     try {
-      await login(email, password);
+      await login(completeerBedrijfsEmail(email), password);
     } catch {
       setLoginError(t('loginError'));
     }
@@ -25,12 +26,13 @@ export function AdminLoginForm() {
 
   async function handleForgotPassword() {
     setResetMessage(null);
-    if (!email) {
+    const volledigEmail = completeerBedrijfsEmail(email);
+    if (!volledigEmail) {
       setResetMessage(t('forgotPasswordMissingEmail'));
       return;
     }
     try {
-      await resetPassword(email);
+      await resetPassword(volledigEmail);
       setResetMessage(t('forgotPasswordSent'));
     } catch {
       setResetMessage(t('loginError'));
@@ -44,14 +46,29 @@ export function AdminLoginForm() {
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-sm text-white/80">
       <label className={labelClassName}>
         {t('labelEmail')}
-        <input
-          type="email"
-          required
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          data-testid="beheer-login-email"
-          className={fieldClassName}
-        />
+        <span className={`flex items-center gap-1 ${fieldClassName}`}>
+          {/* Geen type="email": medewerkers typen alleen "hem"/"paul"/"julie", het
+              domein wordt bij verzenden aangevuld. Wie een adres buiten het
+              bedrijfsdomein heeft, typt het gewoon voluit -- dan valt het
+              achtervoegsel weg. */}
+          <input
+            type="text"
+            required
+            autoComplete="username"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            data-testid="beheer-login-email"
+            className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none"
+          />
+          {!email.includes('@') && (
+            <span
+              data-testid="beheer-login-email-domein"
+              className="shrink-0 text-sm text-white/50"
+            >
+              {BEDRIJFS_EMAIL_DOMEIN}
+            </span>
+          )}
+        </span>
       </label>
 
       <label className={labelClassName}>

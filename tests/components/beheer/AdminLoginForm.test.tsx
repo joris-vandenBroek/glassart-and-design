@@ -47,6 +47,40 @@ describe('AdminLoginForm', () => {
     );
   });
 
+  it('completes a short username with the hardcoded company domain', async () => {
+    loginMock.mockResolvedValue(undefined);
+    renderForm();
+    fireEvent.change(screen.getByTestId('beheer-login-email'), { target: { value: 'hem' } });
+    fireEvent.change(screen.getByTestId('beheer-login-password'), {
+      target: { value: 'geheim123' },
+    });
+    fireEvent.click(screen.getByTestId('beheer-login-submit'));
+    await waitFor(() =>
+      expect(loginMock).toHaveBeenCalledWith('hem@glassartanddesign.com', 'geheim123')
+    );
+  });
+
+  it('shows the domain suffix only while the field holds no @ itself', () => {
+    renderForm();
+    expect(screen.getByTestId('beheer-login-email-domein')).toHaveTextContent(
+      '@glassartanddesign.com'
+    );
+    fireEvent.change(screen.getByTestId('beheer-login-email'), {
+      target: { value: 'joris.vandenbroek@gmail.com' },
+    });
+    expect(screen.queryByTestId('beheer-login-email-domein')).not.toBeInTheDocument();
+  });
+
+  it('completes a short username when requesting a password reset', async () => {
+    resetPasswordMock.mockResolvedValue(undefined);
+    renderForm();
+    fireEvent.change(screen.getByTestId('beheer-login-email'), { target: { value: 'julie' } });
+    fireEvent.click(screen.getByTestId('beheer-forgot-password'));
+    await waitFor(() =>
+      expect(resetPasswordMock).toHaveBeenCalledWith('julie@glassartanddesign.com')
+    );
+  });
+
   it('shows a generic error message when login fails', async () => {
     loginMock.mockRejectedValue(new Error('auth/wrong-password'));
     renderForm();

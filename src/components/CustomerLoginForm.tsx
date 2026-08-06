@@ -6,6 +6,7 @@ import { useRouter } from '@/i18n/navigation';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { PasswordInput } from '@/components/PasswordInput';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
+import { completeerTestKlantEmail, isTestOmgeving } from '@/lib/emailDomein';
 
 export function CustomerLoginForm() {
   const t = useTranslations('loginPage');
@@ -19,7 +20,7 @@ export function CustomerLoginForm() {
     event.preventDefault();
     setError(null);
     try {
-      const status = await login(email, password);
+      const status = await login(completeerTestKlantEmail(email), password);
       if (status === 'Goedgekeurd') {
         router.replace('/account');
       } else if (status === 'Beoordelen') {
@@ -44,8 +45,11 @@ export function CustomerLoginForm() {
           {t('labelEmail')}
           <RequiredMark />
         </span>
+        {/* Lokaal en op staging is dit een tekstveld, zodat een testaccount als
+            "test1" niet op de browservalidatie van type="email" stukloopt. In
+            productie blijft het gewoon een e-mailveld. */}
         <input
-          type="email"
+          type={isTestOmgeving() ? 'text' : 'email'}
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}

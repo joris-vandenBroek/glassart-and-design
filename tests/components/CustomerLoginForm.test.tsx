@@ -121,6 +121,53 @@ describe('CustomerLoginForm', () => {
     );
   });
 
+  it('completes a "testN" account with the company domain on staging', async () => {
+    process.env.NEXT_PUBLIC_ENVIRONMENT_LABEL = 'staging';
+    try {
+      fetchMock
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'Goedgekeurd' }) })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            user: { id: 'k1', email: 'test1@glassartanddesign.com', status: 'Goedgekeurd' },
+          }),
+        });
+      renderForm();
+      submitWith('test1', 'gaadTest1');
+
+      await waitFor(() =>
+        expect(fetchMock).toHaveBeenCalledWith(
+          '/api/auth/login',
+          expect.objectContaining({
+            body: JSON.stringify({ email: 'test1@glassartanddesign.com', password: 'gaadTest1' }),
+          })
+        )
+      );
+    } finally {
+      delete process.env.NEXT_PUBLIC_ENVIRONMENT_LABEL;
+    }
+  });
+
+  it('leaves a real e-mail address untouched', async () => {
+    process.env.NEXT_PUBLIC_ENVIRONMENT_LABEL = 'staging';
+    try {
+      fetchMock.mockResolvedValueOnce({ ok: false });
+      renderForm();
+      submitWith('klant@example.com', 'geheim123');
+
+      await waitFor(() =>
+        expect(fetchMock).toHaveBeenCalledWith(
+          '/api/auth/login',
+          expect.objectContaining({
+            body: JSON.stringify({ email: 'klant@example.com', password: 'geheim123' }),
+          })
+        )
+      );
+    } finally {
+      delete process.env.NEXT_PUBLIC_ENVIRONMENT_LABEL;
+    }
+  });
+
   it('shows the required-field legend', () => {
     renderForm();
     expect(screen.getByTestId('login-verplicht-legende')).toHaveTextContent('* verplicht veld');
