@@ -129,6 +129,28 @@ describe('DrukkerModal zendingen', () => {
     expect(screen.getByText(/Testbedrijf BV/)).toBeInTheDocument();
   });
 
+  it('shows the zendingnummer before the datum when present', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => [
+        {
+          id: 'zending-2',
+          verzondenOp: '2026-08-07T10:00:00Z',
+          onderwerp: 'ZD-00007 — Nieuwe order(s) voor de drukker – 7-8-2026',
+          body: '...',
+          bestellingIds: ['header-2'],
+          aantalKlanten: 1,
+          aantalRegels: 1,
+          verzondDoor: 'paul@glassartanddesign.com',
+          zendingnummer: 'ZD-00007',
+        },
+      ],
+    });
+    renderModal({ mode: 'edit', drukker: DRUKKER });
+    const zendingRow = await screen.findByTestId('drukker-zending-zending-2');
+    expect(zendingRow).toHaveTextContent('ZD-00007');
+  });
+
   it('disables Verwijderen while zendingen are still loading', () => {
     fetchMock.mockReturnValue(new Promise(() => {}));
     renderModal({ mode: 'edit', drukker: DRUKKER });

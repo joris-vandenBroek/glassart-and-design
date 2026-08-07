@@ -191,6 +191,14 @@ describe('BestellingenSection', () => {
     expect(screen.getByTestId('data-table-row-header-2')).toHaveTextContent('GD-00302');
   });
 
+  it('shows the zendingnummer once a bestelling has been sent, and nothing before that', () => {
+    renderSection({
+      bestellingen: [BESTELLINGEN[0], { ...BESTELLINGEN[1], zendingnummer: 'ZD-00007' }],
+    });
+    expect(screen.getByTestId('data-table-row-header-2')).toHaveTextContent('ZD-00007');
+    expect(screen.getByTestId('data-table-row-header-1')).not.toHaveTextContent('ZD-');
+  });
+
   it('shows only the "Te versturen naar drukker" bestelling after clicking that quick filter link', () => {
     const bestellingen = [
       { ...BESTELLINGEN[0], status: 'Te versturen naar drukker' as const },

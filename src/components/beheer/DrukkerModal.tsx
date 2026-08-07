@@ -290,6 +290,7 @@ export function DrukkerModal({
                     <li key={zending.id} data-testid={`drukker-zending-${zending.id}`} className="rounded-sm bg-black/30 p-2 text-xs">
                       <div className="flex items-center justify-between gap-2">
                         <span>
+                          {zending.zendingnummer && `${zending.zendingnummer} — `}
                           {zending.verzondenOp ? zending.verzondenOp.toLocaleString('nl-NL') : ''} —{' '}
                           {t('drukkersZendingenSamenvatting', {
                             klanten: zending.aantalKlanten,

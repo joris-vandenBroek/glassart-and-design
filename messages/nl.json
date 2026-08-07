@@ -492,6 +492,7 @@
     "bestellingenActionError": "Er is iets misgegaan. Probeer het opnieuw.",
     "bestellingenEmpty": "Geen bestellingen gevonden.",
     "bestellingenColBestelnummer": "Bestelnr.",
+    "bestellingenColZendingnummer": "Zendingnr.",
     "bestellingenColKlant": "Klant",
     "bestellingenColDatum": "Besteldatum",
     "bestellingenColAantal": "Aantal",

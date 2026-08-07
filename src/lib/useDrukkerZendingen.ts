@@ -40,6 +40,7 @@ export function useDrukkerZendingen(drukkerId: string | null): { zendingen: Druk
           aantalKlanten: number;
           aantalRegels: number;
           verzondDoor: string;
+          zendingnummer?: string | null;
         }>;
         if (cancelled) return;
         setZendingen(
@@ -52,6 +53,7 @@ export function useDrukkerZendingen(drukkerId: string | null): { zendingen: Druk
             aantalKlanten: row.aantalKlanten,
             aantalRegels: row.aantalRegels,
             verzondDoor: row.verzondDoor,
+            zendingnummer: row.zendingnummer ?? null,
           }))
         );
       } catch {

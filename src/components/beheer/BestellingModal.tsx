@@ -265,6 +265,9 @@ export function BestellingModal({
               <span>
                 {bestelling.bestelnr} · {bestelling.companyName} · {bestelling.besteldatum}
               </span>
+              {bestelling.zendingnummer && (
+                <span className="text-xs text-white/50">{bestelling.zendingnummer}</span>
+              )}
               <span
                 data-testid="bestelling-modal-status"
                 className={`w-fit rounded-full px-3 py-1 text-xs uppercase tracking-wide ${STATUS_BADGE_CLASS[bestelling.status]}`}

@@ -133,6 +133,16 @@ describe('BestellingModal', () => {
     expect(screen.getByTestId('modal-header')).toHaveTextContent('GD-00101');
   });
 
+  it('shows the zendingnummer in the subtitle when present', () => {
+    renderModal({ ...BESTELLING, zendingnummer: 'ZD-00007' });
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('ZD-00007');
+  });
+
+  it('does not show a zendingnummer line when absent', () => {
+    renderModal(BESTELLING);
+    expect(screen.getByTestId('modal-header')).not.toHaveTextContent('ZD-');
+  });
+
   it('caps the bestelregels list height so it scrolls independently of the modal frame', () => {
     renderModal(BESTELLING);
     const list = screen.getByTestId('bestelling-modal-line-line-1').closest('ul');

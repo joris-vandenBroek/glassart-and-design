@@ -44,10 +44,33 @@ describe('useDrukkerZendingen', () => {
         aantalKlanten: 1,
         aantalRegels: 2,
         verzondDoor: 'paul@glassartanddesign.com',
+        zendingnummer: null,
       },
     ]);
     expect(result.current.error).toBe(false);
     expect(fetchMock).toHaveBeenCalledWith('/api/drukkers/drukker-1/zendingen');
+  });
+
+  it('maps zendingnummer from the response when present', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => [
+        {
+          id: 'zending-2',
+          verzondenOp: '2026-08-07T10:00:00Z',
+          onderwerp: 'ZD-00007 — Nieuwe order(s) voor de drukker – 7-8-2026',
+          body: '...',
+          bestellingIds: ['header-2'],
+          aantalKlanten: 1,
+          aantalRegels: 1,
+          verzondDoor: 'paul@glassartanddesign.com',
+          zendingnummer: 'ZD-00007',
+        },
+      ],
+    });
+    const { result } = renderHook(() => useDrukkerZendingen('drukker-2'));
+    await waitFor(() => expect(result.current.zendingen).not.toBeNull());
+    expect(result.current.zendingen![0].zendingnummer).toBe('ZD-00007');
   });
 
   it('sets error true when the fetch fails', async () => {
