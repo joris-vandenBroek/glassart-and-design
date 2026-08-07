@@ -10,6 +10,7 @@ interface AfrondenBevestigingDialogProps {
   onAlleenDeze: () => void;
   onOokDeze: () => void;
   onClose: () => void;
+  isBezig?: boolean;
 }
 
 export function AfrondenBevestigingDialog({
@@ -18,6 +19,7 @@ export function AfrondenBevestigingDialog({
   onAlleenDeze,
   onOokDeze,
   onClose,
+  isBezig = false,
 }: AfrondenBevestigingDialogProps) {
   const t = useTranslations('beheer');
 
@@ -32,24 +34,27 @@ export function AfrondenBevestigingDialog({
           <button
             type="button"
             onClick={onOokDeze}
+            disabled={isBezig}
             data-testid="afronden-bevestiging-ook-deze"
-            className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+            className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
           >
             {t('bestellingenAfrondenOokDeze')}
           </button>
           <button
             type="button"
             onClick={onAlleenDeze}
+            disabled={isBezig}
             data-testid="afronden-bevestiging-alleen-deze"
-            className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+            className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
           >
             {t('bestellingenAfrondenAlleenDeze')}
           </button>
           <button
             type="button"
             onClick={onClose}
+            disabled={isBezig}
             data-testid="afronden-bevestiging-annuleren"
-            className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+            className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
           >
             {t('annuleren')}
           </button>

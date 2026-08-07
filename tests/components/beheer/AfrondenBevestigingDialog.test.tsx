@@ -93,4 +93,18 @@ describe('AfrondenBevestigingDialog', () => {
     expect(onAlleenDeze).not.toHaveBeenCalled();
     expect(onOokDeze).not.toHaveBeenCalled();
   });
+
+  it('disables all three footer buttons while isBezig is true', () => {
+    renderDialog({ isBezig: true });
+    expect(screen.getByTestId('afronden-bevestiging-alleen-deze')).toBeDisabled();
+    expect(screen.getByTestId('afronden-bevestiging-ook-deze')).toBeDisabled();
+    expect(screen.getByTestId('afronden-bevestiging-annuleren')).toBeDisabled();
+  });
+
+  it('does not disable the footer buttons when isBezig is left unset', () => {
+    renderDialog();
+    expect(screen.getByTestId('afronden-bevestiging-alleen-deze')).not.toBeDisabled();
+    expect(screen.getByTestId('afronden-bevestiging-ook-deze')).not.toBeDisabled();
+    expect(screen.getByTestId('afronden-bevestiging-annuleren')).not.toBeDisabled();
+  });
 });

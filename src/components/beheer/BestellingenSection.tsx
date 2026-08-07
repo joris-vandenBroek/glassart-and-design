@@ -76,6 +76,14 @@ export function BestellingenSection({
   const [afrondKandidaten, setAfrondKandidaten] = useState<Bestelling[]>([]);
   const [afrondGenoten, setAfrondGenoten] = useState<ZendingGenoten[]>([]);
   const [afrondFout, setAfrondFout] = useState<string | null>(null);
+  const [afrondBezig, setAfrondBezig] = useState(false);
+
+  // Een oude foutmelding hoort niet te blijven hangen als de medewerker van
+  // filter wisselt -- die verwijst dan mogelijk niet eens meer naar bestellingen
+  // die nog zichtbaar zijn.
+  useEffect(() => {
+    setAfrondFout(null);
+  }, [statusFilter]);
 
   useEffect(() => {
     if (bestellingen === null) return;
@@ -132,17 +140,23 @@ export function BestellingenSection({
   }
 
   async function voerAfrondingUit(teAfronden: Bestelling[]) {
-    const { afgerond, mislukt } = await afrondBestellingen(teAfronden, actorFromMedewerker(user));
-    afgerond.forEach((bestelling) => onBestellingUpdated(bestelling));
-    setAfrondKandidaten([]);
-    setAfrondGenoten([]);
-    setSelectedIds(new Set());
-    setAfrondFout(mislukt.length > 0 ? t('bestellingenAfrondenFout', { n: mislukt.length }) : null);
+    setAfrondBezig(true);
+    try {
+      const { afgerond, mislukt } = await afrondBestellingen(teAfronden, actorFromMedewerker(user));
+      afgerond.forEach((bestelling) => onBestellingUpdated(bestelling));
+      setAfrondKandidaten([]);
+      setAfrondGenoten([]);
+      setSelectedIds(new Set());
+      setAfrondFout(mislukt.length > 0 ? t('bestellingenAfrondenFout', { n: mislukt.length }) : null);
+    } finally {
+      setAfrondBezig(false);
+    }
   }
 
   async function startAfronden(teAfronden: Bestelling[]) {
     if (teAfronden.length === 0) return;
     setAfrondFout(null);
+    setAfrondBezig(true);
 
     let genoten: ZendingGenoten[] = [];
     try {
@@ -155,11 +169,14 @@ export function BestellingenSection({
     }
 
     if (genoten.length === 0) {
+      // voerAfrondingUit zet afrondBezig hierna zelf weer op false in zijn
+      // eigen finally -- de vlag blijft aan tot die hele PATCH-ronde klaar is.
       await voerAfrondingUit(teAfronden);
       return;
     }
     setAfrondKandidaten(teAfronden);
     setAfrondGenoten(genoten);
+    setAfrondBezig(false);
   }
 
   if (loadError) {
@@ -207,8 +224,9 @@ export function BestellingenSection({
             <button
               type="button"
               onClick={() => void startAfronden(bestellingen.filter((b) => selectedIds.has(b.id)))}
+              disabled={afrondBezig}
               data-testid="bestellingen-afronden"
-              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
             >
               {t('bestellingenAfronden')}
             </button>
@@ -299,7 +317,7 @@ export function BestellingenSection({
         maten={maten ?? []}
         materiaalsoorten={materiaalsoorten ?? []}
         onVerstuurd={(updated) => {
-          updated.forEach(onBestellingUpdated);
+          updated.forEach((bestelling) => onBestellingUpdated(bestelling));
           setSelectedIds(new Set());
           setShowVersturenDialog(false);
         }}
@@ -307,6 +325,7 @@ export function BestellingenSection({
       <AfrondenBevestigingDialog
         isOpen={afrondGenoten.length > 0}
         genoten={afrondGenoten}
+        isBezig={afrondBezig}
         onAlleenDeze={() => void voerAfrondingUit(afrondKandidaten)}
         onOokDeze={() =>
           void voerAfrondingUit([
@@ -317,6 +336,7 @@ export function BestellingenSection({
         onClose={() => {
           setAfrondKandidaten([]);
           setAfrondGenoten([]);
+          setAfrondFout(null);
         }}
       />
     </div>

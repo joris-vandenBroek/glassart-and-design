@@ -436,5 +436,202 @@ describe('BestellingenSection', () => {
       );
       await waitFor(() => expect(screen.queryByTestId('bestelling-modal')).not.toBeInTheDocument());
     });
+
+    describe('bescherming tegen dubbel klikken', () => {
+      it('schakelt de bulkknop uit tijdens het afronden zodat een tweede klik geen extra PATCH-ronde start', async () => {
+        let resolvePatch: (value: { ok: boolean; json: () => Promise<unknown> }) => void = () => {};
+        const patchPromise = new Promise<{ ok: boolean; json: () => Promise<unknown> }>((resolve) => {
+          resolvePatch = resolve;
+        });
+        fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+          if (typeof url === 'string' && url.startsWith('/api/drukkerzendingen')) {
+            return Promise.resolve({ ok: true, json: async () => [] });
+          }
+          if (
+            typeof url === 'string' &&
+            url.startsWith('/api/bestelheaders/') &&
+            init?.method === 'PATCH'
+          ) {
+            return patchPromise;
+          }
+          return Promise.resolve({ ok: true, json: async () => ({}) });
+        });
+
+        const { onBestellingUpdated } = renderSection({ bestellingen: [VERSTUURD] });
+        fireEvent.click(screen.getByTestId('data-table-quick-verstuurd'));
+        fireEvent.click(screen.getByTestId('data-table-row-select-header-2'));
+        fireEvent.click(screen.getByTestId('bestellingen-afronden'));
+
+        await waitFor(() => expect(screen.getByTestId('bestellingen-afronden')).toBeDisabled());
+
+        fireEvent.click(screen.getByTestId('bestellingen-afronden'));
+
+        const patchCalls = fetchMock.mock.calls.filter(
+          ([url, init]) =>
+            typeof url === 'string' &&
+            url.startsWith('/api/bestelheaders/') &&
+            (init as RequestInit | undefined)?.method === 'PATCH'
+        );
+        expect(patchCalls).toHaveLength(1);
+
+        resolvePatch({ ok: true, json: async () => ({}) });
+
+        await waitFor(() => expect(onBestellingUpdated).toHaveBeenCalledTimes(1));
+      });
+
+      it('schakelt de knoppen van de bevestigingsdialoog uit tijdens het afronden zodat een tweede klik op "Alleen deze afronden" geen extra ronde start', async () => {
+        const genoot = { ...BESTELLINGEN[1], id: 'header-9', bestelnr: 'GD-00309' };
+        let resolvePatch: (value: { ok: boolean; json: () => Promise<unknown> }) => void = () => {};
+        const patchPromise = new Promise<{ ok: boolean; json: () => Promise<unknown> }>((resolve) => {
+          resolvePatch = resolve;
+        });
+        fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+          if (typeof url === 'string' && url.startsWith('/api/drukkerzendingen')) {
+            return Promise.resolve({
+              ok: true,
+              json: async () => [
+                {
+                  id: 'z1',
+                  drukkerId: 'drukker-1',
+                  drukkerNaam: 'Drukkerij Janssen',
+                  verzondenOp: '2026-08-03T10:00:00Z',
+                  bestellingIds: ['header-2', 'header-9'],
+                },
+              ],
+            });
+          }
+          if (
+            typeof url === 'string' &&
+            url.startsWith('/api/bestelheaders/') &&
+            init?.method === 'PATCH'
+          ) {
+            return patchPromise;
+          }
+          return Promise.resolve({ ok: true, json: async () => ({}) });
+        });
+
+        const { onBestellingUpdated } = renderSection({ bestellingen: [VERSTUURD, genoot] });
+        fireEvent.click(screen.getByTestId('data-table-quick-verstuurd'));
+        fireEvent.click(screen.getByTestId('data-table-row-select-header-2'));
+        fireEvent.click(screen.getByTestId('bestellingen-afronden'));
+
+        await waitFor(() => expect(screen.getByTestId('afronden-bevestiging')).toBeInTheDocument());
+        fireEvent.click(screen.getByTestId('afronden-bevestiging-alleen-deze'));
+
+        await waitFor(() =>
+          expect(screen.getByTestId('afronden-bevestiging-alleen-deze')).toBeDisabled()
+        );
+        expect(screen.getByTestId('afronden-bevestiging-ook-deze')).toBeDisabled();
+        expect(screen.getByTestId('afronden-bevestiging-annuleren')).toBeDisabled();
+
+        fireEvent.click(screen.getByTestId('afronden-bevestiging-alleen-deze'));
+
+        const patchCalls = fetchMock.mock.calls.filter(
+          ([url, init]) =>
+            typeof url === 'string' &&
+            url.startsWith('/api/bestelheaders/') &&
+            (init as RequestInit | undefined)?.method === 'PATCH'
+        );
+        expect(patchCalls).toHaveLength(1);
+
+        resolvePatch({ ok: true, json: async () => ({}) });
+
+        await waitFor(() => expect(onBestellingUpdated).toHaveBeenCalledTimes(1));
+        expect(onBestellingUpdated).toHaveBeenCalledWith({ ...VERSTUURD, status: 'Afgerond' });
+      });
+    });
+
+    describe('afrondFout opruimen', () => {
+      it('wist de foutmelding wanneer het statusfilter wisselt', async () => {
+        fetchMock.mockImplementation((url: string) => {
+          if (typeof url === 'string' && url.startsWith('/api/drukkerzendingen')) {
+            return Promise.resolve({ ok: true, json: async () => [] });
+          }
+          if (typeof url === 'string' && url.startsWith('/api/bestelheaders/')) {
+            return Promise.resolve({ ok: false });
+          }
+          return Promise.resolve({ ok: true, json: async () => ({}) });
+        });
+        renderSection({ bestellingen: [VERSTUURD] });
+        fireEvent.click(screen.getByTestId('data-table-quick-verstuurd'));
+        fireEvent.click(screen.getByTestId('data-table-row-select-header-2'));
+        fireEvent.click(screen.getByTestId('bestellingen-afronden'));
+
+        await waitFor(() => expect(screen.getByTestId('bestellingen-afronden-fout')).toBeInTheDocument());
+
+        fireEvent.click(screen.getByTestId('data-table-quick-alle'));
+
+        expect(screen.queryByTestId('bestellingen-afronden-fout')).not.toBeInTheDocument();
+      });
+
+      it('wist de foutmelding van een andere afrondronde ook wanneer de bevestigingsdialoog met Annuleren wordt gesloten', async () => {
+        // Simuleert de race die kan ontstaan doordat afrondBezig een gedeelde
+        // vlag is: de zending-lookup voor header-2 (die de dialoog toont)
+        // blijft hangen, terwijl ondertussen een heel ander, direct afgerond
+        // -- en mislukt -- rondje (header-5, via de losse modal-knop) al klaar
+        // is en afrondFout heeft gezet. Zodra de trage lookup alsnog genoten
+        // oplevert, opent de dialoog met die oude fout nog zichtbaar erboven.
+        const genoot = { ...BESTELLINGEN[1], id: 'header-9', bestelnr: 'GD-00309' };
+        const header5 = { ...BESTELLINGEN[1], id: 'header-5', bestelnr: 'GD-00305' };
+
+        let resolveHeader2Lookup: (value: { ok: boolean; json: () => Promise<unknown> }) => void =
+          () => {};
+        const header2LookupPromise = new Promise<{ ok: boolean; json: () => Promise<unknown> }>(
+          (resolve) => {
+            resolveHeader2Lookup = resolve;
+          }
+        );
+
+        fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+          if (typeof url === 'string' && url.startsWith('/api/drukkerzendingen')) {
+            if (url.includes('header-2')) {
+              return header2LookupPromise;
+            }
+            return Promise.resolve({ ok: true, json: async () => [] });
+          }
+          if (
+            typeof url === 'string' &&
+            url.startsWith('/api/bestelheaders/header-5') &&
+            init?.method === 'PATCH'
+          ) {
+            return Promise.resolve({ ok: false });
+          }
+          return Promise.resolve({ ok: true, json: async () => ({}) });
+        });
+
+        renderSection({ bestellingen: [VERSTUURD, genoot, header5] });
+        fireEvent.click(screen.getByTestId('data-table-quick-verstuurd'));
+        fireEvent.click(screen.getByTestId('data-table-row-select-header-2'));
+        fireEvent.click(screen.getByTestId('bestellingen-afronden'));
+
+        // header-2's lookup hangt nog -- ondertussen rondt de medewerker
+        // header-5 los af via de modal, en dat mislukt.
+        fireEvent.click(screen.getByTestId('data-table-row-header-5'));
+        fireEvent.click(screen.getByTestId('bestelling-modal-afronden'));
+
+        await waitFor(() => expect(screen.getByTestId('bestellingen-afronden-fout')).toBeInTheDocument());
+        expect(screen.queryByTestId('afronden-bevestiging')).not.toBeInTheDocument();
+
+        resolveHeader2Lookup({
+          ok: true,
+          json: async () => [
+            {
+              id: 'z1',
+              drukkerId: 'drukker-1',
+              drukkerNaam: 'Drukkerij Janssen',
+              verzondenOp: '2026-08-03T10:00:00Z',
+              bestellingIds: ['header-2', 'header-9'],
+            },
+          ],
+        });
+
+        await waitFor(() => expect(screen.getByTestId('afronden-bevestiging')).toBeInTheDocument());
+        expect(screen.getByTestId('bestellingen-afronden-fout')).toBeInTheDocument();
+
+        fireEvent.click(screen.getByTestId('afronden-bevestiging-annuleren'));
+
+        expect(screen.queryByTestId('bestellingen-afronden-fout')).not.toBeInTheDocument();
+      });
+    });
   });
 });
