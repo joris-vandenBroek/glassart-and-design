@@ -413,6 +413,8 @@ describe('VersturenNaarDrukkerDialog', () => {
   it('cannot be dismissed via Annuleren while a send is in flight', async () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url === '/api/instellingen/bedrijfsgegevens') return { ok: true, json: async () => BEDRIJFSGEGEVENS_SEED };
+      if (url === '/api/drukkers/drukker-1/zendingen/nummer') return { ok: true, json: async () => ({ zendingnummer: 'ZD-00001' }) };
+      if (url === 'https://example.com/mail.php') return { ok: true };
       return new Promise(() => {});
     });
     const { onClose } = await renderReadyDialog();

@@ -363,6 +363,12 @@ describe('BestellingenSection', () => {
     });
 
     it('reports each verstuurde bestelling, clears the selection, and closes the dialog on a successful send', async () => {
+      fetchMock.mockImplementation((url: string) => {
+        if (url === '/api/drukkers/drukker-1/zendingen/nummer') {
+          return Promise.resolve({ ok: true, json: async () => ({ zendingnummer: 'ZD-00001' }) });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      });
       const { onBestellingUpdated } = renderSection({ bestellingen: [TE_VERSTUREN] });
       fireEvent.click(screen.getByTestId('data-table-quick-te-versturen'));
       fireEvent.click(screen.getByTestId('data-table-row-select-header-1'));
@@ -372,7 +378,11 @@ describe('BestellingenSection', () => {
       fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
 
       await waitFor(() => expect(onBestellingUpdated).toHaveBeenCalled());
-      expect(onBestellingUpdated.mock.calls[0][0]).toEqual({ ...TE_VERSTUREN, status: 'Verstuurd naar drukker' });
+      expect(onBestellingUpdated.mock.calls[0][0]).toEqual({
+        ...TE_VERSTUREN,
+        status: 'Verstuurd naar drukker',
+        zendingnummer: 'ZD-00001',
+      });
       expect(screen.queryByTestId('drukker-versturen-drukker')).not.toBeInTheDocument();
       expect(screen.queryByTestId('bestellingen-selectie-balk')).not.toBeInTheDocument();
     });

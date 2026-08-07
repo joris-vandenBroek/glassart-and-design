@@ -291,6 +291,27 @@ describe('BeheerShell', () => {
     expect(screen.getByTestId('bestelling-modal')).toHaveTextContent('Hotel paneel');
   });
 
+  it('carries zendingnummer through from the initial bestelheaders load into the Bestellingen DataTable', async () => {
+    mockCollections({
+      klanten: [{ id: 'uid-1', ...KLANT_DATA }],
+      bestelheaders: [
+        {
+          id: 'header-1',
+          klantId: 'uid-1',
+          bestelnr: 'GD-00001',
+          zendingnummer: 'ZD-00007',
+          besteldatum: '2026-07-01T00:00:00',
+          status: 'Verstuurd naar drukker',
+          lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 3 }],
+        },
+      ],
+    });
+    renderShell();
+    screen.getByTestId('beheer-nav-bestellingen').click();
+    expect(await screen.findByTestId('bestellingen-section')).toBeInTheDocument();
+    expect(screen.getByTestId('data-table-row-header-1')).toHaveTextContent('ZD-00007');
+  });
+
   it('shows the segmenten count and switches to the Segmenten section', async () => {
     mockCollections({
       segmenten: [

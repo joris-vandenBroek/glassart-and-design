@@ -87,6 +87,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
           id: string;
           klantId: string;
           bestelnr: string;
+          zendingnummer?: string | null;
           besteldatum: string;
           status: string;
           lines: BestellingLine[];
@@ -97,6 +98,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
               id: header.id,
               klantId: header.klantId,
               bestelnr: header.bestelnr ?? header.id,
+              zendingnummer: header.zendingnummer ?? null,
               besteldatum: new Date(header.besteldatum).toLocaleDateString('nl-NL'),
               status: header.status,
               lineCount: header.lines.length,
@@ -194,7 +196,9 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
 
   function handleBestellingUpdated(updated: Bestelling) {
     setRawBestellingen((current) =>
-      (current ?? []).map((row) => (row.id === updated.id ? { ...row, status: updated.status } : row))
+      (current ?? []).map((row) =>
+        row.id === updated.id ? { ...row, status: updated.status, zendingnummer: updated.zendingnummer ?? row.zendingnummer } : row
+      )
     );
   }
 

@@ -126,7 +126,10 @@ export function VersturenNaarDrukkerDialog({
     try {
       const nummerResponse = await fetch(`/api/drukkers/${drukkerId}/zendingen/nummer`, { method: 'POST' });
       if (!nummerResponse.ok) throw new Error('nummer reservation failed');
-      const nummerData = (await nummerResponse.json()) as { zendingnummer: string };
+      const nummerData = (await nummerResponse.json()) as { zendingnummer?: unknown };
+      if (typeof nummerData?.zendingnummer !== 'string' || nummerData.zendingnummer === '') {
+        throw new Error('nummer reservation returned an unexpected shape');
+      }
       zendingnummer = nummerData.zendingnummer;
     } catch {
       setError(t('drukkerVersturenMailError'));
