@@ -44,6 +44,10 @@ interface BestellingModalProps {
   onAfronden: (bestelling: Bestelling) => void;
   onLinePrijsVastgesteld: (bestellingId: string, lineId: string, prijs: number) => void;
   onLineUpdated: (bestellingId: string, lineId: string, updates: Partial<BestellingLine>) => void;
+  /** True zolang ergens (bulkknop, bevestigingsdialoog, of deze knop zelf elders) een
+   * afrondronde loopt -- schakelt de "Afronden"-knop uit zodat deze derde ingang naar
+   * startAfronden niet buiten de gedeelde afrondBezig-mutex om kan lopen. */
+  isAfrondBezig?: boolean;
 }
 
 function isCustomLine(line: BestellingLine): boolean {
@@ -71,6 +75,7 @@ export function BestellingModal({
   onAfronden,
   onLinePrijsVastgesteld,
   onLineUpdated,
+  isAfrondBezig = false,
 }: BestellingModalProps) {
   const t = useTranslations('beheer');
   const [error, setError] = useState<string | null>(null);
@@ -329,8 +334,9 @@ export function BestellingModal({
           <button
             type="button"
             onClick={handleAfronden}
+            disabled={isAfrondBezig}
             data-testid="bestelling-modal-afronden"
-            className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+            className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
           >
             {t('bestellingenAfronden')}
           </button>

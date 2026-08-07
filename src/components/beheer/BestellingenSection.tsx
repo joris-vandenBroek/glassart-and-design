@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { HelpHint } from '@/components/HelpHint';
@@ -77,6 +77,14 @@ export function BestellingenSection({
   const [afrondGenoten, setAfrondGenoten] = useState<ZendingGenoten[]>([]);
   const [afrondFout, setAfrondFout] = useState<string | null>(null);
   const [afrondBezig, setAfrondBezig] = useState(false);
+  // Echte mutex: startAfronden heeft drie ingangen (bulkknop, de losse
+  // "Afronden"-knop in BestellingModal, en indirect de bevestigingsdialoog),
+  // en afrondBezig alleen (React state) is daarvoor ontoereikend -- een
+  // closure kan een verouderde waarde zien en React voert de update pas later
+  // door. afrondBezig blijft wel bestaan om knoppen in de render uit te
+  // schakelen; afrondBezigRef is de synchroon gelezen/gezette slotvariabele
+  // die daadwerkelijk bepaalt of een nieuwe ronde mag starten.
+  const afrondBezigRef = useRef(false);
 
   // Een oude foutmelding hoort niet te blijven hangen als de medewerker van
   // filter wisselt -- die verwijst dan mogelijk niet eens meer naar bestellingen
@@ -140,21 +148,35 @@ export function BestellingenSection({
   }
 
   async function voerAfrondingUit(teAfronden: Bestelling[]) {
+    // Zelfde slot als startAfronden: als er ergens al een ronde loopt (bulk,
+    // deze functie zelf via een andere ingang, of de lookup-fase van
+    // startAfronden), doet een tweede aanroep helemaal niets -- geen extra
+    // PATCH-ronde, geen extra activiteitenlog-regels.
+    if (afrondBezigRef.current) return;
+    afrondBezigRef.current = true;
     setAfrondBezig(true);
     try {
       const { afgerond, mislukt } = await afrondBestellingen(teAfronden, actorFromMedewerker(user));
       afgerond.forEach((bestelling) => onBestellingUpdated(bestelling));
-      setAfrondKandidaten([]);
-      setAfrondGenoten([]);
       setSelectedIds(new Set());
       setAfrondFout(mislukt.length > 0 ? t('bestellingenAfrondenFout', { n: mislukt.length }) : null);
     } finally {
+      afrondBezigRef.current = false;
       setAfrondBezig(false);
     }
   }
 
   async function startAfronden(teAfronden: Bestelling[]) {
     if (teAfronden.length === 0) return;
+    // Synchrone slot-check: elke ingang (bulkknop, de losse "Afronden"-knop in
+    // BestellingModal, straks eventueel nog een andere) roept uiteindelijk
+    // startAfronden of voerAfrondingUit aan, en deze ref is de enige plek die
+    // écht meteen weet of er al een ronde bezig is -- afrondBezig (state) kan
+    // hier niet voor gebruikt worden, want de closure van een tweede,
+    // gelijktijdige aanroep kan nog de oude (false) waarde zien voordat React
+    // de update heeft doorgevoerd.
+    if (afrondBezigRef.current) return;
+    afrondBezigRef.current = true;
     setAfrondFout(null);
     setAfrondBezig(true);
 
@@ -166,11 +188,17 @@ export function BestellingenSection({
       // De zendinggenoot-melding is informatief. Faalt de lookup, dan is de
       // medewerker tegenhouden erger dan de hint missen -- gewoon afronden.
       genoten = [];
+    } finally {
+      // De ref beschermt hier alleen de lookup-fase. Of er nu meteen wordt
+      // afgerond (voerAfrondingUit hieronder) of de bevestigingsdialoog wordt
+      // getoond (waar de medewerker eerst moet kiezen), in beide gevallen
+      // pakt de vervolgstap het slot zelf opnieuw -- dat gebeurt synchroon,
+      // zonder await ertussen, dus er is geen gat waar een andere aanroep
+      // tussendoor kan glippen.
+      afrondBezigRef.current = false;
     }
 
     if (genoten.length === 0) {
-      // voerAfrondingUit zet afrondBezig hierna zelf weer op false in zijn
-      // eigen finally -- de vlag blijft aan tot die hele PATCH-ronde klaar is.
       await voerAfrondingUit(teAfronden);
       return;
     }
@@ -305,6 +333,7 @@ export function BestellingenSection({
         }}
         onLinePrijsVastgesteld={handleLinePrijsVastgesteld}
         onLineUpdated={handleLineUpdated}
+        isAfrondBezig={afrondBezig}
       />
       <VersturenNaarDrukkerDialog
         isOpen={showVersturenDialog}
@@ -326,14 +355,31 @@ export function BestellingenSection({
         isOpen={afrondGenoten.length > 0}
         genoten={afrondGenoten}
         isBezig={afrondBezig}
-        onAlleenDeze={() => void voerAfrondingUit(afrondKandidaten)}
-        onOokDeze={() =>
+        onAlleenDeze={() => {
+          // Deze twee dialoogknoppen zijn de enige plekken die afrondKandidaten/
+          // afrondGenoten mogen legen -- ze lossen immers de dialoog op die ze
+          // zelf lieten zien. voerAfrondingUit zelf doet dat expliciet niet meer:
+          // die wordt ook aangeroepen door een compleet losstaande ronde zonder
+          // eigen dialoog (bijv. via de modal-knop), en die mag nooit een
+          // ándere, nog openstaande bevestigingsdialoog wegklikken.
+          void voerAfrondingUit(afrondKandidaten).then(() => {
+            setAfrondKandidaten([]);
+            setAfrondGenoten([]);
+          });
+        }}
+        onOokDeze={() => {
           void voerAfrondingUit([
             ...afrondKandidaten,
             ...afrondGenoten.flatMap((entry) => entry.bestellingen),
-          ])
-        }
+          ]).then(() => {
+            setAfrondKandidaten([]);
+            setAfrondGenoten([]);
+          });
+        }}
         onClose={() => {
+          // Hier wordt voerAfrondingUit niet aangeroepen, dus het slot is hier
+          // niet aan de orde -- de ref is al vrij sinds startAfronden de
+          // dialoog liet zien.
           setAfrondKandidaten([]);
           setAfrondGenoten([]);
           setAfrondFout(null);

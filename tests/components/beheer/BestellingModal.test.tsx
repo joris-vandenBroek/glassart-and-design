@@ -87,7 +87,10 @@ const BESTELLING: Bestelling = {
   ],
 };
 
-function renderModal(bestelling: Bestelling | null) {
+function renderModal(
+  bestelling: Bestelling | null,
+  overrides: Partial<React.ComponentProps<typeof BestellingModal>> = {}
+) {
   const onClose = vi.fn();
   const onUpdated = vi.fn();
   const onAfronden = vi.fn();
@@ -108,6 +111,7 @@ function renderModal(bestelling: Bestelling | null) {
         onAfronden={onAfronden}
         onLinePrijsVastgesteld={onLinePrijsVastgesteld}
         onLineUpdated={onLineUpdated}
+        {...overrides}
       />
     </NextIntlClientProvider>
   );
@@ -598,6 +602,24 @@ describe('BestellingModal — afronden/terugzetten', () => {
       '/api/bestelheaders/header-4',
       expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'Afgerond' }) })
     );
+  });
+
+  it('disables the "Afronden" button while an afrondronde elders bezig is, so a click has no effect', () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    const { onAfronden } = renderModal(BESTELLING_VERSTUURD, { isAfrondBezig: true });
+    const knop = screen.getByTestId('bestelling-modal-afronden');
+
+    expect(knop).toBeDisabled();
+    expect(knop.className).toMatch(/disabled:opacity-40/);
+
+    fireEvent.click(knop);
+    expect(onAfronden).not.toHaveBeenCalled();
+  });
+
+  it('leaves the "Afronden" button enabled when isAfrondBezig is not set', () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal(BESTELLING_VERSTUURD);
+    expect(screen.getByTestId('bestelling-modal-afronden')).not.toBeDisabled();
   });
 
   it('calls onUpdated with the status reverted to Verstuurd naar drukker when terugzetten, logs bestelling_afronding_teruggezet', async () => {
