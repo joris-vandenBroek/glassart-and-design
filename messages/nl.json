@@ -491,6 +491,7 @@
     "bestellingenLoadError": "Kon de bestellingen niet laden. Probeer de pagina te verversen.",
     "bestellingenActionError": "Er is iets misgegaan. Probeer het opnieuw.",
     "bestellingenEmpty": "Geen bestellingen gevonden.",
+    "bestellingenColBestelnummer": "Bestelnr.",
     "bestellingenColKlant": "Klant",
     "bestellingenColDatum": "Besteldatum",
     "bestellingenColAantal": "Aantal",

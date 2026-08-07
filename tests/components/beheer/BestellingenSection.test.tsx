@@ -185,6 +185,12 @@ describe('BestellingenSection', () => {
     expect(screen.getByTestId('data-table-row-header-2')).toBeInTheDocument();
   });
 
+  it('shows the bestelnummer in the table', () => {
+    renderSection();
+    expect(screen.getByTestId('data-table-row-header-1')).toHaveTextContent('GD-00301');
+    expect(screen.getByTestId('data-table-row-header-2')).toHaveTextContent('GD-00302');
+  });
+
   it('shows only the "Te versturen naar drukker" bestelling after clicking that quick filter link', () => {
     const bestellingen = [
       { ...BESTELLINGEN[0], status: 'Te versturen naar drukker' as const },

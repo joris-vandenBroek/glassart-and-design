@@ -286,6 +286,7 @@ export function BestellingenSection({
   );
 
   const columns: Column<Bestelling>[] = [
+    { key: 'bestelnr', label: t('bestellingenColBestelnummer') },
     { key: 'companyName', label: t('bestellingenColKlant') },
     { key: 'besteldatum', label: t('bestellingenColDatum') },
     {
