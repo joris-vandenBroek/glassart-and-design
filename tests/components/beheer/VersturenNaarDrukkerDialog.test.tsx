@@ -371,4 +371,57 @@ describe('VersturenNaarDrukkerDialog', () => {
     renderDialog();
     expect(screen.getByTestId('drukker-versturen-verplicht-legende')).toHaveTextContent('* verplicht veld');
   });
+
+  describe('onvolledige bedrijfsgegevens', () => {
+    // Het Bedrijfsgegevens-type belooft tien verplichte strings, maar de data
+    // komt als losse JSON-blob uit `instellingen` en wordt nergens gevalideerd.
+    // Een record dat bestaat maar velden mist is dus een reële situatie --
+    // zeker sinds de seeds weg zijn en niets die gaten meer opvult.
+    function mockOnvolledig(ontbrekend: Partial<Record<string, undefined>>) {
+      fetchMock.mockImplementation(async (url: string) => {
+        if (url === '/api/instellingen/bedrijfsgegevens') {
+          return { ok: true, json: async () => ({ ...BEDRIJFSGEGEVENS_SEED, ...ontbrekend }) };
+        }
+        return { ok: true, json: async () => ({}) };
+      });
+    }
+
+    it('blocks sending and names the missing field instead of mailing a blank factuurvoetje', async () => {
+      mockOnvolledig({ kvkNummer: undefined });
+      renderDialog();
+
+      const melding = await screen.findByTestId('drukker-versturen-bedrijfsgegevens-onvolledig');
+      expect(melding).toHaveTextContent('KVK-nummer');
+      expect(screen.getByTestId('drukker-versturen-versturen')).toBeDisabled();
+    });
+
+    it('lists every missing field, not just the first', async () => {
+      mockOnvolledig({ kvkNummer: undefined, btwNummer: undefined });
+      renderDialog();
+
+      const melding = await screen.findByTestId('drukker-versturen-bedrijfsgegevens-onvolledig');
+      expect(melding).toHaveTextContent('KVK-nummer');
+      expect(melding).toHaveTextContent('btw-nummer');
+    });
+
+    it('treats a blank value the same as an absent one', async () => {
+      fetchMock.mockImplementation(async (url: string) => {
+        if (url === '/api/instellingen/bedrijfsgegevens') {
+          return { ok: true, json: async () => ({ ...BEDRIJFSGEGEVENS_SEED, bezoekadres: '   ' }) };
+        }
+        return { ok: true, json: async () => ({}) };
+      });
+      renderDialog();
+
+      expect(await screen.findByTestId('drukker-versturen-bedrijfsgegevens-onvolledig')).toHaveTextContent('bezoekadres');
+      expect(screen.getByTestId('drukker-versturen-versturen')).toBeDisabled();
+    });
+
+    it('does not complain when the record is complete', async () => {
+      await renderReadyDialog();
+      expect(screen.queryByTestId('drukker-versturen-bedrijfsgegevens-onvolledig')).not.toBeInTheDocument();
+      expect(screen.getByTestId('drukker-versturen-versturen')).not.toBeDisabled();
+    });
+  });
+
 });

@@ -28,9 +28,13 @@ const fetchMock = vi.fn();
 // alleen de dialoog maar de hele sectie crashen op escapeHtml(undefined).
 // Daarom wordt die ene route hier centraal afgevangen, vóór fetchMock -- zo
 // hoeft geen enkele losse mockImplementation eraan te denken.
+// Per test overschrijfbaar, zodat een test die juist een onvolledig record wil
+// onderzoeken niet vastloopt op dit vangnet.
+let bedrijfsgegevensRespons: unknown = BEDRIJFSGEGEVENS_SEED;
+
 vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {
   if (url === '/api/instellingen/bedrijfsgegevens') {
-    return Promise.resolve({ ok: true, json: async () => BEDRIJFSGEGEVENS_SEED });
+    return Promise.resolve({ ok: true, json: async () => bedrijfsgegevensRespons });
   }
   return fetchMock(url, init);
 });
@@ -157,6 +161,7 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Bestelling
 
 beforeEach(() => {
   fetchMock.mockReset();
+  bedrijfsgegevensRespons = BEDRIJFSGEGEVENS_SEED;
   fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) });
   vi.stubEnv('NEXT_PUBLIC_MAIL_ENDPOINT_URL', 'https://example.com/mail.php');
   vi.stubEnv('NEXT_PUBLIC_MAIL_SECRET', 'test-secret');
@@ -905,4 +910,28 @@ describe('BestellingenSection', () => {
       });
     });
   });
+
+  it('keeps rendering the whole section when the bedrijfsgegevens record exists but is incomplete', async () => {
+    // VersturenNaarDrukkerDialog is altijd gemount en bouwt de drukkersmail op.
+    // Toen die opbouw nog gooide op een ontbrekend veld, sleurde één onvolledig
+    // bedrijfsgegeven het complete bestellingenscherm mee -- geen tabel, geen
+    // filters, geen afronden. Dat mag nooit meer kunnen.
+    bedrijfsgegevensRespons = { ...BEDRIJFSGEGEVENS_SEED, kvkNummer: undefined, bezoekadres: undefined };
+    const teVersturen = { ...BESTELLINGEN[0], status: 'Te versturen naar drukker' as const };
+
+    renderSection({ bestellingen: [teVersturen, BESTELLINGEN[1]] });
+
+    // Eerst de dialoog openen en wachten tot het onvolledige record echt
+    // verwerkt is -- anders slaagt deze test ook zonder fix, simpelweg omdat de
+    // tabel al gerenderd was voordat de fetch terugkwam.
+    fireEvent.click(screen.getByTestId('data-table-quick-te-versturen'));
+    fireEvent.click(screen.getByTestId('data-table-row-select-header-1'));
+    fireEvent.click(screen.getByTestId('bestellingen-versturen-naar-drukker'));
+    expect(await screen.findByTestId('drukker-versturen-bedrijfsgegevens-onvolledig')).toBeInTheDocument();
+
+    // En dan de kern: de sectie eromheen staat er nog steeds.
+    expect(screen.getByTestId('data-table-row-header-1')).toBeInTheDocument();
+    expect(screen.getByTestId('data-table-quick-verstuurd')).toBeInTheDocument();
+  });
+
 });

@@ -7,7 +7,7 @@ import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import { useApiRecord } from '@/lib/useApiRecord';
-import { buildDrukkerMail } from '@/lib/buildDrukkerMail';
+import { buildDrukkerMail, ontbrekendeFactuurvoetjeVelden } from '@/lib/buildDrukkerMail';
 import type { Bestelling } from './BestellingenSection';
 import type { Klant } from './KlantenSection';
 import type { Bedrijfsgegevens } from './bedrijfsgegevensTypes';
@@ -70,12 +70,33 @@ export function VersturenNaarDrukkerDialog({
     [bestellingen, ontbrekendeKlantIds]
   );
 
+  const ontbrekendeBedrijfsvelden = useMemo(
+    () => ontbrekendeFactuurvoetjeVelden(bedrijfsgegevens),
+    [bedrijfsgegevens]
+  );
+  const heeftOnvolledigeBedrijfsgegevens = ontbrekendeBedrijfsvelden.length > 0;
+
   const mail = useMemo(
     () =>
-      bedrijfsgegevens
+      // Alleen opbouwen wanneer de dialoog daadwerkelijk open is. Dit component
+      // is altijd gemount vanuit BestellingenSection, dus zonder deze conditie
+      // draait de mailopbouw bij elke render van het bestellingenscherm --
+      // werk dat niemand ziet, en vroeger de plek waar één ontbrekend
+      // bedrijfsgegeven het hele scherm meesleurde.
+      isOpen && bedrijfsgegevens && !heeftOnvolledigeBedrijfsgegevens
         ? buildDrukkerMail({ bestellingen, klanten, kunstwerken, materialen, maten, materiaalsoorten, bedrijfsgegevens })
         : null,
-    [bestellingen, klanten, kunstwerken, materialen, maten, materiaalsoorten, bedrijfsgegevens]
+    [
+      isOpen,
+      bestellingen,
+      klanten,
+      kunstwerken,
+      materialen,
+      maten,
+      materiaalsoorten,
+      bedrijfsgegevens,
+      heeftOnvolledigeBedrijfsgegevens,
+    ]
   );
 
   function handleDialogClose() {
@@ -222,6 +243,14 @@ export function VersturenNaarDrukkerDialog({
         {heeftBedrijfsgegevensFout && (
           <p data-testid="drukker-versturen-bedrijfsgegevens-fout" className="text-xs text-red-400">
             {t('drukkerVersturenBedrijfsgegevensFout')}
+          </p>
+        )}
+
+        {heeftOnvolledigeBedrijfsgegevens && (
+          <p data-testid="drukker-versturen-bedrijfsgegevens-onvolledig" className="text-xs text-red-400">
+            {t('drukkerVersturenBedrijfsgegevensOnvolledig', {
+              velden: ontbrekendeBedrijfsvelden.map((veld) => t(`bedrijfsgegevensVeld_${veld}`)).join(', '),
+            })}
           </p>
         )}
 

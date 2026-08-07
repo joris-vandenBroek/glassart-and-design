@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildDrukkerMail } from '@/lib/buildDrukkerMail';
+import { buildDrukkerMail, ontbrekendeFactuurvoetjeVelden } from '@/lib/buildDrukkerMail';
 import type { Bestelling } from '@/components/beheer/BestellingenSection';
 import type { Klant } from '@/components/beheer/KlantenSection';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from '@/components/beheer/materiaalTypes';
@@ -330,5 +330,44 @@ describe('buildDrukkerMail', () => {
       bedrijfsgegevens: { ...BEDRIJFSGEGEVENS_SEED, bezoekadres: 'Kade & Haven 1, 1000 AB "Rotterdam"' },
     });
     expect(mail.html).toContain('Kade &amp; Haven 1, 1000 AB &quot;Rotterdam&quot;');
+  });
+});
+
+describe('ontbrekendeFactuurvoetjeVelden', () => {
+  it('reports nothing for a complete record', () => {
+    expect(ontbrekendeFactuurvoetjeVelden(BEDRIJFSGEGEVENS_SEED)).toEqual([]);
+  });
+
+  it('names every field the factuurvoetje needs but does not have', () => {
+    // De data komt als losse JSON-blob uit `instellingen` en wordt nergens
+    // gevalideerd, dus het Bedrijfsgegevens-type liegt hier over runtime:
+    // ontbrekende velden zijn undefined terwijl het type "string" belooft.
+    const onvolledig = { ...BEDRIJFSGEGEVENS_SEED, kvkNummer: undefined, email: undefined } as unknown as Bedrijfsgegevens;
+    expect(ontbrekendeFactuurvoetjeVelden(onvolledig).sort()).toEqual(['email', 'kvkNummer']);
+  });
+
+  it('treats a blank or whitespace-only value as missing', () => {
+    const leeg = { ...BEDRIJFSGEGEVENS_SEED, bezoekadres: '   ' } as Bedrijfsgegevens;
+    expect(ontbrekendeFactuurvoetjeVelden(leeg)).toEqual(['bezoekadres']);
+  });
+
+  it('reports nothing when the record itself is absent, because that case is already handled separately', () => {
+    expect(ontbrekendeFactuurvoetjeVelden(null)).toEqual([]);
+  });
+});
+
+describe('buildDrukkerMail robustness', () => {
+  it('never throws on an incomplete record, so one missing field cannot take down the screen that renders it', () => {
+    // VersturenNaarDrukkerDialog is altijd gemount in het bestellingenscherm.
+    // Gooide dit, dan verdween niet de dialoog maar het hele scherm.
+    const onvolledig = { ...BEDRIJFSGEGEVENS_SEED, bezoekadres: undefined, btwNummer: undefined } as unknown as Bedrijfsgegevens;
+    const mail = callBuildDrukkerMail({
+      bestellingen: [bestelling()],
+      klanten: [klant()],
+      bedrijfsgegevens: onvolledig,
+    });
+    expect(mail.html).toContain('KVK-nummer: 12345678');
+    expect(mail.html).not.toContain('undefined');
+    expect(mail.text).not.toContain('undefined');
   });
 });
