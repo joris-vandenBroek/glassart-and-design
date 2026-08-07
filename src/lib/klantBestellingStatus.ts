@@ -6,7 +6,8 @@ const KLANT_STATUS_MAP: Record<Bestelling['status'], KlantBestellingStatus> = {
   'Te beoordelen': 'inBehandeling',
   'Te versturen naar drukker': 'inBehandeling',
   'Verstuurd naar drukker': 'inBehandeling',
-  Afgerond: 'afgerond',
+  'Te factureren': 'inBehandeling',
+  'Betaald en afgerond': 'afgerond',
   Afgewezen: 'afgewezen',
 };
 

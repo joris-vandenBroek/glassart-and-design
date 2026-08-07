@@ -22,8 +22,12 @@ describe('toKlantBestellingStatus', () => {
     expect(toKlantBestellingStatus('Afgewezen')).toBe('afgewezen');
   });
 
-  it('maps "Afgerond" to afgerond', () => {
-    expect(toKlantBestellingStatus('Afgerond')).toBe('afgerond');
+  it('maps "Betaald en afgerond" to afgerond', () => {
+    expect(toKlantBestellingStatus('Betaald en afgerond')).toBe('afgerond');
+  });
+
+  it('maps Te factureren to inBehandeling', () => {
+    expect(toKlantBestellingStatus('Te factureren')).toBe('inBehandeling');
   });
 
   it('provides a badge class for all 3 klant statuses', () => {

@@ -33,7 +33,7 @@ export interface Bestelling {
   bestelnr: string;
   zendingnummer?: string | null;
   besteldatum: string;
-  status: 'Te beoordelen' | 'Te versturen naar drukker' | 'Verstuurd naar drukker' | 'Afgerond' | 'Afgewezen';
+  status: 'Te beoordelen' | 'Te versturen naar drukker' | 'Verstuurd naar drukker' | 'Te factureren' | 'Betaald en afgerond' | 'Afgewezen';
   lineCount: number;
   totalQuantity: number;
   lines: BestellingLine[];
