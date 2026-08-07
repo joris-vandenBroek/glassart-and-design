@@ -71,7 +71,7 @@ export function DrukkerModal({
     const orders = zending.bestellingIds
       .map((id) => bestellingen.find((b) => b.id === id))
       .filter((b): b is Bestelling => b != null);
-    return { afgerond: orders.filter((b) => b.status === 'Afgerond').length, totaal: zending.bestellingIds.length };
+    return { afgerond: orders.filter((b) => b.status === 'Te factureren').length, totaal: zending.bestellingIds.length };
   }
 
   async function handleMarkeerZendingAlsAfgerond(zending: DrukkerZending) {
@@ -88,7 +88,7 @@ export function DrukkerModal({
       .filter((b): b is Bestelling => b != null);
     const teAfronden = orders.filter((b) => b.status === 'Verstuurd naar drukker');
     if (teAfronden.length === 0) {
-      const alleAfgerond = orders.length === zending.bestellingIds.length && orders.every((b) => b.status === 'Afgerond');
+      const alleAfgerond = orders.length === zending.bestellingIds.length && orders.every((b) => b.status === 'Te factureren');
       if (!alleAfgerond) {
         setZendingActionError({
           zendingId: zending.id,
@@ -103,11 +103,11 @@ export function DrukkerModal({
         const response = await fetch(`/api/bestelheaders/${bestelling.id}`, {
           method: 'PATCH',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ status: 'Afgerond' }),
+          body: JSON.stringify({ status: 'Te factureren' }),
         });
         if (!response.ok) throw new Error('update failed');
         void logActiviteit('bestelling_afgerond', actorFromMedewerker(user), bestelling.bestelnr);
-        onBestellingUpdated({ ...bestelling, status: 'Afgerond' });
+        onBestellingUpdated({ ...bestelling, status: 'Te factureren' });
         afgerond += 1;
       } catch {
         setZendingActionError({

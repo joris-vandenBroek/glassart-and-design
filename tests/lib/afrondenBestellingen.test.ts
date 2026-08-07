@@ -30,15 +30,15 @@ beforeEach(() => {
 });
 
 describe('afrondBestellingen', () => {
-  it('patches every bestelling to Afgerond and reports them as afgerond', async () => {
+  it('patches every bestelling to Te factureren and reports them as afgerond', async () => {
     fetchMock.mockResolvedValue({ ok: true });
     const result = await afrondBestellingen([bestelling('1'), bestelling('2')], ACTOR);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[0][0]).toBe('/api/bestelheaders/1');
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ status: 'Afgerond' });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ status: 'Te factureren' });
     expect(result.afgerond.map((b) => b.id)).toEqual(['1', '2']);
-    expect(result.afgerond.every((b) => b.status === 'Afgerond')).toBe(true);
+    expect(result.afgerond.every((b) => b.status === 'Te factureren')).toBe(true);
     expect(result.mislukt).toEqual([]);
   });
 

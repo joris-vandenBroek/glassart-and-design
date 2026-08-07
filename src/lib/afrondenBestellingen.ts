@@ -7,7 +7,7 @@ export interface AfrondResultaat {
 }
 
 /**
- * Zet elke meegegeven bestelling op "Afgerond" en logt per geslaagde bestelling
+ * Zet elke meegegeven bestelling op "Te factureren" en logt per geslaagde bestelling
  * één activiteit. Een mislukte PATCH laat de bestelling ongemoeid en komt in
  * `mislukt` terecht -- de aanroeper hoort dat aan de medewerker te melden in
  * plaats van stilzwijgend alles als gelukt te tonen.
@@ -22,7 +22,7 @@ export async function afrondBestellingen(
         const response = await fetch(`/api/bestelheaders/${bestelling.id}`, {
           method: 'PATCH',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ status: 'Afgerond' }),
+          body: JSON.stringify({ status: 'Te factureren' }),
         });
         if (!response.ok) {
           return { bestelling, gelukt: false };
@@ -38,7 +38,7 @@ export async function afrondBestellingen(
   return {
     afgerond: resultaten
       .filter((r) => r.gelukt)
-      .map((r) => ({ ...r.bestelling, status: 'Afgerond' as const })),
+      .map((r) => ({ ...r.bestelling, status: 'Te factureren' as const })),
     mislukt: resultaten.filter((r) => !r.gelukt).map((r) => r.bestelling),
   };
 }

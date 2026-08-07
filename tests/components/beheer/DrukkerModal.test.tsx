@@ -259,14 +259,14 @@ describe('DrukkerModal — zending afronden', () => {
     expect(screen.getByTestId('drukker-zending-afronden-zending-1')).toBeInTheDocument();
   });
 
-  it('hides the afronden button once every bestelling in the zending is Afgerond', async () => {
+  it('hides the afronden button once every bestelling in the zending is Te factureren', async () => {
     mockZending(['header-1', 'header-2']);
     renderModal(
       { mode: 'edit', drukker: DRUKKER },
       {
         bestellingen: [
-          { ...BESTELLING_1, status: 'Afgerond' },
-          { ...BESTELLING_2, status: 'Afgerond' },
+          { ...BESTELLING_1, status: 'Te factureren' },
+          { ...BESTELLING_2, status: 'Te factureren' },
         ],
       }
     );
@@ -275,7 +275,7 @@ describe('DrukkerModal — zending afronden', () => {
     expect(screen.queryByTestId('drukker-zending-afronden-zending-1')).not.toBeInTheDocument();
   });
 
-  it('marks every Verstuurd-naar-drukker bestelling in the zending as Afgerond, sequentially, and logs each one', async () => {
+  it('marks every Verstuurd-naar-drukker bestelling in the zending as Te factureren, sequentially, and logs each one', async () => {
     mockZending(['header-1', 'header-2']);
     const { onBestellingUpdated } = renderModal(
       { mode: 'edit', drukker: DRUKKER },
@@ -288,13 +288,13 @@ describe('DrukkerModal — zending afronden', () => {
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
         '/api/bestelheaders/header-1',
-        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'Afgerond' }) })
+        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'Te factureren' }) })
       )
     );
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
         '/api/bestelheaders/header-2',
-        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'Afgerond' }) })
+        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'Te factureren' }) })
       )
     );
     await waitFor(() => expect(onBestellingUpdated).toHaveBeenCalledTimes(2));
