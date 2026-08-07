@@ -388,6 +388,61 @@ describe('BestellingenSection', () => {
     });
   });
 
+  describe('factureren (Te factureren -> Betaald en afgerond)', () => {
+    const TE_FACTUREREN = { ...BESTELLINGEN[1], status: 'Te factureren' as const };
+    const BETAALD_EN_AFGEROND = { ...BESTELLINGEN[1], status: 'Betaald en afgerond' as const };
+
+    it('shows the new quick-filter options alongside the existing ones', () => {
+      renderSection();
+      expect(screen.getByTestId('data-table-quick-te-versturen')).toBeInTheDocument();
+      expect(screen.getByTestId('data-table-quick-verstuurd')).toBeInTheDocument();
+      expect(screen.getByTestId('data-table-quick-te-factureren')).toHaveTextContent('Te factureren');
+      expect(screen.getByTestId('data-table-quick-betaald-en-afgerond')).toHaveTextContent(
+        'Betaald en afgerond'
+      );
+      expect(screen.getByTestId('data-table-quick-alle')).toBeInTheDocument();
+    });
+
+    it('shows the "Betaald en afgerond melden" bulk action under the "Te factureren" filter and PATCHes each selected bestelling without the zendinggenoten dialog', async () => {
+      const { onBestellingUpdated } = renderSection({ bestellingen: [TE_FACTUREREN] });
+      fireEvent.click(screen.getByTestId('data-table-quick-te-factureren'));
+      fireEvent.click(screen.getByTestId('data-table-row-select-header-2'));
+      expect(screen.getByTestId('bestellingen-factureren')).toHaveTextContent(
+        'Betaald en afgerond melden'
+      );
+      expect(screen.queryByTestId('bestellingen-afronden')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('bestellingen-factureren'));
+
+      await waitFor(() =>
+        expect(onBestellingUpdated).toHaveBeenCalledWith({
+          ...TE_FACTUREREN,
+          status: 'Betaald en afgerond',
+        })
+      );
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-2',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ status: 'Betaald en afgerond' }),
+        })
+      );
+      const zendingLookupCalls = fetchMock.mock.calls.filter(
+        ([url]) => typeof url === 'string' && url.startsWith('/api/drukkerzendingen')
+      );
+      expect(zendingLookupCalls).toHaveLength(0);
+      expect(screen.queryByTestId('afronden-bevestiging')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('bestellingen-selectie-balk')).not.toBeInTheDocument();
+    });
+
+    it('shows no selection bar / bulk action under the "Betaald en afgerond" filter', () => {
+      renderSection({ bestellingen: [BETAALD_EN_AFGEROND] });
+      fireEvent.click(screen.getByTestId('data-table-quick-betaald-en-afgerond'));
+      expect(screen.queryByTestId('data-table-row-select-header-2')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('bestellingen-selectie-balk')).not.toBeInTheDocument();
+    });
+  });
+
   it('shows a help popover explaining the drukker flow', () => {
     renderSection();
     expect(screen.queryByTestId('bestellingen-help-popover')).not.toBeInTheDocument();
@@ -416,7 +471,7 @@ describe('BestellingenSection', () => {
       fireEvent.click(screen.getByTestId('bestellingen-afronden'));
 
       await waitFor(() =>
-        expect(onBestellingUpdated).toHaveBeenCalledWith({ ...VERSTUURD, status: 'Afgerond' })
+        expect(onBestellingUpdated).toHaveBeenCalledWith({ ...VERSTUURD, status: 'Te factureren' })
       );
       expect(screen.queryByTestId('afronden-bevestiging')).not.toBeInTheDocument();
     });
@@ -443,7 +498,7 @@ describe('BestellingenSection', () => {
       fireEvent.click(screen.getByTestId('afronden-bevestiging-alleen-deze'));
 
       await waitFor(() => expect(onBestellingUpdated).toHaveBeenCalledTimes(1));
-      expect(onBestellingUpdated).toHaveBeenCalledWith({ ...VERSTUURD, status: 'Afgerond' });
+      expect(onBestellingUpdated).toHaveBeenCalledWith({ ...VERSTUURD, status: 'Te factureren' });
     });
 
     it('rondt bij "ook deze" de selectie én de genoten af', async () => {
@@ -483,7 +538,7 @@ describe('BestellingenSection', () => {
       fireEvent.click(screen.getByTestId('bestellingen-afronden'));
 
       await waitFor(() =>
-        expect(onBestellingUpdated).toHaveBeenCalledWith({ ...VERSTUURD, status: 'Afgerond' })
+        expect(onBestellingUpdated).toHaveBeenCalledWith({ ...VERSTUURD, status: 'Te factureren' })
       );
       expect(screen.queryByTestId('afronden-bevestiging')).not.toBeInTheDocument();
     });
@@ -514,7 +569,7 @@ describe('BestellingenSection', () => {
       fireEvent.click(screen.getByTestId('bestelling-modal-afronden'));
 
       await waitFor(() =>
-        expect(onBestellingUpdated).toHaveBeenCalledWith({ ...VERSTUURD, status: 'Afgerond' })
+        expect(onBestellingUpdated).toHaveBeenCalledWith({ ...VERSTUURD, status: 'Te factureren' })
       );
       await waitFor(() => expect(screen.queryByTestId('bestelling-modal')).not.toBeInTheDocument());
     });
@@ -542,7 +597,7 @@ describe('BestellingenSection', () => {
       fireEvent.click(screen.getByTestId('bestelling-modal-afronden'));
 
       await waitFor(() =>
-        expect(onBestellingUpdated).toHaveBeenCalledWith({ ...losseVierde, status: 'Afgerond' })
+        expect(onBestellingUpdated).toHaveBeenCalledWith({ ...losseVierde, status: 'Te factureren' })
       );
       expect(onBestellingUpdated).toHaveBeenCalledTimes(1);
       expect(screen.getByTestId('bestellingen-selectie-balk')).toHaveTextContent(
@@ -678,7 +733,7 @@ describe('BestellingenSection', () => {
         resolvePatch({ ok: true, json: async () => ({}) });
 
         await waitFor(() => expect(onBestellingUpdated).toHaveBeenCalledTimes(1));
-        expect(onBestellingUpdated).toHaveBeenCalledWith({ ...VERSTUURD, status: 'Afgerond' });
+        expect(onBestellingUpdated).toHaveBeenCalledWith({ ...VERSTUURD, status: 'Te factureren' });
       });
 
       it('schakelt ook de "Afronden"-knop in de modal uit tijdens een bulkronde, zodat een tweede aanroep via die knop geen extra PATCH-ronde start', async () => {
@@ -731,7 +786,7 @@ describe('BestellingenSection', () => {
         resolvePatch({ ok: true, json: async () => ({}) });
 
         await waitFor(() => expect(onBestellingUpdated).toHaveBeenCalledTimes(1));
-        expect(onBestellingUpdated).toHaveBeenCalledWith({ ...VERSTUURD, status: 'Afgerond' });
+        expect(onBestellingUpdated).toHaveBeenCalledWith({ ...VERSTUURD, status: 'Te factureren' });
       });
 
       it('een openstaande bevestigingsdialoog wordt niet weggeklikt door een gelijktijdige tweede ronde via de modal-knop', async () => {
@@ -906,7 +961,7 @@ describe('BestellingenSection', () => {
         fireEvent.click(screen.getByTestId('afronden-bevestiging-alleen-deze'));
 
         await waitFor(() => expect(onBestellingUpdated).toHaveBeenCalledTimes(1));
-        expect(onBestellingUpdated).toHaveBeenCalledWith({ ...VERSTUURD, status: 'Afgerond' });
+        expect(onBestellingUpdated).toHaveBeenCalledWith({ ...VERSTUURD, status: 'Te factureren' });
       });
     });
 

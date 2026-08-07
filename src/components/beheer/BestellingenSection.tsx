@@ -10,7 +10,7 @@ import type { Kunstwerk, Materiaal, Maat, Materiaalsoort, Drukker } from './mate
 import type { Klant } from './KlantenSection';
 import type { BtwTarieven } from './btwTarievenTypes';
 import { useAdminAuth } from '@/lib/useAdminAuth';
-import { actorFromMedewerker } from '@/lib/logActiviteit';
+import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import { afrondBestellingen } from '@/lib/afrondenBestellingen';
 import { fetchZendingen, openstaandeZendingGenoten, type ZendingGenoten } from '@/lib/zendingGenoten';
 import { AfrondenBevestigingDialog } from './AfrondenBevestigingDialog';
@@ -261,6 +261,29 @@ export function BestellingenSection({
     setAfrondBezig(false);
   }
 
+  const [facturerenBezig, setFacturerenBezig] = useState(false);
+
+  async function voerFacturerenUit(teFactureren: Bestelling[]) {
+    setFacturerenBezig(true);
+    try {
+      await Promise.all(
+        teFactureren.map(async (bestelling) => {
+          const response = await fetch(`/api/bestelheaders/${bestelling.id}`, {
+            method: 'PATCH',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ status: 'Betaald en afgerond' }),
+          });
+          if (!response.ok) return;
+          void logActiviteit('bestelling_gefactureerd', actorFromMedewerker(user), bestelling.bestelnr);
+          onBestellingUpdated({ ...bestelling, status: 'Betaald en afgerond' });
+        })
+      );
+      setSelectedIds(new Set());
+    } finally {
+      setFacturerenBezig(false);
+    }
+  }
+
   if (loadError) {
     return (
       <p data-testid="bestellingen-error" className="text-xs text-red-400">
@@ -274,7 +297,9 @@ export function BestellingenSection({
   }
 
   const selectieActief =
-    statusFilter === 'Te versturen naar drukker' || statusFilter === 'Verstuurd naar drukker';
+    statusFilter === 'Te versturen naar drukker' ||
+    statusFilter === 'Verstuurd naar drukker' ||
+    statusFilter === 'Te factureren';
 
   // selectedIds zelf wordt pas in een useEffect opgeschoond nadat het filter
   // wisselt, dus in de render die direct op zo'n wissel volgt kan het nog
@@ -326,6 +351,18 @@ export function BestellingenSection({
             >
               {t('bestellingenAfronden')}
             </button>
+          ) : statusFilter === 'Te factureren' ? (
+            <button
+              type="button"
+              onClick={() =>
+                void voerFacturerenUit(bestellingen.filter((b) => selectieVoorFilter.has(b.id)))
+              }
+              disabled={facturerenBezig}
+              data-testid="bestellingen-factureren"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+            >
+              {t('bestellingenFactureren')}
+            </button>
           ) : (
             <button
               type="button"
@@ -365,6 +402,16 @@ export function BestellingenSection({
               value: 'Verstuurd naar drukker',
               label: t('bestellingenQuickVerstuurdNaarDrukker'),
               testId: 'verstuurd',
+            },
+            {
+              value: 'Te factureren',
+              label: t('bestellingenQuickTeFactureren'),
+              testId: 'te-factureren',
+            },
+            {
+              value: 'Betaald en afgerond',
+              label: t('bestellingenQuickBetaaldEnAfgerond'),
+              testId: 'betaald-en-afgerond',
             },
             { value: '', label: t('bestellingenQuickAlle'), testId: 'alle' },
           ],

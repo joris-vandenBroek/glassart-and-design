@@ -528,6 +528,8 @@
     "bestellingenHistorieAfgewezen": "Afgewezen",
     "bestellingenQuickTeVersturenNaarDrukker": "Te versturen naar drukker",
     "bestellingenQuickVerstuurdNaarDrukker": "Verstuurd naar drukker",
+    "bestellingenQuickTeFactureren": "Te factureren",
+    "bestellingenQuickBetaaldEnAfgerond": "Betaald en afgerond",
     "bestellingenQuickAlle": "Alle bestellingen",
     "bestellingenGeselecteerd": "{count} bestellingen geselecteerd ({klanten} klanten)",
     "bestellingenVersturenNaarDrukker": "Versturen naar drukker",
