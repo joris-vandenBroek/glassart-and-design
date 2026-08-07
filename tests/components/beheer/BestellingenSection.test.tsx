@@ -595,16 +595,16 @@ describe('BestellingenSection', () => {
 
       it('een openstaande bevestigingsdialoog wordt niet weggeklikt door een gelijktijdige tweede ronde via de modal-knop', async () => {
         // header-2's zendinggenoot-lookup levert een genoot op en toont de
-        // bevestigingsdialoog. Zodra die open staat (dus niet meer "bezig"),
-        // rondt de medewerker via de losse modal-knop een heel andere
-        // bestelling af (header-5) -- en dat mislukt. De mutex staat dat toe
-        // (de dialoog wacht op een keuze, dus is geen aparte ronde meer aan
-        // het blokkeren), maar die tweede ronde mag de nog openstaande dialoog
-        // voor header-2 niet stiekem wegklikken.
+        // bevestigingsdialoog. Zodra die open staat, probeert de medewerker
+        // via de losse modal-knop een heel andere bestelling af te ronden
+        // (header-5). Het dialoog-slot (afrondDialoogOpenRef) weigert die
+        // tweede ronde meteen -- er wordt zelfs geen lookup of PATCH voor
+        // header-5 gestart -- en de dialoog voor header-2 blijft ongemoeid
+        // staan.
         const genoot = { ...BESTELLINGEN[1], id: 'header-9', bestelnr: 'GD-00309' };
         const header5 = { ...BESTELLINGEN[1], id: 'header-5', bestelnr: 'GD-00305' };
 
-        fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+        fetchMock.mockImplementation((url: string) => {
           if (typeof url === 'string' && url.startsWith('/api/drukkerzendingen')) {
             if (url.includes('header-2')) {
               return Promise.resolve({
@@ -622,13 +622,6 @@ describe('BestellingenSection', () => {
             }
             return Promise.resolve({ ok: true, json: async () => [] });
           }
-          if (
-            typeof url === 'string' &&
-            url.startsWith('/api/bestelheaders/header-5') &&
-            init?.method === 'PATCH'
-          ) {
-            return Promise.resolve({ ok: false });
-          }
           return Promise.resolve({ ok: true, json: async () => ({}) });
         });
 
@@ -640,14 +633,20 @@ describe('BestellingenSection', () => {
         await waitFor(() => expect(screen.getByTestId('afronden-bevestiging')).toBeInTheDocument());
         expect(screen.getByTestId('afronden-bevestiging')).toHaveTextContent('GD-00309');
 
+        fetchMock.mockClear();
+
         fireEvent.click(screen.getByTestId('data-table-row-header-5'));
         fireEvent.click(screen.getByTestId('bestelling-modal-afronden'));
 
-        await waitFor(() => expect(screen.getByTestId('bestellingen-afronden-fout')).toBeInTheDocument());
+        const header5ZendingCalls = fetchMock.mock.calls.filter(
+          ([url]) => typeof url === 'string' && url.startsWith('/api/drukkerzendingen') && url.includes('header-5')
+        );
+        expect(header5ZendingCalls).toHaveLength(0);
         expect(onBestellingUpdated).not.toHaveBeenCalled();
+        expect(screen.queryByTestId('bestellingen-afronden-fout')).not.toBeInTheDocument();
 
         // De dialoog voor header-2 staat nog gewoon open, ongemoeid door
-        // header-5's mislukte ronde.
+        // header-5's geweigerde ronde.
         expect(screen.getByTestId('afronden-bevestiging')).toBeInTheDocument();
         expect(screen.getByTestId('afronden-bevestiging')).toHaveTextContent('GD-00309');
 
@@ -655,6 +654,118 @@ describe('BestellingenSection', () => {
 
         expect(screen.queryByTestId('afronden-bevestiging')).not.toBeInTheDocument();
         expect(screen.queryByTestId('bestellingen-afronden-fout')).not.toBeInTheDocument();
+      });
+
+      it('een openstaande bevestigingsdialoog wordt niet overschreven door een tweede ronde die zelf ook zendinggenoten heeft', async () => {
+        // header-2 heeft genoot header-9 en toont de dialoog. Terwijl die nog
+        // op een keuze wacht, probeert de medewerker via de modal-knop een
+        // heel andere bestelling (header-5) af te ronden, die zélf ook een
+        // openstaande genoot heeft (header-10). Zonder het extra dialoog-slot
+        // zou startAfronden voor header-5 gewoon doorlopen en
+        // afrondKandidaten/afrondGenoten overschrijven met header-5/header-10
+        // -- de dialoog voor header-2/header-9 zou dan stilzwijgend verdwijnen.
+        const genoot9 = { ...BESTELLINGEN[1], id: 'header-9', bestelnr: 'GD-00309' };
+        const header5 = { ...BESTELLINGEN[1], id: 'header-5', bestelnr: 'GD-00305' };
+        const genoot10 = { ...BESTELLINGEN[1], id: 'header-10', bestelnr: 'GD-00310' };
+
+        fetchMock.mockImplementation((url: string) => {
+          if (typeof url === 'string' && url.startsWith('/api/drukkerzendingen')) {
+            if (url.includes('header-2')) {
+              return Promise.resolve({
+                ok: true,
+                json: async () => [
+                  {
+                    id: 'z1',
+                    drukkerId: 'drukker-1',
+                    drukkerNaam: 'Drukkerij Janssen',
+                    verzondenOp: '2026-08-03T10:00:00Z',
+                    bestellingIds: ['header-2', 'header-9'],
+                  },
+                ],
+              });
+            }
+            if (url.includes('header-5')) {
+              return Promise.resolve({
+                ok: true,
+                json: async () => [
+                  {
+                    id: 'z2',
+                    drukkerId: 'drukker-1',
+                    drukkerNaam: 'Drukkerij Janssen',
+                    verzondenOp: '2026-08-03T10:00:00Z',
+                    bestellingIds: ['header-5', 'header-10'],
+                  },
+                ],
+              });
+            }
+            return Promise.resolve({ ok: true, json: async () => [] });
+          }
+          return Promise.resolve({ ok: true, json: async () => ({}) });
+        });
+
+        renderSection({ bestellingen: [VERSTUURD, genoot9, header5, genoot10] });
+        fireEvent.click(screen.getByTestId('data-table-quick-verstuurd'));
+        fireEvent.click(screen.getByTestId('data-table-row-select-header-2'));
+        fireEvent.click(screen.getByTestId('bestellingen-afronden'));
+
+        await waitFor(() => expect(screen.getByTestId('afronden-bevestiging')).toBeInTheDocument());
+        expect(screen.getByTestId('afronden-bevestiging')).toHaveTextContent('GD-00309');
+
+        fetchMock.mockClear();
+
+        fireEvent.click(screen.getByTestId('data-table-row-header-5'));
+        fireEvent.click(screen.getByTestId('bestelling-modal-afronden'));
+
+        // De tweede ronde mag zelfs niet aan de lookup beginnen -- startAfronden
+        // hoort direct terug te keren zolang de dialoog nog op een keuze wacht.
+        const header5ZendingCalls = fetchMock.mock.calls.filter(
+          ([url]) => typeof url === 'string' && url.startsWith('/api/drukkerzendingen') && url.includes('header-5')
+        );
+        expect(header5ZendingCalls).toHaveLength(0);
+
+        expect(screen.getByTestId('afronden-bevestiging')).toBeInTheDocument();
+        expect(screen.getByTestId('afronden-bevestiging')).toHaveTextContent('GD-00309');
+        expect(screen.getByTestId('afronden-bevestiging')).not.toHaveTextContent('GD-00310');
+      });
+
+      it('kan na het annuleren van de dialoog gewoon een nieuwe ronde starten', async () => {
+        // De belangrijkste test: het dialoog-slot mag nooit blijven hangen na
+        // annuleren, anders is het scherm blijvend onbruikbaar.
+        const genoot = { ...BESTELLINGEN[1], id: 'header-9', bestelnr: 'GD-00309' };
+        fetchMock.mockImplementation((url: string) => {
+          if (typeof url === 'string' && url.startsWith('/api/drukkerzendingen')) {
+            return Promise.resolve({
+              ok: true,
+              json: async () => [
+                {
+                  id: 'z1',
+                  drukkerId: 'drukker-1',
+                  drukkerNaam: 'Drukkerij Janssen',
+                  verzondenOp: '2026-08-03T10:00:00Z',
+                  bestellingIds: ['header-2', 'header-9'],
+                },
+              ],
+            });
+          }
+          return Promise.resolve({ ok: true, json: async () => ({}) });
+        });
+
+        const { onBestellingUpdated } = renderSection({ bestellingen: [VERSTUURD, genoot] });
+        fireEvent.click(screen.getByTestId('data-table-quick-verstuurd'));
+        fireEvent.click(screen.getByTestId('data-table-row-select-header-2'));
+        fireEvent.click(screen.getByTestId('bestellingen-afronden'));
+
+        await waitFor(() => expect(screen.getByTestId('afronden-bevestiging')).toBeInTheDocument());
+        fireEvent.click(screen.getByTestId('afronden-bevestiging-annuleren'));
+        expect(screen.queryByTestId('afronden-bevestiging')).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByTestId('bestellingen-afronden'));
+
+        await waitFor(() => expect(screen.getByTestId('afronden-bevestiging')).toBeInTheDocument());
+        fireEvent.click(screen.getByTestId('afronden-bevestiging-alleen-deze'));
+
+        await waitFor(() => expect(onBestellingUpdated).toHaveBeenCalledTimes(1));
+        expect(onBestellingUpdated).toHaveBeenCalledWith({ ...VERSTUURD, status: 'Afgerond' });
       });
     });
 

@@ -85,6 +85,17 @@ export function BestellingenSection({
   // schakelen; afrondBezigRef is de synchroon gelezen/gezette slotvariabele
   // die daadwerkelijk bepaalt of een nieuwe ronde mag starten.
   const afrondBezigRef = useRef(false);
+  // Los van afrondBezigRef (die alleen de korte lookup-fase beschermt) moet
+  // een al openstaande bevestigingsdialoog zelf ook een nieuwe ronde weigeren.
+  // Zonder dit slot kan een medewerker, terwijl de dialoog nog op een keuze
+  // wacht, via een andere ingang (bijvoorbeeld de losse "Afronden"-knop in
+  // BestellingModal voor een heel andere bestelling) een tweede ronde starten
+  // die -- als die zelf ook zendinggenoten heeft -- afrondKandidaten/
+  // afrondGenoten overschrijft en de eerste, nog onbeantwoorde dialoog
+  // stilzwijgend laat verdwijnen. Ook dit moet een ref zijn: de closure van
+  // die tweede aanroep moet synchroon kunnen zien dat er al een dialoog open
+  // staat, vóór er ooit een lookup wordt gestart.
+  const afrondDialoogOpenRef = useRef(false);
 
   // Een oude foutmelding hoort niet te blijven hangen als de medewerker van
   // filter wisselt -- die verwijst dan mogelijk niet eens meer naar bestellingen
@@ -162,12 +173,21 @@ export function BestellingenSection({
       setAfrondFout(mislukt.length > 0 ? t('bestellingenAfrondenFout', { n: mislukt.length }) : null);
     } finally {
       afrondBezigRef.current = false;
+      // Deze functie is precies de plek waar elke bevestigingsdialoog wordt
+      // opgelost (via "alleen deze" of "ook deze"), dus hier hoort het
+      // dialoog-slot ook weer vrij te komen. Was er nooit een dialoog (het
+      // "genoten.length === 0"-pad in startAfronden), dan stond de ref al op
+      // false en is dit een no-op.
+      afrondDialoogOpenRef.current = false;
       setAfrondBezig(false);
     }
   }
 
   async function startAfronden(teAfronden: Bestelling[]) {
     if (teAfronden.length === 0) return;
+    // Weiger meteen een nieuwe ronde zolang er al een bevestigingsdialoog op
+    // een keuze wacht -- zie de toelichting bij afrondDialoogOpenRef hierboven.
+    if (afrondDialoogOpenRef.current) return;
     // Synchrone slot-check: elke ingang (bulkknop, de losse "Afronden"-knop in
     // BestellingModal, straks eventueel nog een andere) roept uiteindelijk
     // startAfronden of voerAfrondingUit aan, en deze ref is de enige plek die
@@ -202,6 +222,7 @@ export function BestellingenSection({
       await voerAfrondingUit(teAfronden);
       return;
     }
+    afrondDialoogOpenRef.current = true;
     setAfrondKandidaten(teAfronden);
     setAfrondGenoten(genoten);
     setAfrondBezig(false);
@@ -333,7 +354,13 @@ export function BestellingenSection({
         }}
         onLinePrijsVastgesteld={handleLinePrijsVastgesteld}
         onLineUpdated={handleLineUpdated}
-        isAfrondBezig={afrondBezig}
+        // Ook uitgeschakeld terwijl de bevestigingsdialoog op een keuze wacht
+        // (afrondGenoten.length > 0, dezelfde voorwaarde als de dialoog z'n
+        // eigen isOpen hieronder) -- niet omdat het slot dat al niet zou
+        // afdwingen (startAfronden weigert die ronde toch via
+        // afrondDialoogOpenRef), maar voor de duidelijkheid richting de
+        // medewerker: de knop hoort er dan zichtbaar uitgeschakeld uit te zien.
+        isAfrondBezig={afrondBezig || afrondGenoten.length > 0}
       />
       <VersturenNaarDrukkerDialog
         isOpen={showVersturenDialog}
@@ -377,9 +404,11 @@ export function BestellingenSection({
           });
         }}
         onClose={() => {
-          // Hier wordt voerAfrondingUit niet aangeroepen, dus het slot is hier
-          // niet aan de orde -- de ref is al vrij sinds startAfronden de
-          // dialoog liet zien.
+          // Hier wordt voerAfrondingUit niet aangeroepen (afrondBezigRef is
+          // dus niet aan de orde), maar het dialoog-slot moet wel expliciet
+          // vrijkomen -- annuleren is de enige weg terug die niet via
+          // voerAfrondingUit's finally loopt.
+          afrondDialoogOpenRef.current = false;
           setAfrondKandidaten([]);
           setAfrondGenoten([]);
           setAfrondFout(null);
