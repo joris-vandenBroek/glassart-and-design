@@ -55,6 +55,7 @@ export function KlantenSection({
 }: KlantenSectionProps) {
   const t = useTranslations('beheer');
   const [selectedKlant, setSelectedKlant] = useState<Klant | null>(null);
+  const [statusFilter, setStatusFilter] = useState('');
 
   if (loadError) {
     return (
@@ -87,10 +88,12 @@ export function KlantenSection({
         onRowClick={setSelectedKlant}
         quickFilter={{
           key: 'status',
-          activeValue: 'Beoordelen',
-          activeLabel: t('klantenQuickTeBeoordelen'),
-          allLabel: t('klantenQuickAlle'),
-          defaultActive: false,
+          value: statusFilter,
+          onChange: setStatusFilter,
+          options: [
+            { value: 'Beoordelen', label: t('klantenQuickTeBeoordelen'), testId: 'te-beoordelen' },
+            { value: '', label: t('klantenQuickAlle'), testId: 'alle' },
+          ],
         }}
         emptyLabel={t('klantenEmpty')}
         searchPlaceholder={t('dataTableSearchPlaceholder')}
