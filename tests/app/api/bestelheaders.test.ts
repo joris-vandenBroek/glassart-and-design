@@ -439,7 +439,7 @@ describe('bestelheaders routes', () => {
     const header = await created.json();
     const staffCookie = await medewerkerCookie();
 
-    for (const status of ['Te versturen naar drukker', 'Verstuurd naar drukker', 'Afgerond']) {
+    for (const status of ['Te versturen naar drukker', 'Verstuurd naar drukker', 'Betaald en afgerond']) {
       await patchHeader(
         new Request('http://localhost/api', {
           method: 'PATCH',
@@ -458,7 +458,7 @@ describe('bestelheaders routes', () => {
       'Te beoordelen',
       'Te versturen naar drukker',
       'Verstuurd naar drukker',
-      'Afgerond',
+      'Betaald en afgerond',
     ]);
   });
 
@@ -509,9 +509,9 @@ describe('bestelheaders routes', () => {
     }
     await patchStatus('Te versturen naar drukker');
     await patchStatus('Verstuurd naar drukker');
-    await patchStatus('Afgerond');
+    await patchStatus('Betaald en afgerond');
     await patchStatus('Verstuurd naar drukker'); // Terugzetten
-    await patchStatus('Afgerond'); // Afgerond again
+    await patchStatus('Betaald en afgerond'); // Afgerond again
 
     const [rows] = await getPool().query(
       'SELECT status FROM bestelstatusHistorie WHERE bestelheaderId = ? ORDER BY tijdstip ASC',
@@ -521,9 +521,9 @@ describe('bestelheaders routes', () => {
       'Te beoordelen',
       'Te versturen naar drukker',
       'Verstuurd naar drukker',
-      'Afgerond',
+      'Betaald en afgerond',
       'Verstuurd naar drukker',
-      'Afgerond',
+      'Betaald en afgerond',
     ]);
   });
 

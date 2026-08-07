@@ -144,7 +144,7 @@ describe('klanten admin routes', () => {
       headerId,
       klant.id,
       'AUTOTEST-BLOCK-1',
-      'Afgerond',
+      'Betaald en afgerond',
     ]);
     const sessionId = await createSession('klant', klant.id);
     const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
@@ -188,7 +188,7 @@ describe('klanten admin routes', () => {
       headerId,
       klant.id,
       'AUTOTEST-BLOCK-2',
-      'Afgerond',
+      'Betaald en afgerond',
     ]);
 
     try {

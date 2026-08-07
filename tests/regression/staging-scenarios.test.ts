@@ -1213,20 +1213,23 @@ describe('Bestelling afronden -- van plaatsing tot "Afgerond" met bestelstatusHi
       expect(versturen.status).toBe(200);
 
       // De eigenlijke scenario onder test: "Markeer zending als afgerond" (DrukkerModal) /
-      // "Afronden" (BestellingModal) patchen beide dezelfde route met status: 'Afgerond'.
-      const afronden = await patchHeader(req('PATCH', { status: 'Afgerond' }, staff), {
+      // "Afronden" (BestellingModal) patchen beide dezelfde route met status: 'Te factureren'
+      // (de "Afronden"-mechanismes doel-status na dit ontwerp -- zie sectie B van het
+      // design-doc; "Betaald en afgerond" wordt pas via de nieuwe, losstaande "Factureren"-
+      // actie bereikt, wat buiten dit scenario valt).
+      const afronden = await patchHeader(req('PATCH', { status: 'Te factureren' }, staff), {
         params: { id: header.id },
       });
       expect(afronden.status).toBe(200);
 
       const [headerRows] = await getPool().query('SELECT status FROM bestelheaders WHERE id = ?', [header.id]);
-      expect((headerRows as Array<{ status: string }>)[0].status).toBe('Afgerond');
+      expect((headerRows as Array<{ status: string }>)[0].status).toBe('Te factureren');
 
       const [historieRows] = await getPool().query(
         'SELECT status FROM bestelstatusHistorie WHERE bestelheaderId = ? ORDER BY tijdstip ASC',
         [header.id]
       );
-      expect((historieRows as Array<{ status: string }>).map((r) => r.status)).toContain('Afgerond');
+      expect((historieRows as Array<{ status: string }>).map((r) => r.status)).toContain('Te factureren');
     } finally {
       // opruimenKlanten verwijdert ook de bestelheader (via klantId IN (...)) -- geen
       // apart headerId-cleanup nodig, zelfde patroon als de andere scenario's in dit bestand.

@@ -51,7 +51,7 @@ describe('openstaandeZendingGenoten', () => {
 
   it('ignores genoten that are already afgerond', () => {
     const b1 = bestelling('1', 'Verstuurd naar drukker');
-    const b2 = bestelling('2', 'Afgerond');
+    const b2 = bestelling('2', 'Betaald en afgerond');
     expect(openstaandeZendingGenoten([zending('z1', ['1', '2'])], [b1], [b1, b2])).toEqual([]);
   });
 
