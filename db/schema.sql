@@ -140,7 +140,6 @@ CREATE TABLE drukkers (
 
 CREATE TABLE drukkerZendingen (
   id CHAR(36) PRIMARY KEY,
-  zendingnummer VARCHAR(20),
   drukkerId CHAR(36) NOT NULL,
   verzondenOp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   onderwerp VARCHAR(255),
@@ -149,6 +148,7 @@ CREATE TABLE drukkerZendingen (
   aantalKlanten INT NOT NULL DEFAULT 0,
   aantalRegels INT NOT NULL DEFAULT 0,
   verzondDoor VARCHAR(255),
+  zendingnummer VARCHAR(20),
   FOREIGN KEY (drukkerId) REFERENCES drukkers(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
