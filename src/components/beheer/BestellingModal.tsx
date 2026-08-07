@@ -156,17 +156,33 @@ export function BestellingModal({
     onAfronden(bestelling);
   }
 
-  async function handleTerugzetten() {
+  async function handleFactureren() {
     if (!bestelling) return;
     try {
       const response = await fetch(`/api/bestelheaders/${bestelling.id}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ status: 'Verstuurd naar drukker' }),
+        body: JSON.stringify({ status: 'Betaald en afgerond' }),
+      });
+      if (!response.ok) throw new Error('update failed');
+      void logActiviteit('bestelling_gefactureerd', actorFromMedewerker(user), bestelling.bestelnr);
+      onUpdated({ ...bestelling, status: 'Betaald en afgerond' });
+    } catch {
+      setError(t('bestellingenActionError'));
+    }
+  }
+
+  async function terugzettenNaar(status: 'Verstuurd naar drukker' | 'Te factureren') {
+    if (!bestelling) return;
+    try {
+      const response = await fetch(`/api/bestelheaders/${bestelling.id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status }),
       });
       if (!response.ok) throw new Error('update failed');
       void logActiviteit('bestelling_afronding_teruggezet', actorFromMedewerker(user), bestelling.bestelnr);
-      onUpdated({ ...bestelling, status: 'Verstuurd naar drukker' });
+      onUpdated({ ...bestelling, status });
     } catch {
       setError(t('bestellingenActionError'));
     }
@@ -345,14 +361,33 @@ export function BestellingModal({
           >
             {t('bestellingenAfronden')}
           </button>
-        ) : bestelling && bestelling.status === 'Afgerond' ? (
+        ) : bestelling && bestelling.status === 'Te factureren' ? (
+          <>
+            <button
+              type="button"
+              onClick={handleFactureren}
+              data-testid="bestelling-modal-factureren"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+            >
+              {t('bestellingenFactureren')}
+            </button>
+            <button
+              type="button"
+              onClick={() => terugzettenNaar('Verstuurd naar drukker')}
+              data-testid="bestelling-modal-terugzetten-naar-verstuurd"
+              className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+            >
+              {t('bestellingenTerugzetten')}
+            </button>
+          </>
+        ) : bestelling && bestelling.status === 'Betaald en afgerond' ? (
           <button
             type="button"
-            onClick={handleTerugzetten}
+            onClick={() => terugzettenNaar('Te factureren')}
             data-testid="bestelling-modal-terugzetten"
             className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
           >
-            {t('bestellingenTerugzetten')}
+            {t('bestellingenFactureringTerugzetten')}
           </button>
         ) : null
       }

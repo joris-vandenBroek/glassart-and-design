@@ -564,11 +564,18 @@ const BESTELLING_VERSTUURD: Bestelling = {
   lines: [{ id: 'line-6', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
 };
 
-const BESTELLING_AFGEROND: Bestelling = {
+const BESTELLING_TE_FACTUREREN: Bestelling = {
   ...BESTELLING_VERSTUURD,
   id: 'header-5',
   bestelnr: 'GD-00105',
-  status: 'Afgerond',
+  status: 'Te factureren',
+};
+
+const BESTELLING_BETAALD_EN_AFGEROND: Bestelling = {
+  ...BESTELLING_VERSTUURD,
+  id: 'header-6',
+  bestelnr: 'GD-00106',
+  status: 'Betaald en afgerond',
 };
 
 describe('BestellingModal — afronden/terugzetten', () => {
@@ -580,12 +587,24 @@ describe('BestellingModal — afronden/terugzetten', () => {
     expect(screen.queryByTestId('bestelling-modal-terugzetten')).not.toBeInTheDocument();
   });
 
-  it('shows only Terugzetten for a bestelling that is Afgerond', () => {
-    renderModal(BESTELLING_AFGEROND);
+  it('shows only Terugzetten for a bestelling that is Betaald en afgerond', () => {
+    renderModal(BESTELLING_BETAALD_EN_AFGEROND);
     expect(screen.getByTestId('bestelling-modal-terugzetten')).toBeInTheDocument();
     expect(screen.queryByTestId('bestelling-modal-afronden')).not.toBeInTheDocument();
     expect(screen.queryByTestId('bestelling-modal-goedkeuren')).not.toBeInTheDocument();
     expect(screen.queryByTestId('bestelling-modal-afwijzen')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-factureren')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-terugzetten-naar-verstuurd')).not.toBeInTheDocument();
+  });
+
+  it('shows Factureren and a second Terugzetten button for a bestelling that is Te factureren', () => {
+    renderModal(BESTELLING_TE_FACTUREREN);
+    expect(screen.getByTestId('bestelling-modal-factureren')).toHaveTextContent('Betaald en afgerond melden');
+    expect(screen.getByTestId('bestelling-modal-terugzetten-naar-verstuurd')).toHaveTextContent('Terugzetten');
+    expect(screen.queryByTestId('bestelling-modal-afronden')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-goedkeuren')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-afwijzen')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-terugzetten')).not.toBeInTheDocument();
   });
 
   it('shows no action buttons for a bestelling that is Te versturen naar drukker or Afgewezen', () => {
@@ -615,7 +634,7 @@ describe('BestellingModal — afronden/terugzetten', () => {
     );
     expect(fetchMock).not.toHaveBeenCalledWith(
       '/api/bestelheaders/header-4',
-      expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'Afgerond' }) })
+      expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'Te factureren' }) })
     );
   });
 
@@ -637,10 +656,31 @@ describe('BestellingModal — afronden/terugzetten', () => {
     expect(screen.getByTestId('bestelling-modal-afronden')).not.toBeDisabled();
   });
 
-  it('calls onUpdated with the status reverted to Verstuurd naar drukker when terugzetten, logs bestelling_afronding_teruggezet', async () => {
+  it('calls onUpdated with the status reverted to Te factureren when terugzetten from Betaald en afgerond, logs bestelling_afronding_teruggezet', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
-    const { onUpdated } = renderModal(BESTELLING_AFGEROND);
+    const { onUpdated } = renderModal(BESTELLING_BETAALD_EN_AFGEROND);
     fireEvent.click(screen.getByTestId('bestelling-modal-terugzetten'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-6',
+        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'Te factureren' }) })
+      )
+    );
+    await waitFor(() =>
+      expect(onUpdated).toHaveBeenCalledWith({ ...BESTELLING_BETAALD_EN_AFGEROND, status: 'Te factureren' })
+    );
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'bestelling_afronding_teruggezet',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'GD-00106'
+    );
+  });
+
+  it('calls onUpdated with the status reverted to Verstuurd naar drukker when terugzetten from Te factureren, logs bestelling_afronding_teruggezet', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    const { onUpdated } = renderModal(BESTELLING_TE_FACTUREREN);
+    fireEvent.click(screen.getByTestId('bestelling-modal-terugzetten-naar-verstuurd'));
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
@@ -649,13 +689,44 @@ describe('BestellingModal — afronden/terugzetten', () => {
       )
     );
     await waitFor(() =>
-      expect(onUpdated).toHaveBeenCalledWith({ ...BESTELLING_AFGEROND, status: 'Verstuurd naar drukker' })
+      expect(onUpdated).toHaveBeenCalledWith({ ...BESTELLING_TE_FACTUREREN, status: 'Verstuurd naar drukker' })
     );
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'bestelling_afronding_teruggezet',
       { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'GD-00105'
     );
+  });
+
+  it('marks the bestelling as Betaald en afgerond when clicking Factureren, logs bestelling_gefactureerd', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    const { onUpdated } = renderModal(BESTELLING_TE_FACTUREREN);
+    fireEvent.click(screen.getByTestId('bestelling-modal-factureren'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-5',
+        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'Betaald en afgerond' }) })
+      )
+    );
+    await waitFor(() =>
+      expect(onUpdated).toHaveBeenCalledWith({ ...BESTELLING_TE_FACTUREREN, status: 'Betaald en afgerond' })
+    );
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'bestelling_gefactureerd',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'GD-00105'
+    );
+  });
+
+  it('shows an error and does not call onUpdated when Factureren fails', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
+    const { onUpdated } = renderModal(BESTELLING_TE_FACTUREREN);
+    fireEvent.click(screen.getByTestId('bestelling-modal-factureren'));
+
+    expect(await screen.findByTestId('bestelling-modal-error')).toBeInTheDocument();
+    expect(onUpdated).not.toHaveBeenCalled();
+    expect(logActiviteitMock).not.toHaveBeenCalled();
   });
 
   it('fetches and shows the status history from the API, in the order the server returned it', async () => {
@@ -665,32 +736,34 @@ describe('BestellingModal — afronden/terugzetten', () => {
         { status: 'Te beoordelen', tijdstip: '2026-07-04T08:00:00.000Z' },
         { status: 'Te versturen naar drukker', tijdstip: '2026-07-04T09:00:00.000Z' },
         { status: 'Verstuurd naar drukker', tijdstip: '2026-07-05T08:00:00.000Z' },
-        { status: 'Afgerond', tijdstip: '2026-08-05T09:00:00.000Z' },
+        { status: 'Te factureren', tijdstip: '2026-08-05T08:30:00.000Z' },
+        { status: 'Betaald en afgerond', tijdstip: '2026-08-05T09:00:00.000Z' },
       ],
     });
-    renderModal(BESTELLING_AFGEROND);
+    renderModal(BESTELLING_BETAALD_EN_AFGEROND);
     const historie = await screen.findByTestId('bestelling-modal-historie');
     expect(historie).toHaveTextContent('Te beoordelen');
     expect(historie).toHaveTextContent('Goedgekeurd');
     expect(historie).toHaveTextContent('Verstuurd naar drukker');
-    expect(historie).toHaveTextContent('Afgerond');
-    expect(fetchMock).toHaveBeenCalledWith('/api/bestelheaders/header-5/statushistorie');
+    expect(historie).toHaveTextContent('Te factureren');
+    expect(historie).toHaveTextContent('Betaald en afgerond');
+    expect(fetchMock).toHaveBeenCalledWith('/api/bestelheaders/header-6/statushistorie');
   });
 
-  it('shows the same status twice if it was reached twice (Afgerond -> Terugzetten -> Afgerond again)', async () => {
+  it('shows the same status twice if it was reached twice (Betaald en afgerond -> Terugzetten -> Betaald en afgerond again)', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: async () => [
         { status: 'Te beoordelen', tijdstip: '2026-07-04T08:00:00.000Z' },
         { status: 'Verstuurd naar drukker', tijdstip: '2026-07-05T08:00:00.000Z' },
-        { status: 'Afgerond', tijdstip: '2026-07-06T08:00:00.000Z' },
+        { status: 'Betaald en afgerond', tijdstip: '2026-07-06T08:00:00.000Z' },
         { status: 'Verstuurd naar drukker', tijdstip: '2026-07-07T08:00:00.000Z' },
-        { status: 'Afgerond', tijdstip: '2026-08-05T09:00:00.000Z' },
+        { status: 'Betaald en afgerond', tijdstip: '2026-08-05T09:00:00.000Z' },
       ],
     });
-    renderModal(BESTELLING_AFGEROND);
+    renderModal(BESTELLING_BETAALD_EN_AFGEROND);
     const historie = await screen.findByTestId('bestelling-modal-historie');
-    expect(within(historie).getAllByText('Afgerond')).toHaveLength(2);
+    expect(within(historie).getAllByText('Betaald en afgerond')).toHaveLength(2);
     expect(within(historie).getAllByText('Verstuurd naar drukker')).toHaveLength(2);
   });
 });
