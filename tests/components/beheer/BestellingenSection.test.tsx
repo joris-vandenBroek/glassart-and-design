@@ -27,9 +27,9 @@ const fetchMock = vi.fn();
 // Een test die de fetch-mock vervangt en die route vergeet, laat daardoor niet
 // alleen de dialoog maar de hele sectie crashen op escapeHtml(undefined).
 // Daarom wordt die ene route hier centraal afgevangen, vóór fetchMock -- zo
-// hoeft geen enkele losse mockImplementation eraan te denken.
-// Per test overschrijfbaar, zodat een test die juist een onvolledig record wil
-// onderzoeken niet vastloopt op dit vangnet.
+// hoeft geen enkele losse mockImplementation eraan te denken. De respons is
+// per test overschrijfbaar, zodat een test die juist een onvolledig record wil
+// onderzoeken niet op dit vangnet vastloopt.
 let bedrijfsgegevensRespons: unknown = BEDRIJFSGEGEVENS_SEED;
 
 vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {
