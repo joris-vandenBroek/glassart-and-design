@@ -275,6 +275,22 @@ describe('DrukkerModal — zending afronden', () => {
     expect(screen.queryByTestId('drukker-zending-afronden-zending-1')).not.toBeInTheDocument();
   });
 
+  it('still counts a bestelling as afgerond once it has moved on to Betaald en afgerond', async () => {
+    mockZending(['header-1', 'header-2']);
+    renderModal(
+      { mode: 'edit', drukker: DRUKKER },
+      {
+        bestellingen: [
+          { ...BESTELLING_1, status: 'Te factureren' },
+          { ...BESTELLING_2, status: 'Betaald en afgerond' },
+        ],
+      }
+    );
+    const zendingRow = await screen.findByTestId('drukker-zending-zending-1');
+    expect(zendingRow).toHaveTextContent('2 / 2 afgerond');
+    expect(screen.queryByTestId('drukker-zending-afronden-zending-1')).not.toBeInTheDocument();
+  });
+
   it('marks every Verstuurd-naar-drukker bestelling in the zending as Te factureren, sequentially, and logs each one', async () => {
     mockZending(['header-1', 'header-2']);
     const { onBestellingUpdated } = renderModal(

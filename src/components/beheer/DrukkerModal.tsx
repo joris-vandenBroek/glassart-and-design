@@ -71,7 +71,10 @@ export function DrukkerModal({
     const orders = zending.bestellingIds
       .map((id) => bestellingen.find((b) => b.id === id))
       .filter((b): b is Bestelling => b != null);
-    return { afgerond: orders.filter((b) => b.status === 'Te factureren').length, totaal: zending.bestellingIds.length };
+    return {
+      afgerond: orders.filter((b) => b.status === 'Te factureren' || b.status === 'Betaald en afgerond').length,
+      totaal: zending.bestellingIds.length,
+    };
   }
 
   async function handleMarkeerZendingAlsAfgerond(zending: DrukkerZending) {
@@ -88,7 +91,9 @@ export function DrukkerModal({
       .filter((b): b is Bestelling => b != null);
     const teAfronden = orders.filter((b) => b.status === 'Verstuurd naar drukker');
     if (teAfronden.length === 0) {
-      const alleAfgerond = orders.length === zending.bestellingIds.length && orders.every((b) => b.status === 'Te factureren');
+      const alleAfgerond =
+        orders.length === zending.bestellingIds.length &&
+        orders.every((b) => b.status === 'Te factureren' || b.status === 'Betaald en afgerond');
       if (!alleAfgerond) {
         setZendingActionError({
           zendingId: zending.id,

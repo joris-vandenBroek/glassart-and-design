@@ -55,6 +55,12 @@ describe('openstaandeZendingGenoten', () => {
     expect(openstaandeZendingGenoten([zending('z1', ['1', '2'])], [b1], [b1, b2])).toEqual([]);
   });
 
+  it('ignores genoten that are already Te factureren', () => {
+    const b1 = bestelling('1', 'Verstuurd naar drukker');
+    const b2 = bestelling('2', 'Te factureren');
+    expect(openstaandeZendingGenoten([zending('z1', ['1', '2'])], [b1], [b1, b2])).toEqual([]);
+  });
+
   it('ignores ids that no longer exist in the bestellingen list', () => {
     const b1 = bestelling('1', 'Verstuurd naar drukker');
     expect(openstaandeZendingGenoten([zending('z1', ['1', 'weg'])], [b1], [b1])).toEqual([]);

@@ -441,6 +441,24 @@ describe('BestellingenSection', () => {
       expect(screen.queryByTestId('data-table-row-select-header-2')).not.toBeInTheDocument();
       expect(screen.queryByTestId('bestellingen-selectie-balk')).not.toBeInTheDocument();
     });
+
+    it('reports a failed PATCH instead of silently swallowing it, and keeps the selection intact', async () => {
+      fetchMock.mockImplementation((url: string) => {
+        if (typeof url === 'string' && url.startsWith('/api/bestelheaders/')) {
+          return Promise.resolve({ ok: false });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      });
+      const { onBestellingUpdated } = renderSection({ bestellingen: [TE_FACTUREREN] });
+      fireEvent.click(screen.getByTestId('data-table-quick-te-factureren'));
+      fireEvent.click(screen.getByTestId('data-table-row-select-header-2'));
+      fireEvent.click(screen.getByTestId('bestellingen-factureren'));
+
+      await waitFor(() => expect(screen.getByTestId('bestellingen-afronden-fout')).toBeInTheDocument());
+      expect(onBestellingUpdated).not.toHaveBeenCalled();
+      expect(screen.getByTestId('bestellingen-selectie-balk')).toBeInTheDocument();
+      expect(screen.getByTestId('data-table-row-select-header-2')).toBeChecked();
+    });
   });
 
   it('shows a help popover explaining the drukker flow', () => {

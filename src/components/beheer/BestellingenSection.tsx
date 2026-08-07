@@ -78,6 +78,7 @@ export function BestellingenSection({
   const [afrondGenoten, setAfrondGenoten] = useState<ZendingGenoten[]>([]);
   const [afrondFout, setAfrondFout] = useState<string | null>(null);
   const [afrondBezig, setAfrondBezig] = useState(false);
+  const [facturerenBezig, setFacturerenBezig] = useState(false);
   // Echte mutex: startAfronden heeft drie ingangen (bulkknop, de losse
   // "Afronden"-knop in BestellingModal, en indirect de bevestigingsdialoog),
   // en afrondBezig alleen (React state) is daarvoor ontoereikend -- een
@@ -261,24 +262,32 @@ export function BestellingenSection({
     setAfrondBezig(false);
   }
 
-  const [facturerenBezig, setFacturerenBezig] = useState(false);
-
   async function voerFacturerenUit(teFactureren: Bestelling[]) {
     setFacturerenBezig(true);
+    setAfrondFout(null);
     try {
-      await Promise.all(
+      const resultaten = await Promise.all(
         teFactureren.map(async (bestelling) => {
-          const response = await fetch(`/api/bestelheaders/${bestelling.id}`, {
-            method: 'PATCH',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ status: 'Betaald en afgerond' }),
-          });
-          if (!response.ok) return;
-          void logActiviteit('bestelling_gefactureerd', actorFromMedewerker(user), bestelling.bestelnr);
-          onBestellingUpdated({ ...bestelling, status: 'Betaald en afgerond' });
+          try {
+            const response = await fetch(`/api/bestelheaders/${bestelling.id}`, {
+              method: 'PATCH',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ status: 'Betaald en afgerond' }),
+            });
+            if (!response.ok) return { bestelling, gelukt: false };
+            void logActiviteit('bestelling_gefactureerd', actorFromMedewerker(user), bestelling.bestelnr);
+            onBestellingUpdated({ ...bestelling, status: 'Betaald en afgerond' });
+            return { bestelling, gelukt: true };
+          } catch {
+            return { bestelling, gelukt: false };
+          }
         })
       );
-      setSelectedIds(new Set());
+      const mislukt = resultaten.filter((r) => !r.gelukt);
+      if (mislukt.length === 0) {
+        setSelectedIds(new Set());
+      }
+      setAfrondFout(mislukt.length > 0 ? t('bestellingenAfrondenFout', { n: mislukt.length }) : null);
     } finally {
       setFacturerenBezig(false);
     }
