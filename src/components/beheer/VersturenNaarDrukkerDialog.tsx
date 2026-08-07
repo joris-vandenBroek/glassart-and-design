@@ -122,11 +122,25 @@ export function VersturenNaarDrukkerDialog({
     setIsSending(true);
     setError(null);
 
+    let zendingnummer: string;
+    try {
+      const nummerResponse = await fetch(`/api/drukkers/${drukkerId}/zendingen/nummer`, { method: 'POST' });
+      if (!nummerResponse.ok) throw new Error('nummer reservation failed');
+      const nummerData = (await nummerResponse.json()) as { zendingnummer: string };
+      zendingnummer = nummerData.zendingnummer;
+    } catch {
+      setError(t('drukkerVersturenMailError'));
+      setIsSending(false);
+      return;
+    }
+
+    const subjectMetZendingnummer = `${zendingnummer} — ${mail.subject}`;
+
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret, to: drukker.email, subject: mail.subject, body: mail.text, html: mail.html }),
+        body: JSON.stringify({ secret, to: drukker.email, subject: subjectMetZendingnummer, body: mail.text, html: mail.html }),
       });
       if (!response.ok) {
         setError(t('drukkerVersturenMailError'));
@@ -146,12 +160,13 @@ export function VersturenNaarDrukkerDialog({
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          onderwerp: mail.subject,
+          onderwerp: subjectMetZendingnummer,
           body: mail.text,
           bestellingIds: bestellingen.map((b) => b.id),
           aantalKlanten: new Set(bestellingen.map((b) => b.klantId)).size,
           aantalRegels: bestellingen.reduce((sum, b) => sum + b.lineCount, 0),
           verzondDoor: user?.email ?? 'Onbekend',
+          zendingnummer,
         }),
       });
       if (!zendingResponse.ok) throw new Error('zending create failed');
@@ -160,7 +175,7 @@ export function VersturenNaarDrukkerDialog({
           fetch(`/api/bestelheaders/${bestelling.id}`, {
             method: 'PATCH',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ status: 'Verstuurd naar drukker' }),
+            body: JSON.stringify({ status: 'Verstuurd naar drukker', zendingnummer }),
           })
         )
       );
@@ -170,7 +185,7 @@ export function VersturenNaarDrukkerDialog({
         actorFromMedewerker(user),
         bestellingen.map((b) => b.bestelnr).join(', ')
       );
-      onVerstuurd(bestellingen.map((b) => ({ ...b, status: 'Verstuurd naar drukker' as const })));
+      onVerstuurd(bestellingen.map((b) => ({ ...b, status: 'Verstuurd naar drukker' as const, zendingnummer })));
       onClose();
     } catch {
       setError(t('drukkerVersturenStatusError'));
@@ -232,7 +247,10 @@ export function VersturenNaarDrukkerDialog({
 
         <div className="flex flex-col gap-1">
           <span className="text-xs uppercase tracking-wide text-white/60">{t('drukkerVersturenLabelPreview')}</span>
-          <p className="text-xs text-white/70">{mail?.subject}</p>
+          <p data-testid="drukker-versturen-onderwerp" className="text-xs text-white/70">
+            {mail?.subject}
+            {mail && <span className="text-white/40"> · {t('drukkerVersturenZendingnummerToelichting')}</span>}
+          </p>
           <div
             data-testid="drukker-versturen-preview"
             className="max-h-64 overflow-y-auto rounded-sm bg-white p-3 text-xs"

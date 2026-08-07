@@ -148,6 +148,7 @@ function mailCallPayload() {
 function defaultFetchImplementation(url: string) {
   if (url === 'https://example.com/mail.php') return { ok: true };
   if (url === '/api/instellingen/bedrijfsgegevens') return { ok: true, json: async () => BEDRIJFSGEGEVENS_SEED };
+  if (url === '/api/drukkers/drukker-1/zendingen/nummer') return { ok: true, json: async () => ({ zendingnummer: 'ZD-00001' }) };
   if (url === '/api/drukkers/drukker-1/zendingen') return { ok: true, json: async () => ({ ok: true }) };
   return { ok: true, json: async () => ({ ok: true }) };
 }
@@ -184,6 +185,57 @@ describe('VersturenNaarDrukkerDialog', () => {
     expect(screen.getByTestId('drukker-versturen-drukker')).toHaveValue('drukker-1');
   });
 
+  it('shows the mail subject without a zendingnummer in the preview, with a note that one is assigned on send', async () => {
+    await renderReadyDialog();
+    const onderwerpRegel = screen.getByTestId('drukker-versturen-onderwerp');
+    expect(onderwerpRegel).toHaveTextContent('Nieuwe order(s) voor de drukker');
+    expect(onderwerpRegel).toHaveTextContent('zendingnummer wordt toegekend bij verzenden');
+    expect(onderwerpRegel).not.toHaveTextContent('ZD-');
+  });
+
+  it('reserves a zendingnummer before sending, and prefixes the mail subject, archive onderwerp, and status-updates with it', async () => {
+    const { onVerstuurd } = await renderReadyDialog();
+    fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/drukkers/drukker-1/zendingen/nummer',
+        expect.objectContaining({ method: 'POST' })
+      )
+    );
+    await waitFor(() => expect(mailCallPayload()).toBeDefined());
+    expect(mailCallPayload().subject).toMatch(/^ZD-00001 — Nieuwe order\(s\) voor de drukker/);
+
+    await waitFor(() => expect(zendingCall()).toBeDefined());
+    const zendingBody = JSON.parse((zendingCall()![1] as { body: string }).body);
+    expect(zendingBody.zendingnummer).toBe('ZD-00001');
+    expect(zendingBody.onderwerp).toMatch(/^ZD-00001 — /);
+
+    await waitFor(() => expect(statusCallFor('header-1')).toBeDefined());
+    expect(JSON.parse((statusCallFor('header-1')![1] as { body: string }).body)).toEqual({
+      status: 'Verstuurd naar drukker',
+      zendingnummer: 'ZD-00001',
+    });
+
+    await waitFor(() =>
+      expect(onVerstuurd).toHaveBeenCalledWith([{ ...BESTELLING, status: 'Verstuurd naar drukker', zendingnummer: 'ZD-00001' }])
+    );
+  });
+
+  it('shows the mail error and never sends when reserving a zendingnummer fails', async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/drukkers/drukker-1/zendingen/nummer') return { ok: false };
+      return defaultFetchImplementation(url);
+    });
+    await renderReadyDialog();
+    fireEvent.click(screen.getByTestId('drukker-versturen-versturen'));
+
+    expect(await screen.findByTestId('drukker-versturen-error')).toHaveTextContent(
+      'Het versturen van de e-mail is mislukt. Probeer het opnieuw.'
+    );
+    expect(fetchMock).not.toHaveBeenCalledWith('https://example.com/mail.php', expect.anything());
+  });
+
   it('sends the mail with both a plain-text and an html body, including the Glassart & Design invoice footer, updates statuses, saves a zending, logs the activiteit, and closes', async () => {
     const { onVerstuurd, onClose } = await renderReadyDialog();
 
@@ -203,7 +255,7 @@ describe('VersturenNaarDrukkerDialog', () => {
     await waitFor(() =>
       expect(statusCallFor('header-1')).toEqual([
         '/api/bestelheaders/header-1',
-        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'Verstuurd naar drukker' }) }),
+        expect.objectContaining({ method: 'PATCH' }),
       ])
     );
     await waitFor(() => expect(zendingCall()).toBeDefined());
@@ -218,7 +270,7 @@ describe('VersturenNaarDrukkerDialog', () => {
       { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'GD-00201'
     );
-    expect(onVerstuurd).toHaveBeenCalledWith([{ ...BESTELLING, status: 'Verstuurd naar drukker' }]);
+    expect(onVerstuurd).toHaveBeenCalledWith([{ ...BESTELLING, status: 'Verstuurd naar drukker', zendingnummer: 'ZD-00001' }]);
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -253,6 +305,7 @@ describe('VersturenNaarDrukkerDialog', () => {
   it('shows a distinct error when the mail sends but the status update fails', async () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url === 'https://example.com/mail.php') return { ok: true };
+      if (url === '/api/drukkers/drukker-1/zendingen/nummer') return { ok: true, json: async () => ({ zendingnummer: 'ZD-00001' }) };
       if (url === '/api/drukkers/drukker-1/zendingen') return { ok: true, json: async () => ({ ok: true }) };
       if (url === '/api/instellingen/bedrijfsgegevens') return { ok: true, json: async () => BEDRIJFSGEGEVENS_SEED };
       return { ok: false };
@@ -269,6 +322,7 @@ describe('VersturenNaarDrukkerDialog', () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url === 'https://example.com/mail.php') return { ok: true };
       if (url === '/api/instellingen/bedrijfsgegevens') return { ok: true, json: async () => BEDRIJFSGEGEVENS_SEED };
+      if (url === '/api/drukkers/drukker-1/zendingen/nummer') return { ok: true, json: async () => ({ zendingnummer: 'ZD-00001' }) };
       if (url === '/api/drukkers/drukker-1/zendingen') {
         callOrder.push('zending');
         return { ok: true, json: async () => ({ ok: true }) };
@@ -287,6 +341,7 @@ describe('VersturenNaarDrukkerDialog', () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url === 'https://example.com/mail.php') return { ok: true };
       if (url === '/api/instellingen/bedrijfsgegevens') return { ok: true, json: async () => BEDRIJFSGEGEVENS_SEED };
+      if (url === '/api/drukkers/drukker-1/zendingen/nummer') return { ok: true, json: async () => ({ zendingnummer: 'ZD-00001' }) };
       if (url === '/api/drukkers/drukker-1/zendingen') return { ok: true, json: async () => ({ ok: true }) };
       return { ok: false };
     });
@@ -306,7 +361,7 @@ describe('VersturenNaarDrukkerDialog', () => {
     await waitFor(() => expect(versturenButton).toBeDisabled());
 
     fireEvent.click(versturenButton);
-    expect(fetchMock.mock.calls.filter((call) => (call[0] as string) !== '/api/instellingen/bedrijfsgegevens')).toHaveLength(3);
+    expect(fetchMock.mock.calls.filter((call) => (call[0] as string) !== '/api/instellingen/bedrijfsgegevens')).toHaveLength(4);
   });
 
   it('disables Versturen as soon as the mail POST succeeds, before the zending/status writes settle', async () => {
@@ -314,6 +369,7 @@ describe('VersturenNaarDrukkerDialog', () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url === 'https://example.com/mail.php') return { ok: true };
       if (url === '/api/instellingen/bedrijfsgegevens') return { ok: true, json: async () => BEDRIJFSGEGEVENS_SEED };
+      if (url === '/api/drukkers/drukker-1/zendingen/nummer') return { ok: true, json: async () => ({ zendingnummer: 'ZD-00001' }) };
       if (url === '/api/drukkers/drukker-1/zendingen') {
         return new Promise((resolve) => {
           resolveZending = () => resolve({ ok: true, json: async () => ({ ok: true }) });
@@ -436,5 +492,4 @@ describe('VersturenNaarDrukkerDialog', () => {
       expect(screen.getByTestId('drukker-versturen-versturen')).not.toBeDisabled();
     });
   });
-
 });

@@ -543,6 +543,7 @@
     "drukkerVersturenBedrijfsgegevensFout": "Bedrijfsgegevens van Glassart & Design konden niet worden geladen — kan niet verstuurd worden.",
     "drukkerVersturenBedrijfsgegevensOnvolledig": "De bedrijfsgegevens van Glassart & Design zijn onvolledig — {aantal, plural, one {# veld ontbreekt} other {# velden ontbreken}}: {velden}. Kan niet verstuurd worden; vul ze aan bij Instellingen.",
     "drukkerVersturenBedrijfsgegevensOntbreekt": "De bedrijfsgegevens van Glassart & Design zijn nog niet ingevuld — kan niet verstuurd worden. Vul ze in bij Instellingen.",
+    "drukkerVersturenZendingnummerToelichting": "zendingnummer wordt toegekend bij verzenden",
     "bedrijfsgegevensVeld_bezoekadres": "bezoekadres",
     "bedrijfsgegevensVeld_kvkNummer": "KVK-nummer",
     "bedrijfsgegevensVeld_btwNummer": "btw-nummer",
