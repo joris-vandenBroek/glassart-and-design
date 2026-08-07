@@ -75,6 +75,12 @@ export function VersturenNaarDrukkerDialog({
     [bedrijfsgegevens]
   );
   const heeftOnvolledigeBedrijfsgegevens = ontbrekendeBedrijfsvelden.length > 0;
+  // useApiRecord mapt een 404 op `data: null, error: null`, dus een ontbrekende
+  // instellingen-rij is niet aan `bedrijfsgegevensError` te herkennen. Zonder
+  // deze aparte melding zou de medewerker een grijze Versturen-knop zien zonder
+  // enige uitleg -- reëel sinds het seed-mechanisme weg is en er dus niets meer
+  // is dat de rij automatisch aanmaakt.
+  const mistBedrijfsgegevensRecord = !bedrijfsgegevens && !heeftBedrijfsgegevensFout;
 
   const mail = useMemo(
     () =>
@@ -250,7 +256,14 @@ export function VersturenNaarDrukkerDialog({
           <p data-testid="drukker-versturen-bedrijfsgegevens-onvolledig" className="text-xs text-red-400">
             {t('drukkerVersturenBedrijfsgegevensOnvolledig', {
               velden: ontbrekendeBedrijfsvelden.map((veld) => t(`bedrijfsgegevensVeld_${veld}`)).join(', '),
+              aantal: ontbrekendeBedrijfsvelden.length,
             })}
+          </p>
+        )}
+
+        {mistBedrijfsgegevensRecord && (
+          <p data-testid="drukker-versturen-bedrijfsgegevens-ontbreekt" className="text-xs text-red-400">
+            {t('drukkerVersturenBedrijfsgegevensOntbreekt')}
           </p>
         )}
 

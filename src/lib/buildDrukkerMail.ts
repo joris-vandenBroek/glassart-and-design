@@ -28,17 +28,29 @@ export interface DrukkerMail {
 const FACTUURVOETJE_VELDEN = ['bezoekadres', 'kvkNummer', 'btwNummer', 'email'] as const;
 
 /**
+ * Bewust smal getypeerd: de aanroeper zet dit om in de vertaalsleutel
+ * `bedrijfsgegevensVeld_${veld}`. Zou dit `string` zijn, dan levert een later
+ * toegevoegd veld zonder vertaling stilzwijgend de ruwe sleutelnaam in beeld
+ * in plaats van een compilerfout.
+ */
+export type FactuurvoetjeVeld = (typeof FACTUURVOETJE_VELDEN)[number];
+
+/**
  * Geeft de factuurvoetje-velden terug die ontbreken of leeg zijn.
  *
  * `Bedrijfsgegevens` belooft in TypeScript tien verplichte strings, maar de
  * data komt als losse JSON-blob uit de `instellingen`-tabel en wordt nergens
  * gevalideerd -- een ontbrekend veld is op runtime dus gewoon `undefined`.
- * Een afwezig record levert een lege lijst op: dat geval hoort de aanroeper
- * al apart af te vangen (er valt dan niets te melden over losse velden).
+ *
+ * Een afwezig record levert een lege lijst op: er valt dan niets te melden
+ * over losse velden. Let op dat dit iets anders is dan "alles in orde" -- de
+ * aanroeper moet het ontbreken van het record zelf afvangen. `useApiRecord`
+ * mapt een 404 op `data: null, error: null`, dus dat geval is met een
+ * error-check alleen niet te onderscheiden.
  */
 export function ontbrekendeFactuurvoetjeVelden(
   bedrijfsgegevens: Bedrijfsgegevens | null | undefined
-): string[] {
+): FactuurvoetjeVeld[] {
   if (!bedrijfsgegevens) {
     return [];
   }

@@ -417,6 +417,19 @@ describe('VersturenNaarDrukkerDialog', () => {
       expect(screen.getByTestId('drukker-versturen-versturen')).toBeDisabled();
     });
 
+    it('explains that the record is missing entirely instead of leaving a dead grey button', async () => {
+      // useApiRecord mapt een 404 op data: null, error: null -- zonder aparte
+      // melding zag de medewerker alleen een uitgeschakelde knop.
+      fetchMock.mockImplementation(async (url: string) => {
+        if (url === '/api/instellingen/bedrijfsgegevens') return { ok: false, status: 404 };
+        return { ok: true, json: async () => ({}) };
+      });
+      renderDialog();
+
+      expect(await screen.findByTestId('drukker-versturen-bedrijfsgegevens-ontbreekt')).toBeInTheDocument();
+      expect(screen.getByTestId('drukker-versturen-versturen')).toBeDisabled();
+    });
+
     it('does not complain when the record is complete', async () => {
       await renderReadyDialog();
       expect(screen.queryByTestId('drukker-versturen-bedrijfsgegevens-onvolledig')).not.toBeInTheDocument();
