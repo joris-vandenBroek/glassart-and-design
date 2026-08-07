@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildDrukkerMail, ontbrekendeFactuurvoetjeVelden } from '@/lib/buildDrukkerMail';
+import { buildDrukkerMail, ontbrekendeFactuurvoetjeVelden, ontbrekendeKlantVelden } from '@/lib/buildDrukkerMail';
 import type { Bestelling } from '@/components/beheer/BestellingenSection';
 import type { Klant } from '@/components/beheer/KlantenSection';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from '@/components/beheer/materiaalTypes';
@@ -394,6 +394,55 @@ describe('buildDrukkerMail robustness', () => {
     });
     expect(mail.html).toContain('KVK-nummer: 12345678');
     expect(mail.html).not.toContain('undefined');
+    expect(mail.text).not.toContain('undefined');
+  });
+});
+
+describe('ontbrekendeKlantVelden', () => {
+  it('reports nothing for a klant with a complete main address', () => {
+    expect(ontbrekendeKlantVelden(klant())).toEqual([]);
+  });
+
+  it('reports nothing for a klant with a complete delivery address', () => {
+    const metAfleveradres = klant({
+      deliveryAddress: 'Havenweg 5',
+      deliveryPostcode: '5678 CD',
+      deliveryCity: 'Havenstad',
+    });
+    expect(ontbrekendeKlantVelden(metAfleveradres)).toEqual([]);
+  });
+
+  it('names the missing main-address fields', () => {
+    // Deze kolommen zijn NULLABLE in db/schema.sql terwijl Klant ze als
+    // verplichte string typeert -- op runtime dus gewoon null.
+    const zonderAdres = { ...klant(), address: null, city: null } as unknown as Klant;
+    expect([...ontbrekendeKlantVelden(zonderAdres)].sort()).toEqual(['address', 'city']);
+  });
+
+  it('checks the delivery fields instead of the main ones once a delivery address is filled in', () => {
+    const halfAfleveradres = klant({ deliveryAddress: 'Havenweg 5' });
+    expect([...ontbrekendeKlantVelden(halfAfleveradres)].sort()).toEqual(['deliveryCity', 'deliveryPostcode']);
+  });
+
+  it('reports a missing bedrijfsnaam', () => {
+    const naamloos = { ...klant(), companyName: '   ' } as Klant;
+    expect(ontbrekendeKlantVelden(naamloos)).toEqual(['companyName']);
+  });
+
+  it('reports nothing when the klant record itself is absent, because that case is handled separately', () => {
+    expect(ontbrekendeKlantVelden(null)).toEqual([]);
+  });
+});
+
+describe('buildDrukkerMail klant robustness', () => {
+  it('never writes a literal null into the mail when address columns are empty', () => {
+    // Voorheen leverde dit "Afleveradres: null, null null" op in de tekstmail,
+    // terwijl de HTML-variant via escapeHtml juist leeg bleef -- twee
+    // verschillende uitkomsten voor dezelfde data.
+    const zonderAdres = { ...klant(), address: null, postcode: null, city: null } as unknown as Klant;
+    const mail = callBuildDrukkerMail({ bestellingen: [bestelling()], klanten: [zonderAdres] });
+    expect(mail.text).not.toContain('null');
+    expect(mail.html).not.toContain('null');
     expect(mail.text).not.toContain('undefined');
   });
 });

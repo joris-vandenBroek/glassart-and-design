@@ -7,7 +7,7 @@ import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
 import { useApiRecord } from '@/lib/useApiRecord';
-import { buildDrukkerMail, ontbrekendeFactuurvoetjeVelden } from '@/lib/buildDrukkerMail';
+import { buildDrukkerMail, ontbrekendeFactuurvoetjeVelden, ontbrekendeKlantVelden } from '@/lib/buildDrukkerMail';
 import type { Bestelling } from './BestellingenSection';
 import type { Klant } from './KlantenSection';
 import type { Bedrijfsgegevens } from './bedrijfsgegevensTypes';
@@ -70,6 +70,19 @@ export function VersturenNaarDrukkerDialog({
     [bestellingen, ontbrekendeKlantIds]
   );
 
+  // Klanten die wél bestaan maar velden missen die de drukker nodig heeft.
+  // Zonder deze controle ging een onbruikbaar bezorgadres gewoon de deur uit.
+  const onvolledigeKlanten = useMemo(
+    () =>
+      Array.from(new Set(bestellingen.map((b) => b.klantId)))
+        .map((klantId) => klanten.find((k) => k.id === klantId))
+        .filter((klant): klant is Klant => klant !== undefined)
+        .map((klant) => ({ klant, velden: ontbrekendeKlantVelden(klant) }))
+        .filter((entry) => entry.velden.length > 0),
+    [bestellingen, klanten]
+  );
+  const heeftOnvolledigeKlantgegevens = onvolledigeKlanten.length > 0;
+
   const ontbrekendeBedrijfsvelden = useMemo(
     () => ontbrekendeFactuurvoetjeVelden(bedrijfsgegevens),
     [bedrijfsgegevens]
@@ -114,7 +127,14 @@ export function VersturenNaarDrukkerDialog({
     const drukker = drukkers.find((d) => d.id === drukkerId);
     const endpoint = process.env.NEXT_PUBLIC_MAIL_ENDPOINT_URL;
     const secret = process.env.NEXT_PUBLIC_MAIL_SECRET;
-    if (!drukker || !endpoint || !secret || !mail || heeftOntbrekendeKlantgegevens) {
+    if (
+      !drukker ||
+      !endpoint ||
+      !secret ||
+      !mail ||
+      heeftOntbrekendeKlantgegevens ||
+      heeftOnvolledigeKlantgegevens
+    ) {
       setError(t('drukkerVersturenMailError'));
       return;
     }
@@ -208,7 +228,14 @@ export function VersturenNaarDrukkerDialog({
           <button
             type="button"
             onClick={handleVersturen}
-            disabled={isSending || !drukkerId || mailSent || heeftOntbrekendeKlantgegevens || !mail}
+            disabled={
+              isSending ||
+              !drukkerId ||
+              mailSent ||
+              heeftOntbrekendeKlantgegevens ||
+              heeftOnvolledigeKlantgegevens ||
+              !mail
+            }
             data-testid="drukker-versturen-versturen"
             className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
           >
@@ -265,6 +292,22 @@ export function VersturenNaarDrukkerDialog({
           <p data-testid="drukker-versturen-klant-ontbreekt" className="text-xs text-red-400">
             {t('drukkerVersturenKlantgegevensOntbreken', { n: aantalBestellingenMetOntbrekendeKlant })}
           </p>
+        )}
+
+        {heeftOnvolledigeKlantgegevens && (
+          <div data-testid="drukker-versturen-klant-onvolledig" className="flex flex-col gap-1 text-xs text-red-400">
+            <span>{t('drukkerVersturenKlantgegevensOnvolledigTitel')}</span>
+            <ul className="list-disc pl-5">
+              {onvolledigeKlanten.map(({ klant, velden }) => (
+                <li key={klant.id}>
+                  {t('drukkerVersturenKlantgegevensOnvolledigRegel', {
+                    klant: klant.companyName?.trim() || t('drukkerVersturenKlantZonderNaam'),
+                    velden: velden.map((veld) => t(`klantVeld_${veld}`)).join(', '),
+                  })}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
 
         {heeftBedrijfsgegevensFout && (
