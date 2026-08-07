@@ -36,6 +36,20 @@ const FACTUURVOETJE_VELDEN = ['bezoekadres', 'kvkNummer', 'btwNummer', 'email'] 
 export type FactuurvoetjeVeld = (typeof FACTUURVOETJE_VELDEN)[number];
 
 /**
+ * Zelfde reden als bij FactuurvoetjeVeld: de aanroeper zet dit om in de
+ * vertaalsleutel `klantVeld_${veld}`, dus een nieuw veld zonder vertaling
+ * hoort een compilerfout te geven in plaats van een ruwe sleutel in beeld.
+ */
+export type KlantVeld =
+  | 'companyName'
+  | 'address'
+  | 'postcode'
+  | 'city'
+  | 'deliveryAddress'
+  | 'deliveryPostcode'
+  | 'deliveryCity';
+
+/**
  * Geeft de factuurvoetje-velden terug die ontbreken of leeg zijn.
  *
  * `Bedrijfsgegevens` belooft in TypeScript tien verplichte strings, maar de
@@ -101,11 +115,46 @@ function buildFactuurvoetjeHtml(bedrijfsgegevens: Bedrijfsgegevens): string {
 </table>`;
 }
 
+/**
+ * Bepaalt of de klant een apart afleveradres heeft. Zo ja, dan gelden de
+ * delivery-velden; zo nee, dan het hoofdadres. Deze keuze bepaalt zowel wat er
+ * in de mail komt als welke velden verplicht zijn -- daarom staat hij hier één
+ * keer, zodat `formatAfleveradres` en `ontbrekendeKlantVelden` niet uit elkaar
+ * kunnen lopen.
+ */
+function gebruiktAfleveradres(klant: Klant): boolean {
+  return typeof klant.deliveryAddress === 'string' && klant.deliveryAddress.trim() !== '';
+}
+
+/**
+ * De klantvelden die de drukkersmail nodig heeft: een bedrijfsnaam om de
+ * sectie mee te labelen, plus een compleet bezorgadres.
+ *
+ * Net als bij de bedrijfsgegevens liegt het type hier over runtime:
+ * `companyName`, `address`, `postcode`, `city` en de delivery-varianten zijn
+ * in `db/schema.sql` NULLABLE, terwijl `Klant` ze als verplichte `string`
+ * typeert. Een afwezig klantrecord levert een lege lijst op -- dat geval hoort
+ * de aanroeper apart af te vangen, want dan valt er over losse velden niets te
+ * zeggen.
+ */
+export function ontbrekendeKlantVelden(klant: Klant | null | undefined): KlantVeld[] {
+  if (!klant) {
+    return [];
+  }
+  const adresVelden: KlantVeld[] = gebruiktAfleveradres(klant)
+    ? ['deliveryAddress', 'deliveryPostcode', 'deliveryCity']
+    : ['address', 'postcode', 'city'];
+  return (['companyName', ...adresVelden] as KlantVeld[]).filter((veld) => {
+    const waarde = klant[veld];
+    return typeof waarde !== 'string' || waarde.trim() === '';
+  });
+}
+
 function formatAfleveradres(klant: Klant): string {
-  const heeftAfleveradres = !!klant.deliveryAddress?.trim();
-  const adres = heeftAfleveradres ? klant.deliveryAddress : klant.address;
-  const postcode = heeftAfleveradres ? klant.deliveryPostcode : klant.postcode;
-  const plaats = heeftAfleveradres ? klant.deliveryCity : klant.city;
+  const heeftAfleveradres = gebruiktAfleveradres(klant);
+  const adres = tekst(heeftAfleveradres ? klant.deliveryAddress : klant.address);
+  const postcode = tekst(heeftAfleveradres ? klant.deliveryPostcode : klant.postcode);
+  const plaats = tekst(heeftAfleveradres ? klant.deliveryCity : klant.city);
   return `${adres}, ${postcode} ${plaats}`;
 }
 
@@ -215,7 +264,10 @@ export function buildDrukkerMail({
   const secties = klantIds.map((klantId) => {
     const klant = klanten.find((k) => k.id === klantId);
     const klantBestellingen = bestellingen.filter((b) => b.klantId === klantId);
-    const bedrijfsnaam = klant?.companyName ?? klantBestellingen[0].companyName;
+    // `??` vangt alleen null/undefined, niet een lege string uit de database --
+    // vandaar tekst() plus een expliciete terugval op de naam die bij de
+    // bestelling zelf is vastgelegd.
+    const bedrijfsnaam = tekst(klant?.companyName) || tekst(klantBestellingen[0].companyName);
     const afleveradres = klant ? formatAfleveradres(klant) : 'Onbekend afleveradres';
 
     const bestellingBlokkenText = klantBestellingen

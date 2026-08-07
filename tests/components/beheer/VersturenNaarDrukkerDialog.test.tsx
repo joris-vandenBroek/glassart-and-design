@@ -430,6 +430,47 @@ describe('VersturenNaarDrukkerDialog', () => {
     expect(screen.getByTestId('drukker-versturen-verplicht-legende')).toHaveTextContent('* verplicht veld');
   });
 
+  describe('onvolledige klantgegevens', () => {
+    // De adreskolommen zijn NULLABLE in db/schema.sql terwijl Klant ze als
+    // verplichte string typeert. Voorheen ging zo'n klant gewoon mee en kwam er
+    // "Afleveradres: null, null null" bij de drukker aan.
+    it('blocks sending and names the klant plus the missing fields', async () => {
+      const zonderAdres = { ...KLANT, address: null, city: null } as unknown as Klant;
+      renderDialog({ klanten: [zonderAdres] });
+
+      const melding = await screen.findByTestId('drukker-versturen-klant-onvolledig');
+      expect(melding).toHaveTextContent('Testbedrijf BV');
+      expect(melding).toHaveTextContent('adres');
+      expect(melding).toHaveTextContent('plaats');
+      expect(screen.getByTestId('drukker-versturen-versturen')).toBeDisabled();
+    });
+
+    it('checks the delivery fields once a delivery address is filled in', async () => {
+      const halfAfleveradres = { ...KLANT, deliveryAddress: 'Havenweg 5' } as Klant;
+      renderDialog({ klanten: [halfAfleveradres] });
+
+      const melding = await screen.findByTestId('drukker-versturen-klant-onvolledig');
+      expect(melding).toHaveTextContent('afleverpostcode');
+      expect(melding).toHaveTextContent('afleverplaats');
+      expect(screen.getByTestId('drukker-versturen-versturen')).toBeDisabled();
+    });
+
+    it('falls back to a readable label for a klant without a bedrijfsnaam', async () => {
+      const naamloos = { ...KLANT, companyName: '' } as Klant;
+      renderDialog({ klanten: [naamloos] });
+
+      expect(await screen.findByTestId('drukker-versturen-klant-onvolledig')).toHaveTextContent(
+        'Klant zonder bedrijfsnaam'
+      );
+    });
+
+    it('does not complain when every klant is complete', async () => {
+      await renderReadyDialog();
+      expect(screen.queryByTestId('drukker-versturen-klant-onvolledig')).not.toBeInTheDocument();
+      expect(screen.getByTestId('drukker-versturen-versturen')).not.toBeDisabled();
+    });
+  });
+
   describe('onvolledige bedrijfsgegevens', () => {
     // Het Bedrijfsgegevens-type belooft tien verplichte strings, maar de data
     // komt als losse JSON-blob uit `instellingen` en wordt nergens gevalideerd.
