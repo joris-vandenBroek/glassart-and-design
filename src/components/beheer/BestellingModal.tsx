@@ -263,7 +263,7 @@ export function BestellingModal({
           <div className="flex items-start justify-between gap-3">
             <div className="flex flex-col items-start gap-1">
               <span>
-                {bestelling.companyName} · {bestelling.besteldatum}
+                {bestelling.bestelnr} · {bestelling.companyName} · {bestelling.besteldatum}
               </span>
               <span
                 data-testid="bestelling-modal-status"

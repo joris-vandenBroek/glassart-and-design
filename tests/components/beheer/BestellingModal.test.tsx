@@ -128,6 +128,11 @@ beforeEach(() => {
 });
 
 describe('BestellingModal', () => {
+  it('shows the bestelnummer in the subtitle', () => {
+    renderModal(BESTELLING);
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('GD-00101');
+  });
+
   it('caps the bestelregels list height so it scrolls independently of the modal frame', () => {
     renderModal(BESTELLING);
     const list = screen.getByTestId('bestelling-modal-line-line-1').closest('ul');
