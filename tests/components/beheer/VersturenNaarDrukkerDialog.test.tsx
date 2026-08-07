@@ -464,6 +464,21 @@ describe('VersturenNaarDrukkerDialog', () => {
       );
     });
 
+    it('names only the incomplete klant when the selection mixes complete and incomplete ones', async () => {
+      // Bestellingen van meerdere klanten combineren is een ondersteund
+      // scenario, dus de opsomming mag de complete klant niet noemen.
+      const onvolledig = { ...KLANT, id: 'uid-2', companyName: 'Ander Bedrijf', city: null } as unknown as Klant;
+      renderDialog({
+        bestellingen: [BESTELLING, { ...BESTELLING, id: 'header-9', klantId: 'uid-2' }],
+        klanten: [KLANT, onvolledig],
+      });
+
+      const melding = await screen.findByTestId('drukker-versturen-klant-onvolledig');
+      expect(melding).toHaveTextContent('Ander Bedrijf');
+      expect(melding).not.toHaveTextContent('Testbedrijf BV');
+      expect(screen.getByTestId('drukker-versturen-versturen')).toBeDisabled();
+    });
+
     it('does not complain when every klant is complete', async () => {
       await renderReadyDialog();
       expect(screen.queryByTestId('drukker-versturen-klant-onvolledig')).not.toBeInTheDocument();

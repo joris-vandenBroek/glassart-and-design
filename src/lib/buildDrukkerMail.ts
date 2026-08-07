@@ -28,26 +28,35 @@ export interface DrukkerMail {
 const FACTUURVOETJE_VELDEN = ['bezoekadres', 'kvkNummer', 'btwNummer', 'email'] as const;
 
 /**
- * Bewust smal getypeerd: de aanroeper zet dit om in de vertaalsleutel
- * `bedrijfsgegevensVeld_${veld}`. Zou dit `string` zijn, dan levert een later
- * toegevoegd veld zonder vertaling stilzwijgend de ruwe sleutelnaam in beeld
- * in plaats van een compilerfout.
+ * Bewust smal getypeerd, afgeleid uit FACTUURVOETJE_VELDEN, zodat type en
+ * gecontroleerde velden één bron delen. Let op: de aanroeper bouwt hiermee de
+ * vertaalsleutel `bedrijfsgegevensVeld_${veld}`, en next-intl's `t()` neemt een
+ * gewone `string` -- een nieuw veld zonder sleutel levert dus geen
+ * compilerfout op maar de ruwe sleutelnaam in beeld. Sleutel handmatig
+ * toevoegen in `messages/nl.json`.
  */
 export type FactuurvoetjeVeld = (typeof FACTUURVOETJE_VELDEN)[number];
 
+const KLANT_ALGEMENE_VELDEN = ['companyName'] as const;
+const KLANT_HOOFDADRES_VELDEN = ['address', 'postcode', 'city'] as const;
+// `deliveryAddress` staat hier bewust niet bij: gebruiktAfleveradres() kiest
+// deze tak alleen wanneer dat veld al gevuld is, dus hij kan nooit ontbreken.
+const KLANT_AFLEVERADRES_VELDEN = ['deliveryPostcode', 'deliveryCity'] as const;
+
 /**
- * Zelfde reden als bij FactuurvoetjeVeld: de aanroeper zet dit om in de
- * vertaalsleutel `klantVeld_${veld}`, dus een nieuw veld zonder vertaling
- * hoort een compilerfout te geven in plaats van een ruwe sleutel in beeld.
+ * Afgeleid uit de arrays hierboven, zodat de union en de daadwerkelijk
+ * gecontroleerde velden niet uit elkaar kunnen lopen.
+ *
+ * Let op: de aanroeper zet dit om in de vertaalsleutel `klantVeld_${veld}`,
+ * maar next-intl's `t()` neemt een gewone `string` -- er is dus géén
+ * compile-time controle dat die sleutel bestaat. Voeg je hier een veld toe,
+ * voeg dan handmatig de sleutel toe in `messages/nl.json`, anders verschijnt
+ * de ruwe sleutelnaam in beeld.
  */
 export type KlantVeld =
-  | 'companyName'
-  | 'address'
-  | 'postcode'
-  | 'city'
-  | 'deliveryAddress'
-  | 'deliveryPostcode'
-  | 'deliveryCity';
+  | (typeof KLANT_ALGEMENE_VELDEN)[number]
+  | (typeof KLANT_HOOFDADRES_VELDEN)[number]
+  | (typeof KLANT_AFLEVERADRES_VELDEN)[number];
 
 /**
  * Geeft de factuurvoetje-velden terug die ontbreken of leeg zijn.
@@ -141,10 +150,8 @@ export function ontbrekendeKlantVelden(klant: Klant | null | undefined): KlantVe
   if (!klant) {
     return [];
   }
-  const adresVelden: KlantVeld[] = gebruiktAfleveradres(klant)
-    ? ['deliveryAddress', 'deliveryPostcode', 'deliveryCity']
-    : ['address', 'postcode', 'city'];
-  return (['companyName', ...adresVelden] as KlantVeld[]).filter((veld) => {
+  const adresVelden = gebruiktAfleveradres(klant) ? KLANT_AFLEVERADRES_VELDEN : KLANT_HOOFDADRES_VELDEN;
+  return [...KLANT_ALGEMENE_VELDEN, ...adresVelden].filter((veld) => {
     const waarde = klant[veld];
     return typeof waarde !== 'string' || waarde.trim() === '';
   });

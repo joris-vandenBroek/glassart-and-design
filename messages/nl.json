@@ -554,7 +554,6 @@
     "klantVeld_address": "adres",
     "klantVeld_postcode": "postcode",
     "klantVeld_city": "plaats",
-    "klantVeld_deliveryAddress": "afleveradres",
     "klantVeld_deliveryPostcode": "afleverpostcode",
     "klantVeld_deliveryCity": "afleverplaats",
     "drukkerVersturenBedrijfsgegevensFout": "Bedrijfsgegevens van Glassart & Design konden niet worden geladen — kan niet verstuurd worden.",
