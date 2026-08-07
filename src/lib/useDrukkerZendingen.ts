@@ -11,6 +11,7 @@ export interface DrukkerZending {
   aantalKlanten: number;
   aantalRegels: number;
   verzondDoor: string;
+  zendingnummer?: string | null;
 }
 
 export function useDrukkerZendingen(drukkerId: string | null): { zendingen: DrukkerZending[] | null; error: boolean } {

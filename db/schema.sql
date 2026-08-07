@@ -140,6 +140,7 @@ CREATE TABLE drukkers (
 
 CREATE TABLE drukkerZendingen (
   id CHAR(36) PRIMARY KEY,
+  zendingnummer VARCHAR(20),
   drukkerId CHAR(36) NOT NULL,
   verzondenOp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   onderwerp VARCHAR(255),
@@ -181,6 +182,7 @@ CREATE TABLE counters (
   value INT NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 INSERT INTO counters (id, value) VALUES ('bestelnummer', 0);
+INSERT INTO counters (id, value) VALUES ('zendingnummer', 0);
 
 CREATE TABLE bestelheaders (
   id CHAR(36) PRIMARY KEY,
@@ -188,6 +190,7 @@ CREATE TABLE bestelheaders (
   bestelnr VARCHAR(20) NOT NULL,
   besteldatum TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   status VARCHAR(50) NOT NULL DEFAULT 'Te beoordelen',
+  zendingnummer VARCHAR(20),
   FOREIGN KEY (klantId) REFERENCES klanten(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

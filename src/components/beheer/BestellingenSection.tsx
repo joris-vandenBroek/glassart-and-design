@@ -31,6 +31,7 @@ export interface Bestelling {
   klantId: string;
   companyName: string;
   bestelnr: string;
+  zendingnummer?: string | null;
   besteldatum: string;
   status: 'Te beoordelen' | 'Te versturen naar drukker' | 'Verstuurd naar drukker' | 'Afgerond' | 'Afgewezen';
   lineCount: number;
