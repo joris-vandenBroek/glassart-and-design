@@ -19,7 +19,56 @@ export interface DrukkerMail {
   html: string;
 }
 
-function escapeHtml(value: string): string {
+/**
+ * De velden die het factuurvoetje nodig heeft. Los benoemd omdat de aanroeper
+ * hierop moet kunnen controleren vóórdat er een mail de deur uit gaat: een
+ * factuurvoetje zonder KVK- of btw-nummer hoort niet bij een drukker aan te
+ * komen.
+ */
+const FACTUURVOETJE_VELDEN = ['bezoekadres', 'kvkNummer', 'btwNummer', 'email'] as const;
+
+/**
+ * Bewust smal getypeerd: de aanroeper zet dit om in de vertaalsleutel
+ * `bedrijfsgegevensVeld_${veld}`. Zou dit `string` zijn, dan levert een later
+ * toegevoegd veld zonder vertaling stilzwijgend de ruwe sleutelnaam in beeld
+ * in plaats van een compilerfout.
+ */
+export type FactuurvoetjeVeld = (typeof FACTUURVOETJE_VELDEN)[number];
+
+/**
+ * Geeft de factuurvoetje-velden terug die ontbreken of leeg zijn.
+ *
+ * `Bedrijfsgegevens` belooft in TypeScript tien verplichte strings, maar de
+ * data komt als losse JSON-blob uit de `instellingen`-tabel en wordt nergens
+ * gevalideerd -- een ontbrekend veld is op runtime dus gewoon `undefined`.
+ *
+ * Een afwezig record levert een lege lijst op: er valt dan niets te melden
+ * over losse velden. Let op dat dit iets anders is dan "alles in orde" -- de
+ * aanroeper moet het ontbreken van het record zelf afvangen. `useApiRecord`
+ * mapt een 404 op `data: null, error: null`, dus dat geval is met een
+ * error-check alleen niet te onderscheiden.
+ */
+export function ontbrekendeFactuurvoetjeVelden(
+  bedrijfsgegevens: Bedrijfsgegevens | null | undefined
+): FactuurvoetjeVeld[] {
+  if (!bedrijfsgegevens) {
+    return [];
+  }
+  return FACTUURVOETJE_VELDEN.filter((veld) => {
+    const waarde = bedrijfsgegevens[veld];
+    return typeof waarde !== 'string' || waarde.trim() === '';
+  });
+}
+
+// Neemt `unknown` in plaats van `string`: het type van de bedrijfsgegevens
+// garandeert niets over de werkelijke inhoud (zie hierboven), en deze functie
+// draait tijdens een render van een component dat altijd gemount is. Zou hij
+// gooien op een ontbrekend veld, dan sloopt dat het hele bestellingenscherm en
+// niet alleen de dialoog -- dat is precies wat er ooit gebeurde.
+function escapeHtml(value: unknown): string {
+  if (typeof value !== 'string') {
+    return '';
+  }
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -28,8 +77,14 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
+// Zelfde reden als bij escapeHtml: een ontbrekend veld mag geen letterlijke
+// "undefined" in de mail zetten.
+function tekst(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
 function buildFactuurvoetjeText(bedrijfsgegevens: Bedrijfsgegevens): string {
-  return `--\nGlassart & Design\n${bedrijfsgegevens.bezoekadres}\nKVK-nummer: ${bedrijfsgegevens.kvkNummer}\nBtw-nummer: ${bedrijfsgegevens.btwNummer}\nE-mailadres (voor facturen): ${bedrijfsgegevens.email}`;
+  return `--\nGlassart & Design\n${tekst(bedrijfsgegevens.bezoekadres)}\nKVK-nummer: ${tekst(bedrijfsgegevens.kvkNummer)}\nBtw-nummer: ${tekst(bedrijfsgegevens.btwNummer)}\nE-mailadres (voor facturen): ${tekst(bedrijfsgegevens.email)}`;
 }
 
 function buildFactuurvoetjeHtml(bedrijfsgegevens: Bedrijfsgegevens): string {
