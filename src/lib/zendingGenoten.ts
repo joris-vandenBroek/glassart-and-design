@@ -13,10 +13,15 @@ export interface ZendingGenoten {
   bestellingen: Bestelling[];
 }
 
-export async function fetchZendingen(bestellingIds: string[]): Promise<Zending[]> {
-  if (bestellingIds.length === 0) {
-    return [];
-  }
+// Zelfde grens als de MAX_IDS-check in de /api/drukkerzendingen-route: die
+// route geeft 400 boven dit aantal ids in één aanroep. Een bulkselectie kan
+// die grens in de beheeromgeving ("alles selecteren" onder een filter)
+// makkelijk overschrijden, dus hakken we hier zelf in blokken -- de route zelf
+// blijft ongemoeid, die grens is daar een zinvolle bescherming tegen een
+// onbedoeld enorme query.
+const MAX_IDS_PER_AANVRAAG = 200;
+
+async function fetchZendingenBatch(bestellingIds: string[]): Promise<Zending[]> {
   const query = encodeURIComponent(bestellingIds.join(','));
   const response = await fetch(`/api/drukkerzendingen?bestellingIds=${query}`);
   if (!response.ok) {
@@ -36,6 +41,34 @@ export async function fetchZendingen(bestellingIds: string[]): Promise<Zending[]
     verzondenOp: row.verzondenOp ? new Date(row.verzondenOp) : null,
     bestellingIds: row.bestellingIds ?? [],
   }));
+}
+
+export async function fetchZendingen(bestellingIds: string[]): Promise<Zending[]> {
+  if (bestellingIds.length === 0) {
+    return [];
+  }
+
+  const blokken: string[][] = [];
+  for (let i = 0; i < bestellingIds.length; i += MAX_IDS_PER_AANVRAAG) {
+    blokken.push(bestellingIds.slice(i, i + MAX_IDS_PER_AANVRAAG));
+  }
+
+  const resultatenPerBlok = await Promise.all(blokken.map((blok) => fetchZendingenBatch(blok)));
+
+  // Dezelfde zending kan in meerdere blokken terugkomen (bijvoorbeeld als hij
+  // bestellingen bevat die in verschillende blokken van de oorspronkelijke
+  // selectie zitten) -- dedupliceren op zending-id zodat de aanroeper nooit
+  // dezelfde zending twee keer ziet.
+  const gezienIds = new Set<string>();
+  const resultaat: Zending[] = [];
+  for (const zendingen of resultatenPerBlok) {
+    for (const zending of zendingen) {
+      if (gezienIds.has(zending.id)) continue;
+      gezienIds.add(zending.id);
+      resultaat.push(zending);
+    }
+  }
+  return resultaat;
 }
 
 /**

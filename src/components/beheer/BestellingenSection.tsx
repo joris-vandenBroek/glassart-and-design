@@ -96,6 +96,16 @@ export function BestellingenSection({
   // die tweede aanroep moet synchroon kunnen zien dat er al een dialoog open
   // staat, vóór er ooit een lookup wordt gestart.
   const afrondDialoogOpenRef = useRef(false);
+  // Onthoudt of de lopende afrondronde is gestart vanuit de bulkselectie (de
+  // knop onder de "verstuurd naar drukker"-selectiebalk) of via de losse
+  // "Afronden"-knop in BestellingModal voor één bestelling. Alleen de eerste
+  // hoort de selectie leeg te maken na afloop -- de losse modal-route rondt
+  // een bestelling af die vaak helemaal niet in de huidige selectie zit, en
+  // zou anders een bestaande selectie van drie aangevinkte bestellingen
+  // zonder aanleiding wegvegen. Beide ingangen zetten deze ref altijd expliciet
+  // vlak vóór ze startAfronden aanroepen, dus hij weerspiegelt steeds de
+  // herkomst van de ronde die daadwerkelijk loopt.
+  const afrondUitSelectieRef = useRef(false);
 
   // Een oude foutmelding hoort niet te blijven hangen als de medewerker van
   // filter wisselt -- die verwijst dan mogelijk niet eens meer naar bestellingen
@@ -158,18 +168,36 @@ export function BestellingenSection({
     );
   }
 
+  function sluitAfrondDialoog() {
+    setAfrondKandidaten([]);
+    setAfrondGenoten([]);
+  }
+
   async function voerAfrondingUit(teAfronden: Bestelling[]) {
     // Zelfde slot als startAfronden: als er ergens al een ronde loopt (bulk,
     // deze functie zelf via een andere ingang, of de lookup-fase van
     // startAfronden), doet een tweede aanroep helemaal niets -- geen extra
     // PATCH-ronde, geen extra activiteitenlog-regels.
-    if (afrondBezigRef.current) return;
+    if (afrondBezigRef.current) {
+      // De aanroepers (onAlleenDeze/onOokDeze) ruimen de dialoog-UI hierna
+      // sowieso onvoorwaardelijk op via hun eigen .then(), ongeacht of deze
+      // ronde hier al dan niet daadwerkelijk heeft gedraaid. Zonder dit zou
+      // afrondDialoogOpenRef op slot blijven staan terwijl de dialoog allang
+      // van het scherm is verdwenen -- waarna startAfronden élke volgende
+      // ronde stilzwijgend zou weigeren, tot een paginaherlaad toe.
+      afrondDialoogOpenRef.current = false;
+      return;
+    }
     afrondBezigRef.current = true;
     setAfrondBezig(true);
     try {
       const { afgerond, mislukt } = await afrondBestellingen(teAfronden, actorFromMedewerker(user));
       afgerond.forEach((bestelling) => onBestellingUpdated(bestelling));
-      setSelectedIds(new Set());
+      // Alleen leegmaken als deze ronde daadwerkelijk vanuit de bulkselectie
+      // is gestart -- zie de toelichting bij afrondUitSelectieRef hierboven.
+      if (afrondUitSelectieRef.current) {
+        setSelectedIds(new Set());
+      }
       setAfrondFout(mislukt.length > 0 ? t('bestellingenAfrondenFout', { n: mislukt.length }) : null);
     } finally {
       afrondBezigRef.current = false;
@@ -183,7 +211,7 @@ export function BestellingenSection({
     }
   }
 
-  async function startAfronden(teAfronden: Bestelling[]) {
+  async function startAfronden(teAfronden: Bestelling[], vanuitSelectie: boolean) {
     if (teAfronden.length === 0) return;
     // Weiger meteen een nieuwe ronde zolang er al een bevestigingsdialoog op
     // een keuze wacht -- zie de toelichting bij afrondDialoogOpenRef hierboven.
@@ -196,6 +224,10 @@ export function BestellingenSection({
     // gelijktijdige aanroep kan nog de oude (false) waarde zien voordat React
     // de update heeft doorgevoerd.
     if (afrondBezigRef.current) return;
+    // Pas hier zetten -- ná beide guards -- zodat een geweigerde aanroep (een
+    // heel andere bestelling terwijl deze ronde of een dialoog al loopt) de
+    // herkomst-vlag van de ronde die daadwerkelijk bezig is nooit overschrijft.
+    afrondUitSelectieRef.current = vanuitSelectie;
     afrondBezigRef.current = true;
     setAfrondFout(null);
     setAfrondBezig(true);
@@ -243,6 +275,16 @@ export function BestellingenSection({
   const selectieActief =
     statusFilter === 'Te versturen naar drukker' || statusFilter === 'Verstuurd naar drukker';
 
+  // selectedIds zelf wordt pas in een useEffect opgeschoond nadat het filter
+  // wisselt, dus in de render die direct op zo'n wissel volgt kan het nog
+  // ids bevatten die niet meer bij het actieve filter horen. Deze afgeleide
+  // waarde filtert daarop meteen in de render zelf -- geen effect-vertraging
+  // -- zodat de selectiebalk nooit één render lang de verkeerde knop of een
+  // verkeerde selectie aan een dialoog laat zien.
+  const selectieVoorFilter = new Set(
+    bestellingen.filter((b) => selectedIds.has(b.id) && b.status === statusFilter).map((b) => b.id)
+  );
+
   const columns: Column<Bestelling>[] = [
     { key: 'companyName', label: t('bestellingenColKlant') },
     { key: 'besteldatum', label: t('bestellingenColDatum') },
@@ -256,24 +298,26 @@ export function BestellingenSection({
 
   return (
     <div data-testid="bestellingen-section">
-      {selectedIds.size > 0 && (
+      {selectieVoorFilter.size > 0 && (
         <div
           data-testid="bestellingen-selectie-balk"
           className="mb-3 flex items-center justify-between gap-3 rounded-sm bg-white/5 px-3 py-2 text-xs"
         >
           <span>
             {t('bestellingenGeselecteerd', {
-              count: selectedIds.size,
+              count: selectieVoorFilter.size,
               klanten: new Set(
-                bestellingen.filter((b) => selectedIds.has(b.id)).map((b) => b.klantId)
+                bestellingen.filter((b) => selectieVoorFilter.has(b.id)).map((b) => b.klantId)
               ).size,
             })}
           </span>
           {statusFilter === 'Verstuurd naar drukker' ? (
             <button
               type="button"
-              onClick={() => void startAfronden(bestellingen.filter((b) => selectedIds.has(b.id)))}
-              disabled={afrondBezig}
+              onClick={() =>
+                void startAfronden(bestellingen.filter((b) => selectieVoorFilter.has(b.id)), true)
+              }
+              disabled={afrondBezig || afrondGenoten.length > 0}
               data-testid="bestellingen-afronden"
               className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
             >
@@ -350,7 +394,10 @@ export function BestellingenSection({
         }}
         onAfronden={(bestelling) => {
           setSelectedBestelling(null);
-          void startAfronden([bestelling]);
+          // Deze losse route rondt hoogstens deze ene bestelling af, die vaak
+          // niet eens in de huidige bulkselectie zit -- die selectie mag hier
+          // dus niet worden weggeveegd (zie afrondUitSelectieRef hierboven).
+          void startAfronden([bestelling], false);
         }}
         onLinePrijsVastgesteld={handleLinePrijsVastgesteld}
         onLineUpdated={handleLineUpdated}
@@ -365,7 +412,7 @@ export function BestellingenSection({
       <VersturenNaarDrukkerDialog
         isOpen={showVersturenDialog}
         onClose={() => setShowVersturenDialog(false)}
-        bestellingen={bestellingen.filter((b) => selectedIds.has(b.id))}
+        bestellingen={bestellingen.filter((b) => selectieVoorFilter.has(b.id))}
         klanten={klanten ?? []}
         drukkers={drukkers ?? []}
         kunstwerken={kunstwerken ?? []}
@@ -389,19 +436,21 @@ export function BestellingenSection({
           // die wordt ook aangeroepen door een compleet losstaande ronde zonder
           // eigen dialoog (bijv. via de modal-knop), en die mag nooit een
           // ándere, nog openstaande bevestigingsdialoog wegklikken.
-          void voerAfrondingUit(afrondKandidaten).then(() => {
-            setAfrondKandidaten([]);
-            setAfrondGenoten([]);
-          });
+          void voerAfrondingUit(afrondKandidaten)
+            .then(sluitAfrondDialoog)
+            // Gooit er iets binnen voerAfrondingUit (bijvoorbeeld een van de
+            // callback-props naar de rest van het scherm), dan mag de dialoog
+            // niet blijven hangen en mag er geen onafgevangen rejection
+            // overblijven -- dezelfde opruiming als bij een geslaagde ronde.
+            .catch(sluitAfrondDialoog);
         }}
         onOokDeze={() => {
           void voerAfrondingUit([
             ...afrondKandidaten,
             ...afrondGenoten.flatMap((entry) => entry.bestellingen),
-          ]).then(() => {
-            setAfrondKandidaten([]);
-            setAfrondGenoten([]);
-          });
+          ])
+            .then(sluitAfrondDialoog)
+            .catch(sluitAfrondDialoog);
         }}
         onClose={() => {
           // Hier wordt voerAfrondingUit niet aangeroepen (afrondBezigRef is
