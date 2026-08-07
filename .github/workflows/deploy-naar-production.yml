@@ -217,8 +217,11 @@ jobs:
             exit 1
           fi
 
+          # 20 x 15s = 5 minuten, gelijk aan staging. Een trage Passenger-restart
+          # haalde de eerdere 100 seconden niet, waardoor een geslaagde deploy
+          # toch rood werd.
           attempt=1
-          max_attempts=10
+          max_attempts=20
           gate_ok="false"
           while [ "$attempt" -le "$max_attempts" ]; do
             gate_body=$(curl -s "https://glassartanddesign.com/nl/collecties")
@@ -229,7 +232,7 @@ jobs:
             echo "Attempt $attempt/$max_attempts: Under Construction-gate not showing on /nl/collecties yet"
             attempt=$((attempt + 1))
             if [ "$attempt" -le "$max_attempts" ]; then
-              sleep 10
+              sleep 15
             fi
           done
           if [ "$gate_ok" != "true" ]; then
@@ -238,7 +241,7 @@ jobs:
           fi
 
           attempt=1
-          max_attempts=10
+          max_attempts=20
           version_ok="false"
           while [ "$attempt" -le "$max_attempts" ]; do
             beheer_body=$(curl -s "https://glassartanddesign.com/nl/beheer")
@@ -249,7 +252,7 @@ jobs:
             echo "Attempt $attempt/$max_attempts: /nl/beheer does not show $VERSION_TAG yet"
             attempt=$((attempt + 1))
             if [ "$attempt" -le "$max_attempts" ]; then
-              sleep 10
+              sleep 15
             fi
           done
           if [ "$version_ok" != "true" ]; then

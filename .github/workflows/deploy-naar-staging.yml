@@ -208,9 +208,13 @@ jobs:
             exit 1
           fi
 
+          # 20 x 15s = 5 minuten. Ruimer dan de 10 x 10s die het hiervoor was:
+          # een trage Passenger-restart haalde die 100 seconden niet, waardoor
+          # een geslaagde deploy toch rood werd en -- erger -- de versietag
+          # oversloeg, wat promoveren naar productie blokkeert.
           if [ -n "$VERSION_TAG" ]; then
             attempt=1
-            max_attempts=10
+            max_attempts=20
             found="false"
             while [ "$attempt" -le "$max_attempts" ]; do
               beheer_body=$(curl -s "https://staging.glassartanddesign.com/nl/beheer")
@@ -221,7 +225,7 @@ jobs:
               echo "Attempt $attempt/$max_attempts: /nl/beheer does not show $VERSION_TAG yet"
               attempt=$((attempt + 1))
               if [ "$attempt" -le "$max_attempts" ]; then
-                sleep 10
+                sleep 15
               fi
             done
             if [ "$found" != "true" ]; then
