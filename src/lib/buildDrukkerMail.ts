@@ -217,17 +217,30 @@ export function buildDrukkerMail({
     const klantBestellingen = bestellingen.filter((b) => b.klantId === klantId);
     const bedrijfsnaam = klant?.companyName ?? klantBestellingen[0].companyName;
     const afleveradres = klant ? formatAfleveradres(klant) : 'Onbekend afleveradres';
-    const lines = klantBestellingen.flatMap((b) => b.lines);
 
-    const regelsText = lines
-      .map((line) => `- ${formatRegel(line, kunstwerken, materialen, maten, materiaalsoorten)}`)
-      .join('\n');
-    const regelsHtml = lines
-      .map((line) => formatRegelHtml(line, kunstwerken, materialen, maten, materiaalsoorten))
+    const bestellingBlokkenText = klantBestellingen
+      .map((bestelling) => {
+        const regelsText = bestelling.lines
+          .map((line) => `- ${formatRegel(line, kunstwerken, materialen, maten, materiaalsoorten)}`)
+          .join('\n');
+        return `Bestelling ${bestelling.bestelnr}:\n${regelsText}`;
+      })
+      .join('\n\n');
+
+    const bestellingBlokkenHtml = klantBestellingen
+      .map((bestelling) => {
+        const regelsHtml = bestelling.lines
+          .map((line) => formatRegelHtml(line, kunstwerken, materialen, maten, materiaalsoorten))
+          .join('');
+        return `<tr>
+  <td style="padding:12px 0 4px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#333333;">Bestelling ${escapeHtml(bestelling.bestelnr)}</td>
+</tr>
+${regelsHtml}`;
+      })
       .join('');
 
     return {
-      text: `== ${bedrijfsnaam} ==\nAfleveradres: ${afleveradres}\n${regelsText}`,
+      text: `== ${bedrijfsnaam} ==\nAfleveradres: ${afleveradres}\n\n${bestellingBlokkenText}`,
       html: `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
   <tr>
     <td style="background:#f2f2f2;padding:12px 16px;border-radius:4px 4px 0 0;">
@@ -238,7 +251,7 @@ export function buildDrukkerMail({
   <tr>
     <td style="padding:0 16px;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-        ${regelsHtml}
+        ${bestellingBlokkenHtml}
       </table>
     </td>
   </tr>

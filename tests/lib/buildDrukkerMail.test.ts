@@ -209,6 +209,32 @@ describe('buildDrukkerMail', () => {
     expect(mail.subject).toContain('Nieuwe order(s) voor de drukker');
   });
 
+  it('shows a "Bestelling {bestelnr}" heading before that bestelling\'s regels, even with a single bestelling per klant', () => {
+    const mail = callBuildDrukkerMail({ bestellingen: [bestelling()], klanten: [klant()] });
+    expect(mail.text).toContain('Bestelling GD-00401:');
+    expect(mail.html).toContain('Bestelling GD-00401');
+  });
+
+  it('shows a separate heading per bestelling, in order, when a klant has multiple bestellingen', () => {
+    const mail = callBuildDrukkerMail({
+      bestellingen: [
+        bestelling({ id: 'header-1', bestelnr: 'GD-00401' }),
+        bestelling({
+          id: 'header-2',
+          bestelnr: 'GD-00402',
+          lines: [{ id: 'line-2', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
+        }),
+      ],
+      klanten: [klant()],
+    });
+    const eersteKopje = mail.text.indexOf('Bestelling GD-00401:');
+    const tweedeKopje = mail.text.indexOf('Bestelling GD-00402:');
+    expect(eersteKopje).toBeGreaterThanOrEqual(0);
+    expect(tweedeKopje).toBeGreaterThan(eersteKopje);
+    expect(mail.text.indexOf('aantal 2')).toBeLessThan(tweedeKopje);
+    expect(mail.text.indexOf('aantal 1')).toBeGreaterThan(tweedeKopje);
+  });
+
   it('appends " (Liggend)" to the maat when the kunstwerk formaat is liggend', () => {
     const mail = callBuildDrukkerMail({
       bestellingen: [
