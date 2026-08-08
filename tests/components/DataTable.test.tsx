@@ -109,6 +109,18 @@ describe('DataTable', () => {
     expect(rowOrder()).toEqual(['data-table-row-a', 'data-table-row-c', 'data-table-row-b']);
   });
 
+  it('toggles the default column to ascending on its first header click when the default direction is desc', () => {
+    renderTable({ defaultSortKey: 'amount', defaultSortDirection: 'desc' });
+    const header = screen.getByTestId('data-table-sort-amount');
+    const rowOrder = () => screen.getAllByTestId(/^data-table-row-/).map((row) => row.getAttribute('data-testid'));
+
+    fireEvent.click(header);
+    expect(rowOrder()).toEqual(['data-table-row-b', 'data-table-row-c', 'data-table-row-a']);
+
+    fireEvent.click(header);
+    expect(rowOrder()).toEqual(['data-table-row-a', 'data-table-row-c', 'data-table-row-b']);
+  });
+
   it('sorts a numeric column numerically, not lexicographically', () => {
     renderTable();
     fireEvent.click(screen.getByTestId('data-table-sort-amount'));

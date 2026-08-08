@@ -191,6 +191,12 @@ describe('BestellingenSection', () => {
     expect(screen.getByTestId('data-table-row-header-2')).toHaveTextContent('GD-00302');
   });
 
+  it('sorts on bestelnummer descending by default, so the newest bestelling is on top', () => {
+    renderSection();
+    const rowOrder = screen.getAllByTestId(/^data-table-row-/).map((row) => row.getAttribute('data-testid'));
+    expect(rowOrder).toEqual(['data-table-row-header-2', 'data-table-row-header-1']);
+  });
+
   it('shows the zendingnummer once a bestelling has been sent, and nothing before that', () => {
     renderSection({
       bestellingen: [BESTELLINGEN[0], { ...BESTELLINGEN[1], zendingnummer: 'ZD-00007' }],

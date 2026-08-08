@@ -114,11 +114,16 @@ export function DataTable<T extends object>({
     if (column.sortable === false) {
       return;
     }
+    // De kolom waarop de tabel standaard staat begint in `defaultSortDirection`
+    // -- klikken draait dus vanaf díe richting om, anders zou de eerste klik op
+    // een kolom met een aflopende standaard meteen in de reset-tak vallen en
+    // niets doen.
+    const startDirection = column.key === initialSortKey ? defaultSortDirection : 'asc';
     if (sortKey !== column.key) {
       setSortKey(column.key);
-      setSortDirection('asc');
-    } else if (sortDirection === 'asc') {
-      setSortDirection('desc');
+      setSortDirection(startDirection);
+    } else if (sortDirection === startDirection) {
+      setSortDirection(startDirection === 'asc' ? 'desc' : 'asc');
     } else {
       // Derde klik: terug naar de standaardsortering van deze tabel.
       setSortKey(initialSortKey);

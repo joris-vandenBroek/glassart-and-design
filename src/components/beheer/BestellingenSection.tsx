@@ -397,6 +397,9 @@ export function BestellingenSection({
         rows={bestellingen}
         getRowId={(row) => row.id}
         onRowClick={setSelectedBestelling}
+        // Aflopend op bestelnummer: de nieuwste bestelling staat bovenaan.
+        defaultSortKey="bestelnr"
+        defaultSortDirection="desc"
         quickFilter={{
           key: 'status',
           value: statusFilter,
