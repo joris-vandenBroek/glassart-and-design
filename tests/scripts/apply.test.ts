@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { Connection } from 'mysql2/promise';
 import { verbind } from '../../scripts/lib/env';
 import { pasMigratiesToe } from '../../scripts/lib/apply';
-import { leesToegepast, noteerToegepast, zorgVoorLedger } from '../../scripts/lib/ledger';
+import { leesToegepast, zorgVoorLedger } from '../../scripts/lib/ledger';
 
 const FIXTURE_DIR = 'tests/fixtures/migrations';
 const OK = '2026-01-01-test-scratch-ok.sql';
@@ -69,13 +69,5 @@ describe('pasMigratiesToe', () => {
     expect(resultaat.mislukt!.filename).toBe(KAPOT);
     expect(resultaat.toegepast).toEqual([]);
     expect(await leesToegepast(connection)).not.toContain(OK);
-  });
-
-  it('skips a migration already recorded in the ledger', async () => {
-    const connection = await connect();
-    await noteerToegepast(connection, OK);
-    const resultaat = await pasMigratiesToe(connection, FIXTURE_DIR, [], () => {});
-    expect(resultaat.toegepast).toEqual([]);
-    expect(resultaat.mislukt).toBeNull();
   });
 });

@@ -40,7 +40,7 @@ export async function pasMigratiesToe(
     for (const [index, statement] of statements.entries()) {
       try {
         await connection.query(statement);
-        log(`  ${index + 1}/${statements.length} ok`);
+        log(`  ${index + 1}/${statements.length} gelukt`);
       } catch (error) {
         return {
           toegepast,

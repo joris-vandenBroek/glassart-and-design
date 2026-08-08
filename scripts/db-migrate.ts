@@ -25,9 +25,21 @@ function valideerArgumenten(): void {
   if (!subcommand || !target) gebruik();
   if (subcommand !== 'status' && subcommand !== 'apply') gebruik();
 
+  // `--mark-applied` with no value would leave markFilename undefined, fall straight past
+  // the mark branch, and silently run every outstanding migration instead of recording one.
+  // Refuse rather than guess.
+  if (markIndex !== -1 && !markFilename) {
+    console.error('Weigering: --mark-applied vereist een bestandsnaam.');
+    process.exit(2);
+  }
+
   // The standing rule in CLAUDE.md: every production database change needs explicit
   // permission. --confirm is the mechanical half of that; asking the user is the other.
-  if (subcommand === 'apply' && target === 'productie' && !confirm && !markFilename) {
+  // This covers --mark-applied too, deliberately: recording a migration that never ran is
+  // the most dangerous write of all, because it makes the deploy gate report production
+  // healthy while the column is actually missing -- the exact failure this feature exists
+  // to prevent.
+  if (subcommand === 'apply' && target === 'productie' && !confirm) {
     console.error('Weigering: `apply` op productie vereist expliciet --confirm.');
     process.exit(2);
   }
@@ -83,6 +95,10 @@ async function main(): Promise<void> {
         `\n${filename} is GEDEELTELIJK toegepast en is NIET genoteerd in schema_migrations.`
       );
       console.error('Controleer de database met de hand voordat je opnieuw draait.');
+      console.error(
+        'Let op: een nieuwe run begint dit bestand weer bij het eerste statement -- de al ' +
+          'uitgevoerde statements zijn niet teruggedraaid en zullen opnieuw falen.'
+      );
       process.exitCode = 1;
       return;
     }
