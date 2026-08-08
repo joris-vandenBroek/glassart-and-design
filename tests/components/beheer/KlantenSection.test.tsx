@@ -99,7 +99,7 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof KlantenSec
 
 beforeEach(() => {
   fetchMock.mockReset();
-  fetchMock.mockResolvedValue({ ok: true });
+  fetchMock.mockResolvedValue({ ok: true, json: async () => ({ ok: true }) });
 });
 
 describe('KlantenSection', () => {

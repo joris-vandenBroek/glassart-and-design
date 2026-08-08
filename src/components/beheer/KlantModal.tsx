@@ -218,8 +218,16 @@ export function KlantModal({
         body: JSON.stringify({ status: 'Goedgekeurd', prijsgroepId }),
       });
       if (!response.ok) throw new Error('update failed');
-      void logActiviteit('klant_goedgekeurd', actorFromMedewerker(user), klant.companyName);
-      onUpdated({ ...klant, status: 'Goedgekeurd', prijsgroepId });
+      // Het klantnummer is een weergave-extraatje: een respons zonder bruikbare
+      // JSON mag een geslaagde goedkeuring nooit alsnog laten mislukken.
+      const body = (await response.json().catch(() => ({}))) as { klantnr?: string | null };
+      const klantnr = body.klantnr ?? klant.klantnr ?? null;
+      void logActiviteit(
+        'klant_goedgekeurd',
+        actorFromMedewerker(user),
+        klantnr ? `${klant.companyName} (${klantnr})` : klant.companyName
+      );
+      onUpdated({ ...klant, status: 'Goedgekeurd', prijsgroepId, klantnr });
     } catch {
       setError(t('klantenActionError'));
     }
@@ -251,6 +259,9 @@ export function KlantModal({
           {t('klantenModalTitel')}
           <HelpHint text={t('klantenHelp')} testId="klant-modal-help" />
         </span>
+      }
+      subtitle={
+        klant?.klantnr ? <span data-testid="klant-modal-klantnr">{klant.klantnr}</span> : undefined
       }
       footerActions={
         klant && fields ? (
