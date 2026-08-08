@@ -63,7 +63,7 @@ afterEach(async () => {
 async function nextExpectedBestelnr(): Promise<string> {
   const [rows] = await getPool().query("SELECT value FROM counters WHERE id = 'bestelnummer'", []);
   const current = ((rows as Array<{ value: number }>)[0]?.value ?? 0) + 1;
-  return `GD-${String(current).padStart(BESTELNR_PADDING, '0')}`;
+  return `BE-${String(current).padStart(BESTELNR_PADDING, '0')}`;
 }
 
 async function klant(email: string): Promise<{ id: string; cookie: string }> {

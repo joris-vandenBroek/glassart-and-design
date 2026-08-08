@@ -171,7 +171,7 @@ export async function POST(request: Request) {
       'bestelnummer',
     ]);
     const nextValue = (valueRows as Array<{ value: number }>)[0].value;
-    const bestelnr = `GD-${String(nextValue).padStart(BESTELNR_PADDING, '0')}`;
+    const bestelnr = `BE-${String(nextValue).padStart(BESTELNR_PADDING, '0')}`;
 
     const headerId = randomUUID();
     await connection.query(
