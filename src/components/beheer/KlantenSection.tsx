@@ -88,6 +88,8 @@ export function KlantenSection({
         rows={klanten}
         getRowId={(row) => row.id}
         onRowClick={setSelectedKlant}
+        // Matches de bestellingenscreen, dat standaard op bestelnr sorteert.
+        defaultSortKey="klantnr"
         quickFilter={{
           key: 'status',
           value: statusFilter,

@@ -353,6 +353,23 @@ describe('klanten admin routes', () => {
     expect((rows as Array<{ klantnr: string | null }>)[0].klantnr).toBeNull();
   });
 
+  it('answers 404 when approving an unknown klant id, without advancing the klantnummer counter', async () => {
+    const onbekendId = randomUUID();
+
+    const standVoor = await klantnummerStand();
+    const response = await patchKlant(
+      req('PATCH', { status: 'Goedgekeurd', prijsgroepId: 'pg-1' }, await medewerkerCookie()),
+      { params: { id: onbekendId } }
+    );
+
+    expect(response.status).toBe(404);
+    const body = await response.json();
+    expect(body.error).toBe('klant-niet-gevonden');
+    expect(await klantnummerStand()).toBe(standVoor);
+    const [rows] = await getPool().query('SELECT id FROM klanten WHERE id = ?', [onbekendId]);
+    expect((rows as unknown[]).length).toBe(0);
+  });
+
   it('does not assign a klantnummer when a klant is rejected', async () => {
     const klant = await insertRow<{ id: string }>('klanten', {
       email: 'klantnr-afgewezen@example.com',

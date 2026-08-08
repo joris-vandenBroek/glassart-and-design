@@ -154,6 +154,7 @@ describe('KlantenSection', () => {
     renderSection();
     const headerButtons = screen.getAllByTestId(/^data-table-sort-/);
     expect(headerButtons[0]).toHaveAttribute('data-testid', 'data-table-sort-klantnr');
+    expect(headerButtons[0]).toHaveTextContent('Klantnr.');
     expect(screen.getByText('KL-00001')).toBeInTheDocument();
   });
 

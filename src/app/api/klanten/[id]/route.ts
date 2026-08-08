@@ -7,6 +7,10 @@ import { checkBtwNummerUpdate } from '@/lib/server/btwNummerCheck';
 
 const KLANTNR_PADDING = 5;
 
+type KlantnummerToekenningResultaat =
+  | { gevonden: false }
+  | { gevonden: true; klantnr: string };
+
 /**
  * Voert de update uit én kent, indien nodig, een klantnummer toe -- alles binnen
  * één transactie. `SELECT ... FOR UPDATE` vergrendelt de klantrij, zodat twee
@@ -20,7 +24,7 @@ const KLANTNR_PADDING = 5;
 async function updateEnKenKlantnummerToe(
   id: string,
   data: Record<string, unknown>
-): Promise<string | null> {
+): Promise<KlantnummerToekenningResultaat> {
   const connection = await getPool().getConnection();
   try {
     await connection.beginTransaction();
@@ -29,7 +33,7 @@ async function updateEnKenKlantnummerToe(
     if (!rij) {
       // Onbekende klant: niets bijwerken en vooral geen nummer verbruiken.
       await connection.rollback();
-      return null;
+      return { gevonden: false };
     }
 
     let klantnr = rij.klantnr;
@@ -51,7 +55,7 @@ async function updateEnKenKlantnummerToe(
     ]);
 
     await connection.commit();
-    return klantnr;
+    return { gevonden: true, klantnr };
   } catch (error) {
     await connection.rollback();
     throw error;
@@ -73,8 +77,11 @@ export const PATCH = withApiErrorHandling(
       return NextResponse.json({ error: 'btwnummer-ongeldig' }, { status: 400 });
     }
     if (data.status === 'Goedgekeurd') {
-      const klantnr = await updateEnKenKlantnummerToe(params.id, data);
-      return NextResponse.json({ ok: true, klantnr });
+      const resultaat = await updateEnKenKlantnummerToe(params.id, data);
+      if (!resultaat.gevonden) {
+        return NextResponse.json({ error: 'klant-niet-gevonden' }, { status: 404 });
+      }
+      return NextResponse.json({ ok: true, klantnr: resultaat.klantnr });
     }
     await updateRow('klanten', params.id, data);
     return NextResponse.json({ ok: true });

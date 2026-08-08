@@ -5,6 +5,14 @@
 -- UNIQUE index -- the counters row inside a transaction is the uniqueness
 -- guarantee, and an index would add a second, partly overlapping source of
 -- truth for all the NULL rows.
+--
+-- Deploy ordering: this migration MUST be run against a given environment
+-- BEFORE the application code that uses it is deployed there -- never after.
+-- The application does `SELECT klantnr FROM klanten ... FOR UPDATE`, and
+-- against a database still missing the column that raises ER_BAD_FIELD_ERROR,
+-- turning every klant approval into a 500. Running this migration first with
+-- the old code still deployed is harmless -- it just carries an unused extra
+-- column until the new code ships.
 ALTER TABLE klanten ADD COLUMN klantnr VARCHAR(20);
 INSERT INTO counters (id, value) VALUES ('klantnummer', 0);
 
@@ -13,7 +21,7 @@ INSERT INTO counters (id, value) VALUES ('klantnummer', 0);
 -- variable (@n := @n + 1 does not guarantee assignment order) or a correlated
 -- subquery on klanten itself (that is the table being updated).
 CREATE TEMPORARY TABLE klantnr_backfill AS
-SELECT id, ROW_NUMBER() OVER (ORDER BY createdAt) AS rn
+SELECT id, ROW_NUMBER() OVER (ORDER BY createdAt, id) AS rn
 FROM klanten
 WHERE status = 'Goedgekeurd' AND klantnr IS NULL;
 
