@@ -11,8 +11,17 @@ function gebruik(): never {
   process.exit(2);
 }
 
-async function main(): Promise<void> {
+// Everything that can be rejected without touching the database is checked here, BEFORE a
+// connection is opened. process.exit() skips pending finally blocks, so an exit from inside
+// the try below would leak the connection -- this repo has exhausted its MySQL connection
+// grant that way before. Inside the try, set process.exitCode and return instead.
+function valideerArgumenten(): void {
   if (!subcommand || !target) gebruik();
+  if (subcommand !== 'status') gebruik();
+}
+
+async function main(): Promise<void> {
+  valideerArgumenten();
 
   const { connection, database } = await verbind(target);
   try {
@@ -29,8 +38,6 @@ async function main(): Promise<void> {
       process.exitCode = openstaand.length > 0 ? 1 : 0;
       return;
     }
-
-    gebruik();
   } finally {
     await connection.end();
   }
