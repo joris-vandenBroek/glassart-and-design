@@ -95,10 +95,10 @@ jobs:
         env:
           MIJNHOST_BUILD: 'true'
           NEXT_PUBLIC_APP_VERSION: ${{ steps.version.outputs.tag }}
-          NEXT_PUBLIC_MAIL_ENDPOINT_URL: ${{ vars.NEXT_PUBLIC_MAIL_ENDPOINT_URL }}
-          NEXT_PUBLIC_MAIL_SECRET: ${{ secrets.NEXT_PUBLIC_MAIL_SECRET }}
-          NEXT_PUBLIC_UPLOAD_ENDPOINT_URL: ${{ vars.NEXT_PUBLIC_UPLOAD_ENDPOINT_URL }}
-          NEXT_PUBLIC_UPLOAD_SECRET: ${{ secrets.NEXT_PUBLIC_UPLOAD_SECRET }}
+        # De mail-/uploadwaarden staan hier BEWUST niet meer bij -- zie de gelijke
+        # toelichting in deploy-naar-staging.yml. Kort: Next bakt elke NEXT_PUBLIC_*-waarde
+        # in de client-bundle, waardoor het relay-secret publiek leesbaar was. Ze gaan nu
+        # als runtime-env mee (zie "Runtime-env uploaden" hieronder).
         # MIJNHOST_BUILD=true gates collecties/word-klant/inloggen/account/contact behind
         # the Under Construction page in production, per src/config/pageAvailability.ts --
         # beheer is always live regardless. NEXT_PUBLIC_APP_VERSION is set to the SAME
@@ -106,9 +106,8 @@ jobs:
         # always matches the version that was actually approved on staging (or the
         # rollback target). NEXT_PUBLIC_FIREBASE_* vars are gone -- Firebase was fully
         # removed from the app, those env vars no longer do anything.
-        # NEXT_PUBLIC_UPLOAD_SECRET was missing from this build step before this rewrite
-        # (staging's build step already had it) -- added here to match, since
-        # useKunstwerkFotoUpload.ts needs it baked in the same way on both environments.
+        # (Historisch: NEXT_PUBLIC_UPLOAD_SECRET ontbrak hier ooit terwijl staging hem wel
+        # had. Dat verschil is nu weg omdat geen van beide builds ze nog meekrijgt.)
 
       - name: Assemble deploy payload
         run: |
@@ -179,6 +178,31 @@ jobs:
           remote_path: '/.next'
           sftpArgs: '-o ConnectionAttempts=5 -o ConnectTimeout=15'
         # Separate step because .next is a dotdir the main step's "*" glob can't see.
+
+      - name: Runtime-env voor de mail-/uploadrelay uploaden
+        env:
+          SFTP_HOST: ${{ vars.PRODUCTION_SFTP_HOST }}
+          SFTP_USER: ${{ secrets.PRODUCTION_SFTP_USERNAME }}
+          SFTP_PASSWORD: ${{ secrets.PRODUCTION_SFTP_PASSWORD }}
+          MAIL_ENDPOINT_URL: ${{ vars.NEXT_PUBLIC_MAIL_ENDPOINT_URL }}
+          MAIL_SECRET: ${{ secrets.NEXT_PUBLIC_MAIL_SECRET }}
+          UPLOAD_ENDPOINT_URL: ${{ vars.NEXT_PUBLIC_UPLOAD_ENDPOINT_URL }}
+          UPLOAD_SECRET: ${{ secrets.NEXT_PUBLIC_UPLOAD_SECRET }}
+        run: |
+          umask 077
+          {
+            printf 'MAIL_ENDPOINT_URL=%s\n' "$MAIL_ENDPOINT_URL"
+            printf 'MAIL_SECRET=%s\n' "$MAIL_SECRET"
+            printf 'UPLOAD_ENDPOINT_URL=%s\n' "$UPLOAD_ENDPOINT_URL"
+            printf 'UPLOAD_SECRET=%s\n' "$UPLOAD_SECRET"
+          } > /tmp/env.production
+          sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no -o ConnectTimeout=15 -o ConnectionAttempts=5 "$SFTP_USER@$SFTP_HOST" <<< $'put /tmp/env.production /.env.production'
+          rm -f /tmp/env.production
+        # Zie de gelijknamige stap in deploy-naar-staging.yml voor de volledige toelichting:
+        # runtime-waarden die alleen /api/mail en /api/upload lezen, weggeschreven als
+        # .env.production in de app-root (Next laadt die bij het opstarten), als losse stap
+        # omdat de "*"-glob van de hoofdupload geen dotfiles ziet, en vóór de restart zodat
+        # de nieuwe waarden meteen actief zijn.
 
       - name: Trigger Passenger restart (tmp/restart.txt)
         env:
