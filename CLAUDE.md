@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**Project location:** this repository lives at `C:\projecten\Glassart and design` (moved here 2026-08-08 from the old `C:\Temp\Glassart and design`, which is now empty/unused — don't work there).
+
 ## Commands
 
 ```bash
