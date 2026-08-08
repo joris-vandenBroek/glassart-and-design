@@ -88,6 +88,7 @@ export function KlantenSection({
         rows={klanten}
         getRowId={(row) => row.id}
         onRowClick={setSelectedKlant}
+        defaultSortKey="companyName"
         quickFilter={{
           key: 'status',
           value: statusFilter,

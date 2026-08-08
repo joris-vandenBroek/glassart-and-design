@@ -152,7 +152,8 @@ describe('KlantenSection', () => {
 
   it('toont het klantnummer als eerste kolom', () => {
     renderSection();
-    expect(screen.getByText(/Klantnr/)).toBeInTheDocument();
+    const headerButtons = screen.getAllByTestId(/^data-table-sort-/);
+    expect(headerButtons[0]).toHaveAttribute('data-testid', 'data-table-sort-klantnr');
     expect(screen.getByText('KL-00001')).toBeInTheDocument();
   });
 
@@ -161,5 +162,30 @@ describe('KlantenSection', () => {
     const rij = screen.getByText('Ander Bedrijf').closest('tr');
     expect(rij).not.toBeNull();
     expect(rij?.textContent).not.toContain('KL-');
+  });
+
+  it('sorteert de tabel standaard op bedrijfsnaam, niet op klantnr (regressie)', () => {
+    // Regressiebescherming: vóór het toevoegen van de klantnr-kolom sorteerde de
+    // tabel standaard op companyName. Omdat DataTable zonder expliciete
+    // defaultSortKey terugvalt op de eerste sorteerbare kolom, zou het toevoegen
+    // van klantnr als eerste kolom de standaardsortering ongemerkt hebben
+    // omgezet naar klantnr. Klanten zonder klantnummer hebben allemaal dezelfde
+    // (lege) sleutel, dus onderling zouden ze op invoervolgorde blijven staan
+    // in plaats van alfabetisch op bedrijfsnaam.
+    const klantenMetAfwijkendeVolgorde: Klant[] = [
+      { ...KLANTEN[0], id: 'uid-1', companyName: 'Testbedrijf BV', klantnr: 'KL-00001' },
+      { ...KLANTEN[1], id: 'uid-2', companyName: 'Ander Bedrijf', klantnr: null },
+      { ...KLANTEN[1], id: 'uid-3', companyName: 'Zorg Bedrijf', klantnr: null },
+    ];
+    renderSection({ klanten: klantenMetAfwijkendeVolgorde });
+
+    const rowTestIds = screen
+      .getAllByTestId(/^data-table-row-/)
+      .map((row) => row.getAttribute('data-testid'));
+
+    // Alfabetisch op bedrijfsnaam: Ander Bedrijf, Testbedrijf BV, Zorg Bedrijf.
+    // Op klantnr (de regressie) zou dit Ander Bedrijf, Zorg Bedrijf, Testbedrijf BV zijn,
+    // omdat Testbedrijf BV als enige een klantnr heeft en dus achteraan komt.
+    expect(rowTestIds).toEqual(['data-table-row-uid-2', 'data-table-row-uid-1', 'data-table-row-uid-3']);
   });
 });
