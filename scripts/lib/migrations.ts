@@ -14,6 +14,14 @@ export function sorteerMigraties(filenames: string[]): string[] {
   return filenames.filter(isMigrationFilename).sort();
 }
 
+// sorteerMigraties silently drops anything not matching the pattern, which would make a
+// misnamed migration invisible to the runner and to the CI gate alike -- a green deploy
+// with an unapplied migration. Callers use this to refuse rather than skip. Non-.sql files
+// (a README, say) are legitimately ignored; a .sql file that does not match is not.
+export function vindOngeldigeMigratienamen(filenames: string[]): string[] {
+  return filenames.filter((name) => name.endsWith('.sql') && !isMigrationFilename(name)).sort();
+}
+
 // Migrations present in the repo but not recorded in the database ledger. Extra entries
 // in `applied` are deliberately NOT reported: that happens legitimately when rolling back
 // to an older vN tag, and while a feature branch's migration has run on staging but has

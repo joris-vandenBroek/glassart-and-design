@@ -26,7 +26,7 @@ export function leesOmgeving(target: string): Record<string, string> {
   }
   const env: Record<string, string> = {};
   for (const line of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
-    const match = line.match(/^\s*([A-Z_]+)\s*=\s*(.*)$/);
+    const match = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)$/);
     if (match) env[match[1]] = match[2].replace(/^["']|["']$/g, '');
   }
   return env;

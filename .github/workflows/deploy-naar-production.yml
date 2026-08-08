@@ -80,7 +80,12 @@ jobs:
         run: npm ci
 
       - name: Controleer databasemigraties
-        run: npx tsx scripts/check-migrations.ts "https://glassartanddesign.com" productie
+        run: |
+          if [ ! -f scripts/check-migrations.ts ]; then
+            echo "::warning::scripts/check-migrations.ts ontbreekt in deze versie -- de migratiecontrole is overgeslagen. Dit hoort alleen te gebeuren bij het terugrollen naar een tag van vóór deze controle."
+            exit 0
+          fi
+          npx tsx scripts/check-migrations.ts "https://glassartanddesign.com" productie
         # Staat ná "Checkout resolved version" (stap hierboven) met opzet: db/migrations/
         # moet de inhoud van de gepromote vN-tag zijn, niet die van master HEAD. En ná
         # "Install dependencies", want tsx komt uit node_modules.

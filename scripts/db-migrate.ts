@@ -1,5 +1,10 @@
 import fs from 'node:fs';
-import { berekenOpenstaand, isMigrationFilename, sorteerMigraties } from './lib/migrations';
+import {
+  berekenOpenstaand,
+  isMigrationFilename,
+  sorteerMigraties,
+  vindOngeldigeMigratienamen,
+} from './lib/migrations';
 import { verbind } from './lib/env';
 import { MIGRATIONS_DIR, leesToegepast, noteerToegepast, zorgVoorLedger } from './lib/ledger';
 import { pasMigratiesToe } from './lib/apply';
@@ -14,6 +19,7 @@ function gebruik(): never {
   console.error('Gebruik: npm run db:status  -- <staging|productie>');
   console.error('         npm run db:migrate -- <staging|productie> [--confirm]');
   console.error('         npm run db:migrate -- <staging|productie> --mark-applied <bestandsnaam>');
+  console.error('         (--mark-applied op productie vereist ook --confirm)');
   process.exit(2);
 }
 
@@ -51,7 +57,15 @@ async function main(): Promise<void> {
   const { connection, database } = await verbind(target);
   try {
     await zorgVoorLedger(connection);
-    const repo = sorteerMigraties(fs.readdirSync(MIGRATIONS_DIR));
+    const bestanden = fs.readdirSync(MIGRATIONS_DIR);
+    const ongeldig = vindOngeldigeMigratienamen(bestanden);
+    if (ongeldig.length > 0) {
+      console.warn(
+        `Let op: ${ongeldig.length} bestand(en) in ${MIGRATIONS_DIR}/ voldoen niet aan het patroon jjjj-mm-dd-naam.sql en worden overgeslagen:`
+      );
+      for (const naam of ongeldig) console.warn(`  - ${naam}`);
+    }
+    const repo = sorteerMigraties(bestanden);
     const toegepast = await leesToegepast(connection);
     const openstaand = berekenOpenstaand(repo, toegepast);
 
@@ -97,7 +111,7 @@ async function main(): Promise<void> {
       console.error('Controleer de database met de hand voordat je opnieuw draait.');
       console.error(
         'Let op: een nieuwe run begint dit bestand weer bij het eerste statement -- de al ' +
-          'uitgevoerde statements zijn niet teruggedraaid en zullen opnieuw falen.'
+          'uitgevoerde statements zijn niet teruggedraaid en kunnen opnieuw falen.'
       );
       process.exitCode = 1;
       return;

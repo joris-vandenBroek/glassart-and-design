@@ -1441,7 +1441,13 @@ Add to `package.json` scripts:
 npm run db:diff -- staging productie
 ```
 
-Expected: reports `klanten: alleen in staging [klantnr]` and a counters difference (`klantnummer`) for as long as the `worktree-klantnummer` branch is unmerged — which is the correct, expected in-flight state, not a fault.
+Expected (as of 2026-08-08): reports `Geen kolomverschillen.` and `counters gelijk: ...` —
+production gained `klanten.klantnr` and the `klantnummer` counter that day, so staging and
+production are column-for-column identical again. (Neither database's `schema_migrations` ledger
+records `2026-08-08-klantnummer.sql` yet, since that file only exists on the unmerged branch
+`worktree-klantnummer` — but that's a ledger gap, not a schema difference, so `db:diff` correctly
+shows nothing here. See "In-flight feature branches" in the design doc for the `--mark-applied`
+step needed on merge.)
 
 - [ ] **Step 3: Commit**
 

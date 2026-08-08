@@ -23,6 +23,11 @@ describe('GET /api/health/schema', () => {
     expect([...body.applied]).toEqual([...body.applied].sort());
   });
 
+  // Deliberate cross-check against the real, seeded baseline ledger (see Task 4) rather than
+  // a fixture this test creates itself -- confirms the endpoint reads the actual
+  // schema_migrations table, not just whatever the previous test inserted. This will fail
+  // for anyone whose staging ledger has been reseeded from scratch and no longer contains
+  // this filename; if that happens, swap in whatever real row the current baseline has.
   it('reports the real migrations that Task 4 seeded', async () => {
     const response = await GET();
     const body = (await response.json()) as { applied: string[] };

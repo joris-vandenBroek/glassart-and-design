@@ -4,6 +4,7 @@ import {
   isMigrationFilename,
   sorteerMigraties,
   splitStatements,
+  vindOngeldigeMigratienamen,
 } from '../../scripts/lib/migrations';
 
 describe('isMigrationFilename', () => {
@@ -49,6 +50,30 @@ describe('berekenOpenstaand', () => {
   // reason to block a deploy.
   it('ignores migrations applied in the database but absent from the repo', () => {
     expect(berekenOpenstaand(repo, [...repo, '2026-09-01-toekomst.sql'])).toEqual([]);
+  });
+});
+
+describe('vindOngeldigeMigratienamen', () => {
+  it('returns nothing for a list of only valid migration filenames', () => {
+    expect(
+      vindOngeldigeMigratienamen(['2026-07-30-a.sql', '2026-08-07-b.sql'])
+    ).toEqual([]);
+  });
+
+  it('reports a filename with a single-digit month', () => {
+    expect(vindOngeldigeMigratienamen(['2026-8-8-foo.sql'])).toEqual([
+      '2026-8-8-foo.sql',
+    ]);
+  });
+
+  it('reports a filename with an uppercase slug', () => {
+    expect(vindOngeldigeMigratienamen(['2026-08-08-Foo.sql'])).toEqual([
+      '2026-08-08-Foo.sql',
+    ]);
+  });
+
+  it('does not report a non-.sql file', () => {
+    expect(vindOngeldigeMigratienamen(['README.md'])).toEqual([]);
   });
 });
 

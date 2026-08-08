@@ -101,8 +101,9 @@ has it from the start.
 **Baseline seeding.** On introduction the table is seeded with the migration filenames present
 on `master` — ten as of 2026-08-08 — on both databases. This is safe because staging and
 production were verified column-for-column identical on 2026-08-08 after the manual
-`zendingnummer` fix, with one in-flight exception noted under "In-flight feature branches"
-below. The data-only migration
+`zendingnummer` fix, and remain identical (re-verified later the same day with `npm run db:diff
+-- staging productie`, which reports no differences at all) — see "In-flight feature branches"
+below for the one thing the ledger does not yet know about that fact. The data-only migration
 `2026-08-07-te-factureren-status.sql` counts as applied on production vacuously — production has
 zero `bestelheaders` rows, so there was nothing to rename.
 
@@ -223,25 +224,31 @@ productie --confirm` → promote to production. The existing "Production databas
 
 ## In-flight feature branches
 
-`klanten.klantnr` (VARCHAR(20)) and the `counters` row `klantnummer` (value 6) exist in the
-staging database but not in production, and not on `master`. They are **not** hand-made drift:
-the branch `worktree-klantnummer` carries `db/migrations/2026-08-08-klantnummer.sql` (including a
-backfill and a counter correction) and the matching `db/schema.sql` change. The staging database
-is simply ahead of `master` because staging *is* the development database — `npm run dev` and the
-test suite both connect to it, so a branch's migration has to be applied there long before it
-merges.
+`klanten.klantnr` (VARCHAR(20)) and the `counters` row `klantnummer` (value 6) exist on **both**
+staging and production, but on neither's ledger, and not on `master`. As of 2026-08-08,
+`npm run db:diff -- staging productie` reports no schema differences at all — production gained
+the column and the counter that same day, so this is no longer the staging-ahead-of-production
+drift it started out as. They are **not** hand-made drift either way: the branch
+`worktree-klantnummer` carries `db/migrations/2026-08-08-klantnummer.sql` (including a backfill
+and a counter correction) and the matching `db/schema.sql` change, and both databases already
+reflect that migration's effect. What neither database has is a `schema_migrations` row for
+`2026-08-08-klantnummer.sql`, because that file only exists on the unmerged branch — the baseline
+seeding in section 1 necessarily uses `master`'s filenames, and this one isn't on `master` yet.
 
 This is the normal steady state of the project, not an incident, and the design accommodates it
 in two places: the gate treats `applied` ⊇ repo as a pass (section 4), and `db:diff` output is
 advisory (section 5).
 
-Two consequences for rollout:
+The consequence for rollout: once `worktree-klantnummer` merges, `2026-08-08-klantnummer.sql`
+becomes part of `master`'s migration set, and the gate will correctly report it as pending on
+**both** staging and production, even though the schema change is already live on both — because
+neither ledger has recorded it. Running the migration for real at that point would fail on a
+duplicate column. The correct action on merge is to record it without executing it, on both
+environments:
 
-- The baseline seeding in section 1 uses `master`'s filenames. Once `worktree-klantnummer`
-  merges, its migration is already applied to staging but *not* recorded in the ledger there.
-  The runner must therefore support recording a migration as applied without executing it —
-  `npm run db:migrate -- staging --mark-applied <filename>` — for exactly this hand-off. Without
-  it the first post-merge deploy would demand a migration that has in fact already run, and
-  re-running it would fail on a duplicate column.
-- Production has never had `klantnummer` applied, so it will show up as genuinely pending there
-  the first time that feature is promoted — which is precisely the gate working as intended.
+```bash
+npm run db:migrate -- staging  --mark-applied 2026-08-08-klantnummer.sql
+npm run db:migrate -- productie --confirm --mark-applied 2026-08-08-klantnummer.sql
+```
+
+This is exactly why `--mark-applied` exists rather than being optional (see section 2).

@@ -37,7 +37,7 @@ It follows the same real-staging-database, no-production-possible, scoped-cleanu
 
 ### Data layer
 
-- `db/schema.sql` is the source of truth for the MySQL schema (22 tables: `klanten`, `medewerkers`, `sessions`, `passwordResetTokens`, catalog lookup tables `segmenten`/`stijlen`/`onderwerpen`/`materiaalsoorten`/`materialen`/`maten`/`prijsgroepen`/`prijsmatrix`, `kunstenaars`/`kunstenaarAfspraken`, `drukkers`/`drukkerZendingen`, `kunstwerken`, `instellingen`, `counters`, `bestelheaders`/`bestellines`, `activiteitenlog`).
+- `db/schema.sql` is the source of truth for the MySQL schema (24 tables: `klanten`, `medewerkers`, `sessions`, `passwordResetTokens`, catalog lookup tables `segmenten`/`stijlen`/`onderwerpen`/`materiaalsoorten`/`materialen`/`maten`/`prijsgroepen`/`prijsmatrix`, `kunstenaars`/`kunstenaarAfspraken`, `drukkers`/`drukkerZendingen`, `kunstwerken`, `instellingen`, `schema_migrations`, `counters`, `bestelheaders`/`bestellines`/`bestelstatusHistorie`, `activiteitenlog`).
 - `src/lib/server/db.ts` exposes a single lazily-created `getPool()` connection pool, driven by `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME` env vars (see `.env.local.example`).
 - `src/lib/server/crud.ts` provides generic `listRows`/`getRow`/`insertRow`/`updateRow`/`deleteRow` helpers (with JSON-column encode/decode support) used by most API routes.
 - `src/lib/server/session.ts` / `password.ts` implement cookie-based sessions and `crypto.scrypt` password hashing — no external auth library.
@@ -94,8 +94,9 @@ grants are IP-bound and GitHub runners can never reach the database.
 `npm run db:status -- <omgeving>` lists applied and pending migrations.
 `npm run db:migrate -- <omgeving> --mark-applied <bestand>` records a migration as applied
 without running it — needed when a feature branch's migration already ran on staging before
-the branch merged. `npm run db:diff` compares two environments' actual schemas, which is the
-only way to spot a column added by hand that belongs to no migration file.
+the branch merged. On `productie` this also requires `--confirm`, same as a real apply.
+`npm run db:diff -- <omgevingA> <omgevingB>` compares two environments' actual schemas, which is
+the only way to spot a column added by hand that belongs to no migration file.
 
 ### Production database access
 

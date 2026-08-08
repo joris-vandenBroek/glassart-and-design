@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { berekenOpenstaand, sorteerMigraties } from './lib/migrations';
+import { berekenOpenstaand, sorteerMigraties, vindOngeldigeMigratienamen } from './lib/migrations';
 import { MIGRATIONS_DIR } from './lib/ledger';
 
 export interface EndpointAntwoord {
@@ -87,7 +87,18 @@ async function main(): Promise<void> {
   }
 
   const url = `${baseUrl.replace(/\/$/, '')}/api/health/schema`;
-  const repo = sorteerMigraties(fs.readdirSync(MIGRATIONS_DIR));
+  const bestanden = fs.readdirSync(MIGRATIONS_DIR);
+
+  const ongeldig = vindOngeldigeMigratienamen(bestanden);
+  if (ongeldig.length > 0) {
+    console.error(
+      `::error::${ongeldig.length} bestand(en) in ${MIGRATIONS_DIR}/ voldoen niet aan het patroon jjjj-mm-dd-naam.sql en zouden stilzwijgend overgeslagen worden:`
+    );
+    for (const naam of ongeldig) console.error(`  - ${naam}`);
+    process.exit(1);
+  }
+
+  const repo = sorteerMigraties(bestanden);
 
   let antwoord: EndpointAntwoord;
   try {
