@@ -37,7 +37,7 @@ It follows the same real-staging-database, no-production-possible, scoped-cleanu
 
 ### Data layer
 
-- `db/schema.sql` is the source of truth for the MySQL schema (22 tables: `klanten`, `medewerkers`, `sessions`, `passwordResetTokens`, catalog lookup tables `segmenten`/`stijlen`/`onderwerpen`/`materiaalsoorten`/`materialen`/`maten`/`prijsgroepen`/`prijsmatrix`, `kunstenaars`/`kunstenaarAfspraken`, `drukkers`/`drukkerZendingen`, `kunstwerken`, `instellingen`, `counters`, `bestelheaders`/`bestellines`, `activiteitenlog`).
+- `db/schema.sql` is the source of truth for the MySQL schema (24 tables: `klanten`, `medewerkers`, `sessions`, `passwordResetTokens`, catalog lookup tables `segmenten`/`stijlen`/`onderwerpen`/`materiaalsoorten`/`materialen`/`maten`/`prijsgroepen`/`prijsmatrix`, `kunstenaars`/`kunstenaarAfspraken`, `drukkers`/`drukkerZendingen`, `kunstwerken`, `instellingen`, `schema_migrations`, `counters`, `bestelheaders`/`bestellines`/`bestelstatusHistorie`, `activiteitenlog`).
 - `src/lib/server/db.ts` exposes a single lazily-created `getPool()` connection pool, driven by `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME` env vars (see `.env.local.example`).
 - `src/lib/server/crud.ts` provides generic `listRows`/`getRow`/`insertRow`/`updateRow`/`deleteRow` helpers (with JSON-column encode/decode support) used by most API routes.
 - `src/lib/server/session.ts` / `password.ts` implement cookie-based sessions and `crypto.scrypt` password hashing — no external auth library.
@@ -73,6 +73,30 @@ It follows the same real-staging-database, no-production-possible, scoped-cleanu
   - `deploy-naar-production.yml` — only runs when dispatched against `refs/heads/master`. Resolves which commit to deploy from an optional `version` input (e.g. `v9`); left blank, it promotes the highest existing `vN` tag — i.e. the latest version that was sent to staging. Builds that exact commit in server mode with `MIJNHOST_BUILD=true` and the same `NEXT_PUBLIC_APP_VERSION` staging showed, then SFTP-deploys to the production Node.js app. Passing an explicit `version` redeploys that tag directly — the rollback path, no new staging round required. Fails loudly (no silent fallback to `master` HEAD) if no tag can be resolved — in particular, no `vN` tags exist until at least one staging run has completed successfully, so a production dispatch before that correctly fails with "no vN tags found," which is expected on a fresh setup, not a bug. The rollback path only rolls back application code — there's no database migration rollback tooling, so check whether `db/schema.sql` changed between the current and target version before rolling back across a schema change.
 - Both workflows target dedicated DirectAdmin Node.js Selector apps (Passenger-style, `app.js` as the startup file, not `next start`) — see `docs/superpowers/plans/2026-07-23-firebase-to-mysql-migration.md` (Task 25) and `docs/superpowers/specs/2026-07-29-staging-to-production-version-promotion-design.md` for the full history and design behind this setup.
 - DirectAdmin's Node.js Selector has no API for restart/npm-install, only UI buttons — every deploy run ends with a `::warning::` and a job-summary reminder to manually click **Run NPM Install** (only if `package.json`/`package-lock.json` changed) and **RESTART** in DirectAdmin. A successful workflow run does NOT mean the new build is live yet.
+
+### Database migrations
+
+`db/schema.sql` is documentation, not an executable migration — a deploy never touches the
+database. Every schema change is a file in `db/migrations/` that must be applied to each
+database separately:
+
+1. Write the migration file and update `db/schema.sql`.
+2. `npm run db:migrate -- staging`
+3. Deploy to staging and verify.
+4. Ask the user for permission, then `npm run db:migrate -- productie --confirm`.
+5. Promote to production.
+
+Both deploy workflows call `scripts/check-migrations.ts` before uploading and **fail** if the
+target database is missing a migration present in the commit being deployed. The check reads
+`/api/health/schema` on the running app rather than connecting to MySQL, because the MySQL
+grants are IP-bound and GitHub runners can never reach the database.
+
+`npm run db:status -- <omgeving>` lists applied and pending migrations.
+`npm run db:migrate -- <omgeving> --mark-applied <bestand>` records a migration as applied
+without running it — needed when a feature branch's migration already ran on staging before
+the branch merged. On `productie` this also requires `--confirm`, same as a real apply.
+`npm run db:diff -- <omgevingA> <omgevingB>` compares two environments' actual schemas, which is
+the only way to spot a column added by hand that belongs to no migration file.
 
 ### Production database access
 
