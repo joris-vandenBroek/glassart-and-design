@@ -208,7 +208,9 @@ export function VersturenNaarDrukkerDialog({
         )
       );
       if (results.some((response) => !response.ok)) throw new Error('status update failed');
-      void logActiviteit('bestelling_verstuurd_naar_drukker', bestellingen.map((b) => b.bestelnr).join(', ')
+      void logActiviteit(
+        'bestelling_verstuurd_naar_drukker',
+        bestellingen.map((b) => b.bestelnr).join(', ')
       );
       onVerstuurd(bestellingen.map((b) => ({ ...b, status: 'Verstuurd naar drukker' as const, zendingnummer })));
       onClose();

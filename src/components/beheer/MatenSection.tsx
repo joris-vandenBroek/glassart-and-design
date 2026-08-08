@@ -82,8 +82,7 @@ export function MatenSection({ maten, kunstwerken, loadError, onAdd, onUpdate, o
     }
     const success = await onRemove(modalState.maat.id);
     if (success) {
-      void logActiviteit('maat_verwijderd', `${modalState.maat.breedte}×${modalState.maat.hoogte} cm`
-      );
+      void logActiviteit('maat_verwijderd', `${modalState.maat.breedte}×${modalState.maat.hoogte} cm`);
       closeModal();
     } else {
       setActionError(t('matenActionError'));

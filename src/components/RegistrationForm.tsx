@@ -92,7 +92,12 @@ export function RegistrationForm() {
         setSubmitError(body.error === 'email-in-use' ? t('emailInUseError') : t('submitError'));
         return;
       }
-      void logActiviteit('word_klant_aanvraag');
+      // Wie de aanvraag deed kan de server hier niet uit een sessie afleiden --
+      // de aanvrager is per definitie nog niet ingelogd. Het bedrijf gaat daarom
+      // mee als omschrijving, zodat het beheerscherm nog steeds ziet wie zich
+      // meldde; actorEmail/actorNaam blijven bewust "Onbekend", want die waarde
+      // is niet geverifieerd.
+      void logActiviteit('word_klant_aanvraag', `${companyName} (${email})`);
       setIsSubmitted(true);
     } catch {
       setSubmitError(t('submitError'));

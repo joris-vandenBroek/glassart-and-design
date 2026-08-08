@@ -222,7 +222,9 @@ export function KlantModal({
       // JSON mag een geslaagde goedkeuring nooit alsnog laten mislukken.
       const body = (await response.json().catch(() => ({}))) as { klantnr?: string | null };
       const klantnr = body.klantnr ?? klant.klantnr ?? null;
-      void logActiviteit('klant_goedgekeurd', klantnr ? `${klant.companyName} (${klantnr})` : klant.companyName
+      void logActiviteit(
+        'klant_goedgekeurd',
+        klantnr ? `${klant.companyName} (${klantnr})` : klant.companyName
       );
       onUpdated({ ...klant, status: 'Goedgekeurd', prijsgroepId, klantnr });
     } catch {
