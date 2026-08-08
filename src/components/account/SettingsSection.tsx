@@ -117,6 +117,10 @@ export function SettingsSection() {
     setBtwNummerError(null);
 
     try {
+      // klantnr staat wel in `profile` (het wordt getoond), maar is een
+      // server-toegekende leeswaarde: het hoort niet terug te worden gestuurd.
+      // Vervangen door `...profile` laat het weer meeliften -- de allowlist in
+      // klantFields.ts negeert het dan wel, maar de request klopt niet meer.
       const { klantnr: _klantnr, ...profileForPatch } = profile;
       const response = await fetch('/api/klanten/me', {
         method: 'PATCH',
