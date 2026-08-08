@@ -164,14 +164,14 @@ describe('KlantenSection', () => {
     expect(rij?.textContent).not.toContain('KL-');
   });
 
-  it('sorteert de tabel standaard op bedrijfsnaam, niet op klantnr (regressie)', () => {
-    // Regressiebescherming: vóór het toevoegen van de klantnr-kolom sorteerde de
-    // tabel standaard op companyName. Omdat DataTable zonder expliciete
-    // defaultSortKey terugvalt op de eerste sorteerbare kolom, zou het toevoegen
-    // van klantnr als eerste kolom de standaardsortering ongemerkt hebben
-    // omgezet naar klantnr. Klanten zonder klantnummer hebben allemaal dezelfde
-    // (lege) sleutel, dus onderling zouden ze op invoervolgorde blijven staan
-    // in plaats van alfabetisch op bedrijfsnaam.
+  it('sorteert de tabel standaard op klantnr, net als bestellingen op bestelnr', () => {
+    // Bewuste keuze: de klantnr-kolom staat vooraan en DataTable valt zonder
+    // expliciete defaultSortKey terug op de eerste sorteerbare kolom, dus de
+    // tabel sorteert standaard op klantnummer -- gelijk aan het
+    // bestellingenscherm, dat standaard op bestelnr sorteert. Klanten zonder
+    // klantnummer delen dezelfde (lege) sleutel en behouden onderling hun
+    // invoervolgorde. Deze test legt dat vast zodat het niet ongemerkt
+    // terugvalt op bedrijfsnaam.
     const klantenMetAfwijkendeVolgorde: Klant[] = [
       { ...KLANTEN[0], id: 'uid-1', companyName: 'Testbedrijf BV', klantnr: 'KL-00001' },
       { ...KLANTEN[1], id: 'uid-2', companyName: 'Ander Bedrijf', klantnr: null },
@@ -183,9 +183,9 @@ describe('KlantenSection', () => {
       .getAllByTestId(/^data-table-row-/)
       .map((row) => row.getAttribute('data-testid'));
 
-    // Alfabetisch op bedrijfsnaam: Ander Bedrijf, Testbedrijf BV, Zorg Bedrijf.
-    // Op klantnr (de regressie) zou dit Ander Bedrijf, Zorg Bedrijf, Testbedrijf BV zijn,
-    // omdat Testbedrijf BV als enige een klantnr heeft en dus achteraan komt.
-    expect(rowTestIds).toEqual(['data-table-row-uid-2', 'data-table-row-uid-1', 'data-table-row-uid-3']);
+    // Op klantnr: de twee zonder nummer eerst (lege sleutel, invoervolgorde
+    // behouden), Testbedrijf BV als enige met nummer achteraan. Alfabetisch op
+    // bedrijfsnaam zou Ander Bedrijf, Testbedrijf BV, Zorg Bedrijf geven.
+    expect(rowTestIds).toEqual(['data-table-row-uid-2', 'data-table-row-uid-3', 'data-table-row-uid-1']);
   });
 });
