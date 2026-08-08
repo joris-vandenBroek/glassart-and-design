@@ -164,9 +164,12 @@ Voor klanten zonder nummer blijft de cel leeg (geen `—` of placeholder). Het
 bestaande globale zoekveld van `DataTable` doorzoekt kolommen automatisch, dus
 zoeken op `KL-00003` werkt zonder extra werk.
 
-**KlantModal** (`KlantModal.tsx`) — het klantnummer komt in de kop naast de
-bedrijfsnaam, alleen gerenderd wanneer aanwezig. Het is een leeswaarde: het
-veld verschijnt niet in `EditableFields` en is niet bewerkbaar.
+**KlantModal** (`KlantModal.tsx`) — de kop van deze modal toont nu alleen de
+titel "Klantgegevens"; de bedrijfsnaam staat pas in het formulier eronder. Het
+klantnummer komt daarom in de `subtitle`-prop van `Modal`, precies zoals
+`BestellingModal` daar `bestelnr · companyName · besteldatum` neerzet — alleen
+gerenderd wanneer aanwezig. Het is een leeswaarde: het veld verschijnt niet in
+`EditableFields` en is niet bewerkbaar.
 
 **Drukkersmail** (`buildDrukkerMail.ts`) — de klant-sectiekop wordt
 `Testbedrijf BV (KL-00003)` in zowel de tekst- als de HTML-variant. Het nummer
