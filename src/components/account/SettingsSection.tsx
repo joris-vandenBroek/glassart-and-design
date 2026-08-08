@@ -8,6 +8,7 @@ import { LOCALE_META } from '@/lib/localeMeta';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
 import { normaliseerBtwNummer, valideerBtwNummer } from '@/lib/btwNummer';
+import { MINIMALE_WACHTWOORDLENGTE } from '@/lib/wachtwoordBeleid';
 import { PasswordInput } from '@/components/PasswordInput';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { Combobox } from '@/components/Combobox';
@@ -101,7 +102,7 @@ export function SettingsSection() {
       setPasswordError(t('passwordMismatch'));
       return;
     }
-    if (password && password.length < 8) {
+    if (password && password.length < MINIMALE_WACHTWOORDLENGTE) {
       setPasswordError(t('passwordTooShort'));
       return;
     }

@@ -17,9 +17,10 @@ type KlantnummerToekenningResultaat =
  * gelijktijdige goedkeuringen (dubbelklik, twee medewerkers) niet allebei een
  * nummer uitdelen: wie al een nummer heeft, houdt het.
  *
- * Bewust niet via `updateRow()`: die draait op de pool en zou dus buiten deze
- * transactie vallen. De SQL hieronder is een kopie van `updateRow` zonder de
- * JSON-serialisatie -- `klanten` heeft geen JSON-kolommen.
+ * `updateRow()` krijgt de transactie-connection mee: die stond hier eerder met
+ * de hand nagebouwd omdat `updateRow` alleen op de pool draaide, maar daarmee
+ * liep deze update ook langs de kolomcontrole heen die elke andere schrijfactie
+ * wél passeert.
  */
 async function updateEnKenKlantnummerToe(
   id: string,
@@ -46,13 +47,7 @@ async function updateEnKenKlantnummerToe(
       klantnr = `KL-${String(nextValue).padStart(KLANTNR_PADDING, '0')}`;
     }
 
-    const velden: Record<string, unknown> = { ...data, klantnr };
-    const kolommen = Object.keys(velden);
-    const assignments = kolommen.map((kolom) => `\`${kolom}\` = ?`).join(', ');
-    await connection.query(`UPDATE klanten SET ${assignments} WHERE id = ?`, [
-      ...kolommen.map((kolom) => velden[kolom]),
-      id,
-    ]);
+    await updateRow('klanten', id, { ...data, klantnr }, [], connection);
 
     await connection.commit();
     return { gevonden: true, klantnr };

@@ -65,7 +65,15 @@ export async function POST(request: Request) {
   if (!klantId) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
-  const { lines } = (await request.json()) as { lines: LineInput[] };
+  const { lines } = (await request.json()) as { lines?: LineInput[] };
+
+  // Zonder deze controle liep een body zonder (of met een niet-array) `lines`
+  // stuk op de for-of eronder, en kwam er een 500 terug op wat gewoon een
+  // ongeldige request is. Een lége lijst blijft bewust toegestaan: dat is geen
+  // ongeldige request, en de beheerkant maakt er gebruik van.
+  if (!Array.isArray(lines)) {
+    return NextResponse.json({ error: 'invalid-body' }, { status: 400 });
+  }
 
   for (const line of lines) {
     const validationError = validateLine(line);

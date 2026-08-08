@@ -26,9 +26,10 @@ beforeEach(async () => {
 
 describe('instellingen route', () => {
   it('returns 404 when no row exists yet', async () => {
-    const response = await GET(new Request('http://localhost/api'), {
-      params: { id: TEST_ID },
-    });
+    const response = await GET(
+      new Request('http://localhost/api', { headers: { cookie: await medewerkerCookie() } }),
+      { params: { id: TEST_ID } }
+    );
     expect(response.status).toBe(404);
   });
 
@@ -46,11 +47,43 @@ describe('instellingen route', () => {
     );
     expect(patchResponse.status).toBe(200);
 
-    const getResponse = await GET(new Request('http://localhost/api'), {
-      params: { id: TEST_ID },
-    });
+    const getResponse = await GET(
+      new Request('http://localhost/api', { headers: { cookie: await medewerkerCookie() } }),
+      { params: { id: TEST_ID } }
+    );
     const body = await getResponse.json();
     expect(body.bezoekadres).toBe('Den Heuvel 21, 5688 EM Oirschot');
+  });
+
+  // Alleen een korte lijst records is publiek leesbaar (de contactpagina heeft
+  // `bedrijfsgegevens` nodig); al het overige vraagt een medewerkersessie.
+  it('weigert een onbekend instellingen-record zonder medewerkersessie', async () => {
+    const response = await GET(new Request('http://localhost/api'), { params: { id: TEST_ID } });
+    expect(response.status).toBe(401);
+  });
+
+  // Bewust alleen lezen: `bedrijfsgegevens` is een écht record dat de beheerder
+  // heeft ingevuld, dus deze test schrijft er niets naar en gaat er ook niet van
+  // uit dat het gevuld is.
+  it('laat tenaamstelling en bic weg uit een publieke lees van bedrijfsgegevens', async () => {
+    const publiek = await GET(new Request('http://localhost/api'), {
+      params: { id: 'bedrijfsgegevens' },
+    });
+    expect(publiek.status).not.toBe(401);
+    if (publiek.status === 404) return;
+
+    const body = await publiek.json();
+    expect(body).not.toHaveProperty('tenaamstelling');
+    expect(body).not.toHaveProperty('bic');
+
+    const alsMedewerker = await GET(
+      new Request('http://localhost/api', { headers: { cookie: await medewerkerCookie() } }),
+      { params: { id: 'bedrijfsgegevens' } }
+    );
+    const volledig = await alsMedewerker.json();
+    // De medewerkerlees is niet gefilterd; welke velden gevuld zijn hangt van de
+    // echte data af, dus we controleren alleen dat er niet gefilterd wordt.
+    expect(Object.keys(volledig).length).toBeGreaterThanOrEqual(Object.keys(body).length);
   });
 
   it('rejects a PATCH without a medewerker session', async () => {

@@ -60,4 +60,56 @@ describe('activiteitenlog route', () => {
     );
     expect(response.status).toBe(400);
   });
+
+  // Deze route staat bewust open voor anonieme bezoekers. Zonder server-side
+  // afleiding kon iedereen dus een gebeurtenis op naam van een medewerker
+  // wegschrijven -- en daarmee het auditlog waardeloos maken.
+  it('negeert een actor uit de body en logt een anonieme post als Onbekend', async () => {
+    const marker = `test-marker-spoof-${Date.now()}-${Math.random()}`;
+    await POST(
+      new Request('http://localhost/api', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          type: 'klant_goedgekeurd',
+          actorId: 'staff-1',
+          actorEmail: 'joris@glassartanddesign.com',
+          actorNaam: 'Joris',
+          omschrijving: marker,
+        }),
+      })
+    );
+
+    const [rows] = await getPool().query('SELECT * FROM activiteitenlog WHERE omschrijving = ?', [marker]);
+    const rij = (rows as Array<{ actorId: string | null; actorEmail: string; actorNaam: string }>)[0];
+    expect(rij).toBeDefined();
+    expect(rij.actorId).toBeNull();
+    expect(rij.actorEmail).toBe('Onbekend');
+    expect(rij.actorNaam).toBe('Onbekend');
+
+    await getPool().query('DELETE FROM activiteitenlog WHERE omschrijving = ?', [marker]);
+  });
+
+  // De sleutels van de body werden vroeger kolomnamen in de INSERT, en die
+  // konden zonder sessie meegegeven worden.
+  it('laat een gemanipuleerde kolomnaam in de body niet in de query landen', async () => {
+    const marker = `test-marker-inject-${Date.now()}-${Math.random()}`;
+    const response = await POST(
+      new Request('http://localhost/api', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          type: 'word_klant_bezocht',
+          omschrijving: marker,
+          ['id`) SELECT wachtwoordHash FROM klanten -- ']: 'x',
+        }),
+      })
+    );
+
+    expect(response.status).toBe(201);
+    const [rows] = await getPool().query('SELECT * FROM activiteitenlog WHERE omschrijving = ?', [marker]);
+    expect((rows as unknown[]).length).toBe(1);
+
+    await getPool().query('DELETE FROM activiteitenlog WHERE omschrijving = ?', [marker]);
+  });
 });

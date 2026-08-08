@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { logActiviteit, ONBEKENDE_ACTOR } from '@/lib/logActiviteit';
 import { isBtwNummerVerplicht, normaliseerBtwNummer, valideerBtwNummer } from '@/lib/btwNummer';
+import { MINIMALE_WACHTWOORDLENGTE } from '@/lib/wachtwoordBeleid';
 import { PasswordInput } from '@/components/PasswordInput';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { Combobox } from '@/components/Combobox';
@@ -33,6 +34,12 @@ export function RegistrationForm() {
     const formData = new FormData(event.currentTarget);
     if (formData.get('password') !== formData.get('passwordConfirm')) {
       setPasswordError(t('passwordMismatch'));
+      return;
+    }
+    // Spiegelt valideerWachtwoord() server-side (register weigert dit sinds kort
+    // ook echt); dit is puur om de fout meteen bij het veld te tonen.
+    if (((formData.get('password') as string) ?? '').length < MINIMALE_WACHTWOORDLENGTE) {
+      setPasswordError(t('passwordTooShort'));
       return;
     }
     setPasswordError(null);

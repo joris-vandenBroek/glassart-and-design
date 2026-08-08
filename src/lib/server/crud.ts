@@ -1,5 +1,16 @@
 import { randomUUID } from 'crypto';
+import type { Pool } from 'mysql2/promise';
 import { getPool } from './db';
+import { controleerKolommen, TABLE_COLUMNS, VERBORGEN_KOLOMMEN } from './tableColumns';
+
+/**
+ * Zet een identifier veilig tussen backticks. De allowlist in `tableColumns.ts`
+ * is de echte bescherming; dit is de tweede laag, zodat een identifier die daar
+ * ooit langs komt alsnog niet uit zijn quotes kan breken.
+ */
+function quoteIdent(naam: string): string {
+  return `\`${naam.replace(/`/g, '``')}\``;
+}
 
 function serializeRow(data: Record<string, unknown>, jsonColumns: string[]): Record<string, unknown> {
   const result: Record<string, unknown> = {};
@@ -9,20 +20,45 @@ function serializeRow(data: Record<string, unknown>, jsonColumns: string[]): Rec
   return result;
 }
 
+/**
+ * Leest een JSON-kolom uit. mysql2 parseert een native JSON-kolom zelf al op een
+ * gewone `query()`, maar geeft hem als string terug zodra de waarde via een
+ * expressie of een oudere kolomdefinitie binnenkomt -- vandaar de dubbele weg.
+ * Stond eerder als losse ternary op zes plekken in de codebase.
+ */
+export function parseJsonKolom<T>(waarde: unknown, fallback: T): T {
+  if (typeof waarde === 'string') {
+    try {
+      return JSON.parse(waarde) as T;
+    } catch {
+      // Eén stukgelopen rij mag geen hele lijst laten crashen met een 500.
+      return fallback;
+    }
+  }
+  return (waarde ?? fallback) as T;
+}
+
 function deserializeRow<T>(row: Record<string, unknown>, jsonColumns: string[]): T {
   const result: Record<string, unknown> = { ...row };
   for (const column of jsonColumns) {
-    if (typeof result[column] === 'string') {
-      result[column] = JSON.parse(result[column] as string);
-    } else if (result[column] == null) {
-      result[column] = [];
-    }
+    result[column] = parseJsonKolom(result[column], []);
   }
   return result as T;
 }
 
+/**
+ * De kolommen die een SELECT mag teruggeven. `SELECT *` zou anders ook
+ * `wachtwoordHash` meesturen -- zie VERBORGEN_KOLOMMEN.
+ */
+function selectLijst(table: string): string {
+  const verborgen = VERBORGEN_KOLOMMEN[table];
+  if (!verborgen || verborgen.length === 0) return '*';
+  const zichtbaar = (TABLE_COLUMNS[table] ?? []).filter((kolom) => !verborgen.includes(kolom));
+  return zichtbaar.map(quoteIdent).join(', ');
+}
+
 export async function listRows<T>(table: string, jsonColumns: string[] = []): Promise<T[]> {
-  const [rows] = await getPool().query(`SELECT * FROM \`${table}\``);
+  const [rows] = await getPool().query(`SELECT ${selectLijst(table)} FROM ${quoteIdent(table)}`);
   return (rows as Record<string, unknown>[]).map((row) => deserializeRow<T>(row, jsonColumns));
 }
 
@@ -31,7 +67,10 @@ export async function getRow<T>(
   id: string,
   jsonColumns: string[] = []
 ): Promise<T | null> {
-  const [rows] = await getPool().query(`SELECT * FROM \`${table}\` WHERE id = ?`, [id]);
+  const [rows] = await getPool().query(
+    `SELECT ${selectLijst(table)} FROM ${quoteIdent(table)} WHERE id = ?`,
+    [id]
+  );
   const row = (rows as Record<string, unknown>[])[0];
   return row ? deserializeRow<T>(row, jsonColumns) : null;
 }
@@ -45,29 +84,41 @@ export async function insertRow<T extends { id?: string }>(
   const full = { id, ...data } as Record<string, unknown>;
   const serialized = serializeRow(full, jsonColumns);
   const columns = Object.keys(serialized);
+  controleerKolommen(table, columns);
   const placeholders = columns.map(() => '?').join(', ');
   const values = columns.map((column) => serialized[column]);
   await getPool().query(
-    `INSERT INTO \`${table}\` (${columns.map((c) => `\`${c}\``).join(', ')}) VALUES (${placeholders})`,
+    `INSERT INTO ${quoteIdent(table)} (${columns.map(quoteIdent).join(', ')}) VALUES (${placeholders})`,
     values
   );
   return full as T;
 }
 
+/**
+ * `connection` is optioneel zodat een aanroeper die al in een transactie zit
+ * dezelfde update kan draaien zónder de SQL met de hand te herbouwen -- wat
+ * /api/klanten/[id] eerder wél deed, en daarmee ook de kolomcontrole hieronder
+ * ontliep.
+ */
 export async function updateRow(
   table: string,
   id: string,
   data: Record<string, unknown>,
-  jsonColumns: string[] = []
+  jsonColumns: string[] = [],
+  connection?: Pick<Pool, 'query'>
 ): Promise<void> {
   const serialized = serializeRow(data, jsonColumns);
   const columns = Object.keys(serialized);
   if (columns.length === 0) return;
-  const assignments = columns.map((column) => `\`${column}\` = ?`).join(', ');
+  controleerKolommen(table, columns);
+  const assignments = columns.map((column) => `${quoteIdent(column)} = ?`).join(', ');
   const values = columns.map((column) => serialized[column]);
-  await getPool().query(`UPDATE \`${table}\` SET ${assignments} WHERE id = ?`, [...values, id]);
+  await (connection ?? getPool()).query(
+    `UPDATE ${quoteIdent(table)} SET ${assignments} WHERE id = ?`,
+    [...values, id]
+  );
 }
 
 export async function deleteRow(table: string, id: string): Promise<void> {
-  await getPool().query(`DELETE FROM \`${table}\` WHERE id = ?`, [id]);
+  await getPool().query(`DELETE FROM ${quoteIdent(table)} WHERE id = ?`, [id]);
 }

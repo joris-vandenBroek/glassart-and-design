@@ -125,12 +125,8 @@ export function VersturenNaarDrukkerDialog({
 
   async function handleVersturen() {
     const drukker = drukkers.find((d) => d.id === drukkerId);
-    const endpoint = process.env.NEXT_PUBLIC_MAIL_ENDPOINT_URL;
-    const secret = process.env.NEXT_PUBLIC_MAIL_SECRET;
     if (
       !drukker ||
-      !endpoint ||
-      !secret ||
       !mail ||
       heeftOntbrekendeKlantgegevens ||
       heeftOnvolledigeKlantgegevens
@@ -160,10 +156,19 @@ export function VersturenNaarDrukkerDialog({
     const subjectMetZendingnummer = `${zendingnummer} — ${mail.subject}`;
 
     try {
-      const response = await fetch(endpoint, {
+      // De ontvanger komt niet meer uit deze request mee: /api/mail zoekt het
+      // e-mailadres zelf bij `drukkerId` op, zodat de relay niet vanaf de client
+      // naar een willekeurig adres te sturen is.
+      const response = await fetch('/api/mail', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret, to: drukker.email, subject: subjectMetZendingnummer, body: mail.text, html: mail.html }),
+        body: JSON.stringify({
+          soort: 'drukker',
+          drukkerId,
+          subject: subjectMetZendingnummer,
+          body: mail.text,
+          html: mail.html,
+        }),
       });
       if (!response.ok) {
         setError(t('drukkerVersturenMailError'));

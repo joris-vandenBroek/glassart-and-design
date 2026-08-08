@@ -156,6 +156,7 @@
     "labelPassword": "Wachtwoord",
     "labelPasswordConfirm": "Wachtwoord opnieuw",
     "passwordMismatch": "Wachtwoorden komen niet overeen.",
+    "passwordTooShort": "Het wachtwoord moet minimaal 8 tekens lang zijn.",
     "labelAddress": "Adres",
     "labelPostcode": "Postcode",
     "labelCity": "Plaats",

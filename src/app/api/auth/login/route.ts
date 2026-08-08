@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getPool } from '@/lib/server/db';
 import { verifyPassword } from '@/lib/server/password';
-import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
+import { createSession, SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS } from '@/lib/server/session';
 import { withApiErrorHandling } from '@/lib/server/apiRoute';
 
 export const POST = withApiErrorHandling('POST /api/auth/login', async (request: Request) => {
@@ -18,12 +18,6 @@ export const POST = withApiErrorHandling('POST /api/auth/login', async (request:
 
   const sessionId = await createSession('klant', klant.id);
   const response = NextResponse.json({ status: klant.status }, { status: 200 });
-  response.cookies.set(SESSION_COOKIE_NAME, sessionId, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 60 * 24 * 30,
-  });
+  response.cookies.set(SESSION_COOKIE_NAME, sessionId, SESSION_COOKIE_OPTIONS);
   return response;
 });

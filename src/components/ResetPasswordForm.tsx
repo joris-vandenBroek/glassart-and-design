@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { Link } from '@/i18n/navigation';
 import { PasswordInput } from '@/components/PasswordInput';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
+import { MINIMALE_WACHTWOORDLENGTE } from '@/lib/wachtwoordBeleid';
 
 export function ResetPasswordForm() {
   const t = useTranslations('resetPasswordPage');
@@ -19,7 +20,7 @@ export function ResetPasswordForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    if (newPassword.length < 8) {
+    if (newPassword.length < MINIMALE_WACHTWOORDLENGTE) {
       setError(t('passwordTooShort'));
       return;
     }
