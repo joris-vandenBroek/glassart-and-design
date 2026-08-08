@@ -156,6 +156,7 @@
     "labelPassword": "Password",
     "labelPasswordConfirm": "Confirm password",
     "passwordMismatch": "Passwords do not match.",
+    "passwordTooShort": "The password must be at least 8 characters long.",
     "labelAddress": "Address",
     "labelPostcode": "Postal code",
     "labelCity": "City",

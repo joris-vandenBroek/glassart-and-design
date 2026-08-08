@@ -1,4 +1,4 @@
-import { logActiviteit, type ActiviteitActor } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import type { Bestelling } from '@/components/beheer/BestellingenSection';
 
 export interface AfrondResultaat {
@@ -12,10 +12,7 @@ export interface AfrondResultaat {
  * `mislukt` terecht -- de aanroeper hoort dat aan de medewerker te melden in
  * plaats van stilzwijgend alles als gelukt te tonen.
  */
-export async function afrondBestellingen(
-  bestellingen: Bestelling[],
-  actor: ActiviteitActor
-): Promise<AfrondResultaat> {
+export async function afrondBestellingen(bestellingen: Bestelling[]): Promise<AfrondResultaat> {
   const resultaten = await Promise.all(
     bestellingen.map(async (bestelling) => {
       try {
@@ -27,7 +24,7 @@ export async function afrondBestellingen(
         if (!response.ok) {
           return { bestelling, gelukt: false };
         }
-        void logActiviteit('bestelling_afgerond', actor, bestelling.bestelnr);
+        void logActiviteit('bestelling_afgerond', bestelling.bestelnr);
         return { bestelling, gelukt: true };
       } catch {
         return { bestelling, gelukt: false };

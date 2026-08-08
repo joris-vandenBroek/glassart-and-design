@@ -50,7 +50,7 @@ describe('kunstenaars + kunstenaarAfspraken routes', () => {
       ['exclusieveKlantIds']
     );
     createdKunstenaarIds.push(kunstenaar.id);
-    const response = await listKunstenaars();
+    const response = await listKunstenaars(req('GET'));
     const body = await response.json();
     const found = body.find((row: { id: string }) => row.id === kunstenaar.id);
     expect(found.naam).toBe('Anna');
@@ -123,8 +123,41 @@ describe('kunstenaars + kunstenaarAfspraken routes', () => {
     const body = await created.json();
     createdKunstenaarIds.push(body.id);
 
-    const getResponse = await getKunstenaar(req('GET'), { params: { id: body.id } });
+    const getResponse = await getKunstenaar(req('GET', undefined, cookie), { params: { id: body.id } });
     expect((await getResponse.json()).exclusieveKlantIds).toEqual(['klant-a', 'klant-b']);
+  });
+
+  // De collectiepagina is publiek, dus deze lijst met klant-UUID's lag mee op
+  // straat. `resolveOrderRight` heeft er maar twee dingen uit nodig -- is de
+  // lijst leeg, en sta ik erin -- en die blijven na redactie kloppen.
+  it('verbergt voor een publieke lezer wélke klanten exclusief zijn, maar niet dát het exclusief is', async () => {
+    const sessionId = await createSession('medewerker', 'staff-1');
+    const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
+    const created = await createKunstenaar(
+      req('POST', { naam: 'Fenna', exclusieveKlantIds: ['klant-a', 'klant-b'] }, cookie)
+    );
+    const body = await created.json();
+    createdKunstenaarIds.push(body.id);
+
+    const publiek = await (
+      await getKunstenaar(req('GET'), { params: { id: body.id } })
+    ).json();
+    expect(publiek.exclusieveKlantIds).not.toContain('klant-a');
+    expect(publiek.exclusieveKlantIds).not.toContain('klant-b');
+    // Nog steeds niet-leeg, anders zou het werk ineens voor iedereen bestelbaar lijken.
+    expect(publiek.exclusieveKlantIds.length).toBeGreaterThan(0);
+  });
+
+  it('laat een niet-exclusieve kunstenaar publiek een lege lijst houden', async () => {
+    const sessionId = await createSession('medewerker', 'staff-1');
+    const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
+    const created = await createKunstenaar(req('POST', { naam: 'Gijs', exclusieveKlantIds: [] }, cookie));
+    const body = await created.json();
+    createdKunstenaarIds.push(body.id);
+
+    const publiek = await (await listKunstenaars(req('GET'))).json();
+    const gevonden = publiek.find((rij: { id: string }) => rij.id === body.id);
+    expect(gevonden.exclusieveKlantIds).toEqual([]);
   });
 
   it('stores and retrieves prijsafspraken and prijsopslag only for staff, keyed by the kunstenaar id', async () => {

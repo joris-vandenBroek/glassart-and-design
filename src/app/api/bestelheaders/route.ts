@@ -3,9 +3,10 @@ import { randomUUID } from 'crypto';
 import { getPool } from '@/lib/server/db';
 import { requireKlant, requireMedewerker } from '@/lib/server/requireAuth';
 import { berekenBestellijnPrijs } from '@/lib/server/prijsmodule';
+import { volgendNummer } from '@/lib/server/counters';
+import { parseJsonKolom } from '@/lib/server/crud';
+import { withApiErrorHandling } from '@/lib/server/apiRoute';
 import type { PoolConnection } from 'mysql2/promise';
-
-const BESTELNR_PADDING = 5;
 
 interface LineInput {
   kunstwerkId: string;
@@ -50,22 +51,27 @@ async function checkOrderRight(
   const kunstenaar = (kunstenaarRows as Array<{ exclusieveKlantIds: string | string[] | null }>)[0];
   if (!kunstenaar) return false;
 
-  const exclusieveKlantIds: string[] =
-    typeof kunstenaar.exclusieveKlantIds === 'string'
-      ? JSON.parse(kunstenaar.exclusieveKlantIds)
-      : kunstenaar.exclusieveKlantIds ?? [];
+  const exclusieveKlantIds = parseJsonKolom<string[]>(kunstenaar.exclusieveKlantIds, []);
   if (exclusieveKlantIds.length === 0) return true;
   return exclusieveKlantIds.includes(klantId);
 }
 
-export async function POST(request: Request) {
+export const POST = withApiErrorHandling('POST /api/bestelheaders', async (request: Request) => {
   // klantId comes from the session, never from the request body -- otherwise anyone
   // could place an order "as" any customer just by putting a different id in the body.
   const klantId = await requireKlant(request);
   if (!klantId) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
-  const { lines } = (await request.json()) as { lines: LineInput[] };
+  const { lines } = (await request.json()) as { lines?: LineInput[] };
+
+  // Zonder deze controle liep een body zonder (of met een niet-array) `lines`
+  // stuk op de for-of eronder, en kwam er een 500 terug op wat gewoon een
+  // ongeldige request is. Een lége lijst blijft bewust toegestaan: dat is geen
+  // ongeldige request, en de beheerkant maakt er gebruik van.
+  if (!Array.isArray(lines)) {
+    return NextResponse.json({ error: 'invalid-body' }, { status: 400 });
+  }
 
   for (const line of lines) {
     const validationError = validateLine(line);
@@ -104,16 +110,8 @@ export async function POST(request: Request) {
         await connection.rollback();
         return NextResponse.json({ error: 'kunstwerk-not-found' }, { status: 400 });
       }
-      // mysql2 auto-parses a native JSON column to an array/object on a plain
-      // pool/connection.query() (confirmed during Task 3's review) -- only JSON.parse
-      // it when it actually comes back as a string, same guard as prijsmodule.ts's
-      // berekenPrijzenVoorAlleKunstwerken and crud.ts's deserializeRow.
-      const maatIds: string[] =
-        typeof kunstwerkRow.maatIds === 'string' ? JSON.parse(kunstwerkRow.maatIds) : kunstwerkRow.maatIds ?? [];
-      const materiaalIds: string[] =
-        typeof kunstwerkRow.materiaalIds === 'string'
-          ? JSON.parse(kunstwerkRow.materiaalIds)
-          : kunstwerkRow.materiaalIds ?? [];
+      const maatIds = parseJsonKolom<string[]>(kunstwerkRow.maatIds, []);
+      const materiaalIds = parseJsonKolom<string[]>(kunstwerkRow.materiaalIds, []);
 
       if (materiaalIds.length > 0 && !materiaalIds.includes(line.materiaalId)) {
         await connection.rollback();
@@ -162,16 +160,7 @@ export async function POST(request: Request) {
       resolvedLines.push({ ...line, resolvedPrijs: resultaat.status === 'vast' ? resultaat.prijs : null });
     }
 
-    const [counterRows] = await connection.query(
-      'UPDATE counters SET value = value + 1 WHERE id = ?',
-      ['bestelnummer']
-    );
-    void counterRows;
-    const [valueRows] = await connection.query('SELECT value FROM counters WHERE id = ?', [
-      'bestelnummer',
-    ]);
-    const nextValue = (valueRows as Array<{ value: number }>)[0].value;
-    const bestelnr = `BE-${String(nextValue).padStart(BESTELNR_PADDING, '0')}`;
+    const bestelnr = await volgendNummer(connection, 'bestelnummer', 'BE-');
 
     const headerId = randomUUID();
     await connection.query(
@@ -203,15 +192,17 @@ export async function POST(request: Request) {
 
     await connection.commit();
     return NextResponse.json({ id: headerId, bestelnr }, { status: 201 });
-  } catch {
+  } catch (error) {
+    // Rollbacken en dan doorgooien: de wrapper logt de fout en maakt er een 500
+    // van. De oude lege `catch` slikte elke oorzaak stilzwijgend in.
     await connection.rollback();
-    return NextResponse.json({ error: 'server-error' }, { status: 500 });
+    throw error;
   } finally {
     connection.release();
   }
-}
+});
 
-export async function GET(request: Request) {
+export const GET = withApiErrorHandling('GET /api/bestelheaders', async (request: Request) => {
   const url = new URL(request.url);
   const klantId = url.searchParams.get('klantId');
 
@@ -237,13 +228,29 @@ export async function GET(request: Request) {
     ? await pool.query('SELECT * FROM bestelheaders WHERE klantId = ?', [klantId])
     : await pool.query('SELECT * FROM bestelheaders');
 
-  const result = await Promise.all(
-    (headers as Array<Record<string, unknown>>).map(async (header) => {
-      const [lines] = await pool.query('SELECT * FROM bestellines WHERE bestelheaderId = ?', [
-        header.id,
-      ]);
-      return { ...header, lines };
-    })
+  const headerRijen = headers as Array<Record<string, unknown>>;
+  if (headerRijen.length === 0) {
+    return NextResponse.json([]);
+  }
+
+  // Eén query voor alle regels in plaats van één per bestelling: de beheerkant
+  // haalt hier élke bestelling op, en dat waren evenveel losse queries als er
+  // bestellingen zijn.
+  const headerIds = headerRijen.map((header) => header.id);
+  const [lines] = await pool.query('SELECT * FROM bestellines WHERE bestelheaderId IN (?)', [
+    headerIds,
+  ]);
+  const regelsPerHeader = new Map<unknown, Array<Record<string, unknown>>>();
+  for (const regel of lines as Array<Record<string, unknown>>) {
+    const bestaand = regelsPerHeader.get(regel.bestelheaderId);
+    if (bestaand) {
+      bestaand.push(regel);
+    } else {
+      regelsPerHeader.set(regel.bestelheaderId, [regel]);
+    }
+  }
+
+  return NextResponse.json(
+    headerRijen.map((header) => ({ ...header, lines: regelsPerHeader.get(header.id) ?? [] }))
   );
-  return NextResponse.json(result);
-}
+});

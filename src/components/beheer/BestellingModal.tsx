@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Modal } from '@/components/Modal';
 import { useAdminAuth } from '@/lib/useAdminAuth';
-import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import { useBestellingHistorie } from '@/lib/useBestellingHistorie';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { resolveBtwPercentage } from '@/lib/resolveBtw';
@@ -128,7 +128,7 @@ export function BestellingModal({
         body: JSON.stringify({ status: 'Te versturen naar drukker' }),
       });
       if (!response.ok) throw new Error('update failed');
-      void logActiviteit('bestelling_goedgekeurd', actorFromMedewerker(user), bestelling.bestelnr);
+      void logActiviteit('bestelling_goedgekeurd', bestelling.bestelnr);
       onUpdated({ ...bestelling, status: 'Te versturen naar drukker' });
     } catch {
       setError(t('bestellingenActionError'));
@@ -144,7 +144,7 @@ export function BestellingModal({
         body: JSON.stringify({ status: 'Afgewezen' }),
       });
       if (!response.ok) throw new Error('update failed');
-      void logActiviteit('bestelling_afgewezen', actorFromMedewerker(user), bestelling.bestelnr);
+      void logActiviteit('bestelling_afgewezen', bestelling.bestelnr);
       onUpdated({ ...bestelling, status: 'Afgewezen' });
     } catch {
       setError(t('bestellingenActionError'));
@@ -165,7 +165,7 @@ export function BestellingModal({
         body: JSON.stringify({ status: 'Betaald en afgerond' }),
       });
       if (!response.ok) throw new Error('update failed');
-      void logActiviteit('bestelling_gefactureerd', actorFromMedewerker(user), bestelling.bestelnr);
+      void logActiviteit('bestelling_gefactureerd', bestelling.bestelnr);
       onUpdated({ ...bestelling, status: 'Betaald en afgerond' });
     } catch {
       setError(t('bestellingenActionError'));
@@ -181,7 +181,7 @@ export function BestellingModal({
         body: JSON.stringify({ status }),
       });
       if (!response.ok) throw new Error('update failed');
-      void logActiviteit('bestelling_afronding_teruggezet', actorFromMedewerker(user), bestelling.bestelnr);
+      void logActiviteit('bestelling_afronding_teruggezet', bestelling.bestelnr);
       onUpdated({ ...bestelling, status });
     } catch {
       setError(t('bestellingenActionError'));
@@ -202,7 +202,7 @@ export function BestellingModal({
         }
       );
       if (!response.ok) throw new Error('update failed');
-      void logActiviteit('bestelling_prijs_vastgesteld', actorFromMedewerker(user), bestelling.bestelnr);
+      void logActiviteit('bestelling_prijs_vastgesteld', bestelling.bestelnr);
       onLinePrijsVastgesteld(bestelling.id, line.id, prijs);
     } catch {
       setError(t('bestellingenActionError'));
@@ -262,7 +262,7 @@ export function BestellingModal({
         }
       );
       if (!response.ok) throw new Error('update failed');
-      void logActiviteit('bestelling_regel_gewijzigd', actorFromMedewerker(user), bestelling.bestelnr);
+      void logActiviteit('bestelling_regel_gewijzigd', bestelling.bestelnr);
       onLineUpdated(bestelling.id, line.id, updates);
       cancelEditRegel();
     } catch {

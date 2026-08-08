@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { useRouter } from '@/i18n/navigation';
 import { GlassPanel } from '@/components/GlassPanel';
-import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import { AccountNav, type AccountSection } from './AccountNav';
 import { OrdersSection } from './OrdersSection';
 import { SettingsSection } from './SettingsSection';
@@ -29,7 +29,7 @@ export function AccountDashboard() {
   useEffect(() => {
     if (isHydrated && isCustomer && !hasLoggedVisit.current) {
       hasLoggedVisit.current = true;
-      void logActiviteit('account_bezocht', actorFromCustomer(user));
+      void logActiviteit('account_bezocht');
     }
   }, [isHydrated, isCustomer, user]);
 

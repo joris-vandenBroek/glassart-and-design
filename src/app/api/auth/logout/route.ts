@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
-import { destroySession, SESSION_COOKIE_NAME } from '@/lib/server/session';
+import { destroySession, sessionIdFromRequest, SESSION_COOKIE_NAME } from '@/lib/server/session';
+import { withApiErrorHandling } from '@/lib/server/apiRoute';
 
-export async function POST(request: Request) {
-  const cookie = request.headers.get('cookie') ?? '';
-  const match = cookie.match(new RegExp(`${SESSION_COOKIE_NAME}=([^;]+)`));
-  if (match) {
-    await destroySession(match[1]);
+export const POST = withApiErrorHandling('POST /api/auth/logout', async (request: Request) => {
+  const sessionId = sessionIdFromRequest(request);
+  if (sessionId) {
+    await destroySession(sessionId);
   }
   const response = NextResponse.json({ ok: true });
   response.cookies.set(SESSION_COOKIE_NAME, '', { path: '/', maxAge: 0 });
   return response;
-}
+});

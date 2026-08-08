@@ -18,14 +18,7 @@ vi.mock('@/i18n/navigation', () => ({
 }));
 
 vi.mock('@/lib/logActiviteit', () => ({
-  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
-  actorFromCustomer: (
-    user: { uid: string; email: string | null; companyName: string | null; contactPerson: string | null } | null
-  ) =>
-    user
-      ? { id: user.uid, email: user.email ?? 'Onbekend', naam: user.companyName ?? user.contactPerson ?? 'Onbekend' }
-      : { id: null, email: 'Onbekend', naam: 'Onbekend' },
-}));
+  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),}));
 
 function renderDashboard() {
   return render(
@@ -91,11 +84,7 @@ describe('AccountDashboard', () => {
     renderDashboard();
     await waitFor(() => expect(screen.getByTestId('orders-section')).toBeInTheDocument());
     expect(logActiviteitMock).toHaveBeenCalledTimes(1);
-    expect(logActiviteitMock).toHaveBeenCalledWith('account_bezocht', {
-      id: 'uid-1',
-      email: 'klant@example.com',
-      naam: 'Testbedrijf BV',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith('account_bezocht');
   });
 
   it('does not log account_bezocht when redirected for not being logged in', async () => {

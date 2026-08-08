@@ -9,7 +9,7 @@ import { HelpHint } from '@/components/HelpHint';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 import { useAdminAuth } from '@/lib/useAdminAuth';
-import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import type { Kunstenaar } from './kunstenaarTypes';
 import type { Klant } from './KlantenSection';
 import type { Kunstwerk } from './materiaalTypes';
@@ -295,7 +295,6 @@ export function KunstenaarsSection({
     if (success) {
       void logActiviteit(
         modalState.mode === 'add' ? 'kunstenaar_toegevoegd' : 'kunstenaar_gewijzigd',
-        actorFromMedewerker(user),
         naam
       );
       closeModal();
@@ -326,7 +325,7 @@ export function KunstenaarsSection({
       success = false;
     }
     if (success) {
-      void logActiviteit('kunstenaar_verwijderd', actorFromMedewerker(user), modalState.kunstenaar.naam);
+      void logActiviteit('kunstenaar_verwijderd', modalState.kunstenaar.naam);
       closeModal();
     } else {
       setActionError(t('kunstenaarsActionError'));

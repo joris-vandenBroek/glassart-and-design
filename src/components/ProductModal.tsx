@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useCart } from '@/lib/useCart';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
-import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import { useOverlayDismiss } from '@/lib/useOverlayDismiss';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
 import { resolveOrderRight } from '@/lib/resolveOrderRight';
@@ -260,7 +260,7 @@ export function ProductModal({
           quantity: quantityNum,
         });
       }
-      void logActiviteit('mandje_toegevoegd', actorFromCustomer(user));
+      void logActiviteit('mandje_toegevoegd');
       setIsConfirmed(true);
       closeTimeoutRef.current = setTimeout(() => {
         closeTimeoutRef.current = null;
@@ -286,7 +286,7 @@ export function ProductModal({
         prijs: null,
         quantity: quantityNum,
       });
-      void logActiviteit('mandje_eigen_maat_toegevoegd', actorFromCustomer(user), kunstwerk.naam);
+      void logActiviteit('mandje_eigen_maat_toegevoegd', kunstwerk.naam);
     } else {
       const gekozenMaat = beschikbareMaten.find((maat) => maat.id === maatId);
       if (!gekozenMaat || !prijsRegel) {
@@ -303,7 +303,7 @@ export function ProductModal({
         prijs: prijsRegel.prijs,
         quantity: quantityNum,
       });
-      void logActiviteit('mandje_toegevoegd', actorFromCustomer(user), kunstwerk.naam);
+      void logActiviteit('mandje_toegevoegd', kunstwerk.naam);
     }
     setIsConfirmed(true);
     closeTimeoutRef.current = setTimeout(() => {

@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
-import { logActiviteit, ONBEKENDE_ACTOR } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import { isBtwNummerVerplicht, normaliseerBtwNummer, valideerBtwNummer } from '@/lib/btwNummer';
+import { MINIMALE_WACHTWOORDLENGTE } from '@/lib/wachtwoordBeleid';
 import { PasswordInput } from '@/components/PasswordInput';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { Combobox } from '@/components/Combobox';
@@ -24,7 +25,7 @@ export function RegistrationForm() {
   useEffect(() => {
     if (!hasLoggedVisit.current) {
       hasLoggedVisit.current = true;
-      void logActiviteit('word_klant_bezocht', ONBEKENDE_ACTOR);
+      void logActiviteit('word_klant_bezocht');
     }
   }, []);
 
@@ -33,6 +34,12 @@ export function RegistrationForm() {
     const formData = new FormData(event.currentTarget);
     if (formData.get('password') !== formData.get('passwordConfirm')) {
       setPasswordError(t('passwordMismatch'));
+      return;
+    }
+    // Spiegelt valideerWachtwoord() server-side (register weigert dit sinds kort
+    // ook echt); dit is puur om de fout meteen bij het veld te tonen.
+    if (((formData.get('password') as string) ?? '').length < MINIMALE_WACHTWOORDLENGTE) {
+      setPasswordError(t('passwordTooShort'));
       return;
     }
     setPasswordError(null);
@@ -85,7 +92,12 @@ export function RegistrationForm() {
         setSubmitError(body.error === 'email-in-use' ? t('emailInUseError') : t('submitError'));
         return;
       }
-      void logActiviteit('word_klant_aanvraag', { id: null, email, naam: companyName });
+      // Wie de aanvraag deed kan de server hier niet uit een sessie afleiden --
+      // de aanvrager is per definitie nog niet ingelogd. Het bedrijf gaat daarom
+      // mee als omschrijving, zodat het beheerscherm nog steeds ziet wie zich
+      // meldde; actorEmail/actorNaam blijven bewust "Onbekend", want die waarde
+      // is niet geverifieerd.
+      void logActiviteit('word_klant_aanvraag', `${companyName} (${email})`);
       setIsSubmitted(true);
     } catch {
       setSubmitError(t('submitError'));

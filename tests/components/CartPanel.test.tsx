@@ -11,14 +11,7 @@ const logActiviteitMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
 
 vi.mock('@/lib/logActiviteit', () => ({
-  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
-  actorFromCustomer: (
-    user: { uid: string; email: string | null; companyName: string | null; contactPerson: string | null } | null
-  ) =>
-    user
-      ? { id: user.uid, email: user.email ?? 'Onbekend', naam: user.companyName ?? user.contactPerson ?? 'Onbekend' }
-      : { id: null, email: 'Onbekend', naam: 'Onbekend' },
-}));
+  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),}));
 
 vi.mock('@/i18n/navigation', () => ({
   Link: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
@@ -325,9 +318,11 @@ describe('CartPanel', () => {
     expect(screen.queryByTestId('cart-place-order-error')).not.toBeInTheDocument();
   });
 
-  it('sends a confirmation email via fetch when the order succeeds and mail env vars are set', async () => {
-    vi.stubEnv('NEXT_PUBLIC_MAIL_ENDPOINT_URL', 'https://example.com/mail.php');
-    vi.stubEnv('NEXT_PUBLIC_MAIL_SECRET', 'test-secret');
+  // De ontvanger en het relay-secret zitten bewust niet meer in deze request:
+  // /api/mail stuurt een bestelbevestiging altijd naar het adres van de
+  // ingelogde klant zelf. Het niet-geconfigureerd-geval is daarmee ook een
+  // servergeval geworden -- zie tests/app/api/mail.test.ts.
+  it('sends a confirmation email via /api/mail when the order succeeds', async () => {
     await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
     fireEvent.click(screen.getByTestId('cart-icon'));
@@ -336,12 +331,11 @@ describe('CartPanel', () => {
 
     await screen.findByTestId('cart-order-confirmation');
     await waitFor(() =>
-      expect(fetchMock).toHaveBeenCalledWith('https://example.com/mail.php', {
+      expect(fetchMock).toHaveBeenCalledWith('/api/mail', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          secret: 'test-secret',
-          to: 'klant@example.com',
+          soort: 'bestelbevestiging',
           subject: 'Bevestiging van uw bestelling — Glassart & Design',
           body: 'Uw bestelling is door ons ontvangen en zal zo spoedig mogelijk worden verwerkt.',
         }),
@@ -349,22 +343,7 @@ describe('CartPanel', () => {
     );
   });
 
-  it('does not call fetch when the mail endpoint/secret env vars are not set', async () => {
-    vi.stubEnv('NEXT_PUBLIC_MAIL_ENDPOINT_URL', '');
-    vi.stubEnv('NEXT_PUBLIC_MAIL_SECRET', '');
-    await renderCartPanel();
-    fireEvent.click(screen.getByTestId('seed-cart'));
-    fireEvent.click(screen.getByTestId('cart-icon'));
-    await waitFor(() => expect(screen.getByTestId('cart-place-order')).not.toBeDisabled());
-    fireEvent.click(screen.getByTestId('cart-place-order'));
-
-    await screen.findByTestId('cart-order-confirmation');
-    expect(fetchMock).not.toHaveBeenCalledWith('https://example.com/mail.php', expect.anything());
-  });
-
   it('still shows the order confirmation, plus a soft warning, if sending the email fails', async () => {
-    vi.stubEnv('NEXT_PUBLIC_MAIL_ENDPOINT_URL', 'https://example.com/mail.php');
-    vi.stubEnv('NEXT_PUBLIC_MAIL_SECRET', 'test-secret');
     mailRejects = true;
     await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
@@ -379,8 +358,6 @@ describe('CartPanel', () => {
   });
 
   it('shows the email warning when the mail endpoint responds with a non-ok status', async () => {
-    vi.stubEnv('NEXT_PUBLIC_MAIL_ENDPOINT_URL', 'https://example.com/mail.php');
-    vi.stubEnv('NEXT_PUBLIC_MAIL_SECRET', 'test-secret');
     mailResponse = { ok: false };
     await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
@@ -471,7 +448,6 @@ describe('CartPanel', () => {
     await screen.findByTestId('cart-order-confirmation');
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'bestelling_geplaatst',
-      { id: 'uid-1', email: 'klant@example.com', naam: 'Testbedrijf BV' },
       'GD-00001'
     );
   });

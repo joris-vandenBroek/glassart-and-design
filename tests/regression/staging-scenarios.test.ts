@@ -414,12 +414,12 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
       }
       stap('Beide bestellingen goedgekeurd -> "Te versturen naar drukker"');
 
-      const drukkerStandaard = await insertRow<{ id: string }>('drukkers', {
+      const drukkerStandaard = await insertRow<{ id: string; naam: string }>('drukkers', {
         naam: 'AUTOTEST Drukker Standaard',
         email: 'autotest-standaard@example.com',
         standaard: true,
       } as never);
-      const drukkerAlternatief = await insertRow<{ id: string }>('drukkers', {
+      const drukkerAlternatief = await insertRow<{ id: string; naam: string }>('drukkers', {
         naam: 'AUTOTEST Drukker Alternatief',
         email: 'autotest-alternatief@example.com',
         standaard: false,
@@ -686,7 +686,7 @@ describe('Bestelling-levenscyclus -- plaatsen tot verstuurd naar drukker', () =>
       expect(goedkeuren.status).toBe(200);
       stap('Bestelling goedgekeurd -> "Te versturen naar drukker"');
 
-      const drukker = await insertRow<{ id: string }>('drukkers', {
+      const drukker = await insertRow<{ id: string; naam: string }>('drukkers', {
         naam: 'AUTOTEST Drukker Levenscyclus',
         email: 'autotest-levenscyclus-drukker@example.com',
         standaard: false,
@@ -1181,7 +1181,7 @@ describe('Bestelling afronden -- van plaatsing tot "Afgerond" met bestelstatusHi
       });
       expect(goedkeuren.status).toBe(200);
 
-      const drukker = await insertRow<{ id: string }>('drukkers', {
+      const drukker = await insertRow<{ id: string; naam: string }>('drukkers', {
         naam: 'AUTOTEST Drukker Afronden',
         email: 'autotest-afronden-drukker@example.com',
         standaard: false,

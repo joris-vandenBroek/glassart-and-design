@@ -17,14 +17,7 @@ let authUser: Record<string, unknown> | null = null;
 let bestelinstellingenData: unknown = null;
 
 vi.mock('@/lib/logActiviteit', () => ({
-  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
-  actorFromCustomer: (
-    user: { uid: string; email: string | null; companyName: string | null; contactPerson: string | null } | null
-  ) =>
-    user
-      ? { id: user.uid, email: user.email ?? 'Onbekend', naam: user.companyName ?? user.contactPerson ?? 'Onbekend' }
-      : { id: null, email: 'Onbekend', naam: 'Onbekend' },
-}));
+  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),}));
 
 const KUNSTWERK: Kunstwerk = {
   id: 'kw-1',
@@ -542,7 +535,6 @@ describe('ProductModal', () => {
     fireEvent.click(screen.getByTestId('product-modal-confirm'));
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'mandje_toegevoegd',
-      { id: 'uid-1', email: 'klant@example.com', naam: 'Testbedrijf BV' },
       'Hotel paneel'
     );
   });
@@ -556,7 +548,6 @@ describe('ProductModal', () => {
     fireEvent.click(screen.getByTestId('product-modal-confirm'));
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'mandje_toegevoegd',
-      { id: null, email: 'Onbekend', naam: 'Onbekend' },
       'Hotel paneel'
     );
   });
@@ -747,7 +738,6 @@ describe('ProductModal', () => {
     });
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'mandje_eigen_maat_toegevoegd',
-      { id: null, email: 'Onbekend', naam: 'Onbekend' },
       'Hotel paneel'
     );
   });
@@ -868,11 +858,7 @@ describe('ProductModal', () => {
       prijs: 360,
       quantity: 1,
     });
-    expect(logActiviteitMock).toHaveBeenCalledWith('mandje_toegevoegd', {
-      id: null,
-      email: 'Onbekend',
-      naam: 'Onbekend',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith('mandje_toegevoegd');
   });
 
   it('shows the materiaal select but hides the maat select for a maatloos kunstwerk that still has a materiaal, showing free-size inputs', () => {

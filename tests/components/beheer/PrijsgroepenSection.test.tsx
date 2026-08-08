@@ -12,12 +12,7 @@ vi.mock('@/lib/useAdminAuth', () => ({
 }));
 
 vi.mock('@/lib/logActiviteit', () => ({
-  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
-  actorFromMedewerker: (user: { uid: string; email: string | null } | null) =>
-    user
-      ? { id: user.uid, email: user.email ?? 'Onbekend', naam: user.email ?? 'Onbekend' }
-      : { id: null, email: 'Onbekend', naam: 'Onbekend' },
-}));
+  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),}));
 
 const PRIJSGROEPEN: Prijsgroep[] = [
   { id: 'pg-1', naam: 'Standaard', kortingspercentage: 0, opslagpercentage: null },
@@ -85,7 +80,6 @@ describe('PrijsgroepenSection', () => {
     await waitFor(() => expect(screen.queryByTestId('prijsgroep-modal')).not.toBeInTheDocument());
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'prijsgroep_toegevoegd',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'VIP'
     );
   });
@@ -129,7 +123,6 @@ describe('PrijsgroepenSection', () => {
     );
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'prijsgroep_gewijzigd',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'Wholesale'
     );
   });
@@ -176,7 +169,6 @@ describe('PrijsgroepenSection', () => {
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith('pg-1'));
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'prijsgroep_verwijderd',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'Standaard'
     );
   });

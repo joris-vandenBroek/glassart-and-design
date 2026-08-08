@@ -61,12 +61,7 @@ vi.mock('@/lib/useAdminAuth', () => ({
 }));
 
 vi.mock('@/lib/logActiviteit', () => ({
-  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
-  actorFromMedewerker: (user: { uid: string; email: string | null } | null) =>
-    user
-      ? { id: user.uid, email: user.email ?? 'Onbekend', naam: user.email ?? 'Onbekend' }
-      : { id: null, email: 'Onbekend', naam: 'Onbekend' },
-}));
+  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),}));
 
 const KLANTEN: Klant[] = [
   {
@@ -258,7 +253,6 @@ describe('KunstenaarsSection', () => {
     expect(onRefetch).toHaveBeenCalled();
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'kunstenaar_toegevoegd',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'Nieuwe Kunstenaar'
     );
   });
@@ -472,7 +466,6 @@ describe('KunstenaarsSection', () => {
     ]);
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'kunstenaar_gewijzigd',
-      expect.anything(),
       'Sabrina G.'
     );
   });
@@ -484,7 +477,6 @@ describe('KunstenaarsSection', () => {
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith('ka-1'));
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'kunstenaar_verwijderd',
-      expect.anything(),
       'Sabrina Glasser'
     );
   });
@@ -608,7 +600,6 @@ describe('KunstenaarsSection', () => {
     await waitFor(() => expect(screen.queryByTestId('kunstenaar-modal')).not.toBeInTheDocument());
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'kunstenaar_toegevoegd',
-      expect.anything(),
       'Nieuw'
     );
   });

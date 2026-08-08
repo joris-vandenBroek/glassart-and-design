@@ -4,8 +4,7 @@ import { updateRow, deleteRow } from '@/lib/server/crud';
 import { requireMedewerker, requireKlant } from '@/lib/server/requireAuth';
 import { withApiErrorHandling } from '@/lib/server/apiRoute';
 import { checkBtwNummerUpdate } from '@/lib/server/btwNummerCheck';
-
-const KLANTNR_PADDING = 5;
+import { volgendNummer } from '@/lib/server/counters';
 
 type KlantnummerToekenningResultaat =
   | { gevonden: false }
@@ -17,9 +16,10 @@ type KlantnummerToekenningResultaat =
  * gelijktijdige goedkeuringen (dubbelklik, twee medewerkers) niet allebei een
  * nummer uitdelen: wie al een nummer heeft, houdt het.
  *
- * Bewust niet via `updateRow()`: die draait op de pool en zou dus buiten deze
- * transactie vallen. De SQL hieronder is een kopie van `updateRow` zonder de
- * JSON-serialisatie -- `klanten` heeft geen JSON-kolommen.
+ * `updateRow()` krijgt de transactie-connection mee: die stond hier eerder met
+ * de hand nagebouwd omdat `updateRow` alleen op de pool draaide, maar daarmee
+ * liep deze update ook langs de kolomcontrole heen die elke andere schrijfactie
+ * wél passeert.
  */
 async function updateEnKenKlantnummerToe(
   id: string,
@@ -36,23 +36,9 @@ async function updateEnKenKlantnummerToe(
       return { gevonden: false };
     }
 
-    let klantnr = rij.klantnr;
-    if (!klantnr) {
-      await connection.query('UPDATE counters SET value = value + 1 WHERE id = ?', ['klantnummer']);
-      const [valueRows] = await connection.query('SELECT value FROM counters WHERE id = ?', [
-        'klantnummer',
-      ]);
-      const nextValue = (valueRows as Array<{ value: number }>)[0].value;
-      klantnr = `KL-${String(nextValue).padStart(KLANTNR_PADDING, '0')}`;
-    }
+    const klantnr = rij.klantnr || (await volgendNummer(connection, 'klantnummer', 'KL-'));
 
-    const velden: Record<string, unknown> = { ...data, klantnr };
-    const kolommen = Object.keys(velden);
-    const assignments = kolommen.map((kolom) => `\`${kolom}\` = ?`).join(', ');
-    await connection.query(`UPDATE klanten SET ${assignments} WHERE id = ?`, [
-      ...kolommen.map((kolom) => velden[kolom]),
-      id,
-    ]);
+    await updateRow('klanten', id, { ...data, klantnr }, [], connection);
 
     await connection.commit();
     return { gevonden: true, klantnr };

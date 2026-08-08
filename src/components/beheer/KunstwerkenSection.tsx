@@ -10,7 +10,7 @@ import { ModalTabs } from '@/components/ModalTabs';
 import { ProductModal } from '@/components/ProductModal';
 import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 import { useAdminAuth } from '@/lib/useAdminAuth';
-import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import type { Kunstwerk, Segment, Materiaal, Materiaalsoort, Maat, KunstwerkFormaat, Stijl, Onderwerp } from './materiaalTypes';
 import { isVierkanteMaat } from './materiaalTypes';
 import type { Kunstenaar } from './kunstenaarTypes';
@@ -157,7 +157,7 @@ export function KunstwerkenSection({
     setPendingNieuweSegmentNaam(naam);
     const success = await onAddSegment({ omschrijving: naam });
     if (success) {
-      void logActiviteit('segment_toegevoegd', actorFromMedewerker(user), naam);
+      void logActiviteit('segment_toegevoegd', naam);
     } else {
       setPendingNieuweSegmentNaam(null);
       setSegmentToevoegenError(t('kunstwerkenNieuweSegmentError'));
@@ -177,7 +177,7 @@ export function KunstwerkenSection({
     setPendingNieuweStijlNaam(naam);
     const success = await onAddStijl({ omschrijving: naam });
     if (success) {
-      void logActiviteit('stijl_toegevoegd', actorFromMedewerker(user));
+      void logActiviteit('stijl_toegevoegd');
     } else {
       setPendingNieuweStijlNaam(null);
       setStijlToevoegenError(t('kunstwerkenNieuweStijlError'));
@@ -199,7 +199,7 @@ export function KunstwerkenSection({
     setPendingNieuweOnderwerpNaam(naam);
     const success = await onAddOnderwerp({ omschrijving: naam });
     if (success) {
-      void logActiviteit('onderwerp_toegevoegd', actorFromMedewerker(user));
+      void logActiviteit('onderwerp_toegevoegd');
     } else {
       setPendingNieuweOnderwerpNaam(null);
       setOnderwerpToevoegenError(t('kunstwerkenNieuweOnderwerpError'));
@@ -490,7 +490,6 @@ export function KunstwerkenSection({
     if (success) {
       void logActiviteit(
         modalState.mode === 'add' ? 'kunstwerk_toegevoegd' : 'kunstwerk_gewijzigd',
-        actorFromMedewerker(user),
         naam
       );
       closeModal();
@@ -503,7 +502,7 @@ export function KunstwerkenSection({
     if (modalState?.mode !== 'edit') return;
     const success = await onRemove(modalState.kunstwerk.id);
     if (success) {
-      void logActiviteit('kunstwerk_verwijderd', actorFromMedewerker(user), modalState.kunstwerk.naam);
+      void logActiviteit('kunstwerk_verwijderd', modalState.kunstwerk.naam);
       closeModal();
     } else {
       setActionError(t('kunstwerkenActionError'));
@@ -519,7 +518,7 @@ export function KunstwerkenSection({
       const nieuweNaam = kunstwerk.omschrijvingNl || kunstwerk.id;
       const success = await onUpdate(id, { ...data, naam: nieuweNaam });
       if (success) {
-        void logActiviteit('kunstwerk_gewijzigd', actorFromMedewerker(user), nieuweNaam);
+        void logActiviteit('kunstwerk_gewijzigd', nieuweNaam);
       }
     }
     setBackfillBezig(false);
@@ -541,7 +540,7 @@ export function KunstwerkenSection({
       const { id, ...data } = kunstwerk;
       const success = await onUpdate(id, { ...data, materiaalIds: alleMateriaalIds, maatIds: alleMaatIds });
       if (success) {
-        void logActiviteit('kunstwerk_gewijzigd', actorFromMedewerker(user));
+        void logActiviteit('kunstwerk_gewijzigd');
       }
     }
     setBackfillBezig(false);

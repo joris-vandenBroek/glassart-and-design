@@ -7,7 +7,7 @@ import { Modal } from '@/components/Modal';
 import { HelpHint } from '@/components/HelpHint';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
-import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import type { Prijsgroep } from './materiaalTypes';
 import type { Klant } from './KlantenSection';
 
@@ -87,7 +87,6 @@ export function PrijsgroepenSection({
     if (success) {
       void logActiviteit(
         modalState.mode === 'add' ? 'prijsgroep_toegevoegd' : 'prijsgroep_gewijzigd',
-        actorFromMedewerker(user),
         naam
       );
       closeModal();
@@ -105,7 +104,7 @@ export function PrijsgroepenSection({
     }
     const success = await onRemove(modalState.prijsgroep.id);
     if (success) {
-      void logActiviteit('prijsgroep_verwijderd', actorFromMedewerker(user), modalState.prijsgroep.naam);
+      void logActiviteit('prijsgroep_verwijderd', modalState.prijsgroep.naam);
       closeModal();
     } else {
       setActionError(t('prijsgroepenActionError'));

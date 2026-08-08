@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Modal } from '@/components/Modal';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
-import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import { useDrukkerZendingen, type DrukkerZending } from '@/lib/useDrukkerZendingen';
 import type { Drukker } from './materiaalTypes';
 import type { Bestelling } from './BestellingenSection';
@@ -111,7 +111,7 @@ export function DrukkerModal({
           body: JSON.stringify({ status: 'Te factureren' }),
         });
         if (!response.ok) throw new Error('update failed');
-        void logActiviteit('bestelling_afgerond', actorFromMedewerker(user), bestelling.bestelnr);
+        void logActiviteit('bestelling_afgerond', bestelling.bestelnr);
         onBestellingUpdated({ ...bestelling, status: 'Te factureren' });
         afgerond += 1;
       } catch {
@@ -134,7 +134,6 @@ export function DrukkerModal({
     if (success) {
       void logActiviteit(
         state.mode === 'add' ? 'drukker_toegevoegd' : 'drukker_gewijzigd',
-        actorFromMedewerker(user),
         fields.naam
       );
       onClose();
@@ -151,7 +150,7 @@ export function DrukkerModal({
     }
     const success = await onRemove(state.drukker.id);
     if (success) {
-      void logActiviteit('drukker_verwijderd', actorFromMedewerker(user), state.drukker.naam);
+      void logActiviteit('drukker_verwijderd', state.drukker.naam);
       onClose();
     } else {
       setActionError(t('drukkersActionError'));

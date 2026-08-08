@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { HelpHint } from '@/components/HelpHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
-import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import type { Maat, Materiaal, Materiaalsoort } from './materiaalTypes';
 
 interface PrijsmatrixRegel {
@@ -129,7 +129,6 @@ export function PrijsmatrixSection({
         const maat = maten!.find((m) => m.id === maatId);
         void logActiviteit(
           'prijsmatrix_gewijzigd',
-          actorFromMedewerker(user),
           maat ? `${maat.breedte}×${maat.hoogte} — ${materiaalNaam}` : materiaalNaam
         );
       });

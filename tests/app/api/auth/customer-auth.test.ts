@@ -75,11 +75,40 @@ describe('customer auth routes', () => {
   });
 
   it('rejects registering the same email twice', async () => {
-    await register(jsonRequest({ email: 'dup@example.com', password: 'x', companyName: 'A' }));
+    const first = await register(
+      jsonRequest({ email: 'dup@example.com', password: 'geheim123', companyName: 'A' })
+    );
+    // Anders zou deze test ook slagen wanneer de eerste registratie al faalde.
+    expect(first.status).toBe(201);
     const second = await register(
-      jsonRequest({ email: 'dup@example.com', password: 'x', companyName: 'A' })
+      jsonRequest({ email: 'dup@example.com', password: 'geheim123', companyName: 'A' })
     );
     expect(second.status).toBe(400);
+    expect(await second.json()).toEqual({ error: 'email-in-use' });
+  });
+
+  // Registratie controleerde het wachtwoord helemaal niet -- een lege string werd
+  // gewoon gehasht en opgeslagen.
+  it('weigert een registratie zonder of met een te kort wachtwoord', async () => {
+    for (const password of [undefined, '', 'kort']) {
+      const response = await register(
+        jsonRequest({ email: 'zwak@example.com', password, companyName: 'A' })
+      );
+      expect(response.status).toBe(400);
+    }
+    const [rows] = await getPool().query('SELECT id FROM klanten WHERE email = ?', ['zwak@example.com']);
+    expect((rows as unknown[]).length).toBe(0);
+  });
+
+  it('normaliseert het e-mailadres bij registratie', async () => {
+    const response = await register(
+      jsonRequest({ email: '  Hoofdletter@Example.COM ', password: 'geheim123', companyName: 'A' })
+    );
+    expect(response.status).toBe(201);
+    const [rows] = await getPool().query('SELECT email FROM klanten WHERE email = ?', [
+      'hoofdletter@example.com',
+    ]);
+    expect((rows as unknown[]).length).toBe(1);
   });
 
   it('logs in with correct credentials and sets a session cookie', async () => {
@@ -94,8 +123,13 @@ describe('customer auth routes', () => {
   });
 
   it('rejects login with wrong password', async () => {
-    await register(jsonRequest({ email: 'wrong@example.com', password: 'right', companyName: 'A' }));
-    const response = await login(jsonRequest({ email: 'wrong@example.com', password: 'wrong' }));
+    const registratie = await register(
+      jsonRequest({ email: 'wrong@example.com', password: 'juistwachtwoord', companyName: 'A' })
+    );
+    // Zonder deze controle zou de 401 hieronder net zo goed "klant bestaat niet"
+    // kunnen betekenen.
+    expect(registratie.status).toBe(201);
+    const response = await login(jsonRequest({ email: 'wrong@example.com', password: 'foutwachtwoord' }));
     expect(response.status).toBe(401);
   });
 

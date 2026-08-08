@@ -197,4 +197,58 @@ describe('klanten self-service route', () => {
     const [rows] = await getPool().query('SELECT klantnr FROM klanten WHERE id = ?', [klant.id]);
     expect((rows as Array<{ klantnr: string }>)[0].klantnr).toBe('KL-09999');
   });
+
+  // De uniciteitscontrole die bij registratie wél gebeurt ontbrak hier, dus liep
+  // dit op de UNIQUE-index stuk als een 500 in plaats van een uitlegbare fout.
+  it('weigert een e-mailadres dat al bij een andere klant hoort', async () => {
+    const { klant: bestaande } = await createKlantWithCookie();
+    const { cookie } = await createKlantWithCookie();
+
+    const [rows] = await getPool().query('SELECT email FROM klanten WHERE id = ?', [bestaande.id]);
+    const bezetAdres = (rows as Array<{ email: string }>)[0].email;
+
+    const response = await patchMe(req('PATCH', { email: bezetAdres }, cookie));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'email-in-use' });
+  });
+
+  it('weigert een onbruikbaar e-mailadres en normaliseert een geldig adres', async () => {
+    const { klant, cookie } = await createKlantWithCookie();
+
+    expect((await patchMe(req('PATCH', { email: 'geen-apenstaartje' }, cookie))).status).toBe(400);
+
+    const nieuw = `Me-Nieuw-${Date.now()}@Example.COM`;
+    expect((await patchMe(req('PATCH', { email: nieuw }, cookie))).status).toBe(200);
+    const [rows] = await getPool().query('SELECT email FROM klanten WHERE id = ?', [klant.id]);
+    expect((rows as Array<{ email: string }>)[0].email).toBe(nieuw.trim().toLowerCase());
+  });
+
+  // Wijzigt de klant zijn wachtwoord, dan horen andere apparaten eruit te vliegen
+  // -- maar niet het apparaat waarop hij de wijziging doet.
+  it('gooit andere sessies weg bij een wachtwoordwijziging, maar niet de huidige', async () => {
+    const { klant, cookie } = await createKlantWithCookie();
+    const andereSessie = await createSession('klant', klant.id);
+
+    const response = await patchMe(req('PATCH', { password: 'nieuwwachtwoord' }, cookie));
+    expect(response.status).toBe(200);
+
+    const [rows] = await getPool().query('SELECT id FROM sessions WHERE userType = ? AND userId = ?', [
+      'klant',
+      klant.id,
+    ]);
+    const overgebleven = (rows as Array<{ id: string }>).map((rij) => rij.id);
+    expect(overgebleven).not.toContain(andereSessie);
+    expect(overgebleven).toContain(cookie.split('=')[1]);
+  });
+
+  it('weigert een te kort nieuw wachtwoord', async () => {
+    const { klant, cookie } = await createKlantWithCookie();
+    const response = await patchMe(req('PATCH', { password: 'kort' }, cookie));
+    expect(response.status).toBe(400);
+
+    const [rows] = await getPool().query('SELECT wachtwoordHash FROM klanten WHERE id = ?', [klant.id]);
+    expect(
+      await verifyPassword('geheim123', (rows as Array<{ wachtwoordHash: string }>)[0].wachtwoordHash)
+    ).toBe(true);
+  });
 });

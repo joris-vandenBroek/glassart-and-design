@@ -14,12 +14,7 @@ vi.mock('@/lib/useAdminAuth', () => ({
 }));
 
 vi.mock('@/lib/logActiviteit', () => ({
-  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
-  actorFromMedewerker: (user: { uid: string; email: string | null } | null) =>
-    user
-      ? { id: user.uid, email: user.email ?? 'Onbekend', naam: user.email ?? 'Onbekend' }
-      : { id: null, email: 'Onbekend', naam: 'Onbekend' },
-}));
+  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),}));
 
 const DRUKKERS: Drukker[] = [
   {
@@ -137,7 +132,6 @@ describe('DrukkersSection', () => {
     await waitFor(() => expect(screen.queryByTestId('drukker-modal')).not.toBeInTheDocument());
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'drukker_toegevoegd',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'Nieuwe Drukker'
     );
   });
@@ -171,7 +165,6 @@ describe('DrukkersSection', () => {
     );
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'drukker_gewijzigd',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'Drukkerij Janssen'
     );
   });
@@ -184,7 +177,6 @@ describe('DrukkersSection', () => {
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith('drukker-1'));
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'drukker_verwijderd',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'Drukkerij Janssen'
     );
   });

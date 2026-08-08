@@ -36,9 +36,10 @@ function makeFile(name = 'foto.jpg') {
   return new File(['inhoud'], name, { type: 'image/jpeg' });
 }
 
+// De hook praat niet meer rechtstreeks met de PHP-uploader: die aanroep loopt via
+// /api/upload, zodat het gedeelde secret server-side blijft. Endpoint en secret
+// zijn daarmee servergevallen -- zie tests/app/api/upload.test.ts.
 beforeEach(() => {
-  vi.stubEnv('NEXT_PUBLIC_UPLOAD_ENDPOINT_URL', 'https://mail-server.example.com/upload-kunstwerk-foto.php');
-  vi.stubEnv('NEXT_PUBLIC_UPLOAD_SECRET', 'test-upload-secret');
   vi.stubGlobal('fetch', vi.fn());
   compressImageMock.mockReset();
   compressImageMock.mockImplementation(async (file: File) => file);
@@ -56,7 +57,7 @@ describe('useKunstwerkFotoUpload', () => {
     expect(screen.getByTestId('error')).toHaveTextContent('none');
   });
 
-  it('sends the shared secret and the file as form data to the configured endpoint', async () => {
+  it('sends the file as form data to /api/upload, without a shared secret', async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       json: async () => ({ success: true, url: 'https://storage.example.com/foto.jpg' }),
@@ -65,10 +66,10 @@ describe('useKunstwerkFotoUpload', () => {
     fireEvent.change(screen.getByTestId('file-input'), { target: { files: [makeFile('mijn-kunstwerk.png')] } });
     await waitFor(() => expect(fetch).toHaveBeenCalled());
     const [endpoint, options] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(endpoint).toBe('https://mail-server.example.com/upload-kunstwerk-foto.php');
+    expect(endpoint).toBe('/api/upload');
     expect(options.method).toBe('POST');
     const body = options.body as FormData;
-    expect(body.get('secret')).toBe('test-upload-secret');
+    expect(body.get('secret')).toBeNull();
     expect((body.get('foto') as File).name).toBe('mijn-kunstwerk.png');
   });
 
@@ -106,20 +107,15 @@ describe('useKunstwerkFotoUpload', () => {
     expect(screen.getByTestId('url')).toHaveTextContent('none');
   });
 
-  it('sets an error and does not call fetch when the endpoint env var is not configured', async () => {
-    vi.stubEnv('NEXT_PUBLIC_UPLOAD_ENDPOINT_URL', '');
+  it('sets an error when the upload route responds without a URL', async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ error: 'upload-mislukt' }),
+    });
     render(<TestConsumer />);
     fireEvent.change(screen.getByTestId('file-input'), { target: { files: [makeFile()] } });
     await waitFor(() => expect(screen.getByTestId('error')).toHaveTextContent('upload'));
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  it('sets an error and does not call fetch when the secret env var is not configured', async () => {
-    vi.stubEnv('NEXT_PUBLIC_UPLOAD_SECRET', '');
-    render(<TestConsumer />);
-    fireEvent.change(screen.getByTestId('file-input'), { target: { files: [makeFile()] } });
-    await waitFor(() => expect(screen.getByTestId('error')).toHaveTextContent('upload'));
-    expect(fetch).not.toHaveBeenCalled();
+    expect(screen.getByTestId('url')).toHaveTextContent('none');
   });
 
   it('sets error to too-large and does not call fetch when the compressed file still exceeds 8MB', async () => {

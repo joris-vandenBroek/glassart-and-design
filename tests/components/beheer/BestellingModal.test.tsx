@@ -18,12 +18,7 @@ vi.mock('@/lib/useAdminAuth', () => ({
 }));
 
 vi.mock('@/lib/logActiviteit', () => ({
-  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
-  actorFromMedewerker: (user: { uid: string; email: string | null } | null) =>
-    user
-      ? { id: user.uid, email: user.email ?? 'Onbekend', naam: user.email ?? 'Onbekend' }
-      : { id: null, email: 'Onbekend', naam: 'Onbekend' },
-}));
+  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),}));
 
 const KUNSTWERKEN: Kunstwerk[] = [
   {
@@ -223,7 +218,6 @@ describe('BestellingModal', () => {
     await waitFor(() =>
       expect(logActiviteitMock).toHaveBeenCalledWith(
         'bestelling_goedgekeurd',
-        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
         'GD-00101'
       )
     );
@@ -236,7 +230,6 @@ describe('BestellingModal', () => {
     await waitFor(() =>
       expect(logActiviteitMock).toHaveBeenCalledWith(
         'bestelling_afgewezen',
-        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
         'GD-00101'
       )
     );
@@ -292,7 +285,6 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
     await waitFor(() => expect(onLinePrijsVastgesteld).toHaveBeenCalledWith('header-2', 'line-3', 275));
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'bestelling_prijs_vastgesteld',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'GD-00102'
     );
   });
@@ -415,7 +407,6 @@ describe('BestellingModal — regel bewerken', () => {
     );
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'bestelling_regel_gewijzigd',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'GD-00101'
     );
     expect(screen.queryByTestId('bestelling-modal-regel-materiaal-line-1')).not.toBeInTheDocument();
@@ -672,7 +663,6 @@ describe('BestellingModal — afronden/terugzetten', () => {
     );
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'bestelling_afronding_teruggezet',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'GD-00106'
     );
   });
@@ -693,7 +683,6 @@ describe('BestellingModal — afronden/terugzetten', () => {
     );
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'bestelling_afronding_teruggezet',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'GD-00105'
     );
   });
@@ -714,7 +703,6 @@ describe('BestellingModal — afronden/terugzetten', () => {
     );
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'bestelling_gefactureerd',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'GD-00105'
     );
   });

@@ -1,6 +1,7 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { useSessionUser } from '@/lib/useSessionUser';
 
 interface AdminUser {
   uid: string;
@@ -18,29 +19,13 @@ interface AdminAuthValue {
 
 const AdminAuthContext = createContext<AdminAuthValue | null>(null);
 
-async function loadMe(): Promise<AdminUser | null> {
-  const response = await fetch('/api/auth/me?type=medewerker');
-  const body = await response.json();
-  const medewerker = body.user as { id: string; email: string | null } | null;
+function mapMedewerker(raw: unknown): AdminUser | null {
+  const medewerker = raw as { id: string; email: string | null } | null;
   return medewerker ? { uid: medewerker.id, email: medewerker.email } : null;
 }
 
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AdminUser | null>(null);
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    loadMe().then((loaded) => {
-      if (!cancelled) {
-        setUser(loaded);
-        setIsHydrated(true);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { user, isHydrated, setUser, herlaad } = useSessionUser('medewerker', mapMedewerker);
 
   const value = useMemo<AdminAuthValue>(
     () => ({
@@ -54,7 +39,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify({ email, password }),
         });
         if (!response.ok) throw new Error('login failed');
-        setUser(await loadMe());
+        await herlaad();
       },
       logout: async () => {
         await fetch('/api/auth/logout', { method: 'POST' });
@@ -68,6 +53,9 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
         });
       },
     }),
+    // setUser/herlaad zijn stabiel genoeg voor deze provider; hun identiteit
+    // verandert alleen mee met `user`, dat hier al in staat.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [user, isHydrated]
   );
 

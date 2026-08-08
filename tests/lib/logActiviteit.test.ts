@@ -1,10 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import {
-  logActiviteit,
-  actorFromCustomer,
-  actorFromMedewerker,
-  ONBEKENDE_ACTOR,
-} from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 
 const fetchMock = vi.fn();
 
@@ -14,38 +9,29 @@ beforeEach(() => {
 });
 
 describe('logActiviteit', () => {
-  it('POSTs the activity to /api/activiteitenlog', async () => {
+  // De actor zit bewust niet meer in de body: de server leidt hem af uit de
+  // sessiecookie, want deze route staat open voor anonieme bezoekers en de
+  // meegestuurde actor was dus vrij te verzinnen.
+  it('POSTs the activity to /api/activiteitenlog, without an actor', async () => {
     fetchMock.mockResolvedValueOnce({ ok: true });
-    await logActiviteit('bestelling_geplaatst', { id: 'k1', email: 'k@x.com', naam: 'Acme' });
+    await logActiviteit('bestelling_geplaatst');
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/activiteitenlog',
       expect.objectContaining({
         method: 'POST',
-        body: JSON.stringify({
-          type: 'bestelling_geplaatst',
-          actorId: 'k1',
-          actorEmail: 'k@x.com',
-          actorNaam: 'Acme',
-        }),
+        body: JSON.stringify({ type: 'bestelling_geplaatst' }),
       })
     );
   });
 
   it('includes omschrijving in the body when provided', async () => {
     fetchMock.mockResolvedValueOnce({ ok: true });
-    await logActiviteit(
-      'bestelling_geplaatst',
-      { id: 'k1', email: 'k@x.com', naam: 'Acme' },
-      'Bestelling GD-00001'
-    );
+    await logActiviteit('bestelling_geplaatst', 'Bestelling GD-00001');
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/activiteitenlog',
       expect.objectContaining({
         body: JSON.stringify({
           type: 'bestelling_geplaatst',
-          actorId: 'k1',
-          actorEmail: 'k@x.com',
-          actorNaam: 'Acme',
           omschrijving: 'Bestelling GD-00001',
         }),
       })
@@ -54,54 +40,6 @@ describe('logActiviteit', () => {
 
   it('never throws when the request fails', async () => {
     fetchMock.mockRejectedValueOnce(new Error('network error'));
-    await expect(logActiviteit('mandje_toegevoegd', ONBEKENDE_ACTOR)).resolves.toBeUndefined();
-  });
-});
-
-describe('actorFromCustomer', () => {
-  it('returns ONBEKENDE_ACTOR for a null user', () => {
-    expect(actorFromCustomer(null)).toEqual(ONBEKENDE_ACTOR);
-  });
-
-  it('uses companyName as naam when present', () => {
-    expect(
-      actorFromCustomer({
-        uid: 'uid-1',
-        email: 'klant@example.com',
-        companyName: 'Testbedrijf BV',
-        contactPerson: 'Jan Jansen',
-      })
-    ).toEqual({ id: 'uid-1', email: 'klant@example.com', naam: 'Testbedrijf BV' });
-  });
-
-  it('falls back to contactPerson when companyName is missing', () => {
-    expect(
-      actorFromCustomer({
-        uid: 'uid-1',
-        email: 'klant@example.com',
-        companyName: null,
-        contactPerson: 'Jan Jansen',
-      })
-    ).toEqual({ id: 'uid-1', email: 'klant@example.com', naam: 'Jan Jansen' });
-  });
-
-  it('falls back to "Onbekend" for naam/email when both are missing', () => {
-    expect(
-      actorFromCustomer({ uid: 'uid-1', email: null, companyName: null, contactPerson: null })
-    ).toEqual({ id: 'uid-1', email: 'Onbekend', naam: 'Onbekend' });
-  });
-});
-
-describe('actorFromMedewerker', () => {
-  it('returns ONBEKENDE_ACTOR for a null user', () => {
-    expect(actorFromMedewerker(null)).toEqual(ONBEKENDE_ACTOR);
-  });
-
-  it('uses the email as both email and naam', () => {
-    expect(actorFromMedewerker({ uid: 'uid-2', email: 'paul@glassartanddesign.com' })).toEqual({
-      id: 'uid-2',
-      email: 'paul@glassartanddesign.com',
-      naam: 'paul@glassartanddesign.com',
-    });
+    await expect(logActiviteit('mandje_toegevoegd')).resolves.toBeUndefined();
   });
 });

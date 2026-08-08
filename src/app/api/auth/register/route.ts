@@ -1,16 +1,25 @@
 import { NextResponse } from 'next/server';
 import { getPool } from '@/lib/server/db';
 import { insertRow } from '@/lib/server/crud';
-import { hashPassword } from '@/lib/server/password';
-import { SELF_EDITABLE_KLANT_FIELDS } from '@/lib/server/klantFields';
+import { hashPassword, valideerWachtwoord } from '@/lib/server/password';
+import { SELF_EDITABLE_KLANT_FIELDS, normaliseerEmail } from '@/lib/server/klantFields';
 import { isBtwNummerVerplicht, normaliseerBtwNummer, valideerBtwNummer } from '@/lib/btwNummer';
+import { withApiErrorHandling } from '@/lib/server/apiRoute';
 
-export async function POST(request: Request) {
-  const body = (await request.json()) as { email: string; password: string } & Record<
-    string,
-    unknown
-  >;
-  const { email, password } = body;
+export const POST = withApiErrorHandling('POST /api/auth/register', async (request: Request) => {
+  const body = (await request.json()) as Record<string, unknown>;
+  const email = normaliseerEmail(body.email);
+  const password = body.password;
+
+  // Hiervóór ging een body zonder e-mailadres of wachtwoord regelrecht naar
+  // hashPassword(undefined) en kwam er een 500 terug op een ongeldige request.
+  if (email === null) {
+    return NextResponse.json({ error: 'email-ongeldig' }, { status: 400 });
+  }
+  const wachtwoordFout = valideerWachtwoord(password);
+  if (wachtwoordFout !== 'ok') {
+    return NextResponse.json({ error: `password-${wachtwoordFout}` }, { status: 400 });
+  }
 
   const [existing] = await getPool().query('SELECT id FROM klanten WHERE email = ?', [email]);
   if ((existing as unknown[]).length > 0) {
@@ -42,17 +51,13 @@ export async function POST(request: Request) {
     fields.btwNummer = btwNummer;
   }
 
-  try {
-    const wachtwoordHash = await hashPassword(password);
-    await insertRow('klanten', {
-      ...fields,
-      email,
-      wachtwoordHash,
-      status: 'Beoordelen',
-      prijsgroepId: null,
-    } as never);
-    return NextResponse.json({ ok: true }, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: 'server-error' }, { status: 500 });
-  }
-}
+  const wachtwoordHash = await hashPassword(password as string);
+  await insertRow('klanten', {
+    ...fields,
+    email,
+    wachtwoordHash,
+    status: 'Beoordelen',
+    prijsgroepId: null,
+  } as never);
+  return NextResponse.json({ ok: true }, { status: 201 });
+});

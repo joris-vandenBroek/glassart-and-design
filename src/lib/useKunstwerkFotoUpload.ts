@@ -25,18 +25,13 @@ export function useKunstwerkFotoUpload(): UseKunstwerkFotoUploadResult {
         setError('too-large');
         return null;
       }
-      const endpoint = process.env.NEXT_PUBLIC_UPLOAD_ENDPOINT_URL;
-      const secret = process.env.NEXT_PUBLIC_UPLOAD_SECRET;
-      if (!endpoint || !secret) {
-        setError('upload');
-        return null;
-      }
+      // Gaat via onze eigen server (/api/upload) in plaats van rechtstreeks naar
+      // de PHP-uploader: het gedeelde secret hoort niet in de client-bundle.
       const formData = new FormData();
-      formData.append('secret', secret);
       formData.append('foto', finalFile);
-      const response = await fetch(endpoint, { method: 'POST', body: formData });
+      const response = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await response.json();
-      if (!response.ok || !data.success) {
+      if (!response.ok || typeof data.url !== 'string') {
         setError('upload');
         return null;
       }

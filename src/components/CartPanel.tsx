@@ -11,7 +11,7 @@ import { formatCurrency } from '@/lib/formatCurrency';
 import { resolveOrderRight } from '@/lib/resolveOrderRight';
 import { ProductImage } from './ProductImage';
 import { Link } from '@/i18n/navigation';
-import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import type { Kunstwerk } from './beheer/materiaalTypes';
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
 
@@ -92,28 +92,24 @@ export function CartPanel() {
       const { bestelnr } = await response.json();
       clear();
       setOrderPlaced(true);
-      void logActiviteit('bestelling_geplaatst', actorFromCustomer(user), bestelnr);
+      void logActiviteit('bestelling_geplaatst', bestelnr);
       if (user.email) {
-        void sendConfirmationEmail(user.email);
+        void sendConfirmationEmail();
       }
     } catch {
       setPlaceOrderError(t('placeOrderError'));
     }
   }
 
-  async function sendConfirmationEmail(email: string) {
-    const endpoint = process.env.NEXT_PUBLIC_MAIL_ENDPOINT_URL;
-    const secret = process.env.NEXT_PUBLIC_MAIL_SECRET;
-    if (!endpoint || !secret) {
-      return;
-    }
+  // De ontvanger staat bewust niet meer in de request: /api/mail stuurt een
+  // bestelbevestiging altijd naar het e-mailadres van de ingelogde klant zelf.
+  async function sendConfirmationEmail() {
     try {
-      const response = await fetch(endpoint, {
+      const response = await fetch('/api/mail', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          secret,
-          to: email,
+          soort: 'bestelbevestiging',
           subject: t('orderEmailSubject'),
           body: t('orderConfirmation'),
         }),
