@@ -509,15 +509,9 @@ git commit -m "feat: voeg migratielogboek en db:status toe"
 
 **Why the loop is a function, not inline CLI code:** this is the only code in the feature that executes DDL against the production database, so it must be covered by tests rather than manual CLI runs. Returning a result object instead of calling `process.exit` lets the tests drive it directly, with no child process. The CLI maps the result to output and exit codes.
 
-- [ ] **Step 1: Make the migrations directory overridable**
+- [ ] **Step 1: Leave `MIGRATIONS_DIR` alone**
 
-In `scripts/lib/ledger.ts`, replace the `MIGRATIONS_DIR` constant with:
-
-```ts
-// Overridable so tests can point the runner at a fixture directory instead of the real
-// db/migrations/. Nothing in production sets this -- CI and the CLI both use the default.
-export const MIGRATIONS_DIR = process.env.MIGRATIONS_DIR ?? 'db/migrations';
-```
+`MIGRATIONS_DIR` stays the plain constant `'db/migrations'` from Task 2. An earlier draft made it overridable via an environment variable for testability, but that turned out to be unnecessary: `pasMigratiesToe` takes the directory as a parameter, which is what the tests actually use. An ambient env var would only add a way to silently redirect the real apply path against production, and it would contradict `env.ts`'s own rule of never falling back to `process.env`.
 
 - [ ] **Step 2: Write the failing test**
 
@@ -740,9 +734,21 @@ function valideerArgumenten(): void {
   if (!subcommand || !target) gebruik();
   if (subcommand !== 'status' && subcommand !== 'apply') gebruik();
 
+  // `--mark-applied` with no value would leave markFilename undefined, fall straight past
+  // the mark branch, and silently run every outstanding migration instead of recording one.
+  // Refuse rather than guess.
+  if (markIndex !== -1 && !markFilename) {
+    console.error('Weigering: --mark-applied vereist een bestandsnaam.');
+    process.exit(2);
+  }
+
   // The standing rule in CLAUDE.md: every production database change needs explicit
   // permission. --confirm is the mechanical half of that; asking the user is the other.
-  if (subcommand === 'apply' && target === 'productie' && !confirm && !markFilename) {
+  // This covers --mark-applied too, deliberately: recording a migration that never ran is
+  // the most dangerous write of all, because it makes the deploy gate report production
+  // healthy while the column is actually missing -- the exact failure this feature exists
+  // to prevent.
+  if (subcommand === 'apply' && target === 'productie' && !confirm) {
     console.error('Weigering: `apply` op productie vereist expliciet --confirm.');
     process.exit(2);
   }
@@ -896,13 +902,13 @@ Ask: "Mag ik de baseline van het migratielogboek op de productiedatabase zetten?
 After an explicit yes:
 
 ```bash
-for f in $(ls db/migrations); do npm run db:migrate -- productie --mark-applied "$f"; done
+for f in $(ls db/migrations); do npm run db:migrate -- productie --confirm --mark-applied "$f"; done
 npm run db:status -- productie
 ```
 
 Expected: `Toegepast: 10`, `Openstaand: 0`, exit code 0.
 
-Note that `--mark-applied` does not require `--confirm`: it writes only to the ledger and never executes a migration. `apply` on production still does.
+`--mark-applied` requires `--confirm` on production just as `apply` does. Recording a migration that never ran is the most dangerous write available: it makes the deploy gate report production healthy while the column is actually missing, silently disabling the safety net this whole feature exists to provide.
 
 - [ ] **Step 4: No commit**
 
