@@ -177,6 +177,14 @@ CREATE TABLE instellingen (
   data JSON NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Records which files in db/migrations/ have been applied to this database. Created on
+-- demand by scripts/db-migrate.ts as well, so an existing database picks it up without a
+-- migration of its own (a migration that creates the ledger would be self-referential).
+CREATE TABLE schema_migrations (
+  filename VARCHAR(255) PRIMARY KEY,
+  applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE counters (
   id VARCHAR(50) PRIMARY KEY,
   value INT NOT NULL DEFAULT 0
