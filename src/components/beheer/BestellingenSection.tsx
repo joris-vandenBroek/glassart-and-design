@@ -10,7 +10,7 @@ import type { Kunstwerk, Materiaal, Maat, Materiaalsoort, Drukker } from './mate
 import type { Klant } from './KlantenSection';
 import type { BtwTarieven } from './btwTarievenTypes';
 import { useAdminAuth } from '@/lib/useAdminAuth';
-import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import { afrondBestellingen } from '@/lib/afrondenBestellingen';
 import { fetchZendingen, openstaandeZendingGenoten, type ZendingGenoten } from '@/lib/zendingGenoten';
 import { AfrondenBevestigingDialog } from './AfrondenBevestigingDialog';
@@ -193,7 +193,7 @@ export function BestellingenSection({
     afrondBezigRef.current = true;
     setAfrondBezig(true);
     try {
-      const { afgerond, mislukt } = await afrondBestellingen(teAfronden, actorFromMedewerker(user));
+      const { afgerond, mislukt } = await afrondBestellingen(teAfronden);
       afgerond.forEach((bestelling) => onBestellingUpdated(bestelling));
       // Alleen leegmaken als deze ronde daadwerkelijk vanuit de bulkselectie
       // is gestart -- zie de toelichting bij afrondUitSelectieRef hierboven.
@@ -275,7 +275,7 @@ export function BestellingenSection({
               body: JSON.stringify({ status: 'Betaald en afgerond' }),
             });
             if (!response.ok) return { bestelling, gelukt: false };
-            void logActiviteit('bestelling_gefactureerd', actorFromMedewerker(user), bestelling.bestelnr);
+            void logActiviteit('bestelling_gefactureerd', bestelling.bestelnr);
             onBestellingUpdated({ ...bestelling, status: 'Betaald en afgerond' });
             return { bestelling, gelukt: true };
           } catch {

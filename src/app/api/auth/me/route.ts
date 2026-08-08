@@ -1,19 +1,18 @@
 import { NextResponse } from 'next/server';
 import { getPool } from '@/lib/server/db';
 import { getRow } from '@/lib/server/crud';
-import { validateSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
+import { validateSession, sessionIdFromRequest } from '@/lib/server/session';
 import { withApiErrorHandling } from '@/lib/server/apiRoute';
 import { prijsgroepVoorKlant } from '@/lib/server/prijsmodule';
 
 export const GET = withApiErrorHandling('GET /api/auth/me', async (request: Request) => {
   const url = new URL(request.url);
   const type = url.searchParams.get('type') ?? 'klant';
-  const cookie = request.headers.get('cookie') ?? '';
-  const match = cookie.match(new RegExp(`${SESSION_COOKIE_NAME}=([^;]+)`));
-  if (!match) {
+  const sessionId = sessionIdFromRequest(request);
+  if (!sessionId) {
     return NextResponse.json({ user: null });
   }
-  const session = await validateSession(match[1]);
+  const session = await validateSession(sessionId);
   if (!session || session.userType !== type) {
     return NextResponse.json({ user: null });
   }

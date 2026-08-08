@@ -68,20 +68,23 @@ export interface ActiviteitActor {
 
 export const ONBEKENDE_ACTOR: ActiviteitActor = { id: null, email: 'Onbekend', naam: 'Onbekend' };
 
-export async function logActiviteit(
-  type: ActiviteitType,
-  actor: ActiviteitActor,
-  omschrijving?: string
-): Promise<void> {
+/**
+ * Schrijft een gebeurtenis naar het activiteitenlog.
+ *
+ * Wie de actie deed staat bewust níet in deze aanroep: de server leidt de actor
+ * af uit de sessiecookie (zie `actorUitSessie` in de route). Dat moest wel,
+ * want deze route staat open voor anonieme bezoekers, en zolang de actor uit de
+ * body kwam kon iedereen een gebeurtenis op naam van een medewerker
+ * wegschrijven. `ActiviteitActor` blijft bestaan als vorm van wat de server
+ * teruggeeft bij het lezen van het log.
+ */
+export async function logActiviteit(type: ActiviteitType, omschrijving?: string): Promise<void> {
   try {
     await fetch('/api/activiteitenlog', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         type,
-        actorId: actor.id,
-        actorEmail: actor.email,
-        actorNaam: actor.naam,
         ...(omschrijving ? { omschrijving } : {}),
       }),
     });
@@ -89,27 +92,4 @@ export async function logActiviteit(
     // Fire-and-forget: a failed log write must never block or surface an
     // error for the underlying user action (page visit, cart add, etc.).
   }
-}
-
-export function actorFromCustomer(
-  user: { uid: string; email: string | null; companyName: string | null; contactPerson: string | null } | null
-): ActiviteitActor {
-  if (!user) {
-    return ONBEKENDE_ACTOR;
-  }
-  return {
-    id: user.uid,
-    email: user.email ?? 'Onbekend',
-    naam: user.companyName ?? user.contactPerson ?? 'Onbekend',
-  };
-}
-
-export function actorFromMedewerker(
-  user: { uid: string; email: string | null } | null
-): ActiviteitActor {
-  if (!user) {
-    return ONBEKENDE_ACTOR;
-  }
-  const email = user.email ?? 'Onbekend';
-  return { id: user.uid, email, naam: email };
 }

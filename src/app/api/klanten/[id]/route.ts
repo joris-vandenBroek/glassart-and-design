@@ -4,8 +4,7 @@ import { updateRow, deleteRow } from '@/lib/server/crud';
 import { requireMedewerker, requireKlant } from '@/lib/server/requireAuth';
 import { withApiErrorHandling } from '@/lib/server/apiRoute';
 import { checkBtwNummerUpdate } from '@/lib/server/btwNummerCheck';
-
-const KLANTNR_PADDING = 5;
+import { volgendNummer } from '@/lib/server/counters';
 
 type KlantnummerToekenningResultaat =
   | { gevonden: false }
@@ -37,15 +36,7 @@ async function updateEnKenKlantnummerToe(
       return { gevonden: false };
     }
 
-    let klantnr = rij.klantnr;
-    if (!klantnr) {
-      await connection.query('UPDATE counters SET value = value + 1 WHERE id = ?', ['klantnummer']);
-      const [valueRows] = await connection.query('SELECT value FROM counters WHERE id = ?', [
-        'klantnummer',
-      ]);
-      const nextValue = (valueRows as Array<{ value: number }>)[0].value;
-      klantnr = `KL-${String(nextValue).padStart(KLANTNR_PADDING, '0')}`;
-    }
+    const klantnr = rij.klantnr || (await volgendNummer(connection, 'klantnummer', 'KL-'));
 
     await updateRow('klanten', id, { ...data, klantnr }, [], connection);
 

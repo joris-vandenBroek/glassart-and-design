@@ -13,12 +13,7 @@ vi.mock('@/lib/useAdminAuth', () => ({
 }));
 
 vi.mock('@/lib/logActiviteit', () => ({
-  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
-  actorFromMedewerker: (user: { uid: string; email: string | null } | null) =>
-    user
-      ? { id: user.uid, email: user.email ?? 'Onbekend', naam: user.email ?? 'Onbekend' }
-      : { id: null, email: 'Onbekend', naam: 'Onbekend' },
-}));
+  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),}));
 
 beforeEach(() => {
   logActiviteitMock.mockReset();
@@ -69,11 +64,7 @@ describe('InstellingenSection', () => {
     fireEvent.click(screen.getByTestId('instellingen-opslaan'));
     await waitFor(() => expect(onSave).toHaveBeenCalledWith({ minimaleAfname: 8 }));
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('bestelinstellingen_gewijzigd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith('bestelinstellingen_gewijzigd')
     );
   });
 
@@ -180,11 +171,7 @@ describe('InstellingenSection', () => {
       })
     );
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('btwtarieven_gewijzigd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith('btwtarieven_gewijzigd')
     );
   });
 });

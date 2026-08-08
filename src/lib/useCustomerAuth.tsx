@@ -1,7 +1,8 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { PrijsgroepAanpassing } from '@/lib/prijsgroep';
+import { useSessionUser } from '@/lib/useSessionUser';
 
 interface CustomerUser {
   uid: string;
@@ -22,10 +23,15 @@ interface CustomerAuthValue {
 
 const CustomerAuthContext = createContext<CustomerAuthValue | null>(null);
 
-async function loadMe(): Promise<{ user: CustomerUser | null; isCustomer: boolean }> {
-  const response = await fetch('/api/auth/me?type=klant');
-  const body = await response.json();
-  const klant = body.user as
+// `isCustomer` hangt aan de status, maar die hoort niet in de gebruikersvorm die
+// de rest van de app ziet -- vandaar dit tussenmodel.
+interface IngelogdeKlant {
+  user: CustomerUser;
+  isCustomer: boolean;
+}
+
+function mapKlant(raw: unknown): IngelogdeKlant | null {
+  const klant = raw as
     | {
         id: string;
         email: string | null;
@@ -36,9 +42,7 @@ async function loadMe(): Promise<{ user: CustomerUser | null; isCustomer: boolea
         prijsgroep?: PrijsgroepAanpassing | null;
       }
     | null;
-  if (!klant) {
-    return { user: null, isCustomer: false };
-  }
+  if (!klant) return null;
   return {
     user: {
       uid: klant.id,
@@ -53,32 +57,12 @@ async function loadMe(): Promise<{ user: CustomerUser | null; isCustomer: boolea
 }
 
 export function CustomerAuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<CustomerUser | null>(null);
-  const [isCustomer, setIsCustomer] = useState(false);
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    // Een mislukte /api/auth/me mag niet in "nog aan het laden" blijven hangen: er hangen
-    // schermen aan isHydrated (o.a. het mandje, dat per klant geladen wordt) die dan nooit
-    // meer verschijnen. Niet kunnen vaststellen wie er inlogt = niet ingelogd.
-    loadMe()
-      .catch(() => ({ user: null, isCustomer: false }))
-      .then((loaded) => {
-        if (cancelled) return;
-        setUser(loaded.user);
-        setIsCustomer(loaded.isCustomer);
-        setIsHydrated(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { user: ingelogd, isHydrated, setUser, herlaad } = useSessionUser('klant', mapKlant);
 
   const value = useMemo<CustomerAuthValue>(
     () => ({
-      user,
-      isCustomer,
+      user: ingelogd?.user ?? null,
+      isCustomer: ingelogd?.isCustomer ?? false,
       isHydrated,
       // The login form navigates client-side afterwards (router.replace), which does not
       // remount this provider (it lives in the locale layout) -- so the context state has
@@ -93,18 +77,16 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
           throw new Error('invalid-credentials');
         }
         const body = (await response.json()) as { status: string };
-        const loaded = await loadMe();
-        setUser(loaded.user);
-        setIsCustomer(loaded.isCustomer);
+        await herlaad();
         return body.status;
       },
       logout: async () => {
         await fetch('/api/auth/logout', { method: 'POST' });
         setUser(null);
-        setIsCustomer(false);
       },
     }),
-    [user, isCustomer, isHydrated]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ingelogd, isHydrated]
   );
 
   return <CustomerAuthContext.Provider value={value}>{children}</CustomerAuthContext.Provider>;

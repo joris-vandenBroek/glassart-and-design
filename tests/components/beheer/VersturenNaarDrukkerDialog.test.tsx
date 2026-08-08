@@ -31,12 +31,7 @@ vi.mock('@/lib/useAdminAuth', () => ({
 }));
 
 vi.mock('@/lib/logActiviteit', () => ({
-  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
-  actorFromMedewerker: (user: { uid: string; email: string | null } | null) =>
-    user
-      ? { id: user.uid, email: user.email ?? 'Onbekend', naam: user.email ?? 'Onbekend' }
-      : { id: null, email: 'Onbekend', naam: 'Onbekend' },
-}));
+  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),}));
 
 const KLANT: Klant = {
   id: 'uid-1',
@@ -268,7 +263,6 @@ describe('VersturenNaarDrukkerDialog', () => {
     });
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'bestelling_verstuurd_naar_drukker',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'GD-00201'
     );
     expect(onVerstuurd).toHaveBeenCalledWith([{ ...BESTELLING, status: 'Verstuurd naar drukker', zendingnummer: 'ZD-00001' }]);
@@ -283,7 +277,6 @@ describe('VersturenNaarDrukkerDialog', () => {
     await waitFor(() =>
       expect(logActiviteitMock).toHaveBeenCalledWith(
         'bestelling_verstuurd_naar_drukker',
-        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
         'GD-00201, GD-00202'
       )
     );

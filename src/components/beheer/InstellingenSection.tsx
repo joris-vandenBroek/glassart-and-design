@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAdminAuth } from '@/lib/useAdminAuth';
-import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import { Combobox } from '@/components/Combobox';
 import { LAND_OPTIONS } from '@/data/landen';
 import type { Bestelinstellingen } from './bestelinstellingenTypes';
@@ -90,7 +90,7 @@ export function InstellingenSection({
         return;
       }
       setForm(clamped);
-      void logActiviteit('bestelinstellingen_gewijzigd', actorFromMedewerker(user));
+      void logActiviteit('bestelinstellingen_gewijzigd');
     } else {
       setForm(clamped);
     }
@@ -103,7 +103,7 @@ export function InstellingenSection({
         setActionError(t('instellingenActionError'));
         return;
       }
-      void logActiviteit('btwtarieven_gewijzigd', actorFromMedewerker(user));
+      void logActiviteit('btwtarieven_gewijzigd');
     }
   }
 

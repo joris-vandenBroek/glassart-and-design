@@ -6,7 +6,7 @@ import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
-import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import type { Materiaalsoort, Materiaal } from './materiaalTypes';
 
 interface MateriaalsoortenSectionProps {
@@ -90,7 +90,6 @@ export function MateriaalsoortenSection({
     if (success) {
       void logActiviteit(
         modalState.mode === 'add' ? 'materiaalsoort_toegevoegd' : 'materiaalsoort_gewijzigd',
-        actorFromMedewerker(user),
         omschrijving
       );
       closeModal();
@@ -110,7 +109,7 @@ export function MateriaalsoortenSection({
     }
     const success = await onRemove(modalState.materiaalsoort.id);
     if (success) {
-      void logActiviteit('materiaalsoort_verwijderd', actorFromMedewerker(user), modalState.materiaalsoort.omschrijving);
+      void logActiviteit('materiaalsoort_verwijderd', modalState.materiaalsoort.omschrijving);
       closeModal();
     } else {
       setActionError(t('materiaalsoortenActionError'));

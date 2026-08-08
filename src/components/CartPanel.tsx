@@ -11,7 +11,7 @@ import { formatCurrency } from '@/lib/formatCurrency';
 import { resolveOrderRight } from '@/lib/resolveOrderRight';
 import { ProductImage } from './ProductImage';
 import { Link } from '@/i18n/navigation';
-import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import type { Kunstwerk } from './beheer/materiaalTypes';
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
 
@@ -92,7 +92,7 @@ export function CartPanel() {
       const { bestelnr } = await response.json();
       clear();
       setOrderPlaced(true);
-      void logActiviteit('bestelling_geplaatst', actorFromCustomer(user), bestelnr);
+      void logActiviteit('bestelling_geplaatst', bestelnr);
       if (user.email) {
         void sendConfirmationEmail();
       }

@@ -8,7 +8,6 @@ vi.stubGlobal('fetch', fetchMock);
 
 vi.mock('@/lib/logActiviteit', () => ({ logActiviteit: vi.fn() }));
 
-const ACTOR = { id: 'staff-1', email: 'paul@example.com', naam: 'Paul' };
 
 function bestelling(id: string): Bestelling {
   return {
@@ -32,7 +31,7 @@ beforeEach(() => {
 describe('afrondBestellingen', () => {
   it('patches every bestelling to Te factureren and reports them as afgerond', async () => {
     fetchMock.mockResolvedValue({ ok: true });
-    const result = await afrondBestellingen([bestelling('1'), bestelling('2')], ACTOR);
+    const result = await afrondBestellingen([bestelling('1'), bestelling('2')]);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[0][0]).toBe('/api/bestelheaders/1');
@@ -44,18 +43,18 @@ describe('afrondBestellingen', () => {
 
   it('logs one activiteit per afgeronde bestelling with its bestelnummer', async () => {
     fetchMock.mockResolvedValue({ ok: true });
-    await afrondBestellingen([bestelling('1'), bestelling('2')], ACTOR);
+    await afrondBestellingen([bestelling('1'), bestelling('2')]);
 
     expect(logActiviteit).toHaveBeenCalledTimes(2);
-    expect(logActiviteit).toHaveBeenCalledWith('bestelling_afgerond', ACTOR, 'GD-1');
-    expect(logActiviteit).toHaveBeenCalledWith('bestelling_afgerond', ACTOR, 'GD-2');
+    expect(logActiviteit).toHaveBeenCalledWith('bestelling_afgerond', 'GD-1');
+    expect(logActiviteit).toHaveBeenCalledWith('bestelling_afgerond', 'GD-2');
   });
 
   it('reports a partial failure instead of pretending everything succeeded', async () => {
     fetchMock.mockImplementation((url: string) =>
       url.endsWith('/2') ? Promise.resolve({ ok: false }) : Promise.resolve({ ok: true })
     );
-    const result = await afrondBestellingen([bestelling('1'), bestelling('2')], ACTOR);
+    const result = await afrondBestellingen([bestelling('1'), bestelling('2')]);
 
     expect(result.afgerond.map((b) => b.id)).toEqual(['1']);
     expect(result.mislukt.map((b) => b.id)).toEqual(['2']);
@@ -64,7 +63,7 @@ describe('afrondBestellingen', () => {
 
   it('treats a rejected fetch as a failure rather than throwing', async () => {
     fetchMock.mockRejectedValue(new Error('offline'));
-    const result = await afrondBestellingen([bestelling('1')], ACTOR);
+    const result = await afrondBestellingen([bestelling('1')]);
 
     expect(result.afgerond).toEqual([]);
     expect(result.mislukt.map((b) => b.id)).toEqual(['1']);

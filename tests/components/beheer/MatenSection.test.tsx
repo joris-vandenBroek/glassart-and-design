@@ -12,12 +12,7 @@ vi.mock('@/lib/useAdminAuth', () => ({
 }));
 
 vi.mock('@/lib/logActiviteit', () => ({
-  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
-  actorFromMedewerker: (user: { uid: string; email: string | null } | null) =>
-    user
-      ? { id: user.uid, email: user.email ?? 'Onbekend', naam: user.email ?? 'Onbekend' }
-      : { id: null, email: 'Onbekend', naam: 'Onbekend' },
-}));
+  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),}));
 
 const KUNSTWERKEN: Kunstwerk[] = [
   {
@@ -164,7 +159,6 @@ describe('MatenSection', () => {
     await waitFor(() =>
       expect(logActiviteitMock).toHaveBeenCalledWith(
         'maat_toegevoegd',
-        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
         '50×70 cm'
       )
     );
@@ -178,7 +172,6 @@ describe('MatenSection', () => {
     await waitFor(() =>
       expect(logActiviteitMock).toHaveBeenCalledWith(
         'maat_gewijzigd',
-        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
         '60×100 cm'
       )
     );
@@ -191,7 +184,6 @@ describe('MatenSection', () => {
     await waitFor(() =>
       expect(logActiviteitMock).toHaveBeenCalledWith(
         'maat_verwijderd',
-        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
         '60×90 cm'
       )
     );

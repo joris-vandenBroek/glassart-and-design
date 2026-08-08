@@ -196,11 +196,7 @@ describe('RegistrationForm', () => {
   it('logs word_klant_bezocht as Onbekend exactly once on mount', () => {
     renderForm();
     expect(logActiviteitMock).toHaveBeenCalledTimes(1);
-    expect(logActiviteitMock).toHaveBeenCalledWith('word_klant_bezocht', {
-      id: null,
-      email: 'Onbekend',
-      naam: 'Onbekend',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith('word_klant_bezocht');
   });
 
   it('logs word_klant_aanvraag with the company name on successful submit', async () => {
@@ -209,11 +205,7 @@ describe('RegistrationForm', () => {
     fillRequiredFields();
     fireEvent.submit(screen.getByTestId('word-klant-submit').closest('form')!);
     await waitFor(() => expect(screen.getByTestId('word-klant-confirmation')).toBeInTheDocument());
-    expect(logActiviteitMock).toHaveBeenCalledWith('word_klant_aanvraag', {
-      id: null,
-      email: 'jan@example.com',
-      naam: 'Testbedrijf BV',
-    });
+    expect(logActiviteitMock).toHaveBeenCalledWith('word_klant_aanvraag');
   });
 
   it('does not log word_klant_aanvraag when registration fails', async () => {

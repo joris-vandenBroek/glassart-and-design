@@ -12,12 +12,7 @@ vi.mock('@/lib/useAdminAuth', () => ({
 }));
 
 vi.mock('@/lib/logActiviteit', () => ({
-  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
-  actorFromMedewerker: (user: { uid: string; email: string | null } | null) =>
-    user
-      ? { id: user.uid, email: user.email ?? 'Onbekend', naam: user.email ?? 'Onbekend' }
-      : { id: null, email: 'Onbekend', naam: 'Onbekend' },
-}));
+  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),}));
 
 beforeEach(() => {
   logActiviteitMock.mockReset();
@@ -146,11 +141,10 @@ describe('StijlenSection', () => {
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith('stijl-2'));
     await waitFor(() => expect(screen.queryByTestId('stijl-modal')).not.toBeInTheDocument());
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('stijl_verwijderd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'stijl_verwijderd',
+        'Klassiek'
+      )
     );
   });
 
@@ -171,11 +165,10 @@ describe('StijlenSection', () => {
     fireEvent.change(screen.getByTestId('stijl-modal-omschrijving'), { target: { value: 'Minimalistisch' } });
     fireEvent.click(screen.getByTestId('stijl-modal-opslaan'));
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('stijl_toegevoegd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'stijl_toegevoegd',
+        'Minimalistisch'
+      )
     );
   });
 
@@ -185,11 +178,10 @@ describe('StijlenSection', () => {
     fireEvent.change(screen.getByTestId('stijl-modal-omschrijving'), { target: { value: 'Klassiek design' } });
     fireEvent.click(screen.getByTestId('stijl-modal-opslaan'));
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('stijl_gewijzigd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'stijl_gewijzigd',
+        'Klassiek design'
+      )
     );
   });
 
@@ -198,11 +190,10 @@ describe('StijlenSection', () => {
     fireEvent.click(screen.getByTestId('data-table-row-stijl-1'));
     fireEvent.click(screen.getByTestId('stijl-modal-verwijderen'));
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('stijl_verwijderd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'stijl_verwijderd',
+        'Modern'
+      )
     );
   });
 

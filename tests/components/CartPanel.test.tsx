@@ -11,14 +11,7 @@ const logActiviteitMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
 
 vi.mock('@/lib/logActiviteit', () => ({
-  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
-  actorFromCustomer: (
-    user: { uid: string; email: string | null; companyName: string | null; contactPerson: string | null } | null
-  ) =>
-    user
-      ? { id: user.uid, email: user.email ?? 'Onbekend', naam: user.companyName ?? user.contactPerson ?? 'Onbekend' }
-      : { id: null, email: 'Onbekend', naam: 'Onbekend' },
-}));
+  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),}));
 
 vi.mock('@/i18n/navigation', () => ({
   Link: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
@@ -455,7 +448,6 @@ describe('CartPanel', () => {
     await screen.findByTestId('cart-order-confirmation');
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'bestelling_geplaatst',
-      { id: 'uid-1', email: 'klant@example.com', naam: 'Testbedrijf BV' },
       'GD-00001'
     );
   });

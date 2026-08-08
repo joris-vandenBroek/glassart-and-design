@@ -7,7 +7,7 @@ import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { Combobox } from '@/components/Combobox';
 import { HelpHint } from '@/components/HelpHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
-import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import { LAND_OPTIONS, landNaam } from '@/data/landen';
 import { resolveBtwPercentage } from '@/lib/resolveBtw';
 import { normaliseerBtwNummer, valideerBtwNummer } from '@/lib/btwNummer';
@@ -194,10 +194,10 @@ export function KlantModal({
       });
       if (!response.ok) throw new Error('update failed');
 
-      if (veldenGewijzigd) void logActiviteit('klant_gewijzigd', actorFromMedewerker(user), klant.companyName);
-      if (prijsgroepGewijzigd) void logActiviteit('klant_prijsgroep_gewijzigd', actorFromMedewerker(user), klant.companyName);
-      if (kunstenaarIdGewijzigd) void logActiviteit('klant_kunstenaarkoppeling_gewijzigd', actorFromMedewerker(user), klant.companyName);
-      if (minimaleAfnameGewijzigd) void logActiviteit('klant_minimale_afname_gewijzigd', actorFromMedewerker(user), klant.companyName);
+      if (veldenGewijzigd) void logActiviteit('klant_gewijzigd', klant.companyName);
+      if (prijsgroepGewijzigd) void logActiviteit('klant_prijsgroep_gewijzigd', klant.companyName);
+      if (kunstenaarIdGewijzigd) void logActiviteit('klant_kunstenaarkoppeling_gewijzigd', klant.companyName);
+      if (minimaleAfnameGewijzigd) void logActiviteit('klant_minimale_afname_gewijzigd', klant.companyName);
 
       onUpdated({ ...klant, ...updates });
       if (minimaleAfnameGewijzigd) {
@@ -222,10 +222,7 @@ export function KlantModal({
       // JSON mag een geslaagde goedkeuring nooit alsnog laten mislukken.
       const body = (await response.json().catch(() => ({}))) as { klantnr?: string | null };
       const klantnr = body.klantnr ?? klant.klantnr ?? null;
-      void logActiviteit(
-        'klant_goedgekeurd',
-        actorFromMedewerker(user),
-        klantnr ? `${klant.companyName} (${klantnr})` : klant.companyName
+      void logActiviteit('klant_goedgekeurd', klantnr ? `${klant.companyName} (${klantnr})` : klant.companyName
       );
       onUpdated({ ...klant, status: 'Goedgekeurd', prijsgroepId, klantnr });
     } catch {
@@ -242,7 +239,7 @@ export function KlantModal({
         body: JSON.stringify({ status: 'Afgewezen' }),
       });
       if (!response.ok) throw new Error('update failed');
-      void logActiviteit('klant_afgewezen', actorFromMedewerker(user), klant.companyName);
+      void logActiviteit('klant_afgewezen', klant.companyName);
       onUpdated({ ...klant, status: 'Afgewezen' });
     } catch {
       setError(t('klantenActionError'));

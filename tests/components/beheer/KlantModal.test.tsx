@@ -17,12 +17,7 @@ vi.mock('@/lib/useAdminAuth', () => ({
 }));
 
 vi.mock('@/lib/logActiviteit', () => ({
-  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
-  actorFromMedewerker: (user: { uid: string; email: string | null } | null) =>
-    user
-      ? { id: user.uid, email: user.email ?? 'Onbekend', naam: user.email ?? 'Onbekend' }
-      : { id: null, email: 'Onbekend', naam: 'Onbekend' },
-}));
+  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),}));
 
 const KLANT: Klant = {
   id: 'uid-1',
@@ -226,7 +221,6 @@ describe('KlantModal', () => {
     );
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'klant_prijsgroep_gewijzigd',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'Testbedrijf BV'
     );
   });
@@ -262,7 +256,6 @@ describe('KlantModal', () => {
     expect(patchBody()).toEqual({ minimaleAfname: 6 });
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'klant_minimale_afname_gewijzigd',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'Testbedrijf BV'
     );
     expect(onUpdated).toHaveBeenCalledWith(expect.objectContaining({ minimaleAfname: 6 }));
@@ -322,7 +315,6 @@ describe('KlantModal', () => {
     await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, contactPerson: 'Piet Pietersen' }));
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'klant_gewijzigd',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'Testbedrijf BV'
     );
     expect(screen.queryByTestId('klant-modal-companyName')).not.toBeInTheDocument();
@@ -434,7 +426,6 @@ describe('KlantModal', () => {
     );
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'klant_goedgekeurd',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'Testbedrijf BV (KL-00008)'
     );
   });
@@ -464,7 +455,6 @@ describe('KlantModal', () => {
     await waitFor(() =>
       expect(logActiviteitMock).toHaveBeenCalledWith(
         'klant_goedgekeurd',
-        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
         'Testbedrijf BV'
       )
     );
@@ -476,7 +466,6 @@ describe('KlantModal', () => {
     await waitFor(() =>
       expect(logActiviteitMock).toHaveBeenCalledWith(
         'klant_afgewezen',
-        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
         'Testbedrijf BV'
       )
     );
@@ -512,7 +501,6 @@ describe('KlantModal', () => {
     await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, kunstenaarId: 'ka-1' }));
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'klant_kunstenaarkoppeling_gewijzigd',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'Testbedrijf BV'
     );
   });

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAdminAuth } from '@/lib/useAdminAuth';
-import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import type { Bedrijfsgegevens, Contactpersoon, Taal } from './bedrijfsgegevensTypes';
 
 interface GlassartDesignSectionProps {
@@ -105,7 +105,7 @@ export function GlassartDesignSection({ bedrijfsgegevens, loadError, onSave }: G
     setActionError(null);
     const success = await onSave(form);
     if (success) {
-      void logActiviteit('bedrijfsgegevens_gewijzigd', actorFromMedewerker(user));
+      void logActiviteit('bedrijfsgegevens_gewijzigd');
     } else {
       setActionError(t('glassartDesignActionError'));
     }

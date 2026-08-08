@@ -12,12 +12,7 @@ vi.mock('@/lib/useAdminAuth', () => ({
 }));
 
 vi.mock('@/lib/logActiviteit', () => ({
-  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
-  actorFromMedewerker: (user: { uid: string; email: string | null } | null) =>
-    user
-      ? { id: user.uid, email: user.email ?? 'Onbekend', naam: user.email ?? 'Onbekend' }
-      : { id: null, email: 'Onbekend', naam: 'Onbekend' },
-}));
+  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),}));
 
 beforeEach(() => {
   logActiviteitMock.mockReset();
@@ -146,11 +141,10 @@ describe('OnderwerpenSection', () => {
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith('ond-2'));
     await waitFor(() => expect(screen.queryByTestId('onderwerp-modal')).not.toBeInTheDocument());
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('onderwerp_verwijderd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'onderwerp_verwijderd',
+        'Landschap'
+      )
     );
   });
 
@@ -171,11 +165,10 @@ describe('OnderwerpenSection', () => {
     fireEvent.change(screen.getByTestId('onderwerp-modal-omschrijving'), { target: { value: 'Portret' } });
     fireEvent.click(screen.getByTestId('onderwerp-modal-opslaan'));
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('onderwerp_toegevoegd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'onderwerp_toegevoegd',
+        'Portret'
+      )
     );
   });
 
@@ -185,11 +178,10 @@ describe('OnderwerpenSection', () => {
     fireEvent.change(screen.getByTestId('onderwerp-modal-omschrijving'), { target: { value: 'Landschappen' } });
     fireEvent.click(screen.getByTestId('onderwerp-modal-opslaan'));
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('onderwerp_gewijzigd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'onderwerp_gewijzigd',
+        'Landschappen'
+      )
     );
   });
 
@@ -198,11 +190,10 @@ describe('OnderwerpenSection', () => {
     fireEvent.click(screen.getByTestId('data-table-row-ond-1'));
     fireEvent.click(screen.getByTestId('onderwerp-modal-verwijderen'));
     await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith('onderwerp_verwijderd', {
-        id: 'staff-1',
-        email: 'paul@glassartanddesign.com',
-        naam: 'paul@glassartanddesign.com',
-      })
+      expect(logActiviteitMock).toHaveBeenCalledWith(
+        'onderwerp_verwijderd',
+        'Abstract'
+      )
     );
   });
 

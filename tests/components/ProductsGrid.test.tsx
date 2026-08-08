@@ -16,14 +16,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/lib/logActiviteit', () => ({
-  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
-  actorFromCustomer: (
-    user: { uid: string; email: string | null; companyName: string | null; contactPerson: string | null } | null
-  ) =>
-    user
-      ? { id: user.uid, email: user.email ?? 'Onbekend', naam: user.companyName ?? user.contactPerson ?? 'Onbekend' }
-      : { id: null, email: 'Onbekend', naam: 'Onbekend' },
-}));
+  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),}));
 
 const SEGMENTEN = [
   { id: 'seg-hotel', omschrijving: 'Hotel' },
@@ -266,7 +259,6 @@ describe('ProductsGrid', () => {
     await waitFor(() =>
       expect(logActiviteitMock).toHaveBeenCalledWith(
         'kunstwerk_bekeken',
-        { id: 'uid-1', email: 'klant@example.com', naam: 'Testbedrijf BV' },
         KUNSTWERKEN[0].naam
       )
     );

@@ -1,16 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getPool } from '@/lib/server/db';
-import { requireMedewerker } from '@/lib/server/requireAuth';
+import { parseJsonKolom } from '@/lib/server/crud';
+import { withMedewerker } from '@/lib/server/apiRoute';
 
 // Begrenst de OR-keten in de query; een grotere selectie dan dit komt in de
 // beheeromgeving niet voor en zou alleen een onbedoeld enorme query opleveren.
 const MAX_IDS = 200;
 
-export async function GET(request: Request) {
-  if (!(await requireMedewerker(request))) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  }
-
+export const GET = withMedewerker('GET /api/drukkerzendingen', async (request: Request) => {
   const raw = new URL(request.url).searchParams.get('bestellingIds') ?? '';
   const ids = raw
     .split(',')
@@ -39,8 +36,7 @@ export async function GET(request: Request) {
   return NextResponse.json(
     (rows as Array<Record<string, unknown>>).map((row) => ({
       ...row,
-      bestellingIds:
-        typeof row.bestellingIds === 'string' ? JSON.parse(row.bestellingIds) : row.bestellingIds,
+      bestellingIds: parseJsonKolom<string[]>(row.bestellingIds, []),
     }))
   );
-}
+});

@@ -7,7 +7,7 @@ import { useApiCollection } from '@/lib/useApiCollection';
 import { usePrijzenPerKunstwerk } from '@/lib/usePrijzenPerKunstwerk';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
-import { logActiviteit, actorFromCustomer } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import { ProductImage } from './ProductImage';
 import { ProductModal } from './ProductModal';
 import { Modal } from './Modal';
@@ -141,7 +141,7 @@ export function ProductsGrid() {
   function handleSelect(kunstwerk: Kunstwerk) {
     setSelectedKunstwerk(kunstwerk);
     if (user) {
-      void logActiviteit('kunstwerk_bekeken', actorFromCustomer(user), kunstwerk.naam);
+      void logActiviteit('kunstwerk_bekeken', kunstwerk.naam);
     }
   }
 

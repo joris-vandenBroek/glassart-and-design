@@ -15,7 +15,6 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/lib/logActiviteit', () => ({
   logActiviteit: vi.fn(),
-  actorFromCustomer: () => ({ id: null, email: 'Onbekend', naam: 'Onbekend' }),
 }));
 
 const SEGMENTEN = [

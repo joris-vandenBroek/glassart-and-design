@@ -1,28 +1,18 @@
 import { NextResponse } from 'next/server';
 import { listRows, insertRow } from '@/lib/server/crud';
 import { getPool } from '@/lib/server/db';
-import { requireMedewerker } from '@/lib/server/requireAuth';
+import { withMedewerker } from '@/lib/server/apiRoute';
 
-export async function GET(request: Request) {
-  if (!(await requireMedewerker(request))) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  }
+export const GET = withMedewerker('GET /api/drukkers', async () => {
   const rows = await listRows<{ id: string; standaard?: boolean }>('drukkers');
   return NextResponse.json(rows.map((row) => ({ ...row, standaard: Boolean(row.standaard) })));
-}
+});
 
-export async function POST(request: Request) {
-  if (!(await requireMedewerker(request))) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+export const POST = withMedewerker('POST /api/drukkers', async (request: Request) => {
+  const data = await request.json();
+  if (data.standaard) {
+    await getPool().query('UPDATE drukkers SET standaard = FALSE WHERE standaard = TRUE');
   }
-  try {
-    const data = await request.json();
-    if (data.standaard) {
-      await getPool().query('UPDATE drukkers SET standaard = FALSE WHERE standaard = TRUE');
-    }
-    const created = await insertRow('drukkers', data);
-    return NextResponse.json(created, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: 'server-error' }, { status: 500 });
-  }
-}
+  const created = await insertRow('drukkers', data);
+  return NextResponse.json(created, { status: 201 });
+});

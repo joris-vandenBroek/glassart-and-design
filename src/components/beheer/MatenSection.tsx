@@ -6,7 +6,7 @@ import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
-import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import type { Maat, Kunstwerk } from './materiaalTypes';
 
 interface MatenSectionProps {
@@ -65,7 +65,6 @@ export function MatenSection({ maten, kunstwerken, loadError, onAdd, onUpdate, o
     if (success) {
       void logActiviteit(
         modalState.mode === 'add' ? 'maat_toegevoegd' : 'maat_gewijzigd',
-        actorFromMedewerker(user),
         `${Number(breedte)}×${Number(hoogte)} cm`
       );
       closeModal();
@@ -83,10 +82,7 @@ export function MatenSection({ maten, kunstwerken, loadError, onAdd, onUpdate, o
     }
     const success = await onRemove(modalState.maat.id);
     if (success) {
-      void logActiviteit(
-        'maat_verwijderd',
-        actorFromMedewerker(user),
-        `${modalState.maat.breedte}×${modalState.maat.hoogte} cm`
+      void logActiviteit('maat_verwijderd', `${modalState.maat.breedte}×${modalState.maat.hoogte} cm`
       );
       closeModal();
     } else {

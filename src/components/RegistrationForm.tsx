@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
-import { logActiviteit, ONBEKENDE_ACTOR } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import { isBtwNummerVerplicht, normaliseerBtwNummer, valideerBtwNummer } from '@/lib/btwNummer';
 import { MINIMALE_WACHTWOORDLENGTE } from '@/lib/wachtwoordBeleid';
 import { PasswordInput } from '@/components/PasswordInput';
@@ -25,7 +25,7 @@ export function RegistrationForm() {
   useEffect(() => {
     if (!hasLoggedVisit.current) {
       hasLoggedVisit.current = true;
-      void logActiviteit('word_klant_bezocht', ONBEKENDE_ACTOR);
+      void logActiviteit('word_klant_bezocht');
     }
   }, []);
 
@@ -92,7 +92,7 @@ export function RegistrationForm() {
         setSubmitError(body.error === 'email-in-use' ? t('emailInUseError') : t('submitError'));
         return;
       }
-      void logActiviteit('word_klant_aanvraag', { id: null, email, naam: companyName });
+      void logActiviteit('word_klant_aanvraag');
       setIsSubmitted(true);
     } catch {
       setSubmitError(t('submitError'));

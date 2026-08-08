@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Modal } from '@/components/Modal';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
-import { logActiviteit, actorFromMedewerker } from '@/lib/logActiviteit';
+import { logActiviteit } from '@/lib/logActiviteit';
 import { useApiRecord } from '@/lib/useApiRecord';
 import { buildDrukkerMail, ontbrekendeFactuurvoetjeVelden, ontbrekendeKlantVelden } from '@/lib/buildDrukkerMail';
 import type { Bestelling } from './BestellingenSection';
@@ -208,10 +208,7 @@ export function VersturenNaarDrukkerDialog({
         )
       );
       if (results.some((response) => !response.ok)) throw new Error('status update failed');
-      void logActiviteit(
-        'bestelling_verstuurd_naar_drukker',
-        actorFromMedewerker(user),
-        bestellingen.map((b) => b.bestelnr).join(', ')
+      void logActiviteit('bestelling_verstuurd_naar_drukker', bestellingen.map((b) => b.bestelnr).join(', ')
       );
       onVerstuurd(bestellingen.map((b) => ({ ...b, status: 'Verstuurd naar drukker' as const, zendingnummer })));
       onClose();

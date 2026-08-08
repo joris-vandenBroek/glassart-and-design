@@ -17,7 +17,6 @@ vi.mock('@/lib/useAdminAuth', () => ({
 
 vi.mock('@/lib/logActiviteit', () => ({
   logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
-  actorFromMedewerker: () => ({ id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' }),
 }));
 
 const DRUKKER: Drukker = {
@@ -316,12 +315,10 @@ describe('DrukkerModal — zending afronden', () => {
     await waitFor(() => expect(onBestellingUpdated).toHaveBeenCalledTimes(2));
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'bestelling_afgerond',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'GD-00201'
     );
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'bestelling_afgerond',
-      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
       'GD-00202'
     );
   });

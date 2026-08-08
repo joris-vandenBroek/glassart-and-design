@@ -1,5 +1,6 @@
 import type { Pool, PoolConnection } from 'mysql2/promise';
 import { pasPrijsgroepToe, type PrijsgroepAanpassing } from '@/lib/prijsgroep';
+import { parseJsonKolom } from '@/lib/server/crud';
 
 export { pasPrijsgroepToe };
 export type { PrijsgroepAanpassing };
@@ -89,16 +90,8 @@ export async function berekenPrijzenVoorAlleKunstwerken(
     materiaalIds: string | string[] | null;
     maatIds: string | string[] | null;
   }>) {
-    const materiaalIds: string[] = row.materiaalIds
-      ? typeof row.materiaalIds === 'string'
-        ? JSON.parse(row.materiaalIds)
-        : row.materiaalIds
-      : [];
-    const maatIds: string[] = row.maatIds
-      ? typeof row.maatIds === 'string'
-        ? JSON.parse(row.maatIds)
-        : row.maatIds
-      : [];
+    const materiaalIds = parseJsonKolom<string[]>(row.materiaalIds, []);
+    const maatIds = parseJsonKolom<string[]>(row.maatIds, []);
     const opslag = row.kunstenaarId ? opslagByKunstenaarId.get(row.kunstenaarId) ?? 0 : 0;
     const combinaties: PrijsCombinatie[] = [];
     for (const materiaalId of materiaalIds) {

@@ -36,12 +36,7 @@ vi.mock('@/lib/useAdminAuth', () => ({
 }));
 
 vi.mock('@/lib/logActiviteit', () => ({
-  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),
-  actorFromMedewerker: (user: { uid: string; email: string | null } | null) =>
-    user
-      ? { id: user.uid, email: user.email ?? 'Onbekend', naam: user.email ?? 'Onbekend' }
-      : { id: null, email: 'Onbekend', naam: 'Onbekend' },
-}));
+  logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),}));
 
 const SEGMENTEN: Segment[] = [
   { id: 'seg-1', omschrijving: 'Hotel' },
@@ -339,7 +334,6 @@ describe('KunstwerkenSection', () => {
     await waitFor(() =>
       expect(logActiviteitMock).toHaveBeenCalledWith(
         'kunstwerk_toegevoegd',
-        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
         'Nieuw kunstwerk'
       )
     );
@@ -353,7 +347,6 @@ describe('KunstwerkenSection', () => {
     await waitFor(() =>
       expect(logActiviteitMock).toHaveBeenCalledWith(
         'kunstwerk_gewijzigd',
-        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
         'Hotel paneel 1'
       )
     );
@@ -367,7 +360,6 @@ describe('KunstwerkenSection', () => {
     await waitFor(() =>
       expect(logActiviteitMock).toHaveBeenCalledWith(
         'kunstwerk_verwijderd',
-        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
         'Hotel paneel 1'
       )
     );
@@ -463,7 +455,6 @@ describe('KunstwerkenSection', () => {
     await waitFor(() =>
       expect(logActiviteitMock).toHaveBeenCalledWith(
         'kunstwerk_gewijzigd',
-        { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
         'Restaurant paneel 3'
       )
     );

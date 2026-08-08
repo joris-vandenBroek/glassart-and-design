@@ -1,22 +1,22 @@
 import { NextResponse } from 'next/server';
 import { getRow, updateRow, deleteRow } from '@/lib/server/crud';
 import { getPool } from '@/lib/server/db';
-import { requireMedewerker } from '@/lib/server/requireAuth';
+import { withMedewerker } from '@/lib/server/apiRoute';
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
-  if (!(await requireMedewerker(request))) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  }
-  const row = await getRow<{ id: string; standaard?: boolean }>('drukkers', params.id);
-  if (!row) return NextResponse.json({ error: 'not-found' }, { status: 404 });
-  return NextResponse.json({ ...row, standaard: Boolean(row.standaard) });
-}
+type Context = { params: { id: string } };
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  if (!(await requireMedewerker(request))) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+export const GET = withMedewerker<Context>(
+  'GET /api/drukkers/[id]',
+  async (_request, { params }) => {
+    const row = await getRow<{ id: string; standaard?: boolean }>('drukkers', params.id);
+    if (!row) return NextResponse.json({ error: 'not-found' }, { status: 404 });
+    return NextResponse.json({ ...row, standaard: Boolean(row.standaard) });
   }
-  try {
+);
+
+export const PATCH = withMedewerker<Context>(
+  'PATCH /api/drukkers/[id]',
+  async (request, { params }) => {
     const data = await request.json();
     if (data.standaard) {
       await getPool().query('UPDATE drukkers SET standaard = FALSE WHERE standaard = TRUE AND id != ?', [
@@ -25,16 +25,12 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
     await updateRow('drukkers', params.id, data);
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: 'server-error' }, { status: 500 });
   }
-}
+);
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-  if (!(await requireMedewerker(request))) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  }
-  try {
+export const DELETE = withMedewerker<Context>(
+  'DELETE /api/drukkers/[id]',
+  async (_request, { params }) => {
     // drukkerZendingen.drukkerId is ON DELETE CASCADE, so without this check a delete
     // would silently succeed and take real verzendhistorie (audit trail) down with it.
     // DrukkerModal.tsx already blocks this client-side against already-loaded zendingen,
@@ -47,7 +43,5 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     }
     await deleteRow('drukkers', params.id);
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: 'server-error' }, { status: 500 });
   }
-}
+);
