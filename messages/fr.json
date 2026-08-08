@@ -268,6 +268,7 @@
       "loadError": "Impossible de charger vos commandes. Veuillez réessayer plus tard."
     },
     "settings": {
+      "labelKlantnr": "Numéro client",
       "labelCompanyName": "Nom de l'entreprise",
       "labelBtwNummer": "Numéro de TVA",
       "labelContactPerson": "Personne de contact",

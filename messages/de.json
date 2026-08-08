@@ -268,6 +268,7 @@
       "loadError": "Bestellungen konnten nicht geladen werden. Bitte versuchen Sie es später erneut."
     },
     "settings": {
+      "labelKlantnr": "Kundennummer",
       "labelCompanyName": "Firmenname",
       "labelBtwNummer": "USt-IdNr.",
       "labelContactPerson": "Ansprechpartner",

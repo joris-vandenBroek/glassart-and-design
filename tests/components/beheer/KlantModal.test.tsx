@@ -119,7 +119,7 @@ function patchBody() {
 
 beforeEach(() => {
   fetchMock.mockReset();
-  fetchMock.mockResolvedValue({ ok: true });
+  fetchMock.mockResolvedValue({ ok: true, json: async () => ({ ok: true }) });
   logActiviteitMock.mockReset();
 });
 
@@ -402,7 +402,40 @@ describe('KlantModal', () => {
     await waitFor(() => expect(patchCall()).toBeDefined());
     expect(patchBody()).toEqual({ status: 'Goedgekeurd', prijsgroepId: 'pg-2' });
     await waitFor(() =>
-      expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, status: 'Goedgekeurd', prijsgroepId: 'pg-2' })
+      expect(onUpdated).toHaveBeenCalledWith({
+        ...KLANT,
+        status: 'Goedgekeurd',
+        prijsgroepId: 'pg-2',
+        klantnr: null,
+      })
+    );
+  });
+
+  it('toont het klantnummer in de kop wanneer de klant er een heeft', () => {
+    renderModal({ ...KLANT, status: 'Goedgekeurd', klantnr: 'KL-00007' });
+    expect(screen.getByTestId('klant-modal-klantnr')).toHaveTextContent('KL-00007');
+  });
+
+  it('toont geen klantnummer in de kop wanneer de klant er geen heeft', () => {
+    renderModal(KLANT);
+    expect(screen.queryByTestId('klant-modal-klantnr')).not.toBeInTheDocument();
+  });
+
+  it('neemt het toegekende klantnummer over uit de respons bij goedkeuren', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ ok: true, klantnr: 'KL-00008' }) });
+    const { onUpdated } = renderModal(KLANT);
+    fireEvent.change(screen.getByTestId('klant-modal-prijsgroep'), { target: { value: 'pg-2' } });
+    fireEvent.click(screen.getByTestId('klant-modal-goedkeuren'));
+
+    await waitFor(() =>
+      expect(onUpdated).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'Goedgekeurd', klantnr: 'KL-00008' })
+      )
+    );
+    expect(logActiviteitMock).toHaveBeenCalledWith(
+      'klant_goedgekeurd',
+      { id: 'staff-1', email: 'paul@glassartanddesign.com', naam: 'paul@glassartanddesign.com' },
+      'Testbedrijf BV (KL-00008)'
     );
   });
 

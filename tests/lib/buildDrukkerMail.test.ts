@@ -322,6 +322,27 @@ describe('buildDrukkerMail', () => {
     expect(mail.html).not.toContain('A & B <Glas>');
   });
 
+  it('zet het klantnummer achter de bedrijfsnaam in tekst en HTML', () => {
+    const mail = callBuildDrukkerMail({
+      bestellingen: [bestelling()],
+      klanten: [klant({ klantnr: 'KL-00003' })],
+    });
+    expect(mail.text).toContain('== Testbedrijf BV (KL-00003) ==');
+    expect(mail.html).toContain('Testbedrijf BV (KL-00003)');
+  });
+
+  it('laat de kop ongewijzigd wanneer de klant geen klantnummer heeft', () => {
+    const mail = callBuildDrukkerMail({ bestellingen: [bestelling()], klanten: [klant()] });
+    expect(mail.text).toContain('== Testbedrijf BV ==');
+    // Bewust op de kop zelf, niet op '(' in het algemeen: het factuurvoetje bevat
+    // al "E-mailadres (voor facturen)".
+    expect(mail.text).not.toContain('Testbedrijf BV (');
+  });
+
+  it('blokkeert het versturen niet wanneer het klantnummer ontbreekt', () => {
+    expect(ontbrekendeKlantVelden(klant({ klantnr: null }))).toEqual([]);
+  });
+
   it('appends a one-time factuurvoetje with the Glassart & Design invoice details, after the klant sections', () => {
     const mail = callBuildDrukkerMail({ bestellingen: [bestelling()], klanten: [klant()] });
 

@@ -24,6 +24,7 @@ CREATE TABLE klanten (
   prijsgroepId CHAR(36),
   kunstenaarId CHAR(36),
   minimaleAfname INT,
+  klantnr VARCHAR(20),
   createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uniq_klanten_kunstenaarId (kunstenaarId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -183,6 +184,7 @@ CREATE TABLE counters (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 INSERT INTO counters (id, value) VALUES ('bestelnummer', 0);
 INSERT INTO counters (id, value) VALUES ('zendingnummer', 0);
+INSERT INTO counters (id, value) VALUES ('klantnummer', 0);
 
 CREATE TABLE bestelheaders (
   id CHAR(36) PRIMARY KEY,

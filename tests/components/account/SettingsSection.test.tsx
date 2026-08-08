@@ -12,6 +12,7 @@ vi.stubGlobal('fetch', fetchMock);
 
 const KLANT_PROFILE = {
   companyName: 'Hotel De Zilveren Zwaan',
+  klantnr: 'KL-00002',
   btwNummer: 'NL123456789B01',
   contactPerson: 'Anne de Vries',
   email: 'anne@dezilverenzwaan.nl',
@@ -22,6 +23,11 @@ const KLANT_PROFILE = {
   land: 'NL',
   contactPreference: 'email',
 };
+
+// klantnr is a server-assigned, read-only field: it must never ride along in the
+// outgoing PATCH body, so the PATCH-body assertions below compare against this
+// klantnr-less variant instead of KLANT_PROFILE itself.
+const { klantnr: _klantnr, ...KLANT_PROFILE_ZONDER_KLANTNR } = KLANT_PROFILE;
 
 vi.mock('@/i18n/navigation', () => ({
   usePathname: () => '/account',
@@ -38,7 +44,7 @@ vi.mock('@/lib/logActiviteit', () => ({
       : { id: null, email: 'Onbekend', naam: 'Onbekend' },
 }));
 
-function renderSection() {
+function renderSection(profiel: Record<string, unknown> = KLANT_PROFILE) {
   fetchMock.mockImplementation(async (url: string, options?: { method?: string }) => {
     if (url === '/api/auth/me?type=klant') {
       return {
@@ -49,7 +55,7 @@ function renderSection() {
       };
     }
     if (url === '/api/klanten/me' && (!options || options.method === undefined)) {
-      return { ok: true, json: async () => KLANT_PROFILE };
+      return { ok: true, json: async () => profiel };
     }
     return { ok: true };
   });
@@ -98,7 +104,7 @@ describe('SettingsSection', () => {
       '/api/klanten/me',
       expect.objectContaining({
         method: 'PATCH',
-        body: JSON.stringify({ ...KLANT_PROFILE, btwNummer: 'NL987654321B02' }),
+        body: JSON.stringify({ ...KLANT_PROFILE_ZONDER_KLANTNR, btwNummer: 'NL987654321B02' }),
       })
     );
   });
@@ -129,7 +135,7 @@ describe('SettingsSection', () => {
       '/api/klanten/me',
       expect.objectContaining({
         method: 'PATCH',
-        body: JSON.stringify({ ...KLANT_PROFILE, btwNummer: '' }),
+        body: JSON.stringify({ ...KLANT_PROFILE_ZONDER_KLANTNR, btwNummer: '' }),
       })
     );
   });
@@ -176,7 +182,7 @@ describe('SettingsSection', () => {
       '/api/klanten/me',
       expect.objectContaining({
         method: 'PATCH',
-        body: JSON.stringify({ ...KLANT_PROFILE, email: 'nieuw@example.com' }),
+        body: JSON.stringify({ ...KLANT_PROFILE_ZONDER_KLANTNR, email: 'nieuw@example.com' }),
       })
     );
   });
@@ -195,7 +201,7 @@ describe('SettingsSection', () => {
       '/api/klanten/me',
       expect.objectContaining({
         method: 'PATCH',
-        body: JSON.stringify({ ...KLANT_PROFILE, password: 'nieuw1234' }),
+        body: JSON.stringify({ ...KLANT_PROFILE_ZONDER_KLANTNR, password: 'nieuw1234' }),
       })
     );
   });
@@ -344,7 +350,20 @@ describe('SettingsSection', () => {
     await waitFor(() => expect(screen.getByTestId('settings-saved')).toBeInTheDocument());
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/klanten/me',
-      expect.objectContaining({ method: 'PATCH', body: JSON.stringify(KLANT_PROFILE) })
+      expect.objectContaining({ method: 'PATCH', body: JSON.stringify(KLANT_PROFILE_ZONDER_KLANTNR) })
     );
+  });
+
+  it('toont het klantnummer als leeswaarde, niet als invoerveld', async () => {
+    renderSection();
+    const klantnr = await screen.findByTestId('settings-klantnr');
+    expect(klantnr).toHaveTextContent('KL-00002');
+    expect(klantnr.tagName).not.toBe('INPUT');
+  });
+
+  it('toont geen klantnummer wanneer de klant er geen heeft', async () => {
+    renderSection({ ...KLANT_PROFILE, klantnr: null });
+    await screen.findByTestId('settings-company-name');
+    expect(screen.queryByTestId('settings-klantnr')).not.toBeInTheDocument();
   });
 });

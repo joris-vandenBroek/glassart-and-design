@@ -275,6 +275,10 @@ export function buildDrukkerMail({
     // vandaar tekst() plus een expliciete terugval op de naam die bij de
     // bestelling zelf is vastgelegd.
     const bedrijfsnaam = tekst(klant?.companyName) || tekst(klantBestellingen[0].companyName);
+    // Het klantnummer staat bewust niet in KLANT_ALGEMENE_VELDEN: een klant
+    // zonder nummer mag een verzending naar de drukker nooit blokkeren.
+    const klantnummer = tekst(klant?.klantnr);
+    const klantKop = klantnummer ? `${bedrijfsnaam} (${klantnummer})` : bedrijfsnaam;
     const afleveradres = klant ? formatAfleveradres(klant) : 'Onbekend afleveradres';
 
     const bestellingBlokkenText = klantBestellingen
@@ -299,11 +303,11 @@ ${regelsHtml}`;
       .join('');
 
     return {
-      text: `== ${bedrijfsnaam} ==\nAfleveradres: ${afleveradres}\n\n${bestellingBlokkenText}`,
+      text: `== ${klantKop} ==\nAfleveradres: ${afleveradres}\n\n${bestellingBlokkenText}`,
       html: `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
   <tr>
     <td style="background:#f2f2f2;padding:12px 16px;border-radius:4px 4px 0 0;">
-      <div style="font-family:Arial,sans-serif;font-size:15px;font-weight:bold;color:#111111;">${escapeHtml(bedrijfsnaam)}</div>
+      <div style="font-family:Arial,sans-serif;font-size:15px;font-weight:bold;color:#111111;">${escapeHtml(klantKop)}</div>
       <div style="font-family:Arial,sans-serif;font-size:13px;color:#555555;margin-top:2px;">Afleveradres: ${escapeHtml(afleveradres)}</div>
     </td>
   </tr>

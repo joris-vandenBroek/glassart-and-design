@@ -36,6 +36,17 @@ async function medewerkerCookie(): Promise<string> {
   return `${SESSION_COOKIE_NAME}=${sessionId}`;
 }
 
+// De klantnummer-teller wordt bewust nooit gereset (projectregel), dus verwachte
+// nummers worden berekend ten opzichte van de actuele stand.
+async function klantnummerStand(): Promise<number> {
+  const [rows] = await getPool().query("SELECT value FROM counters WHERE id = 'klantnummer'");
+  return (rows as Array<{ value: number }>)[0].value;
+}
+
+function verwachtKlantnr(stand: number): string {
+  return `KL-${String(stand).padStart(5, '0')}`;
+}
+
 describe('klanten admin routes', () => {
   it('lists klanten', async () => {
     const klant = await insertRow<{ id: string }>('klanten', {
@@ -271,5 +282,109 @@ describe('klanten admin routes', () => {
 
     const [rows] = await getPool().query('SELECT kunstenaarId FROM klanten WHERE id = ?', [klantTwee.id]);
     expect((rows as Array<{ kunstenaarId: string | null }>)[0].kunstenaarId).toBeNull();
+  });
+
+  it('assigns a klantnummer when a klant is approved', async () => {
+    const klant = await insertRow<{ id: string }>('klanten', {
+      email: 'klantnr-nieuw@example.com',
+      wachtwoordHash: await hashPassword('x'),
+      companyName: 'Nummerbedrijf BV',
+      status: 'Beoordelen',
+    } as never);
+    createdKlantIds.push(klant.id);
+
+    const standVoor = await klantnummerStand();
+    const response = await patchKlant(
+      req('PATCH', { status: 'Goedgekeurd', prijsgroepId: 'pg-1' }, await medewerkerCookie()),
+      { params: { id: klant.id } }
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.klantnr).toBe(verwachtKlantnr(standVoor + 1));
+
+    const [rows] = await getPool().query('SELECT klantnr, status FROM klanten WHERE id = ?', [klant.id]);
+    const rij = (rows as Array<{ klantnr: string; status: string }>)[0];
+    expect(rij.klantnr).toBe(verwachtKlantnr(standVoor + 1));
+    expect(rij.status).toBe('Goedgekeurd');
+  });
+
+  it('keeps the same klantnummer when a klant is approved twice', async () => {
+    const klant = await insertRow<{ id: string }>('klanten', {
+      email: 'klantnr-dubbel@example.com',
+      wachtwoordHash: await hashPassword('x'),
+      status: 'Beoordelen',
+    } as never);
+    createdKlantIds.push(klant.id);
+
+    const eerste = await patchKlant(
+      req('PATCH', { status: 'Goedgekeurd', prijsgroepId: 'pg-1' }, await medewerkerCookie()),
+      { params: { id: klant.id } }
+    );
+    const eersteNr = (await eerste.json()).klantnr;
+
+    const standNaEerste = await klantnummerStand();
+    const tweede = await patchKlant(
+      req('PATCH', { status: 'Goedgekeurd', prijsgroepId: 'pg-2' }, await medewerkerCookie()),
+      { params: { id: klant.id } }
+    );
+
+    expect((await tweede.json()).klantnr).toBe(eersteNr);
+    expect(await klantnummerStand()).toBe(standNaEerste);
+  });
+
+  it('does not assign a klantnummer on a plain field update', async () => {
+    const klant = await insertRow<{ id: string }>('klanten', {
+      email: 'klantnr-veld@example.com',
+      wachtwoordHash: await hashPassword('x'),
+      status: 'Beoordelen',
+    } as never);
+    createdKlantIds.push(klant.id);
+
+    const standVoor = await klantnummerStand();
+    const response = await patchKlant(
+      req('PATCH', { phone: '0612345678' }, await medewerkerCookie()),
+      { params: { id: klant.id } }
+    );
+
+    expect(await response.json()).toEqual({ ok: true });
+    expect(await klantnummerStand()).toBe(standVoor);
+    const [rows] = await getPool().query('SELECT klantnr FROM klanten WHERE id = ?', [klant.id]);
+    expect((rows as Array<{ klantnr: string | null }>)[0].klantnr).toBeNull();
+  });
+
+  it('answers 404 when approving an unknown klant id, without advancing the klantnummer counter', async () => {
+    const onbekendId = randomUUID();
+
+    const standVoor = await klantnummerStand();
+    const response = await patchKlant(
+      req('PATCH', { status: 'Goedgekeurd', prijsgroepId: 'pg-1' }, await medewerkerCookie()),
+      { params: { id: onbekendId } }
+    );
+
+    expect(response.status).toBe(404);
+    const body = await response.json();
+    expect(body.error).toBe('klant-niet-gevonden');
+    expect(await klantnummerStand()).toBe(standVoor);
+    const [rows] = await getPool().query('SELECT id FROM klanten WHERE id = ?', [onbekendId]);
+    expect((rows as unknown[]).length).toBe(0);
+  });
+
+  it('does not assign a klantnummer when a klant is rejected', async () => {
+    const klant = await insertRow<{ id: string }>('klanten', {
+      email: 'klantnr-afgewezen@example.com',
+      wachtwoordHash: await hashPassword('x'),
+      status: 'Beoordelen',
+    } as never);
+    createdKlantIds.push(klant.id);
+
+    const standVoor = await klantnummerStand();
+    await patchKlant(req('PATCH', { status: 'Afgewezen' }, await medewerkerCookie()), {
+      params: { id: klant.id },
+    });
+
+    expect(await klantnummerStand()).toBe(standVoor);
+    const [rows] = await getPool().query('SELECT klantnr FROM klanten WHERE id = ?', [klant.id]);
+    expect((rows as Array<{ klantnr: string | null }>)[0].klantnr).toBeNull();
   });
 });
