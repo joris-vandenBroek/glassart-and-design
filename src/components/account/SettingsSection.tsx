@@ -117,11 +117,12 @@ export function SettingsSection() {
     setBtwNummerError(null);
 
     try {
+      const { klantnr: _klantnr, ...profileForPatch } = profile;
       const response = await fetch('/api/klanten/me', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          ...profile,
+          ...profileForPatch,
           btwNummer: genormaliseerdBtwNummer,
           ...(password ? { password } : {}),
         }),

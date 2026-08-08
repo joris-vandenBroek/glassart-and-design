@@ -24,6 +24,11 @@ const KLANT_PROFILE = {
   contactPreference: 'email',
 };
 
+// klantnr is a server-assigned, read-only field: it must never ride along in the
+// outgoing PATCH body, so the PATCH-body assertions below compare against this
+// klantnr-less variant instead of KLANT_PROFILE itself.
+const { klantnr: _klantnr, ...KLANT_PROFILE_ZONDER_KLANTNR } = KLANT_PROFILE;
+
 vi.mock('@/i18n/navigation', () => ({
   usePathname: () => '/account',
   useRouter: () => ({ replace: replaceMock }),
@@ -99,7 +104,7 @@ describe('SettingsSection', () => {
       '/api/klanten/me',
       expect.objectContaining({
         method: 'PATCH',
-        body: JSON.stringify({ ...KLANT_PROFILE, btwNummer: 'NL987654321B02' }),
+        body: JSON.stringify({ ...KLANT_PROFILE_ZONDER_KLANTNR, btwNummer: 'NL987654321B02' }),
       })
     );
   });
@@ -130,7 +135,7 @@ describe('SettingsSection', () => {
       '/api/klanten/me',
       expect.objectContaining({
         method: 'PATCH',
-        body: JSON.stringify({ ...KLANT_PROFILE, btwNummer: '' }),
+        body: JSON.stringify({ ...KLANT_PROFILE_ZONDER_KLANTNR, btwNummer: '' }),
       })
     );
   });
@@ -177,7 +182,7 @@ describe('SettingsSection', () => {
       '/api/klanten/me',
       expect.objectContaining({
         method: 'PATCH',
-        body: JSON.stringify({ ...KLANT_PROFILE, email: 'nieuw@example.com' }),
+        body: JSON.stringify({ ...KLANT_PROFILE_ZONDER_KLANTNR, email: 'nieuw@example.com' }),
       })
     );
   });
@@ -196,7 +201,7 @@ describe('SettingsSection', () => {
       '/api/klanten/me',
       expect.objectContaining({
         method: 'PATCH',
-        body: JSON.stringify({ ...KLANT_PROFILE, password: 'nieuw1234' }),
+        body: JSON.stringify({ ...KLANT_PROFILE_ZONDER_KLANTNR, password: 'nieuw1234' }),
       })
     );
   });
@@ -345,7 +350,7 @@ describe('SettingsSection', () => {
     await waitFor(() => expect(screen.getByTestId('settings-saved')).toBeInTheDocument());
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/klanten/me',
-      expect.objectContaining({ method: 'PATCH', body: JSON.stringify(KLANT_PROFILE) })
+      expect.objectContaining({ method: 'PATCH', body: JSON.stringify(KLANT_PROFILE_ZONDER_KLANTNR) })
     );
   });
 
