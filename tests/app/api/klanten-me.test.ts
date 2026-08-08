@@ -181,4 +181,20 @@ describe('klanten self-service route', () => {
     const [rows] = await getPool().query('SELECT btwNummer FROM klanten WHERE id = ?', [klant.id]);
     expect((rows as Array<{ btwNummer: string | null }>)[0].btwNummer).toBeNull();
   });
+
+  it('geeft het klantnummer terug maar laat de klant het niet zelf zetten', async () => {
+    // KL-09999 valt bewust buiten de echte reeks, zodat deze fixture nooit kan
+    // botsen met een nummer dat de teller uitdeelt.
+    const { klant, cookie } = await createKlantWithCookie({
+      status: 'Goedgekeurd',
+      klantnr: 'KL-09999',
+    });
+
+    const getResponse = await getMe(req('GET', undefined, cookie));
+    expect((await getResponse.json()).klantnr).toBe('KL-09999');
+
+    await patchMe(req('PATCH', { klantnr: 'KL-00001' }, cookie));
+    const [rows] = await getPool().query('SELECT klantnr FROM klanten WHERE id = ?', [klant.id]);
+    expect((rows as Array<{ klantnr: string }>)[0].klantnr).toBe('KL-09999');
+  });
 });

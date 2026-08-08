@@ -12,6 +12,7 @@ vi.stubGlobal('fetch', fetchMock);
 
 const KLANT_PROFILE = {
   companyName: 'Hotel De Zilveren Zwaan',
+  klantnr: 'KL-00002',
   btwNummer: 'NL123456789B01',
   contactPerson: 'Anne de Vries',
   email: 'anne@dezilverenzwaan.nl',
@@ -38,7 +39,7 @@ vi.mock('@/lib/logActiviteit', () => ({
       : { id: null, email: 'Onbekend', naam: 'Onbekend' },
 }));
 
-function renderSection() {
+function renderSection(profiel: Record<string, unknown> = KLANT_PROFILE) {
   fetchMock.mockImplementation(async (url: string, options?: { method?: string }) => {
     if (url === '/api/auth/me?type=klant') {
       return {
@@ -49,7 +50,7 @@ function renderSection() {
       };
     }
     if (url === '/api/klanten/me' && (!options || options.method === undefined)) {
-      return { ok: true, json: async () => KLANT_PROFILE };
+      return { ok: true, json: async () => profiel };
     }
     return { ok: true };
   });
@@ -346,5 +347,18 @@ describe('SettingsSection', () => {
       '/api/klanten/me',
       expect.objectContaining({ method: 'PATCH', body: JSON.stringify(KLANT_PROFILE) })
     );
+  });
+
+  it('toont het klantnummer als leeswaarde, niet als invoerveld', async () => {
+    renderSection();
+    const klantnr = await screen.findByTestId('settings-klantnr');
+    expect(klantnr).toHaveTextContent('KL-00002');
+    expect(klantnr.tagName).not.toBe('INPUT');
+  });
+
+  it('toont geen klantnummer wanneer de klant er geen heeft', async () => {
+    renderSection({ ...KLANT_PROFILE, klantnr: null });
+    await screen.findByTestId('settings-company-name');
+    expect(screen.queryByTestId('settings-klantnr')).not.toBeInTheDocument();
   });
 });

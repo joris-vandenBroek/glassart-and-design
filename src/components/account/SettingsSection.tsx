@@ -17,6 +17,7 @@ type ContactPreference = 'email' | 'phone' | 'whatsapp';
 
 interface KlantProfile {
   companyName: string;
+  klantnr: string;
   btwNummer: string;
   contactPerson: string;
   email: string;
@@ -30,6 +31,7 @@ interface KlantProfile {
 
 const EMPTY_PROFILE: KlantProfile = {
   companyName: '',
+  klantnr: '',
   btwNummer: '',
   contactPerson: '',
   email: '',
@@ -69,6 +71,7 @@ export function SettingsSection() {
       if (cancelled) return;
       setProfile({
         companyName: klant.companyName ?? '',
+        klantnr: klant.klantnr ?? '',
         btwNummer: klant.btwNummer ?? '',
         contactPerson: klant.contactPerson ?? '',
         email: klant.email ?? '',
@@ -187,6 +190,14 @@ export function SettingsSection() {
         data-testid="settings-section"
         className="flex flex-col gap-4 text-sm text-white/80"
       >
+      {profile.klantnr && (
+        <div className={labelClassName}>
+          <span>{t('labelKlantnr')}</span>
+          <p data-testid="settings-klantnr" className="text-sm normal-case tracking-normal text-white">
+            {profile.klantnr}
+          </p>
+        </div>
+      )}
       <label className={labelClassName}>
         <span>
           {t('labelCompanyName')}

@@ -298,6 +298,7 @@
       "statusRegistered": "Return registered"
     },
     "settings": {
+      "labelKlantnr": "Customer number",
       "labelCompanyName": "Company name",
       "labelBtwNummer": "VAT number",
       "labelContactPerson": "Contact person",
