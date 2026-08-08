@@ -79,6 +79,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Controleer databasemigraties
+        run: npx tsx scripts/check-migrations.ts "https://glassartanddesign.com" productie
+        # Staat ná "Checkout resolved version" (stap hierboven) met opzet: db/migrations/
+        # moet de inhoud van de gepromote vN-tag zijn, niet die van master HEAD. En ná
+        # "Install dependencies", want tsx komt uit node_modules.
+
       - name: Build (server mode)
         run: npm run build
         env:

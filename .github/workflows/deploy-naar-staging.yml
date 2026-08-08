@@ -30,6 +30,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Controleer databasemigraties
+        run: npx tsx scripts/check-migrations.ts "https://staging.glassartanddesign.com" staging
+        # Faalt vóór de build en vóór de upload als de staging-database een migratie mist
+        # die in deze commit zit. De controle gaat via de draaiende app en niet
+        # rechtstreeks naar MySQL, omdat de MySQL-grants IP-gebonden zijn en een
+        # GitHub-runner er nooit bij kan -- zie het ontwerp in
+        # docs/superpowers/specs/2026-08-08-schema-drift-guard-design.md.
+
       - name: Compute next version number
         id: version
         run: |

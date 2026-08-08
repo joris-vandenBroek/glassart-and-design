@@ -74,6 +74,29 @@ It follows the same real-staging-database, no-production-possible, scoped-cleanu
 - Both workflows target dedicated DirectAdmin Node.js Selector apps (Passenger-style, `app.js` as the startup file, not `next start`) — see `docs/superpowers/plans/2026-07-23-firebase-to-mysql-migration.md` (Task 25) and `docs/superpowers/specs/2026-07-29-staging-to-production-version-promotion-design.md` for the full history and design behind this setup.
 - DirectAdmin's Node.js Selector has no API for restart/npm-install, only UI buttons — every deploy run ends with a `::warning::` and a job-summary reminder to manually click **Run NPM Install** (only if `package.json`/`package-lock.json` changed) and **RESTART** in DirectAdmin. A successful workflow run does NOT mean the new build is live yet.
 
+### Database migrations
+
+`db/schema.sql` is documentation, not an executable migration — a deploy never touches the
+database. Every schema change is a file in `db/migrations/` that must be applied to each
+database separately:
+
+1. Write the migration file and update `db/schema.sql`.
+2. `npm run db:migrate -- staging`
+3. Deploy to staging and verify.
+4. Ask the user for permission, then `npm run db:migrate -- productie --confirm`.
+5. Promote to production.
+
+Both deploy workflows call `scripts/check-migrations.ts` before uploading and **fail** if the
+target database is missing a migration present in the commit being deployed. The check reads
+`/api/health/schema` on the running app rather than connecting to MySQL, because the MySQL
+grants are IP-bound and GitHub runners can never reach the database.
+
+`npm run db:status -- <omgeving>` lists applied and pending migrations.
+`npm run db:migrate -- <omgeving> --mark-applied <bestand>` records a migration as applied
+without running it — needed when a feature branch's migration already ran on staging before
+the branch merged. `npm run db:diff` compares two environments' actual schemas, which is the
+only way to spot a column added by hand that belongs to no migration file.
+
 ### Production database access
 
 Claude has working, verified credentials for the production MySQL database (`dv137864_productie` on `h64.mijn.host`, same host as staging), stored in `.env.production.local` (gitignored via the existing `.env*.local` pattern, same convention as `.env.local` for staging) — schema/data changes can be run directly instead of asking the user to run SQL by hand.
