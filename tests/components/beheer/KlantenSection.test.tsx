@@ -44,6 +44,7 @@ const KLANTEN: Klant[] = [
     status: 'Beoordelen',
     prijsgroepId: null,
     kunstenaarId: null,
+    klantnr: 'KL-00001',
   },
   {
     id: 'uid-2',
@@ -147,5 +148,18 @@ describe('KlantenSection', () => {
       expect(onKlantUpdated).toHaveBeenCalledWith({ ...KLANTEN[0], status: 'Goedgekeurd', prijsgroepId: 'pg-2' })
     );
     await waitFor(() => expect(screen.queryByTestId('klant-modal')).not.toBeInTheDocument());
+  });
+
+  it('toont het klantnummer als eerste kolom', () => {
+    renderSection();
+    expect(screen.getByText(/Klantnr/)).toBeInTheDocument();
+    expect(screen.getByText('KL-00001')).toBeInTheDocument();
+  });
+
+  it('laat de klantnummer-cel leeg voor een klant zonder nummer', () => {
+    renderSection();
+    const rij = screen.getByText('Ander Bedrijf').closest('tr');
+    expect(rij).not.toBeNull();
+    expect(rij?.textContent).not.toContain('KL-');
   });
 });

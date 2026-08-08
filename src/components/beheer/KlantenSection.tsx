@@ -28,6 +28,7 @@ export interface Klant {
   invoiceCity: string;
   land?: string | null;
   invoiceLand?: string | null;
+  klantnr?: string | null;
   status: 'Beoordelen' | 'Goedgekeurd' | 'Afgewezen';
   prijsgroepId: string | null;
   kunstenaarId: string | null;
@@ -70,6 +71,7 @@ export function KlantenSection({
   }
 
   const columns: Column<Klant>[] = [
+    { key: 'klantnr', label: t('klantenColKlantnr') },
     { key: 'companyName', label: t('klantenColCompanyName') },
     { key: 'kvk', label: t('klantenColKvk') },
     { key: 'btwNummer', label: t('klantenColBtwNummer') },

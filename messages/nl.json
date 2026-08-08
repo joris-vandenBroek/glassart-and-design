@@ -406,6 +406,7 @@
     "klantenLoadError": "Kon de klanten niet laden. Probeer de pagina te verversen.",
     "klantenActionError": "Er is iets misgegaan. Probeer het opnieuw.",
     "klantenEmpty": "Geen klanten gevonden.",
+    "klantenColKlantnr": "Klantnr.",
     "klantenColCompanyName": "Bedrijfsnaam",
     "klantenColKvk": "KvK-nummer",
     "klantenColBtwNummer": "Btw-nummer",
