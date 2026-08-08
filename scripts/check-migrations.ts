@@ -45,7 +45,17 @@ export function beoordeelMigratieStatus(
     };
   }
 
-  const openstaand = berekenOpenstaand(repoFilenames, antwoord.body.applied ?? []);
+  if (!Array.isArray(antwoord.body.applied)) {
+    return {
+      ok: false,
+      exitCode: 1,
+      regels: [
+        `::error::/api/health/schema op ${omgeving} gaf een onverwacht antwoord: 'applied' ontbreekt of is geen lijst.`,
+      ],
+    };
+  }
+
+  const openstaand = berekenOpenstaand(repoFilenames, antwoord.body.applied);
   if (openstaand.length === 0) {
     return {
       ok: true,
@@ -99,5 +109,8 @@ async function main(): Promise<void> {
 
 // Only run the CLI when executed directly, so the test can import the pure function.
 if (process.argv[1]?.endsWith('check-migrations.ts')) {
-  void main();
+  main().catch((error: Error) => {
+    console.error(`::error::Onverwachte fout in de migratiecontrole: ${error.message}`);
+    process.exit(1);
+  });
 }

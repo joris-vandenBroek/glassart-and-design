@@ -46,6 +46,26 @@ describe('beoordeelMigratieStatus', () => {
     expect(output).toContain('npm run db:migrate -- productie --confirm');
   });
 
+  it('fails with an explicit message when applied is missing from the body', () => {
+    const result = beoordeelMigratieStatus(REPO, { status: 200, body: {} }, 'staging');
+    expect(result.ok).toBe(false);
+    expect(result.exitCode).toBe(1);
+    const output = result.regels.join('\n');
+    expect(output).toContain('onverwacht antwoord');
+    expect(output).not.toContain('toegepast op staging');
+  });
+
+  it('fails with an explicit message when applied is not a list', () => {
+    const result = beoordeelMigratieStatus(
+      REPO,
+      { status: 200, body: { applied: 3 as unknown as string[] } },
+      'staging'
+    );
+    expect(result.ok).toBe(false);
+    expect(result.exitCode).toBe(1);
+    expect(result.regels.join('\n')).toContain('onverwacht antwoord');
+  });
+
   it('passes when the database is ahead of the repo', () => {
     const result = beoordeelMigratieStatus(
       REPO,
