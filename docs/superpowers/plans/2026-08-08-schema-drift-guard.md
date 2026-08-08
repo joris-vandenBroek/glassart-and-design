@@ -14,7 +14,7 @@
 
 - **Scripts are TypeScript run with `tsx`**, not `.mjs`. This keeps them type-checked and importable from Vitest tests with ordinary imports, matching the rest of the repo. Scripts use relative imports only — the `@/` alias is a Next.js/tsconfig path that `tsx` does not resolve here.
 - **Never a blanket `DELETE FROM` or `TRUNCATE` in a test.** Tests run against the real shared staging database. Every test cleans up exactly the rows it created, by exact key, in `afterEach`. A blanket delete on `schema_migrations` would destroy the real ledger. See the hard rule in `CLAUDE.md`.
-- **Test fixture filenames in `schema_migrations` are prefixed `test-`** so they are recognisable and removable by exact name.
+- **Test fixture rows in `schema_migrations` carry `test` in their filename** and are always deleted by exact filename. Rows inserted directly by a test may use a free-form name (`test-2026-01-01-…`); rows that must survive `sorteerMigraties` have to match the migration pattern, so they take the form `2026-01-01-test-…​.sql`. Either way the cleanup targets the exact string, never a pattern and never the whole table.
 - **The target environment is always an explicit positional argument** (`staging` or `productie`) with no default, in every script that connects to a database.
 - **Any change to the production database requires asking the user first, every time.** Task 4 is the only task that touches production and it starts with that question.
 - Migration filenames match `^\d{4}-\d{2}-\d{2}-[a-z0-9-]+\.sql$`. Alphabetical order equals chronological order; every caller depends on this.
@@ -47,6 +47,9 @@ Everything else follows the spec as written.
 | `tests/scripts/ledger.test.ts` | Ledger helpers against the staging database. |
 | `tests/app/api/health-schema.test.ts` | Endpoint test. |
 | `tests/scripts/check-migrations.test.ts` | Gate logic against a stubbed `fetch`. |
+| `scripts/lib/apply.ts` | The migration apply loop, as a testable function returning a result. |
+| `tests/scripts/apply.test.ts` | Apply loop against the staging database via a fixture directory. |
+| `tests/fixtures/migrations/` | Throwaway SQL used only by `apply.test.ts`, never by the CLI. |
 
 ---
 
@@ -493,23 +496,228 @@ git commit -m "feat: voeg migratielogboek en db:status toe"
 ### Task 3: `db:migrate` — apply, confirm, and mark-applied
 
 **Files:**
-- Modify: `scripts/db-migrate.ts`, `package.json`
-- Test: manual verification against staging (see Step 4); the pure parts are already covered by Task 1.
+- Create: `scripts/lib/apply.ts`, `tests/fixtures/migrations/2026-01-01-test-scratch-ok.sql`, `tests/fixtures/migrations/2026-01-02-test-scratch-kapot.sql`
+- Modify: `scripts/db-migrate.ts`, `scripts/lib/ledger.ts`, `package.json`
+- Test: `tests/scripts/apply.test.ts`
 
 **Interfaces:**
 - Consumes: everything from Tasks 1 and 2, plus `splitStatements`.
-- Produces: the `apply` subcommand, `--confirm`, `--mark-applied <filename>`.
+- Produces:
+  - `pasMigratiesToe(connection, migrationsDir, openstaand, log): Promise<ToepasResultaat>` from `scripts/lib/apply.ts`, where
+    `ToepasResultaat = { toegepast: string[]; mislukt: null | { filename: string; index: number; statement: string; message: string } }`
+  - the `apply` subcommand, `--confirm`, `--mark-applied <filename>`.
 
-- [ ] **Step 1: Extend the implementation**
+**Why the loop is a function, not inline CLI code:** this is the only code in the feature that executes DDL against the production database, so it must be covered by tests rather than manual CLI runs. Returning a result object instead of calling `process.exit` lets the tests drive it directly, with no child process. The CLI maps the result to output and exit codes.
+
+- [ ] **Step 1: Make the migrations directory overridable**
+
+In `scripts/lib/ledger.ts`, replace the `MIGRATIONS_DIR` constant with:
+
+```ts
+// Overridable so tests can point the runner at a fixture directory instead of the real
+// db/migrations/. Nothing in production sets this -- CI and the CLI both use the default.
+export const MIGRATIONS_DIR = process.env.MIGRATIONS_DIR ?? 'db/migrations';
+```
+
+- [ ] **Step 2: Write the failing test**
+
+Create `tests/fixtures/migrations/2026-01-01-test-scratch-ok.sql`:
+
+```sql
+-- Fixture for tests/scripts/apply.test.ts. Never applied to a real database by the CLI:
+-- it lives outside db/migrations/ and is only reachable via MIGRATIONS_DIR.
+CREATE TABLE IF NOT EXISTS test_scratch_apply (
+  id INT PRIMARY KEY
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+INSERT IGNORE INTO test_scratch_apply (id) VALUES (1);
+```
+
+Create `tests/fixtures/migrations/2026-01-02-test-scratch-kapot.sql`:
+
+```sql
+-- Fixture: the first statement succeeds, the second cannot. Proves the runner stops at the
+-- failure and does not record the file.
+INSERT IGNORE INTO test_scratch_apply (id) VALUES (2);
+ALTER TABLE test_scratch_apply ADD COLUMN id INT;
+```
+
+Create `tests/scripts/apply.test.ts`:
+
+```ts
+import { afterEach, describe, expect, it } from 'vitest';
+import type { Connection } from 'mysql2/promise';
+import { verbind } from '../../scripts/lib/env';
+import { pasMigratiesToe } from '../../scripts/lib/apply';
+import { leesToegepast, noteerToegepast, zorgVoorLedger } from '../../scripts/lib/ledger';
+
+const FIXTURE_DIR = 'tests/fixtures/migrations';
+const OK = '2026-01-01-test-scratch-ok.sql';
+const KAPOT = '2026-01-02-test-scratch-kapot.sql';
+
+let open: Connection | null = null;
+
+async function connect(): Promise<Connection> {
+  const { connection } = await verbind('staging');
+  open = connection;
+  await zorgVoorLedger(connection);
+  return connection;
+}
+
+// Removes exactly what these tests create: the two fixture ledger rows (by exact filename)
+// and the scratch table. Never touches any other row in schema_migrations.
+afterEach(async () => {
+  if (open) {
+    await open.query('DELETE FROM schema_migrations WHERE filename IN (?, ?)', [OK, KAPOT]);
+    await open.query('DROP TABLE IF EXISTS test_scratch_apply');
+    await open.end();
+    open = null;
+  }
+});
+
+describe('pasMigratiesToe', () => {
+  it('runs a migration, records it, and reports no failure', async () => {
+    const connection = await connect();
+    const resultaat = await pasMigratiesToe(connection, FIXTURE_DIR, [OK], () => {});
+
+    expect(resultaat.mislukt).toBeNull();
+    expect(resultaat.toegepast).toEqual([OK]);
+    expect(await leesToegepast(connection)).toContain(OK);
+
+    const [rows] = await connection.query('SELECT id FROM test_scratch_apply');
+    expect((rows as Array<{ id: number }>).map((r) => r.id)).toEqual([1]);
+  });
+
+  it('stops at the failing statement and does not record the file', async () => {
+    const connection = await connect();
+    await pasMigratiesToe(connection, FIXTURE_DIR, [OK], () => {});
+
+    const resultaat = await pasMigratiesToe(connection, FIXTURE_DIR, [KAPOT], () => {});
+
+    expect(resultaat.toegepast).toEqual([]);
+    expect(resultaat.mislukt).not.toBeNull();
+    expect(resultaat.mislukt!.filename).toBe(KAPOT);
+    // Statement 1 (the INSERT) succeeded; statement 2 (the duplicate column) failed.
+    expect(resultaat.mislukt!.index).toBe(1);
+    expect(resultaat.mislukt!.statement).toContain('ADD COLUMN id');
+
+    // The half-applied file must NOT be in the ledger -- that is the whole point.
+    expect(await leesToegepast(connection)).not.toContain(KAPOT);
+    // ...and the statement that did succeed before the failure is still committed, because
+    // MySQL has no transactional DDL. Asserting it makes that irreversibility explicit.
+    const [rows] = await connection.query('SELECT id FROM test_scratch_apply ORDER BY id');
+    expect((rows as Array<{ id: number }>).map((r) => r.id)).toEqual([1, 2]);
+  });
+
+  it('stops before later files once one has failed', async () => {
+    const connection = await connect();
+    const resultaat = await pasMigratiesToe(connection, FIXTURE_DIR, [KAPOT, OK], () => {});
+
+    expect(resultaat.mislukt!.filename).toBe(KAPOT);
+    expect(resultaat.toegepast).toEqual([]);
+    expect(await leesToegepast(connection)).not.toContain(OK);
+  });
+
+  it('skips a migration already recorded in the ledger', async () => {
+    const connection = await connect();
+    await noteerToegepast(connection, OK);
+    const resultaat = await pasMigratiesToe(connection, FIXTURE_DIR, [], () => {});
+    expect(resultaat.toegepast).toEqual([]);
+    expect(resultaat.mislukt).toBeNull();
+  });
+});
+```
+
+- [ ] **Step 3: Run test to verify it fails**
+
+```bash
+npx vitest run tests/scripts/apply.test.ts
+```
+
+Expected: FAIL — cannot resolve `../../scripts/lib/apply`.
+
+- [ ] **Step 4: Write the apply module**
+
+Create `scripts/lib/apply.ts`:
+
+```ts
+import fs from 'node:fs';
+import path from 'node:path';
+import type { Connection } from 'mysql2/promise';
+import { splitStatements } from './migrations';
+import { noteerToegepast } from './ledger';
+
+export interface Mislukking {
+  filename: string;
+  index: number;
+  statement: string;
+  message: string;
+}
+
+export interface ToepasResultaat {
+  toegepast: string[];
+  mislukt: Mislukking | null;
+}
+
+// Applies the given migrations in the order supplied. Returns a result instead of calling
+// process.exit so the caller (CLI) owns presentation and exit codes, and so this loop --
+// the only code in the feature that runs DDL against production -- is testable directly.
+//
+// MySQL has no transactional DDL: an ALTER implicitly commits, so a file that fails halfway
+// cannot be rolled back. On failure the runner stops immediately and does NOT record the
+// file, leaving the database in a state a human must inspect. That is deliberate: a loud
+// stop mid-file beats a silent "done" or a bogus rollback claim.
+export async function pasMigratiesToe(
+  connection: Connection,
+  migrationsDir: string,
+  openstaand: string[],
+  log: (regel: string) => void
+): Promise<ToepasResultaat> {
+  const toegepast: string[] = [];
+
+  for (const filename of openstaand) {
+    const sql = fs.readFileSync(path.join(migrationsDir, filename), 'utf8');
+    const statements = splitStatements(sql);
+    log(`\n${filename} (${statements.length} statements)`);
+
+    for (const [index, statement] of statements.entries()) {
+      try {
+        await connection.query(statement);
+        log(`  ${index + 1}/${statements.length} ok`);
+      } catch (error) {
+        return {
+          toegepast,
+          mislukt: { filename, index, statement, message: (error as Error).message },
+        };
+      }
+    }
+
+    await noteerToegepast(connection, filename);
+    toegepast.push(filename);
+    log('  genoteerd in schema_migrations');
+  }
+
+  return { toegepast, mislukt: null };
+}
+```
+
+- [ ] **Step 5: Run test to verify it passes**
+
+```bash
+npx vitest run tests/scripts/apply.test.ts
+```
+
+Expected: PASS — 4 tests.
+
+- [ ] **Step 6: Wire the CLI to the apply module**
 
 Replace the body of `scripts/db-migrate.ts` with:
 
 ```ts
 import fs from 'node:fs';
-import path from 'node:path';
-import { berekenOpenstaand, isMigrationFilename, sorteerMigraties, splitStatements } from './lib/migrations';
+import { berekenOpenstaand, isMigrationFilename, sorteerMigraties } from './lib/migrations';
 import { verbind } from './lib/env';
 import { MIGRATIONS_DIR, leesToegepast, noteerToegepast, zorgVoorLedger } from './lib/ledger';
+import { pasMigratiesToe } from './lib/apply';
 
 const args = process.argv.slice(2);
 const [subcommand, target] = args;
@@ -570,31 +778,22 @@ async function main(): Promise<void> {
       return;
     }
 
-    for (const filename of openstaand) {
-      const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, filename), 'utf8');
-      const statements = splitStatements(sql);
-      console.log(`\n${filename} (${statements.length} statements)`);
-      for (const [index, statement] of statements.entries()) {
-        try {
-          await connection.query(statement);
-          console.log(`  ${index + 1}/${statements.length} ok`);
-        } catch (error) {
-          // MySQL has no transactional DDL -- an ALTER implicitly commits, so a file that
-          // fails halfway cannot be rolled back. Stop immediately and do NOT record the
-          // file: a loud stop mid-file beats a silent "done" or a bogus rollback claim.
-          console.error(`  ${index + 1}/${statements.length} MISLUKT: ${(error as Error).message}`);
-          console.error(`  Statement: ${statement}`);
-          console.error(
-            `\n${filename} is GEDEELTELIJK toegepast en is niet genoteerd in schema_migrations.`
-          );
-          console.error('Controleer de database met de hand voordat je opnieuw draait.');
-          process.exit(1);
-        }
-      }
-      await noteerToegepast(connection, filename);
-      console.log(`  genoteerd in schema_migrations`);
+    const resultaat = await pasMigratiesToe(connection, MIGRATIONS_DIR, openstaand, (regel) =>
+      console.log(regel)
+    );
+
+    if (resultaat.mislukt) {
+      const { filename, index, statement, message } = resultaat.mislukt;
+      console.error(`  statement ${index + 1} MISLUKT: ${message}`);
+      console.error(`  Statement: ${statement}`);
+      console.error(
+        `\n${filename} is GEDEELTELIJK toegepast en is NIET genoteerd in schema_migrations.`
+      );
+      console.error('Controleer de database met de hand voordat je opnieuw draait.');
+      process.exit(1);
     }
-    console.log(`\n${openstaand.length} migratie(s) toegepast op ${database}.`);
+
+    console.log(`\n${resultaat.toegepast.length} migratie(s) toegepast op ${database}.`);
   } finally {
     await connection.end();
   }
@@ -612,7 +811,7 @@ Add to `package.json` scripts, next to `db:status`:
     "db:migrate": "tsx scripts/db-migrate.ts apply",
 ```
 
-- [ ] **Step 2: Verify the production guard refuses without `--confirm`**
+- [ ] **Step 7: Verify the production guard refuses without `--confirm`**
 
 ```bash
 npm run db:migrate -- productie
@@ -620,7 +819,7 @@ npm run db:migrate -- productie
 
 Expected: `Weigering: \`apply\` op productie vereist expliciet --confirm.` and exit code 2. **No connection is opened.**
 
-- [ ] **Step 3: Verify `--mark-applied` rejects an unknown filename**
+- [ ] **Step 8: Verify `--mark-applied` rejects an unknown filename**
 
 ```bash
 npm run db:migrate -- staging --mark-applied 2026-01-01-bestaat-niet.sql
@@ -628,7 +827,7 @@ npm run db:migrate -- staging --mark-applied 2026-01-01-bestaat-niet.sql
 
 Expected: `'2026-01-01-bestaat-niet.sql' staat niet in db/migrations/ -- weigering.` and exit code 2.
 
-- [ ] **Step 4: Verify `--mark-applied` works and is visible in status**
+- [ ] **Step 9: Verify `--mark-applied` works and is visible in status**
 
 ```bash
 npm run db:migrate -- staging --mark-applied 2026-07-30-kunstenaar-exclusiviteit.sql
@@ -637,7 +836,7 @@ npm run db:status -- staging
 
 Expected: `Toegepast: 1`, `Openstaand: 9`.
 
-- [ ] **Step 5: Re-run the existing suite for this area**
+- [ ] **Step 10: Re-run the existing suite for this area**
 
 ```bash
 npx vitest run tests/scripts/
@@ -645,10 +844,10 @@ npx vitest run tests/scripts/
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 11: Commit**
 
 ```bash
-git add scripts/db-migrate.ts package.json
+git add scripts/lib/apply.ts scripts/lib/ledger.ts scripts/db-migrate.ts tests/scripts/apply.test.ts tests/fixtures/migrations package.json
 git commit -m "feat: voeg db:migrate toe met confirm-guard en mark-applied"
 ```
 
