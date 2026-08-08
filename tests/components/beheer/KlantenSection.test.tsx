@@ -166,13 +166,11 @@ describe('KlantenSection', () => {
   });
 
   it('sorteert de tabel standaard op klantnr, net als bestellingen op bestelnr', () => {
-    // Bewuste keuze: de klantnr-kolom staat vooraan en DataTable valt zonder
-    // expliciete defaultSortKey terug op de eerste sorteerbare kolom, dus de
-    // tabel sorteert standaard op klantnummer -- gelijk aan het
-    // bestellingenscherm, dat standaard op bestelnr sorteert. Klanten zonder
-    // klantnummer delen dezelfde (lege) sleutel en behouden onderling hun
-    // invoervolgorde. Deze test legt dat vast zodat het niet ongemerkt
-    // terugvalt op bedrijfsnaam.
+    // Bewuste keuze, vastgelegd met defaultSortKey="klantnr": de tabel sorteert
+    // standaard op klantnummer, gelijk aan het bestellingenscherm dat standaard
+    // op bestelnr sorteert. Klanten zonder klantnummer delen dezelfde (lege)
+    // sleutel en behouden onderling hun invoervolgorde. Deze test legt dat vast
+    // zodat het niet ongemerkt terugvalt op bedrijfsnaam.
     const klantenMetAfwijkendeVolgorde: Klant[] = [
       { ...KLANTEN[0], id: 'uid-1', companyName: 'Testbedrijf BV', klantnr: 'KL-00001' },
       { ...KLANTEN[1], id: 'uid-2', companyName: 'Ander Bedrijf', klantnr: null },
