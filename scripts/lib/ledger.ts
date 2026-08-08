@@ -1,6 +1,8 @@
 import type { Connection } from 'mysql2/promise';
 
-export const MIGRATIONS_DIR = 'db/migrations';
+// Overridable so tests can point the runner at a fixture directory instead of the real
+// db/migrations/. Nothing in production sets this -- CI and the CLI both use the default.
+export const MIGRATIONS_DIR = process.env.MIGRATIONS_DIR ?? 'db/migrations';
 
 // IF NOT EXISTS on purpose: the ledger cannot itself be a migration file (the runner would
 // have to read the ledger to discover whether the ledger exists), so it is created on
