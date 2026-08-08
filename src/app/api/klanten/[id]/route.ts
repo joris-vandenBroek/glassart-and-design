@@ -42,7 +42,7 @@ async function updateEnKenKlantnummerToe(
       klantnr = `KL-${String(nextValue).padStart(KLANTNR_PADDING, '0')}`;
     }
 
-    const velden = { ...data, klantnr };
+    const velden: Record<string, unknown> = { ...data, klantnr };
     const kolommen = Object.keys(velden);
     const assignments = kolommen.map((kolom) => `\`${kolom}\` = ?`).join(', ');
     await connection.query(`UPDATE klanten SET ${assignments} WHERE id = ?`, [
