@@ -1,5 +1,9 @@
 # Design: Beheer — Segmenten en Kunstwerken (Deel 1: beheer)
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 21-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Context
 
 Dit deelproject volgt op [2026-07-21-materiaalsoorten-materialen-maten-design.md](2026-07-21-materiaalsoorten-materialen-maten-design.md), dat de eerste generieke Firestore-CRUD-hook (`useFirestoreCollection`) en drie eenvoudige stamdata-tabellen (materiaalsoorten, materialen, maten) opleverde. Dit deelproject bouwt daarop voort met twee nieuwe beheer-secties: **Segmenten** (eenvoudig, identiek patroon aan materiaalsoorten) en **Kunstwerken** (aanzienlijk complexer: bestandsupload, meervoudige selecties, een automatisch prijsrooster, en meertalige beschrijvingen).

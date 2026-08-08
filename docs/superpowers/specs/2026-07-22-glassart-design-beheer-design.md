@@ -1,5 +1,9 @@
 # Design: Beheer — Glassart & Design (bedrijfsgegevens)
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 22-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Context
 
 De publieke contactpagina (`src/app/[locale]/contact/page.tsx` → `src/components/ContactInfo.tsx`) toont op dit moment volledig **hardcoded** bedrijfsgegevens: bezoekadres, twee contactpersonen (naam, rol, telefoon — als losse JSX, geen data-array), een WhatsApp-nummer, e-mailadres, openingstijden (via i18n-tekst `hoursValue`) en KvK-/BTW-/IBAN-gegevens. Een deel hiervan zijn zichtbaar placeholder-waarden (KvK `12345678`, IBAN `NL00 BANK 0123 4567 89`, WhatsApp `31600000000`).

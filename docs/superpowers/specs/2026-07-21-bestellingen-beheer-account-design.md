@@ -1,5 +1,9 @@
 # Design: Bestellingen zichtbaar in Beheer en op de accountpagina
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 21-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Context
 
 `bestelheaders`/`bestellines` bestaan sinds het vorige deelproject echt in Firestore (geschreven bij "Bestelling afronden"), maar zijn nergens zichtbaar: "Bestellingen" is nog een uitgeschakelde plaatshouder in `BeheerNav` (per `2026-07-21-beheer-datatabellen-design.md`), en "Mijn bestellingen" op `/account` toont nog steeds alleen mock-data (`useOrders`/`useAllOrders`), die sinds de vorige ronde niet meer aangevuld wordt omdat `CartPanel` niet langer naar de mock-lijst schrijft. Dit deelproject maakt beide kanten echt.

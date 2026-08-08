@@ -1,5 +1,9 @@
 # Mobiele collectiefilters in een uitschuifpaneel Implementation Plan
 
+> **Historisch implementatieplan.** Dit is het stap-voor-stap plan zoals het op 02-08-2026 is opgesteld en uitgevoerd, inclusief de codefragmenten van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Op de collectiepagina (`/collecties`) tonen we op mobiel direct de kunstwerken-grid, met de bestaande filters achter een "Filters"-knop die een uitschuifpaneel opent, in plaats van de filters die nu bovenaan de pagina staan en de grid ver naar beneden duwen.

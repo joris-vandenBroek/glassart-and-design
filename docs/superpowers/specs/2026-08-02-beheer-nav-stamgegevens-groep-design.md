@@ -1,5 +1,9 @@
 # Uitklapbare "Stamgegevens"-groep in beheermenu — design
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 02-08-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Probleem
 
 Het beheermenu (`BeheerNav.tsx`) toont 16 items als platte lijst en is daardoor te lang. Een

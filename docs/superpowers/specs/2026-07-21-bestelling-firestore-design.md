@@ -1,5 +1,9 @@
 # Design: Bestelling afronden schrijft naar Firestore
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 21-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Context
 
 Tot nu toe plaatst "Bestelling afronden" in `CartPanel.tsx` alleen een mock-bestelling (`useOrders`/localStorage), zichtbaar in "Mijn bestellingen" op `/account`. De klantgoedkeuring-spec (`2026-07-20-klantgoedkeuring-design.md`) had dit bewust buiten scope gehouden: "Echte koppeling van bestellingen ... aan het klantaccount ... blijven mock." Dit deelproject herroept dat expliciet: de klant wil dat een geplaatste bestelling nu een echt `bestelheaders`/`bestellines`-document in Firestore wordt.

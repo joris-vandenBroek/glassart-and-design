@@ -1,5 +1,11 @@
 # KunstwerkSpecCard restyle: whitespace, consistent size, gold accents, Collectie
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 23-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
+> **COMPONENT BESTAAT NIET MEER.** `KunstwerkSpecCard.tsx` is verwijderd in commit `558be38` ("remove KunstwerkSpecCard now that nothing uses it"). De productweergave in de winkel loopt nu via `ProductsGrid.tsx` en `ProductModal.tsx`. Dit ontwerp beschrijft dus vormgeving van een component die niet meer bestaat — de gouden accenten en de spec-regels zijn deels opgegaan in `ProductModal`, maar niet één-op-één. Lees het als achtergrond bij de vormgevingskeuzes, niet als beschrijving van de huidige winkelkaart.
+
 ## Context
 
 `KunstwerkSpecCard.tsx` renders the product card shown in the shop grid

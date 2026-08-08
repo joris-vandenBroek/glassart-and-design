@@ -1,5 +1,9 @@
 # Design: Bevestigingsmail bij bestelling via mijn.host SMTP
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 21-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Context
 
 Sinds "Bestelling afronden" toont de klant al een in-app bevestiging, maar er gaat geen e-mail uit. Firebase Cloud Functions (de voor de hand liggende manier om dit vanuit Firebase te doen) vereisen het Blaze-abonnement, omdat het Spark-plan geen uitgaand netwerkverkeer naar niet-Google-servers toestaat — dat geldt ongeacht of de SMTP-gegevens correct zijn. In plaats daarvan gebruiken we de webhosting die de klant al heeft: mijn.host (Hostingpakket Basis, bevestigd: PHP + FTP/SFTP inbegrepen, geen Blaze nodig).

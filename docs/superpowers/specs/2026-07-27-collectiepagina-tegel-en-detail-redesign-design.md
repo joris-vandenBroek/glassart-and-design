@@ -1,7 +1,13 @@
 # Collectiepagina tegel- en detail-redesign
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 27-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 **Datum:** 2026-07-27
 **Status:** Goedgekeurd, klaar voor implementatieplan
+
+> **Uitgevoerd — en verder gegaan dan hier beschreven.** Dit ontwerp haalde `KunstwerkSpecCard` weg uit de tegelweergave; de component is daarna helemaal verwijderd toen niets hem meer gebruikte (commit `558be38`). De collectiepagina draait nu volledig op `ProductsGrid.tsx` plus `ProductModal.tsx`. De mobiele filterweergave is later nog eens herzien in `2026-08-02-mobiele-collectiefilters-paneel-design.md`.
 
 ## Aanleiding
 

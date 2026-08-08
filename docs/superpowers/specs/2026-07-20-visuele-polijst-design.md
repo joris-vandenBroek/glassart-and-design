@@ -1,5 +1,9 @@
 # Design: Visuele polijst — typography, hover-motion, badges, cart sidebar
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 20-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Context
 
 The last item in the original site-build priority queue was "visuele polijst": typography, hover-motion, and badges, inspired by craft techniques the client pointed at in a reference site, `C:\Temp\Zeus`. That brainstorm was paused mid-session and picked back up now. The client also asked, in the same round, for the winkelmandje (cart) to become a full-width/full-length sidebar like Zeus's `.cart-sidebar`, with the primary button renamed "Bestelling afronden" and a secondary "Bestelling leegmaken" option beneath it — reopening a decision from the product-modal-redesign spec that explicitly kept `CartPanel` as a small nav dropdown.

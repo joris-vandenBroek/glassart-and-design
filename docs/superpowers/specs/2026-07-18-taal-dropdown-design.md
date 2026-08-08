@@ -1,5 +1,9 @@
 # Design: Taalkeuze-dropdown met vlaggen
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 18-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Context
 
 Vervangt de huidige `LanguageSwitcher`: vier losse knoppen (NL/EN/DE/FR) naast elkaar in de navigatiebalk. Wordt één samengeklapte knop met de vlag en code van de actieve taal, die bij klikken een lijst met alle 4 talen toont.

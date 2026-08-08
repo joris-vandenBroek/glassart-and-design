@@ -1,5 +1,9 @@
 # Design: Kunstwerken — publieke koppeling (Deel 2)
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 21-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Context
 
 [Deel 1](2026-07-21-segmenten-kunstwerken-beheer-design.md) leverde een volledig CRUD-beheer op voor Segmenten en Kunstwerken (foto-upload, segment/materiaal/maat-selectie, prijsrooster, meertalige beschrijvingen), maar raakte de publieke site bewust niet aan. Ondertussen is, in een parallel deelproject, een echte checkout-flow gemerged: `CartPanel` schrijft nu al naar Firestore-collecties `bestelheaders`/`bestellines`, maar de bestelregel-velden `kunstwerkId`/`maatId`/`materiaalId` staan hardcoded op `null` — puur scaffolding, met een Firestore-rule die op dit moment zelfs expliciet *alleen* `null` toestaat voor die velden bij het aanmaken.

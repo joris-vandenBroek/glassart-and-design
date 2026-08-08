@@ -1,5 +1,9 @@
 # Collectiepagina filters + breadcrumb + Stijl/Onderwerp/AI-taxonomie Implementation Plan
 
+> **Historisch implementatieplan.** Dit is het stap-voor-stap plan zoals het op 26-07-2026 is opgesteld en uitgevoerd, inclusief de codefragmenten van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give the `/collecties` page a breadcrumb, a filter sidebar (Collectie, Kunstenaar, Formaat, Stijl, Onderwerp, AI-gegenereerd) with removable active-filter chips, and a navbar dropdown that deep-links into a pre-selected segment — backed by two new beheer-maintained taxonomy tables (Stijlen, Onderwerpen) that a kunstwerk can be tagged with many-to-many, including creating a brand-new Stijl/Onderwerp inline while editing a kunstwerk.

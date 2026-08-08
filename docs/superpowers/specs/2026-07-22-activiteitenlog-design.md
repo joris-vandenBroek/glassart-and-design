@@ -1,5 +1,9 @@
 # Design: Activiteitenlog (Firestore-logging + Beheer-overzicht)
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 22-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Context
 
 Er is nu geen enkele vorm van activiteitenlogging op de site. De klant wil per opgesomde actie weten *wie* het deed (klantnaam + e-mail, of "Onbekend" bij een niet-ingelogde bezoeker) en *wanneer*, terugvindbaar in een nieuw overzicht in Beheer — niet alleen ruwe data in de Firebase-console.

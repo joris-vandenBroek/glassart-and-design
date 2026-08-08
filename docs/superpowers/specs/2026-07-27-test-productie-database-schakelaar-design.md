@@ -1,5 +1,9 @@
 # Test/productie-database-schakelaar — ontwerp
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 27-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 > **VERVANGEN (2026-07-27):** dit ontwerp is niet uitgevoerd. Tijdens dezelfde
 > brainstormsessie bleek een losse staging-omgeving (vaste eigen deployment, permanent
 > verbonden met de test-database — voortbouwend op het bestaande

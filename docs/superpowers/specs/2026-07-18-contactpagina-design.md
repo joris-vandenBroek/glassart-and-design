@@ -1,5 +1,9 @@
 # Design: Contactpagina
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 18-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Context
 
 Losse contactpagina (`/contact`), geïnspireerd op de contactsectie van het referentieproject `C:\Temp\Zeus` (twee kolommen: bedrijfsgegevens + kaart links, contactformulier rechts). Vervangt op termijn de huidige contact-sectie op de homepage niet — die blijft als korte samenvatting staan; deze nieuwe pagina is de volledige, uitgebreide contactervaring. De navigatiebalk en de interim `#contact`-ankerlinks (nu wijzend naar de homepage-sectie) worden in dit deelproject omgezet naar deze nieuwe, losse pagina.

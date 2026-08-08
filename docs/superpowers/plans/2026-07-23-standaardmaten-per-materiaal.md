@@ -1,5 +1,9 @@
 # Standaardmaten per materiaal + eigen maat opgeven Implementation Plan
 
+> **Historisch implementatieplan.** Dit is het stap-voor-stap plan zoals het op 23-07-2026 is opgesteld en uitgevoerd, inclusief de codefragmenten van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add the 11 real standard sizes for veiligheidsglas/plexi(Acryl)/Dibond to the database, and let customers request a custom size in the order popup — with a 3-month lead-time warning for veiligheidsglas, a 200x300cm cap (no extra lead time) for Acryl/Dibond, and manual/offerte pricing for every custom-size order.

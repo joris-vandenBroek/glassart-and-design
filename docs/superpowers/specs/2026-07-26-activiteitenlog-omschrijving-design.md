@@ -1,5 +1,9 @@
 # Design: Omschrijving-veld in de activiteitenlog
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 26-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Context
 
 Vervolg op `docs/superpowers/specs/2026-07-22-activiteitenlog-design.md` en `docs/superpowers/specs/2026-07-22-activiteitenlog-uitbreiding-design.md`. Beide eerdere rondes kozen bewust voor "alleen type + wie + wanneer" zonder detailvelden. Gebruiker vroeg naar aanleiding van het Activiteitenlog-scherm expliciet: bij "Materiaal verwijderd" is niet te zien wélk materiaal, bij "Kunstwerk gewijzigd" niet wélk kunstwerk, en bij "Bestelling geplaatst" niet welk bestelnummer. Bij nader onderzoek bleek hetzelfde gat breder te spelen: bij alle klant- en bestelling-acties in Beheer (goedkeuren/afwijzen, prijs vaststellen, prijsgroep/exclusiviteit/minimale afname wijzigen) is de actor de medewerker die klikt, maar staat nergens op wélke klant of bestelling de actie werd toegepast.

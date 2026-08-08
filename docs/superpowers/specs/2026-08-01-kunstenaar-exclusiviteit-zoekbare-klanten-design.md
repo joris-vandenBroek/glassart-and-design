@@ -1,5 +1,9 @@
 # Kunstenaar-exclusiviteit: zoekbare klantselectie — design
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 01-08-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Probleem
 
 `KunstenaarsSection.tsx` toont "Exclusief verkooprecht voor klant" (`exclusieveKlantIds`, max 2

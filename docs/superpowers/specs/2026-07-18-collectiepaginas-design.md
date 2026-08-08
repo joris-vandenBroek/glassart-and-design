@@ -1,5 +1,18 @@
 # Design: Navigatie + Collectiepagina's per segment
 
+> **ACHTERHAALD (gecontroleerd tegen de code op 2026-08-08).** Dit ontwerp is uitgevoerd en daarna volledig vervangen. Het staat hier als historisch ontwerpdocument — gebruik het niet als beschrijving van de huidige site. Wat er sindsdien mee gebeurd is:
+>
+> | Onderdeel uit dit ontwerp | Status nu |
+> |---|---|
+> | 24 statische segmentpagina's `/collecties/[segment]` | **Verwijderd.** Vervangen door één `/collecties`-pagina met client-side filters, zie `2026-07-18-producten-pagina-design.md`. Route verwijderd in commit `299d084`. |
+> | "Collecties"-dropdown in de navigatiebalk | **Verwijderd.** `NavBar.tsx` heeft nu één directe link naar `/collecties`, zonder submenu. |
+> | `SegmentCta`-component | **Hernoemd** naar `BecomeClientCta` (commit `299d084`). |
+> | Login-mockup met `localStorage` en nep-bestelgeschiedenis in de navigatiebalk | **Verwijderd.** Er is echte authenticatie (sessie-cookie tegen MySQL) en een echte accountpagina met echte bestellingen. |
+> | Statische export (`output: 'export'`, `images: { unoptimized: true }`) | **Vervallen.** De app draait in Next.js server mode; zie `2026-07-23-firebase-to-mysql-migration-design.md`. |
+> | Overzichtspagina met 6 tegels per segment | **Vervangen** door het filterbare grid; de tegelvormgeving is later nog eens herzien in `2026-07-27-collectiepagina-tegel-en-detail-redesign-design.md` en `2026-08-02-mobiele-collectiefilters-paneel-design.md`. |
+>
+> De opvolgende ontwerpen die samen de huidige collectiepagina beschrijven: `2026-07-18-producten-pagina-design.md` → `2026-07-27-collectiepagina-tegel-en-detail-redesign-design.md` → `2026-08-02-mobiele-collectiefilters-paneel-design.md`.
+
 ## Context
 
 Dit is het eerste van drie deelprojecten die de statische visitekaartje-pagina uitbreiden richting de volledige publieke website (zie de oorspronkelijke afspraken: collectiepagina's per segment, materialen, over ons, contact, "word klant"-aanvraagformulier). De andere twee deelprojecten — de contactpagina en de klantregistratiepagina — worden apart gespecificeerd en gebouwd, in die volgorde, na dit deelproject.

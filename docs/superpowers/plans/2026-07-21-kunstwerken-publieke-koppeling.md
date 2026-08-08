@@ -1,5 +1,9 @@
 # Kunstwerken — Publieke Koppeling (Deel 2) Implementation Plan
 
+> **Historisch implementatieplan.** Dit is het stap-voor-stap plan zoals het op 21-07-2026 is opgesteld en uitgevoerd, inclusief de codefragmenten van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the hardcoded Unsplash/segment placeholder system on the public site with the real `kunstwerken`/`materialen`/`maten`/`segmenten` Firestore data (collectiepagina, homepage, winkelmandje, checkout), add a watermark overlay for customer-facing photo display, thread price through the cart into `bestellijnen`, loosen the currently null-only `firestore.rules` bestellines rule, and enrich the admin order-detail screen to show resolved kunstwerk info instead of a raw id.

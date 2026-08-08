@@ -1,5 +1,9 @@
 # Design: Beheer — materiaalsoorten, materialen en maten
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 21-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Context
 
 `/beheer` heeft sinds [2026-07-21-beheer-datatabellen-design.md](2026-07-21-beheer-datatabellen-design.md) een navigatiemenu met generieke `DataTable`/`Modal`-bouwstenen, met **Materialen** en **Maten** als uitgeschakelde plaatshouders. Dit deelproject bouwt die twee secties, plus een nieuwe derde sectie **Materiaalsoorten**, als volledige Firestore-backed CRUD-tabellen (tonen, toevoegen, bewerken, verwijderen).

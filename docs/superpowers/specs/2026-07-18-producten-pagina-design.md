@@ -1,5 +1,9 @@
 # Design: Producten-pagina met filter (vervangt segmentpagina's)
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 18-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Context
 
 Herstructurering van de collectiepagina's die eerder gebouwd zijn (deelproject "Navigatie + Collectiepagina's"). In plaats van 6 losse pagina's per segment (`/collecties/hotel`, `/collecties/restaurant`, enz.) plus een aparte overzichtspagina, komt er — geïnspireerd op de productencatalogus van het referentieproject `C:\Temp\Zeus` — **één pagina** die alle sfeerbeelden toont met filterknoppen per segment, naar het voorbeeld van Zeus' `#producten`-sectie (filterknoppen boven een grid, klant filtert direct in de browser zonder paginaverversing).

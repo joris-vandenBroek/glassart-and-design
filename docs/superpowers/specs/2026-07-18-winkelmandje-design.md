@@ -1,5 +1,9 @@
 # Design: Winkelmandje (mock)
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 18-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Context
 
 Vervolg op de eerdere deelprojecten (visitekaartje-pagina, navigatie + collectiepagina's + login-mockup). De site is nog steeds volledig statisch (`output: 'export'`, geen backend, geen middleware). Dit deelproject voegt een winkelmandje toe waarmee bezoekers kunstwerken (met gekozen maat en aantal) kunnen verzamelen en als bestelling kunnen "plaatsen" — net als de login/bestelgeschiedenis is dit uitdrukkelijk een **mock**: er is geen echte order­verwerking, betaling of voorraadcontrole. Geïnspireerd op het winkelmandje uit het referentieproject `C:\Temp\Zeus` (`localStorage`-gebaseerd mandje met maat/aantal-keuze en een "aanvraag"-knop), maar aangepast aan de eigen architectuur van deze site (React/Next.js i.p.v. losse HTML/JS, en gekoppeld aan de bestaande mock-bestelgeschiedenis in plaats van een los contactformulier).

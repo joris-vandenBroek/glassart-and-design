@@ -1,5 +1,9 @@
 # Klantnummer Implementation Plan
 
+> **Historisch implementatieplan.** Dit is het stap-voor-stap plan zoals het op 08-08-2026 is opgesteld en uitgevoerd, inclusief de codefragmenten van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Elke goedgekeurde klant krijgt automatisch een mens-leesbaar klantnummer `KL-00001`, zichtbaar in de klantentabel, de klantgegevens-modal, de mail naar de drukker en het klantaccount.

@@ -1,5 +1,15 @@
 # Firebase → MySQL migratie op mijn.host — ontwerp
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 23-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
+> **UITGEVOERD.** Deze migratie is volledig doorgevoerd; het document staat in de toekomende tijd maar beschrijft geen openstaand werk. Firebase is verdwenen uit de codebase — `src/lib/firebase.ts`, `firestore.rules` en de Firebase-dependency bestaan niet meer. Drie afwijkingen tussen dit ontwerp en wat er gebouwd is (gecontroleerd 2026-08-08):
+>
+> - **`useApiDocument` heet `useApiRecord`.** Overal in dit document staat de ontwerpnaam; de gebouwde hook is `src/lib/useApiRecord.ts`.
+> - **De auto-seeding is er niet meer.** Dit ontwerp nam de Firestore-auto-reseed over in de nieuwe hooks; die is later bewust verwijderd (commits `f617cea` en `fe91c92`), inclusief de laatste seed-constanten als weergave-fallback. `useApiCollection` seedt niets.
+> - **Het schema is doorgegroeid.** De datamodel-mapping hieronder noemt de tabellen van juli; het schema telt er inmiddels 24, met onder meer `stijlen`, `onderwerpen`, `prijsmatrix`, `kunstenaars`, `kunstenaarAfspraken`, `drukkers`, `drukkerZendingen` en `bestelstatusHistorie`. `db/schema.sql` is de bron van waarheid.
+
 ## Context
 
 De site draait nu als statische Next.js-export (`output: 'export'`) op GitHub Pages, met

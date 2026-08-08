@@ -1,5 +1,9 @@
 # Collectiepagina tegel- en detail-redesign Implementation Plan
 
+> **Historisch implementatieplan.** Dit is het stap-voor-stap plan zoals het op 27-07-2026 is opgesteld en uitgevoerd, inclusief de codefragmenten van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Simplify the `/collecties` tiles to a photo-first gallery grid (3 columns, gold border, contain-fit, hover-reveal omschrijving), move all kunstwerk metadata into the existing `ProductModal` detail dialog, give the beheer edit form a live read-only `ProductModal` preview instead of the `KunstwerkSpecCard` print-label preview, and delete `KunstwerkSpecCard` entirely once nothing uses it.

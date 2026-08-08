@@ -1,5 +1,9 @@
 # Design: Add-to-cart redesign — click-to-open product modal
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 19-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Context
 
 The winkelmandje (cart) feature shipped with a hover-reveal "Toevoegen aan mandje" button per `ProductsGrid` card, expanding into a small inline panel (size dropdown + qty stepper + confirm) directly on the card. After seeing it live, the client asked for the Zeus (`C:\Temp\Zeus`) pattern instead: clicking the product card itself opens a popup/modal to add it to the order, with nicer-looking buttons, and an accent color adapted from Zeus's orange to fit Glassart's black/silver (+ gold, per the brand brochure) palette.

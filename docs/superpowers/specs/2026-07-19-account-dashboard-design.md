@@ -1,5 +1,22 @@
 # Design: Klant-accountpagina (dashboard)
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 19-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
+> **VAN DE ZES SECTIES ZIJN ER TWEE OVER.** Dit ontwerp beschrijft een accountpagina op mock-data (`localStorage`); die is inmiddels vervangen door echte data uit MySQL, en drie secties zijn volledig verwijderd. Stand 2026-08-08:
+>
+> | Sectie uit dit ontwerp | Status nu |
+> |---|---|
+> | Bestellingen | **Bestaat** — `OrdersSection`, echte data via `useAllOrders` |
+> | Instellingen | **Bestaat** — `SettingsSection`, schrijft naar het echte `klanten`-record via `/api/klanten/me` |
+> | Te betalen facturen | **Verwijderd** (`InvoicesDueSection`, commit `20d8269`) |
+> | Betaalde facturen | **Verwijderd** (`InvoicesPaidSection`, commit `20d8269`) |
+> | Retourneren | **Verwijderd** (`ReturnsSection`, `useReturns`, commit `20d8269`) |
+> | Gesprekgeschiedenis | **Verwijderd** (`ConversationsSection`, commit `e5d1247`) |
+>
+> Ook verdwenen: `useMockProfile`, `useMockAuth`, `MockProfileProvider`, `ReturnsProvider`, `OrdersProvider` en alle `mock*`-databestanden. De taalvoorkeur uit dit ontwerp is nooit als opgeslagen accountinstelling gebouwd — de `klanten`-tabel heeft geen taalkolom.
+
 ## Context
 
 Tot nu toe opent het klikken op de "GD"-account-icoon (zichtbaar wanneer ingelogd via de mock-auth) een klein dropdown-paneeltje (`AccountMenu.tsx`) met alleen een bestellingenlijst en een uitlogknop. De klant wil een volwaardige account-pagina met 6 secties. Dit was eerder gedocumenteerd als toekomstige roadmap-wens (zie `2026-07-18-b2b-portaal-beheeromgeving-roadmap.md`) en wordt nu voor het eerst echt gebouwd, als mock/demo-functionaliteit (geen backend — dit project is en blijft een statische export).

@@ -1,5 +1,9 @@
 # Design: "Word klant"-registratiepagina (mock)
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 18-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Context
 
 Losse pagina (`/word-klant`) waar bezoekers zich kunnen aanmelden als nieuwe klant, met een keuze tussen particulier en zakelijk. Net als de contactpagina, het mandje en de login/bestelgeschiedenis is dit een **mock**: geen echte accountaanmaak, geen opslag, geen backend. Sluit aan bij de oorspronkelijke afspraak dat nieuwe klanten handmatig worden goedgekeurd door het bedrijf — deze pagina simuleert alleen het aanvraagformulier, niet de goedkeuringsstap zelf (die hoort bij de latere, echte beheeromgeving, zie de aparte roadmap).

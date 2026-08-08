@@ -1,5 +1,9 @@
 # Design: Visitekaartje-pagina (Glassart and Design)
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 18-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Context
 
 Glassart and Design wil een supermoderne website (basiskleuren zwart en zilver) voor de verkoop van kunst op 4mm veiligheidsglas, inclusief montagehaken. De volledige toekomstige website bestaat uit meerdere onderdelen:

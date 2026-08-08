@@ -1,5 +1,9 @@
 # Design: Beheer-authenticatie (fundament)
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 20-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Context
 
 Het roadmap-document (`2026-07-18-b2b-portaal-beheeromgeving-roadmap.md`) beschrijft een volledige beheeromgeving (klantgoedkeuring, orders, facturen, retouren, catalogusbeheer, rollen, boekhoudkoppeling, notificaties). Dat is te groot voor één deelproject. Dit ontwerp dekt alleen het **fundament**: een "Beheer"-knop met inlog, en de architectuurkeuze eronder. Alle overige beheerfunctionaliteit bouwt in latere, aparte deelprojecten op dit fundament voort.

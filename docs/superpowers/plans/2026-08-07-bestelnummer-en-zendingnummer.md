@@ -1,5 +1,9 @@
 # Bestelnummer + Zendingnummer Implementation Plan
 
+> **Historisch implementatieplan.** Dit is het stap-voor-stap plan zoals het op 07-08-2026 is opgesteld en uitgevoerd, inclusief de codefragmenten van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Show the existing `bestelnr` field in the Bestellingen-tabel, de Bestelgegevens-modal, en de e-mail naar de drukker (with a per-bestelling heading, since the mail currently pools regels with no way to tell them apart), and introduce a new human-readable `zendingnummer` (ZD-00001, …) that identifies a printer shipment — reserved before sending so it appears in the mail's onderwerp, stored on both the archived zending and the bestellingen it covered, and shown wherever a shipment is referenced.

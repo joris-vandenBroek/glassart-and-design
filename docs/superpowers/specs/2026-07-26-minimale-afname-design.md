@@ -1,5 +1,9 @@
 # Minimale afname (globaal + per klant override)
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 26-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Context
 
 Klanten kunnen nu in de bestel-popup (`ProductModal.tsx`) elk aantal vanaf

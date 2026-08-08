@@ -1,5 +1,16 @@
 # Design: Beheer — navigatiemenu met datatabellen
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 21-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
+> **HET FRAMEWORK STAAT ER; DE FACTUREN-SECTIE NIET.** Wat dit ontwerp introduceerde — `DataTable`, `Modal`, `BeheerNav`, `BeheerShell` — bestaat nog en draagt de hele beheeromgeving. Twee dingen kloppen niet meer (gecontroleerd 2026-08-08):
+>
+> - **De Facturen-sectie is verwijderd.** `FacturenSection`, `FactuurModal` en `mockAdminInvoices` zijn weg (commit `20d8269`, "on hold for now"). Er is geen facturatie in de beheeromgeving; alleen de bestelstatussen "Te factureren" en "Betaald en afgerond" bestaan.
+> - **De zeven uitgeschakelde plaatshouders zijn allemaal gebouwd.** `DISABLED_ITEMS` in `BeheerNav.tsx` is nu leeg. Het menu telt zestien actieve secties, waaronder Bestellingen, Prijsgroepen, Maten, Materialen, Kunstwerken en Glassart & Design — plus later toegevoegde secties (Kunstenaars, Prijsmatrix, Drukkers, Stijlen, Onderwerpen, Activiteit). Retouren is als enige nooit gebouwd.
+>
+> Verder heet `KlantAanvragenSection` inderdaad `KlantenSection` geworden zoals hier ontworpen, maar de datatoegang loopt niet meer via `getDocs(collection(db, 'klanten'))` — dat is `/api/klanten` geworden.
+
 ## Context
 
 `/beheer` bestaat nu uit een kale login-shell met daaronder rechtstreeks de klantaanvragen als kaarten (`KlantAanvragenSection.tsx`). Dit deelproject vervangt dat door een echte beheeromgeving: een linkermenu met tellers (naar het voorbeeld van de bestaande klant-accountpagina, `AccountNav.tsx`/`AccountDashboard.tsx`), waarachter elke sectie een sorteerbare, filterbare datatabel toont. Een rijklik opent een modal met details en (waar van toepassing) acties.

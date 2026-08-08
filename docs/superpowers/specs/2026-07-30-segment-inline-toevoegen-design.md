@@ -1,5 +1,9 @@
 # Segment inline toevoegen bij kunstwerk — design
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 30-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Probleem
 
 Op het kunstwerkformulier (`KunstwerkenSection.tsx`) kunnen Stijl en Onderwerp al inline een

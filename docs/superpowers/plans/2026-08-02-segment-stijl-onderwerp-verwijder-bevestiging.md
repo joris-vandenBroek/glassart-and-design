@@ -1,5 +1,9 @@
 # Segment/Stijl/Onderwerp verwijder-bevestiging Implementation Plan
 
+> **Historisch implementatieplan.** Dit is het stap-voor-stap plan zoals het op 02-08-2026 is opgesteld en uitgevoerd, inclusief de codefragmenten van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Before a segment, stijl or onderwerp that is still referenced by one or more kunstwerken gets deleted, show an inline confirmation with the exact usage count inside the existing edit modal; only delete after the beheerder confirms. Items not in use keep deleting instantly, unchanged.

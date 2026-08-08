@@ -1,5 +1,9 @@
 # Design: Logo + Materialen/USP-sectie
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 19-07-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 ## Context
 
 De klant heeft een brochure aangeleverd (2026-07-18) met het echte merkidentiteit: een gouden logo-merkteken, 5 gouden USP-iconen (met een vaste betekenis per icoon) en een materialenlijst. Er is geen los logobestand (SVG/PNG/AI) beschikbaar — de klant heeft bevestigd dat het logo nagebouwd mag worden als SVG op basis van de referentie-afbeelding. Dit deelproject bouwt het logo na en voegt het toe aan de navigatiebalk, en voegt een nieuwe homepage-sectie toe met de 5 USP-iconen en de 6 materialen uit de brochure.

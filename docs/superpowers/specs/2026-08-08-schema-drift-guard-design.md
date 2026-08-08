@@ -1,5 +1,9 @@
 # Schema drift guard: making a forgotten migration impossible to deploy past
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 08-08-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 **Date:** 2026-08-08
 **Status:** Approved
 

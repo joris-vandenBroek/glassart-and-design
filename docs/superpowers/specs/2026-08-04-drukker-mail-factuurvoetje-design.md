@@ -1,5 +1,9 @@
 # Drukker-e-mail: factuurgegevens-voetje voor Glassart & Design
 
+> **Historisch ontwerpdocument.** Dit beschrijft het ontwerp zoals het op 04-08-2026 is vastgelegd, inclusief de afwegingen en verworpen alternatieven van dat moment. Het wordt bewust niet bijgewerkt wanneer de code later verandert — de waarde zit in het *waarom*.
+>
+> Voor hoe de applicatie er nú uitziet: [`docs/huidige-staat.md`](../../huidige-staat.md).
+
 Datum: 2026-08-04
 Auteur: Joris van den Broek (met Claude)
 Status: Approved — klaar voor implementatieplan
