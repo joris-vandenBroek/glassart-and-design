@@ -182,6 +182,45 @@ describe('maakOfHergebruikLookupWaarde', () => {
       omschrijvingEn: 'Safari-en',
     });
   });
+
+  it('maakt een nieuwe waarde aan met alleen omschrijvingNl en laat de andere talen weg uit de POST-body', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(200, []))
+      .mockResolvedValueOnce(
+        jsonResponse(201, {
+          id: 's3',
+          omschrijvingNl: 'Savanne',
+          omschrijvingFr: null,
+          omschrijvingDe: null,
+          omschrijvingEn: null,
+        })
+      );
+    const resultaat = await maakOfHergebruikLookupWaarde(
+      'https://staging.glassartanddesign.com',
+      'session_id=abc',
+      'segmenten',
+      'Savanne',
+      undefined,
+      undefined,
+      undefined,
+      fetchMock
+    );
+    expect(resultaat).toEqual({
+      id: 's3',
+      omschrijvingNl: 'Savanne',
+      omschrijvingFr: null,
+      omschrijvingDe: null,
+      omschrijvingEn: null,
+      hergebruikt: false,
+    });
+    const [, createOptions] = fetchMock.mock.calls[1];
+    const verstuurdBody = JSON.parse(createOptions.body);
+    expect(verstuurdBody).toEqual({ omschrijvingNl: 'Savanne' });
+    expect(Object.keys(verstuurdBody)).not.toContain('omschrijvingFr');
+    expect(Object.keys(verstuurdBody)).not.toContain('omschrijvingDe');
+    expect(Object.keys(verstuurdBody)).not.toContain('omschrijvingEn');
+  });
 });
 
 describe('maakKunstwerk', () => {
@@ -279,6 +318,16 @@ describe('leesJsonBestand', () => {
   it('gooit een fout bij een niet-bestaand bestand', async () => {
     const pad = path.join(os.tmpdir(), `lees-json-bestand-test-ontbreekt-${Date.now()}.json`);
     await expect(leesJsonBestand(pad)).rejects.toThrow();
+  });
+
+  it('gooit een duidelijke fout met bestandspad bij kapotte JSON', async () => {
+    const pad = path.join(os.tmpdir(), `lees-json-bestand-test-kapot-${Date.now()}.json`);
+    fs.writeFileSync(pad, '{ dit is geen geldige json');
+    try {
+      await expect(leesJsonBestand(pad)).rejects.toThrow(`'${pad}' bevat geen geldige JSON.`);
+    } finally {
+      fs.unlinkSync(pad);
+    }
   });
 });
 

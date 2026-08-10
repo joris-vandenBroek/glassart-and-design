@@ -77,7 +77,7 @@ describe('import-kunstwerken-cli argumentvalidatie', () => {
     expect(result.stderr).toContain('moet segmenten, stijlen of onderwerpen zijn');
   });
 
-  it('weigert maak-lookup-waarde zonder --omschrijving-fr', () => {
+  it('weigert maak-lookup-waarde zonder --omschrijving-nl', () => {
     const result = runCli([
       'maak-lookup-waarde',
       '--omgeving',
@@ -86,11 +86,11 @@ describe('import-kunstwerken-cli argumentvalidatie', () => {
       'session_id=x',
       '--tabel',
       'segmenten',
-      '--omschrijving-nl',
-      'Afrika',
+      '--omschrijving-fr',
+      'Afrique',
     ]);
     expect(result.status).toBe(2);
-    expect(result.stderr).toContain('--omschrijving-fr is verplicht');
+    expect(result.stderr).toContain('--omschrijving-nl is verplicht');
   });
 
   it('weigert maak-kunstwerk zonder --json en zonder --json-bestand', () => {

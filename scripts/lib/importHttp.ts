@@ -7,9 +7,9 @@ const SESSION_COOKIE_NAME = 'session_id';
 interface MeertaligeOmschrijving {
   id: string;
   omschrijvingNl: string;
-  omschrijvingFr: string;
-  omschrijvingDe: string;
-  omschrijvingEn: string;
+  omschrijvingFr: string | null;
+  omschrijvingDe: string | null;
+  omschrijvingEn: string | null;
 }
 
 export interface ReferentieData {
@@ -105,9 +105,9 @@ export async function maakOfHergebruikLookupWaarde(
   sessieCookie: string,
   tabel: 'segmenten' | 'stijlen' | 'onderwerpen',
   omschrijvingNl: string,
-  omschrijvingFr: string,
-  omschrijvingDe: string,
-  omschrijvingEn: string,
+  omschrijvingFr: string | undefined,
+  omschrijvingDe: string | undefined,
+  omschrijvingEn: string | undefined,
   fetchImpl: typeof fetch = fetch
 ): Promise<MeertaligeOmschrijving & { hergebruikt: boolean }> {
   const lijstResponse = await fetchImpl(`${baseUrl}/api/${tabel}`, { headers: { cookie: sessieCookie } });
@@ -120,6 +120,13 @@ export async function maakOfHergebruikLookupWaarde(
     return { ...match, hergebruikt: true };
   }
 
+  // omschrijvingFr/-De/-En zijn hier optioneel: bij het aanmaken tijdens een replay
+  // (batch doorzetten) kent de agent vaak alleen de Nederlandse tekst uit het manifest. Een
+  // niet-meegegeven taal wordt hier `undefined`, en JSON.stringify laat een `undefined`-waarde
+  // vanzelf weg uit het object -- dus die kolom blijft op de server `NULL` in plaats van de
+  // Nederlandse tekst te krijgen. Zie insertRow in src/lib/server/crud.ts: die bouwt de
+  // kolomlijst uit Object.keys() van de payload, dus een ontbrekende sleutel wordt geen kolom
+  // in de INSERT en de database valt terug op zijn eigen (NULL-)default.
   const createResponse = await fetchImpl(`${baseUrl}/api/${tabel}`, {
     method: 'POST',
     headers: { cookie: sessieCookie, 'content-type': 'application/json' },
@@ -183,7 +190,11 @@ export async function maakKunstwerk(
 // moeten quoten.
 export async function leesJsonBestand(pad: string): Promise<unknown> {
   const inhoud = await fs.readFile(pad, 'utf8');
-  return JSON.parse(inhoud);
+  try {
+    return JSON.parse(inhoud);
+  } catch {
+    throw new Error(`'${pad}' bevat geen geldige JSON.`);
+  }
 }
 
 export async function downloadBestand(

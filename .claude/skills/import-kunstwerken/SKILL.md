@@ -151,8 +151,10 @@ Voor elk bestand in de brondirectory-lijst, in volgorde:
     (met `(nieuw)` achter elke `hergebruikt:false`-waarde), kunstenaar.
 12. Voeg dit kunstwerk toe aan een in-memory manifest-lijst, met **waarden, geen id's**:
     `{ bestandsnaam, formaat, maten: [...breedte×hoogte-paren van de gekozen maatIds...],
-    segmenten: [...gekozen omschrijvingsteksten...], stijlen: [...], onderwerpen: [...],
-    omschrijvingNl, omschrijvingEn, omschrijvingDe, omschrijvingFr }`.
+    segmenten: [...gekozen Nederlandse omschrijvingsteksten (omschrijvingNl), niet de andere
+    talen...], stijlen: [...], onderwerpen: [...], omschrijvingNl, omschrijvingEn, omschrijvingDe,
+    omschrijvingFr }`. `segmenten`/`stijlen`/`onderwerpen` bewaren dus specifiek de Nederlandse
+    tekst — B2.3 matcht en maakt straks op precies die waarde aan.
 
 ## Stap B2: per kunstwerk (batch doorzetten vanuit een manifest)
 
@@ -170,15 +172,23 @@ opzoek/aanmaak-stappen op de nieuwe omgeving:
    `{breedte, hoogte}`-paar uit `manifest-item.maten` met de (nieuw opgehaalde)
    `referentie.maten` op de nieuwe omgeving, en gebruik het `id` van elke rij met een exacte
    `breedte`- én `hoogte`-match. Vind je voor een paar geen exacte match: sla dat paar over en
-   meld dit expliciet in de statusregel van dit kunstwerk (stap 8 hieronder).
+   meld dit expliciet in de statusregel van dit kunstwerk (stap 8 hieronder). Blijft er op deze
+   manier voor dit kunstwerk **geen enkele** match over (`maatIds` zou leeg zijn): sla dan het
+   hele kunstwerk over — geen enkele maat betekent dat niemand het ooit zou kunnen bestellen —
+   meld dit in de eindsamenvatting met reden "geen enkele maat gevonden op deze omgeving", en ga
+   door met het volgende item. Een gedeeltelijke misser (sommige paren matchen wel, andere niet)
+   blijft normaal doorgaan met de wél gevonden `maatIds`.
 3. Voor elke tekst in `manifest-item.segmenten`/`stijlen`/`onderwerpen`: `maak-lookup-waarde`
    op de nieuwe omgeving (stap B.4 — hergebruikt-of-maakt-aan, matcht op `omschrijvingNl`). Het
-   manifest bewaart alleen de Nederlandse tekst; geef die ook mee als `--omschrijving-fr`/
-   `-de`/`-en` als er een treffer is (dan worden die vlaggen toch niet gebruikt — er wordt dan
-   niets aangemaakt). Is er geen treffer en moet de waarde dus echt worden aangemaakt: gebruik
-   bij gebrek aan opgeslagen vertalingen dezelfde Nederlandse tekst voor alle vier de vlaggen
-   (dit is een zeldzame situatie, aangezien segmenten/stijlen/onderwerpen catalogusdata is die
-   op staging en productie doorgaans al hetzelfde is).
+   manifest bewaart alleen de Nederlandse tekst, dus geef **alleen** `--omschrijving-nl` mee
+   (`--omschrijving-fr`/`-de`/`-en` zijn optioneel en laat je hier weg). Is er een treffer, dan
+   worden de weggelaten vlaggen toch niet gebruikt (er wordt dan niets aangemaakt). Moet de
+   waarde echt worden aangemaakt: laat de andere drie talen dan ook daadwerkelijk `NULL` — stuur
+   nooit de Nederlandse tekst als vervanging mee. `omschrijvingFr`/`-De`/`-En` op `NULL` is de
+   manier waarop de app "nog niet vertaald" weergeeft (`resolveOmschrijving` valt dan terug op
+   `omschrijvingNl`), en dat ziet er vandaag identiek uit als een echte vertaling — maar
+   Nederlandse tekst in die kolommen zetten vernietigt permanent het signaal dat een latere
+   vertaalslag nog moet gebeuren.
 4. `materiaalIds` = alle `id`'s uit de nieuwe `referentie.materialen`.
 5. Code: `volgende-code`, met de `toegekendeCodes` van de nieuwe omgeving (stap B.7,
    ongewijzigd).
@@ -186,8 +196,10 @@ opzoek/aanmaak-stappen op de nieuwe omgeving:
 7. Foto: het bronbestand moet nog bestaan op `manifest.brondirectory + '/' + bestandsnaam` —
    upload opnieuw (stap B.9) en maak het kunstwerk aan (stap B.10, met `--json-bestand`),
    inclusief dezelfde 409-retry.
-8. Print dezelfde statusregel als in stap B.11, aangevuld met eventuele overgeslagen maten uit
-   stap 2.
+8. Bij een volledige skip in stap 2 (geen enkele maat gevonden): print de skip-melding uit stap
+   2 en ga direct door met het volgende item — de stappen 3 t/m 7 hierboven worden dan niet
+   uitgevoerd. Anders: print dezelfde statusregel als in stap B.11, aangevuld met eventuele
+   overgeslagen (deel-)maten uit stap 2.
 
 Er wordt in dit pad geen nieuw manifest geschreven.
 
@@ -244,6 +256,9 @@ Meld:
   de kunstenaar zelf: overslaan en melden (zie B2.1) — de praktische vervolgstap voor een mens
   is dan de `toevoegen-kunstenaar`-skill los te starten (deze skill roept die niet automatisch
   aan).
+- Bij Stap B2.2: geen van de manifest-maten vindt een match op de nieuwe omgeving → dit
+  kunstwerk volledig overslaan (niet aanmaken met een lege `maatIds`), melden met reden "geen
+  enkele maat gevonden op deze omgeving", doorgaan met het volgende item.
 
 ## Wat deze skill bewust niet doet
 

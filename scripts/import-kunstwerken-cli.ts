@@ -150,9 +150,9 @@ async function main(): Promise<void> {
         process.exit(2);
       }
       const omschrijvingNl = verplichteOptie(opts, 'omschrijving-nl');
-      const omschrijvingFr = verplichteOptie(opts, 'omschrijving-fr');
-      const omschrijvingDe = verplichteOptie(opts, 'omschrijving-de');
-      const omschrijvingEn = verplichteOptie(opts, 'omschrijving-en');
+      const omschrijvingFr = opts['omschrijving-fr'] || undefined;
+      const omschrijvingDe = opts['omschrijving-de'] || undefined;
+      const omschrijvingEn = opts['omschrijving-en'] || undefined;
       const resultaat = await maakOfHergebruikLookupWaarde(
         baseUrlVoorOmgeving(omgeving),
         sessieCookie,
