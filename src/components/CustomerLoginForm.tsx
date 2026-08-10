@@ -17,10 +17,16 @@ export function CustomerLoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
+  // Elke klik mint een nieuw resettoken en verstuurt een echte e-mail. Wie
+  // ongeduldig vijf keer klikt zou anders vijf links van 24 uur in zijn mailbox
+  // krijgen, allemaal geldig.
+  const [resetBezig, setResetBezig] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    // Anders blijft "we hebben je een mail gestuurd" onder een verse inlogfout staan.
+    setResetMessage(null);
     try {
       const status = await login(completeerTestKlantEmail(email), password);
       if (status === 'Goedgekeurd') {
@@ -38,6 +44,7 @@ export function CustomerLoginForm() {
   }
 
   async function handleWachtwoordVergeten() {
+    if (resetBezig) return;
     setError(null);
     setResetMessage(null);
     const volledigEmail = completeerTestKlantEmail(email);
@@ -45,6 +52,7 @@ export function CustomerLoginForm() {
       setResetMessage(t('forgotPasswordMissingEmail'));
       return;
     }
+    setResetBezig(true);
     try {
       // De response wordt bewust niet uitgelezen: de route antwoordt altijd 200,
       // juist zodat hier geen verschil te zien is tussen een bekend en een
@@ -57,6 +65,8 @@ export function CustomerLoginForm() {
       setResetMessage(t('forgotPasswordSent'));
     } catch {
       setResetMessage(t('forgotPasswordError'));
+    } finally {
+      setResetBezig(false);
     }
   }
 
@@ -116,8 +126,9 @@ export function CustomerLoginForm() {
       <button
         type="button"
         onClick={handleWachtwoordVergeten}
+        disabled={resetBezig}
         data-testid="login-forgot-password"
-        className="text-left text-xs text-white/60 underline hover:text-white"
+        className="text-left text-xs text-white/60 underline hover:text-white disabled:opacity-40"
       >
         {t('forgotPassword')}
       </button>

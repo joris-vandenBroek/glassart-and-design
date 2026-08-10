@@ -223,6 +223,51 @@ describe('CustomerLoginForm', () => {
       expect(await screen.findByTestId('login-reset-message')).toHaveTextContent(verwacht);
     });
 
+    /**
+     * Elke klik mint een resettoken en verstuurt een echte e-mail. Wie ongeduldig
+     * doorklikt zou anders vijf links van 24 uur in zijn mailbox krijgen, allemaal
+     * geldig -- vijf keer zoveel kans dat er eentje in verkeerde handen valt.
+     */
+    it('stuurt bij doorklikken maar één verzoek zolang het eerste nog loopt', async () => {
+      let losResponse: (value: { ok: boolean; json: () => Promise<unknown> }) => void = () => {};
+      const nogNietKlaar = new Promise<{ ok: boolean; json: () => Promise<unknown> }>((resolve) => {
+        losResponse = resolve;
+      });
+      fetchMock.mockReturnValueOnce(nogNietKlaar);
+
+      renderForm();
+      vraagResetAan('klant@example.com');
+
+      const knop = screen.getByTestId('login-forgot-password');
+      await waitFor(() => expect(knop).toBeDisabled());
+
+      fireEvent.click(knop);
+      fireEvent.click(knop);
+
+      // Eén /api/auth/me van de provider plus precies één resetverzoek.
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+
+      losResponse({ ok: true, json: async () => ({ ok: true }) });
+      await screen.findByTestId('login-reset-message');
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(knop).not.toBeDisabled();
+    });
+
+    // Een "we hebben je een mail gestuurd" mag niet onder een verse inlogfout
+    // blijven staan: dan lijkt de mislukte inlogpoging bij die bevestiging te horen.
+    it('wist de resetbevestiging zodra er opnieuw ingelogd wordt', async () => {
+      fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true }) });
+      renderForm();
+      vraagResetAan('klant@example.com');
+      await screen.findByTestId('login-reset-message');
+
+      fetchMock.mockResolvedValueOnce({ ok: false });
+      submitWith('klant@example.com', 'fout');
+
+      expect(await screen.findByTestId('login-error')).toBeInTheDocument();
+      expect(screen.queryByTestId('login-reset-message')).toBeNull();
+    });
+
     it('meldt een fout in plaats van een verzonnen bevestiging als het verzoek mislukt', async () => {
       fetchMock.mockRejectedValueOnce(new Error('network error'));
       renderForm();
