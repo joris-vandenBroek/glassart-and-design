@@ -33,6 +33,7 @@ export interface Klant {
   prijsgroepId: string | null;
   kunstenaarId: string | null;
   minimaleAfname?: number | null;
+  afwijsreden?: string | null;
 }
 
 interface KlantenSectionProps {
