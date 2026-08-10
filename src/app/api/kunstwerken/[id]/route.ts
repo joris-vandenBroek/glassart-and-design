@@ -73,9 +73,12 @@ export const DELETE = withMedewerker(
     if (!bestaand) return NextResponse.json({ error: 'not-found' }, { status: 404 });
 
     // Check en verwijdering in één transactie, met FOR UPDATE op de check: dat sluit de
-    // interleaving waarin een bestelling haar bestellines-INSERT al onderweg heeft
-    // wanneer deze check draait -- die wordt geblokkeerd en deze DELETE ziet de rij dan
-    // alsnog, met 409 tot gevolg. Het sluit niét de omgekeerde volgorde: draait deze
+    // interleaving waarin een bestelling haar bestellines-INSERT al onderweg heeft (nog
+    // niet gecommit) wanneer deze check draait -- die INSERT houdt het rijslot vast, en
+    // het is déze check die daarop wacht, niet andersom. De bestelling zelf loopt
+    // ongehinderd door en committeert gewoon, volledig onaangetast door deze
+    // verwijderpoging; pas ná die commit komt deze check los, ziet ze de rij alsnog, met
+    // 409 tot gevolg. Het sluit niét de omgekeerde volgorde: draait deze
     // transactie eerst, dan committeert ze binnen milliseconden, en een bestelling die
     // vlak daarna zijn INSERT doet gaat gewoon door -- POST /api/bestelheaders leest het
     // kunstwerk met een gewone, niet-blokkerende SELECT en valideert niet opnieuw vlak

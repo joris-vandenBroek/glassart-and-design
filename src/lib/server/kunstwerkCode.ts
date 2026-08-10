@@ -48,9 +48,13 @@ export async function codeKomtVoorInBestelling(code: string): Promise<boolean> {
  * db/migrations/2026-08-10-bestelline-code-index.sql) en blokkeert daarmee een
  * gelijktijdige INSERT met dezelfde code totdat deze transactie commit of rollbackt.
  *
- * Dat sluit precies één interleaving: een bestelling waarvan de bestellines-INSERT
- * al onderweg is wanneer deze check draait, wordt tegengehouden en levert de
- * medewerker een 409 op. Het sluit niét de omgekeerde volgorde: draait deze
+ * Dat sluit precies één interleaving: heeft een bestelling haar bestellines-INSERT
+ * al onderweg (nog niet gecommit) wanneer deze check draait, dan houdt die INSERT
+ * het rijslot vast en is het déze SELECT ... FOR UPDATE die daarop wacht -- niet
+ * andersom. De bestelling zelf loopt ongehinderd door en committeert gewoon,
+ * volledig onaangetast door deze verwijderpoging; pas ná die commit komt deze
+ * check los, ziet ze de bestellines-rij alsnog en levert de medewerker een 409 op.
+ * Het sluit niét de omgekeerde volgorde: draait deze
  * transactie eerst, dan vindt ze niets, deelt ze een gap lock uit, verwijdert en
  * committeert -- en de bestelling die vlak daarna zijn INSERT doet, gaat gewoon
  * door. `POST /api/bestelheaders` leest het kunstwerk namelijk met een gewone,
@@ -94,7 +98,7 @@ export async function codeKomtVoorInBestellingForUpdate(
 }
 
 /**
- * De SELECT hierboven levert de nette foutmelding, maar hij is niet de garantie: een
+ * De `codeIsInGebruik`-SELECT levert de nette foutmelding, maar is niet de garantie: een
  * gewone SELECT op een rij die nog niet bestaat neemt geen slot, dus twee medewerkers
  * die tegelijk dezelfde code opslaan komen er beide langs. De UNIQUE-index vangt dat,
  * en zonder deze vertaling maakt withApiErrorHandling van die botsing een 500 in plaats
