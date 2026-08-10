@@ -172,7 +172,7 @@ export function stelVolgendeCodeVoor(kunstwerken: KunstwerkCode[], prefix: strin
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run tests/lib/kunstwerkCodeVoorstel.test.ts`
-Expected: PASS — alle 12 tests groen.
+Expected: PASS — alle 11 tests groen.
 
 - [ ] **Step 5: Commit**
 
