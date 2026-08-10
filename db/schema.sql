@@ -208,7 +208,7 @@ CREATE TABLE bestelheaders (
 CREATE TABLE bestellines (
   id CHAR(36) PRIMARY KEY,
   bestelheaderId CHAR(36) NOT NULL,
-  kunstwerkId CHAR(36),
+  code VARCHAR(255) NOT NULL,
   maatId CHAR(36),
   materiaalId CHAR(36),
   prijs DECIMAL(10,2),

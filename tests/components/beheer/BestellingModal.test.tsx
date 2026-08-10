@@ -77,8 +77,8 @@ const BESTELLING: Bestelling = {
   lineCount: 2,
   totalQuantity: 5,
   lines: [
-    { id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 3 },
-    { id: 'line-2', kunstwerkId: null, maatId: null, materiaalId: null, prijs: 0, quantity: 2 },
+    { id: 'line-1', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 3 },
+    { id: 'line-2', code: 'onbekende-code', maatId: null, materiaalId: null, prijs: 0, quantity: 2 },
   ],
 };
 
@@ -161,7 +161,7 @@ describe('BestellingModal', () => {
     expect(line1.querySelector('img')).toHaveAttribute('src', 'https://example.com/kw-1.jpg');
   });
 
-  it('falls back to the "onbekend" label for a line whose kunstwerkId does not match any known kunstwerk', () => {
+  it('falls back to the "onbekend" label for a line whose code does not match any known kunstwerk', () => {
     renderModal(BESTELLING);
     const line2 = screen.getByTestId('bestelling-modal-line-line-2');
     expect(line2).toHaveTextContent('Onbekend');
@@ -254,7 +254,7 @@ const BESTELLING_MET_EIGEN_MAAT: Bestelling = {
   lineCount: 1,
   totalQuantity: 1,
   lines: [
-    { id: 'line-3', kunstwerkId: 'kw-1', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: null, quantity: 1 },
+    { id: 'line-3', code: 'Hotel paneel', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: null, quantity: 1 },
   ],
 };
 
@@ -317,8 +317,8 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
       lineCount: 2,
       totalQuantity: 2,
       lines: [
-        { id: 'line-4', kunstwerkId: 'kw-1', maatId: '', materiaalId: 'mat-1', breedte: 50, hoogte: 80, prijs: null, quantity: 1 },
-        { id: 'line-5', kunstwerkId: 'kw-1', maatId: '', materiaalId: 'mat-1', breedte: 60, hoogte: 90, prijs: null, quantity: 1 },
+        { id: 'line-4', code: 'Hotel paneel', maatId: '', materiaalId: 'mat-1', breedte: 50, hoogte: 80, prijs: null, quantity: 1 },
+        { id: 'line-5', code: 'Hotel paneel', maatId: '', materiaalId: 'mat-1', breedte: 60, hoogte: 90, prijs: null, quantity: 1 },
       ],
     };
 
@@ -552,7 +552,7 @@ const BESTELLING_VERSTUURD: Bestelling = {
   status: 'Verstuurd naar drukker',
   lineCount: 1,
   totalQuantity: 1,
-  lines: [{ id: 'line-6', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
+  lines: [{ id: 'line-6', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
 };
 
 const BESTELLING_TE_FACTUREREN: Bestelling = {

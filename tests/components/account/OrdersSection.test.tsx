@@ -34,7 +34,7 @@ function signedInWithOneOrder() {
         bestelnr: 'GD-00001',
         besteldatum: '2026-07-01T14:30:00',
         status: 'Te beoordelen',
-        lines: [{ id: 'line-1', kunstwerkId: null, maatId: null, materiaalId: null, prijs: null, quantity: 2 }],
+        lines: [{ id: 'line-1', code: 'kw-onbekend', maatId: null, materiaalId: null, prijs: null, quantity: 2 }],
       },
     ],
   };
@@ -114,7 +114,7 @@ describe('OrdersSection', () => {
           bestelnr: 'GD-00002',
           besteldatum: '2026-07-01T14:30:00',
           status: 'Afgewezen',
-          lines: [{ id: 'line-1', kunstwerkId: null, maatId: null, materiaalId: null, prijs: null, quantity: 1 }],
+          lines: [{ id: 'line-1', code: 'kw-onbekend', maatId: null, materiaalId: null, prijs: null, quantity: 1 }],
         },
       ],
     };
@@ -137,7 +137,7 @@ describe('OrdersSection', () => {
     expect(screen.getByText('Onbekend artikel')).toBeInTheDocument();
   });
 
-  it('shows a single unknown-item placeholder thumbnail when no line has a resolvable kunstwerkId', async () => {
+  it('shows a single unknown-item placeholder thumbnail when no line has a resolvable code', async () => {
     signedInWithOneOrder();
     renderSection();
     await waitFor(() => expect(screen.getByTestId('account-order-GD-00001')).toBeInTheDocument());
@@ -147,7 +147,7 @@ describe('OrdersSection', () => {
     expect(stack).toHaveTextContent('?');
   });
 
-  it('shows a real thumbnail image for a line with a resolvable kunstwerkId', async () => {
+  it('shows a real thumbnail image for a line with a resolvable code', async () => {
     authUser = { id: 'uid-1', email: 'klant@example.com', status: 'Goedgekeurd' };
     kunstwerkenResponse = [
       {
@@ -172,7 +172,7 @@ describe('OrdersSection', () => {
           bestelnr: 'GD-00003',
           besteldatum: '2026-07-01T14:30:00',
           status: 'Te beoordelen',
-          lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: null, materiaalId: null, prijs: null, quantity: 1 }],
+          lines: [{ id: 'line-1', code: 'Hotel paneel', maatId: null, materiaalId: null, prijs: null, quantity: 1 }],
         },
       ],
     };
@@ -209,7 +209,7 @@ describe('OrdersSection', () => {
           status: 'Te beoordelen',
           lines: ['kw-1', 'kw-2', 'kw-3', 'kw-4'].map((id, index) => ({
             id: `line-${index}`,
-            kunstwerkId: id,
+            code: id,
             maatId: null,
             materiaalId: null,
             prijs: null,
@@ -226,7 +226,7 @@ describe('OrdersSection', () => {
     expect(stack).toHaveTextContent('+2');
   });
 
-  it('deduplicates lines with the same kunstwerkId and renders only 1 tile', async () => {
+  it('deduplicates lines with the same code and renders only 1 tile', async () => {
     authUser = { id: 'uid-1', email: 'klant@example.com', status: 'Goedgekeurd' };
     kunstwerkenResponse = [
       {
@@ -252,8 +252,8 @@ describe('OrdersSection', () => {
           besteldatum: '2026-07-01T14:30:00',
           status: 'Te beoordelen',
           lines: [
-            { id: 'line-1', kunstwerkId: 'kw-1', maatId: null, materiaalId: null, prijs: null, quantity: 1 },
-            { id: 'line-2', kunstwerkId: 'kw-1', maatId: null, materiaalId: null, prijs: null, quantity: 2 },
+            { id: 'line-1', code: 'Hotel paneel', maatId: null, materiaalId: null, prijs: null, quantity: 1 },
+            { id: 'line-2', code: 'Hotel paneel', maatId: null, materiaalId: null, prijs: null, quantity: 2 },
           ],
         },
       ],
@@ -290,7 +290,7 @@ describe('OrdersSection', () => {
           status: 'Te beoordelen',
           lines: ['kw-1', 'kw-2', 'kw-3'].map((id, index) => ({
             id: `line-${index}`,
-            kunstwerkId: id,
+            code: id,
             maatId: null,
             materiaalId: null,
             prijs: null,

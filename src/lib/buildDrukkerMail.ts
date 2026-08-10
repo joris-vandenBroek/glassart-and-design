@@ -185,12 +185,16 @@ function resolveRegel(
   maten: Maat[],
   materiaalsoorten: Materiaalsoort[]
 ): ResolvedRegel {
-  const kunstwerk = kunstwerken.find((k) => k.id === line.kunstwerkId);
+  // De code staat op de bestelregel zelf, dus de aanduiding in de mail kan nooit meer
+  // "Onbekend kunstwerk" worden -- die viel eerder terug zodra het kunstwerk uit de
+  // catalogus verdwenen was. Het kunstwerk wordt nog wél opgezocht, want de mail heeft
+  // de foto en het formaat nodig; die opzoeking houdt haar eigen terugval.
+  const kunstwerk = kunstwerken.find((k) => k.code === line.code);
   const materiaal = materialen.find((m) => m.id === line.materiaalId);
   const materiaalsoort = materiaal ? materiaalsoorten.find((s) => s.id === materiaal.materiaalsoortId) : undefined;
   const maat = maten.find((m) => m.id === line.maatId);
 
-  const naam = kunstwerk?.code || 'Onbekend kunstwerk';
+  const naam = line.code;
   const materiaalOmschrijving = materiaal
     ? `${materiaal.materiaaldikte}mm ${materiaalsoort?.omschrijving ?? materiaal.materiaalsoortId} — ${materiaal.omschrijving}`
     : 'Onbekend materiaal';

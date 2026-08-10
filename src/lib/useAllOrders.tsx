@@ -8,7 +8,7 @@ import { useCustomerAuth } from './useCustomerAuth';
 
 export interface DisplayOrderLine {
   id: string;
-  kunstwerkId: string | null;
+  code: string;
   maatId: string | null;
   materiaalId: string | null;
   breedte?: number;
@@ -65,7 +65,7 @@ export function useAllOrders(): UseAllOrdersResult {
           status: Bestelling['status'];
           lines: Array<{
             id: string;
-            kunstwerkId: string | null;
+            code: string;
             maatId: string | null;
             materiaalId: string | null;
             breedte?: number;

@@ -30,24 +30,22 @@ function resolveOrderThumbnails(
   if (!lines || lines.length === 0) return [];
   if (kunstwerken === null) return [];
 
-  const uniqueIds = Array.from(
-    new Set(lines.map((line) => line.kunstwerkId).filter((id): id is string => id !== null))
-  );
+  const uniqueCodes = Array.from(new Set(lines.map((line) => line.code)));
 
-  if (uniqueIds.length === 0) {
+  if (uniqueCodes.length === 0) {
     return [{ key: 'unknown', kind: 'unknown' }];
   }
 
-  const shown: OrderThumbnail[] = uniqueIds.slice(0, MAX_VISIBLE_THUMBNAILS).map((id) => {
-    const kunstwerk = (kunstwerken ?? []).find((k) => k.id === id);
-    return kunstwerk ? { key: id, kind: 'kunstwerk', foto: kunstwerk.foto } : { key: id, kind: 'unknown' };
+  const shown: OrderThumbnail[] = uniqueCodes.slice(0, MAX_VISIBLE_THUMBNAILS).map((code) => {
+    const kunstwerk = (kunstwerken ?? []).find((k) => k.code === code);
+    return kunstwerk ? { key: code, kind: 'kunstwerk', foto: kunstwerk.foto } : { key: code, kind: 'unknown' };
   });
 
-  if (uniqueIds.length > MAX_VISIBLE_THUMBNAILS) {
+  if (uniqueCodes.length > MAX_VISIBLE_THUMBNAILS) {
     shown[MAX_VISIBLE_THUMBNAILS - 1] = {
       key: 'overflow',
       kind: 'overflow',
-      overflowCount: uniqueIds.length - (MAX_VISIBLE_THUMBNAILS - 1),
+      overflowCount: uniqueCodes.length - (MAX_VISIBLE_THUMBNAILS - 1),
     };
   }
 

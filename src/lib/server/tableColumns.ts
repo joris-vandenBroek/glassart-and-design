@@ -107,7 +107,7 @@ export const TABLE_COLUMNS: Record<string, readonly string[]> = {
   bestellines: [
     'id',
     'bestelheaderId',
-    'kunstwerkId',
+    'code',
     'maatId',
     'materiaalId',
     'prijs',

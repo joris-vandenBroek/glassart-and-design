@@ -105,7 +105,7 @@ const BESTELLINGEN: Bestelling[] = [
     status: 'Te beoordelen',
     lineCount: 1,
     totalQuantity: 3,
-    lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 3 }],
+    lines: [{ id: 'line-1', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 3 }],
   },
   {
     id: 'header-2',
@@ -116,7 +116,7 @@ const BESTELLINGEN: Bestelling[] = [
     status: 'Verstuurd naar drukker',
     lineCount: 1,
     totalQuantity: 1,
-    lines: [{ id: 'line-2', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
+    lines: [{ id: 'line-2', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
   },
 ];
 
@@ -231,7 +231,7 @@ describe('BestellingenSection', () => {
     const bestellingenMetEigenMaat = [
       {
         ...BESTELLINGEN[0],
-        lines: [{ id: 'line-3', kunstwerkId: 'kw-1', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: null, quantity: 1 }],
+        lines: [{ id: 'line-3', code: 'Hotel paneel', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: null, quantity: 1 }],
       },
     ];
     const { onLinePrijsVastgesteld } = renderSection({ bestellingen: bestellingenMetEigenMaat });

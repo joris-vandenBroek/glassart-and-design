@@ -55,6 +55,7 @@ const DEFAULT_COLLECTIONS: Record<string, unknown[]> = {
     {
       id: 'kw-1',
       foto: 'https://storage.example.com/kw-1.jpg',
+      code: 'Hotel paneel 1',
       segmentIds: ['seg-1'],
       materiaalIds: ['mat-1'],
       maatIds: ['maat-1'],
@@ -265,7 +266,7 @@ describe('BeheerShell', () => {
           bestelnr: 'GD-00001',
           besteldatum: '2026-07-01T00:00:00',
           status: 'Te beoordelen',
-          lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 3 }],
+          lines: [{ id: 'line-1', code: 'Hotel paneel 1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 3 }],
         },
         {
           id: 'header-2',
@@ -273,7 +274,7 @@ describe('BeheerShell', () => {
           bestelnr: 'GD-00002',
           besteldatum: '2026-07-02T00:00:00',
           status: 'Afgewezen',
-          lines: [{ id: 'line-2', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
+          lines: [{ id: 'line-2', code: 'Hotel paneel 1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
         },
       ],
     });
@@ -297,7 +298,7 @@ describe('BeheerShell', () => {
           zendingnummer: 'ZD-00007',
           besteldatum: '2026-07-01T00:00:00',
           status: 'Verstuurd naar drukker',
-          lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 3 }],
+          lines: [{ id: 'line-1', code: 'Hotel paneel 1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 3 }],
         },
       ],
     });

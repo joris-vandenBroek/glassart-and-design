@@ -92,14 +92,17 @@ export const POST = withApiErrorHandling('POST /api/bestelheaders', async (reque
       }
     }
 
-    const resolvedLines: Array<LineInput & { resolvedPrijs: number | null }> = [];
+    const resolvedLines: Array<LineInput & { resolvedPrijs: number | null; code: string }> = [];
     for (const line of lines) {
+      // De code komt hier uit de database, niet uit de request -- dat is bewust: een
+      // client kan zo geen code van een ander werk meesturen.
       const [kunstwerkRows] = await connection.query(
-        'SELECT kunstenaarId, maatIds, materiaalIds, prijsPerM2 FROM kunstwerken WHERE id = ?',
+        'SELECT code, kunstenaarId, maatIds, materiaalIds, prijsPerM2 FROM kunstwerken WHERE id = ?',
         [line.kunstwerkId]
       );
       const kunstwerkRow = (
         kunstwerkRows as Array<{
+          code: string;
           kunstenaarId: string | null;
           maatIds: string | string[] | null;
           materiaalIds: string | string[] | null;
@@ -157,7 +160,11 @@ export const POST = withApiErrorHandling('POST /api/bestelheaders', async (reque
         await connection.rollback();
         return NextResponse.json({ error: 'prijs-onbekend' }, { status: 400 });
       }
-      resolvedLines.push({ ...line, resolvedPrijs: resultaat.status === 'vast' ? resultaat.prijs : null });
+      resolvedLines.push({
+        ...line,
+        code: kunstwerkRow.code,
+        resolvedPrijs: resultaat.status === 'vast' ? resultaat.prijs : null,
+      });
     }
 
     const bestelnr = await volgendNummer(connection, 'bestelnummer', 'BE-');
@@ -175,11 +182,11 @@ export const POST = withApiErrorHandling('POST /api/bestelheaders', async (reque
 
     for (const line of resolvedLines) {
       await connection.query(
-        'INSERT INTO bestellines (id, bestelheaderId, kunstwerkId, maatId, materiaalId, prijs, quantity, breedte, hoogte) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO bestellines (id, bestelheaderId, code, maatId, materiaalId, prijs, quantity, breedte, hoogte) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [
           randomUUID(),
           headerId,
-          line.kunstwerkId,
+          line.code,
           line.maatId,
           line.materiaalId,
           line.resolvedPrijs,

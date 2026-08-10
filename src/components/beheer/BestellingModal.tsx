@@ -396,7 +396,7 @@ export function BestellingModal({
         <div data-testid="bestelling-modal" className="flex flex-col gap-3 text-sm text-white/80">
           <ul className="flex max-h-80 flex-col gap-3 overflow-y-auto text-xs">
             {bestelling.lines.map((line) => {
-              const kunstwerk = (kunstwerken ?? []).find((k) => k.id === line.kunstwerkId) ?? null;
+              const kunstwerk = (kunstwerken ?? []).find((k) => k.code === line.code) ?? null;
               const materiaal = (materialen ?? []).find((m) => m.id === line.materiaalId);
               const maat = (maten ?? []).find((m) => m.id === line.maatId);
               const maatWeergave = maat

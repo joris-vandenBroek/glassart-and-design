@@ -17,7 +17,7 @@ import { AfrondenBevestigingDialog } from './AfrondenBevestigingDialog';
 
 export interface BestellingLine {
   id: string;
-  kunstwerkId: string | null;
+  code: string;
   maatId: string | null;
   materiaalId: string | null;
   breedte?: number;

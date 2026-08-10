@@ -808,6 +808,24 @@ describe('bestelheaders routes', () => {
     expect(body.error).toBe('materiaal-niet-beschikbaar');
   });
 
+  it('schrijft de code van het kunstwerk in de bestelregel, niet het kunstwerk-id', async () => {
+    const maatId = await maakMaat(70, 100);
+    const materiaalId = await maakMateriaal();
+    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100);
+    const [kunstwerkRows] = await getPool().query('SELECT code FROM kunstwerken WHERE id = ?', [kunstwerkId]);
+    const verwachteCode = (kunstwerkRows as Array<{ code: string }>)[0].code;
+    const { cookie } = await klant('bestelline-code@example.com');
+
+    const response = await createHeader(
+      postRequest({ lines: [{ kunstwerkId, maatId, materiaalId, prijs: 100, quantity: 1 }] }, cookie)
+    );
+    expect(response.status).toBe(201);
+    const { id: headerId } = await response.json();
+
+    const [lineRows] = await getPool().query('SELECT code FROM bestellines WHERE bestelheaderId = ?', [headerId]);
+    expect((lineRows as Array<{ code: string }>)[0].code).toBe(verwachteCode);
+  });
+
   it('rejects ordering an artwork exclusive to 2 klanten from a third klant, allows both listed klanten', async () => {
     const klantA = await klant('exclusief-a@example.com');
     const klantB = await klant('exclusief-b@example.com');

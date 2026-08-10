@@ -98,6 +98,7 @@ async function maakBestellijnVoorMaat(maatId: string): Promise<{ headerId: strin
   } as never);
   await insertRow<{ id: string }>('bestellines', {
     bestelheaderId: header.id,
+    code: 'test-lookup-resources-maat-guard',
     maatId,
     quantity: 1,
   } as never);

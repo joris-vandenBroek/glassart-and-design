@@ -52,7 +52,7 @@ describe('AccountOrderModal', () => {
       time: '14:30',
       status: 'Te beoordelen',
       description: '',
-      lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
+      lines: [{ id: 'line-1', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
     });
     const line = screen.getByTestId('account-order-modal-line-line-1');
     expect(line).toHaveTextContent('40×60 cm');
@@ -67,7 +67,7 @@ describe('AccountOrderModal', () => {
       status: 'Te beoordelen',
       description: '',
       lines: [
-        { id: 'line-2', kunstwerkId: 'kw-1', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: null, quantity: 1 },
+        { id: 'line-2', code: 'Hotel paneel', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: null, quantity: 1 },
       ],
     });
     const line = screen.getByTestId('account-order-modal-line-line-2');
@@ -83,7 +83,7 @@ describe('AccountOrderModal', () => {
       status: 'Te beoordelen',
       description: '',
       lines: [
-        { id: 'line-2', kunstwerkId: 'kw-1', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: null, quantity: 1 },
+        { id: 'line-2', code: 'Hotel paneel', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: null, quantity: 1 },
       ],
     });
     fireEvent.click(screen.getByTestId('account-order-modal-line-line-2-price-help'));
@@ -99,7 +99,7 @@ describe('AccountOrderModal', () => {
       time: '14:30',
       status: 'Te beoordelen',
       description: '',
-      lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
+      lines: [{ id: 'line-1', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
     });
     expect(screen.queryByTestId('account-order-modal-status-help-popover')).not.toBeInTheDocument();
 
@@ -114,7 +114,7 @@ describe('AccountOrderModal', () => {
       time: '14:30',
       status: 'Te beoordelen',
       description: '',
-      lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
+      lines: [{ id: 'line-1', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
     });
     expect(screen.getByTestId('modal-header')).toHaveTextContent('GD-00001');
   });
@@ -126,7 +126,7 @@ describe('AccountOrderModal', () => {
       time: '14:30',
       status: 'Te beoordelen',
       description: '',
-      lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
+      lines: [{ id: 'line-1', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
     });
     const list = screen.getByTestId('account-order-modal-line-line-1').closest('ul');
     expect(list?.className).toMatch(/max-h-72/);
@@ -140,7 +140,7 @@ describe('AccountOrderModal', () => {
       time: '14:30',
       status: 'Te versturen naar drukker',
       description: '',
-      lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
+      lines: [{ id: 'line-1', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
     });
     expect(screen.getByTestId('account-order-modal-status')).toHaveTextContent('In behandeling');
   });
@@ -152,7 +152,7 @@ describe('AccountOrderModal', () => {
       time: '14:30',
       status: 'Afgewezen',
       description: '',
-      lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
+      lines: [{ id: 'line-1', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
     });
     expect(screen.getByTestId('account-order-modal-status')).toHaveTextContent('Afgewezen');
   });
@@ -165,8 +165,8 @@ describe('AccountOrderModal', () => {
       status: 'Te beoordelen',
       description: '',
       lines: [
-        { id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 },
-        { id: 'line-2', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 50, quantity: 1 },
+        { id: 'line-1', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 },
+        { id: 'line-2', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 50, quantity: 1 },
       ],
     });
     expect(screen.getByTestId('account-order-modal-total')).toHaveTextContent('€ 350,00');
@@ -179,7 +179,7 @@ describe('AccountOrderModal', () => {
       time: '14:30',
       status: 'Te beoordelen',
       description: '',
-      lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
+      lines: [{ id: 'line-1', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
     });
     const line = screen.getByTestId('account-order-modal-line-line-1');
     expect(line).toHaveTextContent('2 × € 150,00');
@@ -194,7 +194,7 @@ describe('AccountOrderModal', () => {
       status: 'Te beoordelen',
       description: '',
       lines: [
-        { id: 'line-2', kunstwerkId: 'kw-1', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: null, quantity: 1 },
+        { id: 'line-2', code: 'Hotel paneel', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: null, quantity: 1 },
       ],
     });
     expect(screen.getByTestId('account-order-modal-total')).toHaveTextContent('Wordt nog vastgesteld');
@@ -220,8 +220,8 @@ describe('AccountOrderModal', () => {
       status: 'Te beoordelen',
       description: '',
       lines: [
-        { id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 },
-        { id: 'line-2', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 50, quantity: 1 },
+        { id: 'line-1', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 },
+        { id: 'line-2', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 50, quantity: 1 },
       ],
     });
     // total excl. btw = 350
@@ -238,7 +238,7 @@ describe('AccountOrderModal', () => {
         time: '14:30',
         status: 'Te beoordelen',
         description: '',
-        lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
+        lines: [{ id: 'line-1', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
       },
       null,
       { tarieven: [{ land: 'DE', percentage: 19 }] }
@@ -255,7 +255,7 @@ describe('AccountOrderModal', () => {
       status: 'Te beoordelen',
       description: '',
       lines: [
-        { id: 'line-2', kunstwerkId: 'kw-1', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: null, quantity: 1 },
+        { id: 'line-2', code: 'Hotel paneel', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: null, quantity: 1 },
       ],
     });
     expect(screen.queryByTestId('account-order-modal-btw')).not.toBeInTheDocument();

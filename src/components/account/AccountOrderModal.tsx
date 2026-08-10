@@ -128,7 +128,7 @@ export function AccountOrderModal({
           {heeftRegels ? (
             <ul className="flex max-h-72 flex-col gap-2 overflow-y-auto text-xs">
               {order.lines!.map((line) => {
-                const kunstwerk = (kunstwerken ?? []).find((k) => k.id === line.kunstwerkId);
+                const kunstwerk = (kunstwerken ?? []).find((k) => k.code === line.code);
                 const materiaal = (materialen ?? []).find((m) => m.id === line.materiaalId);
                 const maat = (maten ?? []).find((m) => m.id === line.maatId);
                 const maatWeergave = maat

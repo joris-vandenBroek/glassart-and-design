@@ -80,7 +80,7 @@ const BESTELLING: Bestelling = {
   status: 'Te versturen naar drukker',
   lineCount: 1,
   totalQuantity: 2,
-  lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
+  lines: [{ id: 'line-1', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
 };
 
 const BESTELLING_2: Bestelling = {
@@ -92,7 +92,7 @@ const BESTELLING_2: Bestelling = {
   status: 'Te versturen naar drukker',
   lineCount: 1,
   totalQuantity: 1,
-  lines: [{ id: 'line-2', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
+  lines: [{ id: 'line-2', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
 };
 
 function renderDialog(overrides: Partial<React.ComponentProps<typeof VersturenNaarDrukkerDialog>> = {}) {

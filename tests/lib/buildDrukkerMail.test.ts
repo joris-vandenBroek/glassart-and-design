@@ -100,7 +100,7 @@ function bestelling(overrides: Partial<Bestelling> = {}): Bestelling {
     status: 'Te versturen naar drukker',
     lineCount: 1,
     totalQuantity: 2,
-    lines: [{ id: 'line-1', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
+    lines: [{ id: 'line-1', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
     ...overrides,
   };
 }
@@ -157,7 +157,7 @@ describe('buildDrukkerMail', () => {
         bestelling({ id: 'header-1' }),
         bestelling({
           id: 'header-2',
-          lines: [{ id: 'line-2', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
+          lines: [{ id: 'line-2', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
         }),
       ],
       klanten: [klant()],
@@ -181,7 +181,7 @@ describe('buildDrukkerMail', () => {
       bestellingen: [
         bestelling({
           lines: [
-            { id: 'line-3', kunstwerkId: 'kw-1', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: 275, quantity: 1 },
+            { id: 'line-3', code: 'Hotel paneel', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: 275, quantity: 1 },
           ],
         }),
       ],
@@ -195,7 +195,7 @@ describe('buildDrukkerMail', () => {
       bestellingen: [
         bestelling({
           lines: [
-            { id: 'line-6', kunstwerkId: 'kw-2', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: 275, quantity: 1 },
+            { id: 'line-6', code: 'Raampaneel', maatId: '', materiaalId: 'mat-1', breedte: 90, hoogte: 140, prijs: 275, quantity: 1 },
           ],
         }),
       ],
@@ -222,7 +222,7 @@ describe('buildDrukkerMail', () => {
         bestelling({
           id: 'header-2',
           bestelnr: 'GD-00402',
-          lines: [{ id: 'line-2', kunstwerkId: 'kw-1', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
+          lines: [{ id: 'line-2', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
         }),
       ],
       klanten: [klant()],
@@ -239,7 +239,7 @@ describe('buildDrukkerMail', () => {
     const mail = callBuildDrukkerMail({
       bestellingen: [
         bestelling({
-          lines: [{ id: 'line-4', kunstwerkId: 'kw-2', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
+          lines: [{ id: 'line-4', code: 'Raampaneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
         }),
       ],
       klanten: [klant()],
@@ -251,7 +251,7 @@ describe('buildDrukkerMail', () => {
     const mail = callBuildDrukkerMail({
       bestellingen: [
         bestelling({
-          lines: [{ id: 'line-5', kunstwerkId: 'kw-3', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
+          lines: [{ id: 'line-5', code: 'Deurpaneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 1 }],
         }),
       ],
       klanten: [klant()],
@@ -274,18 +274,23 @@ describe('buildDrukkerMail', () => {
     expect(mail.text).toContain('Afleveradres: Onbekend afleveradres');
   });
 
-  it('falls back to "Onbekend materiaal", "Onbekend kunstwerk" and "Onbekende maat" for unmatched reference ids', () => {
+  it('falls back to "Onbekend materiaal" and "Onbekende maat" for unmatched reference ids, but shows the regel\'s own code even when no kunstwerk matches it', () => {
+    // De code staat op de bestelregel zelf en komt dus altijd mee, ook als het
+    // kunstwerk waar hij ooit bij hoorde uit de catalogus is verdwenen -- in
+    // tegenstelling tot materiaal en maat, die nog wél via een id worden
+    // opgezocht en dus een "Onbekend(e) ..." fallback kunnen tonen.
     const mail = callBuildDrukkerMail({
       bestellingen: [
         bestelling({
           lines: [
-            { id: 'line-unknown', kunstwerkId: 'kw-missing', maatId: 'maat-missing', materiaalId: 'mat-missing', prijs: 100, quantity: 1 },
+            { id: 'line-unknown', code: 'kw-missing', maatId: 'maat-missing', materiaalId: 'mat-missing', prijs: 100, quantity: 1 },
           ],
         }),
       ],
       klanten: [klant()],
     });
-    expect(mail.text).toContain('Onbekend kunstwerk');
+    expect(mail.text).toContain('kw-missing');
+    expect(mail.text).not.toContain('Onbekend kunstwerk');
     expect(mail.text).toContain('Onbekend materiaal');
     expect(mail.text).toContain('Onbekende maat');
   });
