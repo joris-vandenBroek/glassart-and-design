@@ -30,6 +30,10 @@ interface KunstwerkenSectionProps {
   // dat venster is sub-seconde en de 409 uit /api/kunstwerken/[id] is de harde grens,
   // dus dit veld is een UX-hulp, geen beveiliging.
   bestelCodes: Set<string>;
+  // De foutcode uit useApiCollection's lastMutationErrorCode voor de laatste mislukte
+  // add/update/remove op deze resource (bijv. 'code-bestaat-al'). null zolang er geen
+  // mislukte mutatie is geweest of de server geen herkenbare code teruggaf.
+  actionErrorCode: string | null;
   onAdd: (data: Omit<Kunstwerk, 'id'>) => Promise<boolean>;
   onUpdate: (id: string, data: Omit<Kunstwerk, 'id'>) => Promise<boolean>;
   onRemove: (id: string) => Promise<boolean>;
@@ -75,6 +79,7 @@ export function KunstwerkenSection({
   kunstenaars,
   loadError,
   bestelCodes,
+  actionErrorCode,
   onAdd,
   onUpdate,
   onRemove,
@@ -111,6 +116,14 @@ export function KunstwerkenSection({
   const [omschrijvingDe, setOmschrijvingDe] = useState(LEGE_FORM.omschrijvingDe);
   const [omschrijvingEn, setOmschrijvingEn] = useState(LEGE_FORM.omschrijvingEn);
   const [actionError, setActionError] = useState<string | null>(null);
+  // Zet aan zodra een add/update/remove van de server false teruggeeft. De getoonde
+  // tekst wordt bij elke render opnieuw berekend uit `actionErrorCode` (zie
+  // mutatieFoutmelding hieronder) in plaats van eenmalig vastgelegd na de await --
+  // `actionErrorCode` komt uit React-state een render later binnen dan de boolean uit
+  // add/update/remove, dus een closure die hem meteen na de await zou lezen ving nog
+  // de oude waarde. Herberekenen bij elke render lost dat op zonder op precieze
+  // update-volgorde te hoeven vertrouwen.
+  const [mutationFailed, setMutationFailed] = useState(false);
   const [isDraggingFoto, setIsDraggingFoto] = useState(false);
   const [backfillBezig, setBackfillBezig] = useState(false);
   const [pendingCodeWijziging, setPendingCodeWijziging] = useState<string | null>(null);
@@ -389,6 +402,7 @@ export function KunstwerkenSection({
     setOmschrijvingDe(LEGE_FORM.omschrijvingDe);
     setOmschrijvingEn(LEGE_FORM.omschrijvingEn);
     setActionError(null);
+    setMutationFailed(false);
     setPendingCodeWijziging(null);
   }
 
@@ -418,6 +432,7 @@ export function KunstwerkenSection({
     setOmschrijvingDe(kunstwerk.omschrijvingDe);
     setOmschrijvingEn(kunstwerk.omschrijvingEn);
     setActionError(null);
+    setMutationFailed(false);
     setPendingCodeWijziging(null);
     const bestaandFormaat = kunstwerk.formaat ?? null;
     setFormaatState(bestaandFormaat);
@@ -440,6 +455,7 @@ export function KunstwerkenSection({
   function closeModal() {
     formaatSessionRef.current += 1;
     setPendingCodeWijziging(null);
+    setMutationFailed(false);
     setModalState(null);
   }
 
@@ -495,6 +511,7 @@ export function KunstwerkenSection({
 
   async function bewaarKunstwerk() {
     if (!modalState) return;
+    setMutationFailed(false);
     const data = buildKunstwerkData();
     const success = modalState.mode === 'add' ? await onAdd(data) : await onUpdate(modalState.kunstwerk.id, data);
     if (success) {
@@ -505,7 +522,8 @@ export function KunstwerkenSection({
       closeModal();
     } else {
       setPendingCodeWijziging(null);
-      setActionError(t('kunstwerkenActionError'));
+      setActionError(null);
+      setMutationFailed(true);
     }
   }
 
@@ -546,13 +564,27 @@ export function KunstwerkenSection({
 
   async function handleRemove() {
     if (modalState?.mode !== 'edit') return;
+    setMutationFailed(false);
     const success = await onRemove(modalState.kunstwerk.id);
     if (success) {
       void logActiviteit('kunstwerk_verwijderd', modalState.kunstwerk.code);
       closeModal();
     } else {
-      setActionError(t('kunstwerkenActionError'));
+      setActionError(null);
+      setMutationFailed(true);
     }
+  }
+
+  // Vertaalt de servercode van de laatste mislukte mutatie naar de bijpassende
+  // beheertekst. Berekend bij elke render (niet eenmalig na de mutatie) zodat de
+  // juiste tekst verschijnt zodra `actionErrorCode` binnenkomt, ook al gebeurt dat een
+  // render later dan de boolean die add/update/remove teruggeven.
+  function mutatieFoutmelding(): string {
+    if (actionErrorCode === 'code-bestaat-al') return t('kunstwerkenCodeBestaatAl');
+    if (actionErrorCode === 'code-in-bestelling' || actionErrorCode === 'in-use-bestelling') {
+      return t('kunstwerkenCodeVast');
+    }
+    return t('kunstwerkenActionError');
   }
 
   const alleMateriaalIds = (materialen ?? []).map((materiaal) => materiaal.id);
@@ -663,12 +695,14 @@ export function KunstwerkenSection({
               >
                 {t('kunstwerkenOpslaan')}
               </button>
-              {modalState?.mode === 'edit' && !codeOpSlot && (
+              {modalState?.mode === 'edit' && (
                 <button
                   type="button"
                   onClick={handleRemove}
+                  disabled={codeOpSlot}
+                  title={codeOpSlot ? t('kunstwerkenCodeVast') : undefined}
                   data-testid="kunstwerk-modal-verwijderen"
-                  className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                  className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
                 >
                   {t('kunstwerkenVerwijderen')}
                 </button>
@@ -1106,9 +1140,9 @@ export function KunstwerkenSection({
 
               <RequiredLegend testId="kunstwerk-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
 
-              {actionError && (
+              {(actionError || mutationFailed) && (
                 <p data-testid="kunstwerk-modal-error" className="text-xs text-red-400">
-                  {actionError}
+                  {actionError ?? mutatieFoutmelding()}
                 </p>
               )}
             </div>

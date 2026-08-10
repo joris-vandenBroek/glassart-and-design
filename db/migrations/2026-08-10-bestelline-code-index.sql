@@ -1,0 +1,26 @@
+-- Migratie voor de kunstwerkcode (2026-08-10), deel 3 van 3.
+-- Ontwerp: docs/superpowers/specs/2026-08-10-kunstwerk-code-design.md
+--
+-- Sluit het gat dat overbleef nadat het verwijderslot op een besteld kunstwerk werd
+-- toegevoegd: DELETE /api/kunstwerken/[id] deed de "komt de code voor in bestellines"
+-- controle en de DELETE als twee losse statements. Een bestelling die daartussenin
+-- committeert kan een kunstwerk laten verwijderen terwijl er alsnog een bestellines-rij
+-- met die code bestaat, waarna de code vrijkomt voor hergebruik -- precies de corruptie
+-- die het slot moest voorkomen (ontwerp, beslissing 3).
+--
+-- De echte oplossing draait de controle en de verwijdering in één transactie met
+-- SELECT ... FOR UPDATE op bestellines, zodat InnoDB's gap lock een gelijktijdige INSERT
+-- met dezelfde code blokkeert totdat de transactie klaar is -- een gewone SELECT neemt
+-- geen slot op een rij die nog niet bestaat, dus die stopt een race niet.
+--
+-- FOR UPDATE zonder index scant en vergrendelt echter de hele tabel, wat elke
+-- gelijktijdige bestelling zou blokkeren, niet alleen die met dezelfde code. Vandaar
+-- deze index: hij maakt het gap lock smal (alleen de buurt van de gezochte code) én
+-- versnelt de bestaande, niet-transactionele lock-checks in codeKomtVoorInBestelling
+-- (PATCH en DELETE) die nu al bij elke wijziging of verwijdering op deze kolom filteren.
+--
+-- Volgorde van uitrol: deze migratie draait tegen een omgeving VOORDAT de transactionele
+-- DELETE-handler daar gedeployd wordt -- de index is onschadelijk voor de huidige code
+-- (die kolom wordt al bevraagd) en kan dus ruim voor de deploy toegepast worden, in
+-- tegenstelling tot de twee CHANGE/DROP-migraties uit deel 1 en 2 van deze reeks.
+ALTER TABLE bestellines ADD INDEX idx_bestellines_code (code);

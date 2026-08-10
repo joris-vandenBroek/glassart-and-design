@@ -63,4 +63,139 @@ describe('useApiCollection', () => {
       expect.objectContaining({ method: 'POST' })
     );
   });
+
+  it('exposes the server error code from a failed add, without changing the boolean it returns', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockResolvedValueOnce({
+        ok: false,
+        clone() {
+          return this;
+        },
+        json: async () => ({ error: 'code-bestaat-al' }),
+      });
+    const { result } = renderHook(() => useApiCollection<{ id: string }>('kunstwerken'));
+    await waitFor(() => expect(result.current.items).toEqual([]));
+
+    let success = true;
+    await act(async () => {
+      success = await result.current.add({} as never);
+    });
+    expect(success).toBe(false);
+    expect(result.current.error).toBe('action');
+    expect(result.current.lastMutationErrorCode).toBe('code-bestaat-al');
+  });
+
+  it('exposes the server error code from a failed update', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockResolvedValueOnce({
+        ok: false,
+        clone() {
+          return this;
+        },
+        json: async () => ({ error: 'code-in-bestelling' }),
+      });
+    const { result } = renderHook(() => useApiCollection<{ id: string }>('kunstwerken'));
+    await waitFor(() => expect(result.current.items).toEqual([]));
+
+    await act(async () => {
+      await result.current.update('kw-1', {} as never);
+    });
+    expect(result.current.lastMutationErrorCode).toBe('code-in-bestelling');
+  });
+
+  it('exposes the server error code from a failed remove', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockResolvedValueOnce({
+        ok: false,
+        clone() {
+          return this;
+        },
+        json: async () => ({ error: 'in-use-bestelling' }),
+      });
+    const { result } = renderHook(() => useApiCollection<{ id: string }>('kunstwerken'));
+    await waitFor(() => expect(result.current.items).toEqual([]));
+
+    await act(async () => {
+      await result.current.remove('kw-1');
+    });
+    expect(result.current.lastMutationErrorCode).toBe('in-use-bestelling');
+  });
+
+  it('leaves lastMutationErrorCode null when the failed response has no JSON body (e.g. a plain 500)', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockResolvedValueOnce({
+        ok: false,
+        clone() {
+          return this;
+        },
+        json: async () => {
+          throw new Error('not json');
+        },
+      });
+    const { result } = renderHook(() => useApiCollection<{ id: string }>('kunstwerken'));
+    await waitFor(() => expect(result.current.items).toEqual([]));
+
+    await act(async () => {
+      await result.current.update('kw-1', {} as never);
+    });
+    expect(result.current.lastMutationErrorCode).toBeNull();
+  });
+
+  it('clears lastMutationErrorCode once a later mutation succeeds', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockResolvedValueOnce({
+        ok: false,
+        clone() {
+          return this;
+        },
+        json: async () => ({ error: 'code-bestaat-al' }),
+      })
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: true, json: async () => [] });
+    const { result } = renderHook(() => useApiCollection<{ id: string }>('kunstwerken'));
+    await waitFor(() => expect(result.current.items).toEqual([]));
+
+    await act(async () => {
+      await result.current.add({} as never);
+    });
+    expect(result.current.lastMutationErrorCode).toBe('code-bestaat-al');
+
+    await act(async () => {
+      await result.current.add({} as never);
+    });
+    expect(result.current.lastMutationErrorCode).toBeNull();
+  });
+
+  it('clears lastMutationErrorCode when a later mutation fails before a response exists (offline, DNS, aborted)', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockResolvedValueOnce({
+        ok: false,
+        clone() {
+          return this;
+        },
+        json: async () => ({ error: 'code-bestaat-al' }),
+      })
+      .mockRejectedValueOnce(new Error('network error'));
+    const { result } = renderHook(() => useApiCollection<{ id: string }>('kunstwerken'));
+    await waitFor(() => expect(result.current.items).toEqual([]));
+
+    await act(async () => {
+      await result.current.add({} as never);
+    });
+    expect(result.current.lastMutationErrorCode).toBe('code-bestaat-al');
+
+    let success = true;
+    await act(async () => {
+      success = await result.current.remove('kw-1');
+    });
+    expect(success).toBe(false);
+    expect(result.current.error).toBe('action');
+    expect(result.current.lastMutationErrorCode).toBeNull();
+  });
 });

@@ -267,3 +267,37 @@ describe('slot op een besteld kunstwerk', () => {
     expect(response.status).toBe(404);
   });
 });
+
+describe('hergebruik van een vrijgekomen code', () => {
+  // Deze code komt voor in bestellines, maar op geen enkel kunstwerk (zoals na een
+  // verwijdering waarbij de bestelling pas ná de DELETE-transactie is gecommit --
+  // zie het commentaar bij codeKomtVoorInBestellingForUpdate). Uitgeven van zo'n code
+  // aan een nieuw of ander kunstwerk moet net zo geweigerd worden als een code die al
+  // in gebruik is.
+  it('weigert POST /api/kunstwerken met een code die alleen nog in bestellines voorkomt', async () => {
+    await maakBestelregelMetCode('test-reuse-post-vrij', 'reuse-post@example.com');
+    const cookie = await medewerkerCookie();
+
+    const response = await createKunstwerk(postRequest({ code: 'test-reuse-post-vrij' }, cookie));
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: 'code-bestaat-al' });
+
+    const [rows] = await getPool().query('SELECT 1 FROM kunstwerken WHERE code = ?', ['test-reuse-post-vrij']);
+    expect((rows as unknown[]).length).toBe(0);
+  });
+
+  it('weigert PATCH naar een code die alleen nog in bestellines voorkomt', async () => {
+    const id = await maakKunstwerk('test-reuse-patch-eigen');
+    await maakBestelregelMetCode('test-reuse-patch-vrij', 'reuse-patch@example.com');
+    const cookie = await medewerkerCookie();
+
+    const response = await patchKunstwerk(patchRequest({ code: 'test-reuse-patch-vrij' }, cookie), {
+      params: { id },
+    });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: 'code-bestaat-al' });
+
+    const [rows] = await getPool().query('SELECT code FROM kunstwerken WHERE id = ?', [id]);
+    expect((rows as Array<{ code: string }>)[0].code).toBe('test-reuse-patch-eigen');
+  });
+});
