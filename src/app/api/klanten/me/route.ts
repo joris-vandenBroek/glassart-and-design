@@ -23,7 +23,7 @@ export const GET = withApiErrorHandling('GET /api/klanten/me', async (request: R
   if (!klant) {
     return NextResponse.json({ error: 'not-found' }, { status: 404 });
   }
-  const { wachtwoordHash: _wachtwoordHash, ...safeKlant } = klant;
+  const { wachtwoordHash: _wachtwoordHash, afwijsreden: _afwijsreden, ...safeKlant } = klant;
   return NextResponse.json(safeKlant);
 });
 

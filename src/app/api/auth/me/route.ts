@@ -21,7 +21,7 @@ export const GET = withApiErrorHandling('GET /api/auth/me', async (request: Requ
   if (!user) {
     return NextResponse.json({ user: null });
   }
-  const { wachtwoordHash: _wachtwoordHash, ...safeUser } = user;
+  const { wachtwoordHash: _wachtwoordHash, afwijsreden: _afwijsreden, ...safeUser } = user;
   if (type === 'klant') {
     // Exposed so the client can apply the customer's own korting/opslag to prices it
     // computes itself (e.g. the per-m2 preview for maatloze kunstwerken) -- prijsgroepId

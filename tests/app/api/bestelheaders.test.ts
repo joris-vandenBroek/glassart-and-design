@@ -866,4 +866,44 @@ describe('bestelheaders routes', () => {
     expect(rij.status).toBe('Afgewezen');
     expect(rij.afwijsreden).toBe('Klant heeft nog een openstaande factuur.');
   });
+
+  it('strips afwijsreden from a klant\'s own view of their orders, but includes it for a medewerker', async () => {
+    const { id: klantId, cookie } = await klant('test-afwijsreden-lek@example.com');
+    const created = await createHeader(postRequest({ lines: [] }, cookie));
+    const header = await created.json();
+    const staffCookie = await medewerkerCookie();
+
+    await patchHeader(
+      new Request('http://localhost/api', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', cookie: staffCookie },
+        body: JSON.stringify({ status: 'Afgewezen', afwijsreden: 'Onvoldoende gegevens.' }),
+      }),
+      { params: { id: header.id } }
+    );
+
+    const asKlant = await listHeaders(
+      new Request(`http://localhost/api/bestelheaders?klantId=${klantId}`, {
+        headers: { cookie },
+      })
+    );
+    const klantBody = await asKlant.json();
+    expect(klantBody).toHaveLength(1);
+    expect('afwijsreden' in klantBody[0]).toBe(false);
+
+    const asStaffForKlant = await listHeaders(
+      new Request(`http://localhost/api/bestelheaders?klantId=${klantId}`, {
+        headers: { cookie: staffCookie },
+      })
+    );
+    const staffBody = await asStaffForKlant.json();
+    expect(staffBody[0].afwijsreden).toBe('Onvoldoende gegevens.');
+
+    const bulkAsStaff = await listHeaders(
+      new Request('http://localhost/api/bestelheaders', { headers: { cookie: staffCookie } })
+    );
+    const bulkBody = await bulkAsStaff.json();
+    const bulkRow = bulkBody.find((row: { id: string }) => row.id === header.id);
+    expect(bulkRow.afwijsreden).toBe('Onvoldoende gegevens.');
+  });
 });

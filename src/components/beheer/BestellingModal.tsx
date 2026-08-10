@@ -420,7 +420,7 @@ export function BestellingModal({
           <div
             data-testid="bestelling-modal"
             hidden={bevestigingAfwijzen.open}
-            className="flex flex-col gap-3 text-sm text-white/80"
+            className={`${bevestigingAfwijzen.open ? 'hidden' : 'flex'} flex-col gap-3 text-sm text-white/80`}
           >
             <ul className="flex max-h-80 flex-col gap-3 overflow-y-auto text-xs">
               {bestelling.lines.map((line) => {

@@ -340,7 +340,7 @@ export function KlantModal({
           <div
             data-testid="klant-modal"
             hidden={bevestigingAfwijzen.open}
-            className="flex flex-col gap-3 text-sm text-white/80"
+            className={`${bevestigingAfwijzen.open ? 'hidden' : 'flex'} flex-col gap-3 text-sm text-white/80`}
           >
             <div className="flex items-center justify-between">
               <span
