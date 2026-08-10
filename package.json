@@ -11,7 +11,8 @@
     "test:regression": "vitest run --config vitest.regression.config.ts",
     "db:status": "tsx scripts/db-migrate.ts status",
     "db:migrate": "tsx scripts/db-migrate.ts apply",
-    "db:diff": "tsx scripts/db-diff.ts"
+    "db:diff": "tsx scripts/db-diff.ts",
+    "import:kunstwerken": "tsx scripts/import-kunstwerken-cli.ts"
   },
   "dependencies": {
     "image-size": "^2.0.2",
