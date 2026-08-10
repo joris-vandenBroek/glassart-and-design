@@ -215,7 +215,8 @@ CREATE TABLE bestellines (
   quantity INT NOT NULL DEFAULT 1,
   breedte INT,
   hoogte INT,
-  FOREIGN KEY (bestelheaderId) REFERENCES bestelheaders(id) ON DELETE CASCADE
+  FOREIGN KEY (bestelheaderId) REFERENCES bestelheaders(id) ON DELETE CASCADE,
+  INDEX idx_bestellines_code (code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE bestelstatusHistorie (

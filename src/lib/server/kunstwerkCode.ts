@@ -1,3 +1,4 @@
+import type { Pool } from 'mysql2/promise';
 import { getPool } from './db';
 
 export const KUNSTWERKEN_JSON_COLUMNS = [
@@ -33,6 +34,27 @@ export async function codeIsInGebruik(
  */
 export async function codeKomtVoorInBestelling(code: string): Promise<boolean> {
   const [rows] = await getPool().query('SELECT 1 FROM bestellines WHERE code = ? LIMIT 1', [code]);
+  return (rows as unknown[]).length > 0;
+}
+
+/**
+ * Zelfde controle als `codeKomtVoorInBestelling`, maar met `FOR UPDATE` op een
+ * meegegeven transactie-connection, voor DELETE /api/kunstwerken/[id]. Een gewone
+ * SELECT neemt geen slot op een bestellines-rij die nog niet bestaat, dus twee
+ * gelijktijdige acties -- een bestelling die met deze code committeert en een
+ * verwijdering van het kunstwerk met die code -- komen er dan allebei ongehinderd
+ * langs. `FOR UPDATE` neemt InnoDB's gap lock op de buurt van deze code (mogelijk
+ * gemaakt door de index op bestellines.code, zie
+ * db/migrations/2026-08-10-bestelline-code-index.sql) en blokkeert daarmee een
+ * gelijktijdige INSERT met dezelfde code totdat deze transactie commit of
+ * rollbackt -- de verwijdering en de bestelregel kunnen zo niet meer langs elkaar
+ * heen glippen.
+ */
+export async function codeKomtVoorInBestellingForUpdate(
+  code: string,
+  connection: Pick<Pool, 'query'>
+): Promise<boolean> {
+  const [rows] = await connection.query('SELECT 1 FROM bestellines WHERE code = ? LIMIT 1 FOR UPDATE', [code]);
   return (rows as unknown[]).length > 0;
 }
 

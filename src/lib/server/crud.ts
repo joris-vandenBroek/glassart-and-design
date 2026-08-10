@@ -125,6 +125,18 @@ export async function updateRow(
   );
 }
 
-export async function deleteRow(table: string, id: string): Promise<void> {
-  await getPool().query(`DELETE FROM ${quoteIdent(table)} WHERE id = ?`, [id]);
+/**
+ * `connection` is optioneel, om dezelfde reden als bij `updateRow` hierboven: een
+ * aanroeper die de verwijdering binnen een transactie moet combineren met een
+ * voorafgaande `SELECT ... FOR UPDATE` (bijv. /api/kunstwerken/[id]'s DELETE, dat het
+ * verwijderslot op een besteld kunstwerk anders met een race tussen de check en de
+ * verwijdering zou laten zitten) kan zo dezelfde connection meegeven in plaats van de
+ * SQL met de hand te herbouwen.
+ */
+export async function deleteRow(
+  table: string,
+  id: string,
+  connection?: Pick<Pool, 'query'>
+): Promise<void> {
+  await (connection ?? getPool()).query(`DELETE FROM ${quoteIdent(table)} WHERE id = ?`, [id]);
 }

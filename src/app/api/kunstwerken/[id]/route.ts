@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getRow, updateRow, deleteRow } from '@/lib/server/crud';
+import { getPool } from '@/lib/server/db';
 import { withApiErrorHandling, withMedewerker } from '@/lib/server/apiRoute';
 import {
   KUNSTWERKEN_JSON_COLUMNS,
   codeIsInGebruik,
   codeKomtVoorInBestelling,
+  codeKomtVoorInBestellingForUpdate,
   isDuplicateCodeError,
 } from '@/lib/server/kunstwerkCode';
 
@@ -62,14 +64,30 @@ export const DELETE = withMedewerker(
   async (_request: Request, { params }: { params: { id: string } }) => {
     const bestaand = await getRow<{ code: string }>('kunstwerken', params.id);
     if (!bestaand) return NextResponse.json({ error: 'not-found' }, { status: 404 });
-    // Zonder dit slot kan een code vrijkomen en later aan een nieuw kunstwerk gegeven
-    // worden, waarna historische bestelregels stil naar het verkeerde werk wijzen --
-    // de bestelregel verwijst immers naar de code, niet naar het id. Zelfde foutcode
-    // als de generieke route al gebruikt voor maten en materialen.
-    if (await codeKomtVoorInBestelling(bestaand.code)) {
-      return NextResponse.json({ error: 'in-use-bestelling' }, { status: 409 });
+
+    // Check en verwijdering in één transactie, met FOR UPDATE op de check: zo kan een
+    // bestelling die tussen de check en de verwijdering in zou committeren niet meer
+    // langs dit slot glippen. Een gewone SELECT (zoals PATCH hierboven nog gebruikt)
+    // neemt geen slot op een rij die nog niet bestaat en garandeert dat niet -- zie
+    // codeKomtVoorInBestellingForUpdate. Zonder dit slot kan een code vrijkomen en
+    // later aan een nieuw kunstwerk gegeven worden, waarna historische bestelregels
+    // stil naar het verkeerde werk wijzen. Zelfde foutcode als de generieke route al
+    // gebruikt voor maten en materialen.
+    const connection = await getPool().getConnection();
+    try {
+      await connection.beginTransaction();
+      if (await codeKomtVoorInBestellingForUpdate(bestaand.code, connection)) {
+        await connection.rollback();
+        return NextResponse.json({ error: 'in-use-bestelling' }, { status: 409 });
+      }
+      await deleteRow('kunstwerken', params.id, connection);
+      await connection.commit();
+      return NextResponse.json({ ok: true });
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
     }
-    await deleteRow('kunstwerken', params.id);
-    return NextResponse.json({ ok: true });
   }
 );
