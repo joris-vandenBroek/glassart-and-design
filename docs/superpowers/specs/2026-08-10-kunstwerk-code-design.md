@@ -74,12 +74,21 @@ wordt dat er buiten het systeem een masterbestand meeverandert.
 
 ## A. Schema en migratie
 
+Twee migratiebestanden, in deze volgorde. Beslissing 6 gaat over het vermijden van
+expand/contract, niet over het aantal bestanden: twee bestanden laten de kunstwerkkant en
+de bestelregelkant apart opleveren en apart nakijken, elk met een groene testsuite, zonder
+dat er ooit code hoeft te bestaan die met twee vormen tegelijk werkt.
+
 `db/migrations/2026-08-10-kunstwerk-code.sql`:
 
 ```sql
 ALTER TABLE kunstwerken CHANGE naam code VARCHAR(255) NOT NULL DEFAULT '';
 ALTER TABLE kunstwerken ADD UNIQUE KEY uniek_code (code);
+```
 
+`db/migrations/2026-08-10-bestelline-code.sql`:
+
+```sql
 ALTER TABLE bestellines ADD code VARCHAR(255) NULL AFTER bestelheaderId;
 UPDATE bestellines bl JOIN kunstwerken k ON k.id = bl.kunstwerkId SET bl.code = k.code;
 ALTER TABLE bestellines MODIFY code VARCHAR(255) NOT NULL;
@@ -116,11 +125,12 @@ naar `src/app/api/kunstenaars/[id]/route.ts`.
 - `POST` — medewerker. Lege code na trimmen → `400 code-verplicht`. Code bestaat al
   (hoofdletterongevoelig) → `409 code-bestaat-al`.
 
-De "bestaat al"-controle is een expliciete `SELECT` binnen dezelfde transactie als de
-insert of update, zodat de melding klopt. De `UNIQUE`-index is de laatste backstop voor
-twee gelijktijdige schrijvers die elkaar net missen: `withApiErrorHandling` maakt van een
-onbehandelde fout een 500, dus MySQL's `ER_DUP_ENTRY` op `uniek_code` moet in deze routes
-opgevangen worden en óók `409 code-bestaat-al` opleveren.
+De "bestaat al"-controle is een expliciete `SELECT`, zodat de melding klopt en de juiste
+foutcode teruggegeven wordt. **De `UNIQUE`-index is de enige echte garantie**, niet die
+`SELECT`: een transactie eromheen helpt hier niet, want een gewone `SELECT` op een rij die
+nog niet bestaat neemt geen slot, dus twee gelijktijdige schrijvers komen er beide langs.
+Daarom moet MySQL's `ER_DUP_ENTRY` op `uniek_code` in deze routes opgevangen worden en óók
+`409 code-bestaat-al` opleveren — zonder dat maakt `withApiErrorHandling` er een 500 van.
 
 `src/app/api/kunstwerken/[id]/route.ts`
 
@@ -129,8 +139,12 @@ opgevangen worden en óók `409 code-bestaat-al` opleveren.
   - de huidige code komt voor in `bestellines` → `409 code-in-bestelling`;
   - de nieuwe code hoort al bij een ánder kunstwerk → `409 code-bestaat-al`;
   - de nieuwe code is leeg → `400 code-verplicht`.
-  De controles en de update lopen in één transactie, zodat twee gelijktijdige wijzigingen
-  niet langs elkaar heen glippen.
+
+  "Afwijkend" is een exacte tekstvergelijking, dus ook een wijziging die alleen de
+  hoofdletters aanpast telt als een codewijziging en wordt geweigerd bij een besteld werk.
+  Anders zou de code in `kunstwerken` en die in `bestellines` in schrijfwijze uit elkaar
+  gaan lopen. De dubbel-controle vergelijkt daarentegen wél hoofdletterongevoelig, gelijk
+  aan de index.
 - `DELETE` — medewerker. De code komt voor in `bestellines` → `409 in-use-bestelling`,
   dezelfde foutcode die de generieke route al gebruikt voor maten en materialen.
 
