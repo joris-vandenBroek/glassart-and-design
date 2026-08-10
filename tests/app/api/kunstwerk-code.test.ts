@@ -4,10 +4,21 @@ import { insertRow } from '@/lib/server/crud';
 import { POST as createKunstwerk } from '@/app/api/kunstwerken/route';
 import { PATCH as patchKunstwerk, DELETE as deleteKunstwerk } from '@/app/api/kunstwerken/[id]/route';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
+import { hashPassword } from '@/lib/server/password';
 
 const createdKunstwerkIds: string[] = [];
+const createdHeaderIds: string[] = [];
+const createdKlantEmails: string[] = [];
 
 afterEach(async () => {
+  if (createdHeaderIds.length > 0) {
+    await getPool().query('DELETE FROM bestelheaders WHERE id IN (?)', [createdHeaderIds]);
+    createdHeaderIds.length = 0;
+  }
+  if (createdKlantEmails.length > 0) {
+    await getPool().query('DELETE FROM klanten WHERE email IN (?)', [createdKlantEmails]);
+    createdKlantEmails.length = 0;
+  }
   if (createdKunstwerkIds.length > 0) {
     await getPool().query('DELETE FROM kunstwerken WHERE id IN (?)', [createdKunstwerkIds]);
     createdKunstwerkIds.length = 0;
@@ -40,6 +51,31 @@ async function maakKunstwerk(code: string): Promise<string> {
   const kunstwerk = await insertRow<{ id: string }>('kunstwerken', { code } as never);
   createdKunstwerkIds.push(kunstwerk.id);
   return kunstwerk.id;
+}
+
+async function maakBestelregelMetCode(code: string, email: string): Promise<void> {
+  const klant = await insertRow<{ id: string }>('klanten', {
+    email,
+    wachtwoordHash: await hashPassword('x'),
+    status: 'Goedgekeurd',
+  } as never);
+  createdKlantEmails.push(email);
+  const header = await insertRow<{ id: string }>('bestelheaders', {
+    klantId: klant.id,
+    // Een vast, herkenbaar testbestelnummer: de counters-rij `bestelnummer` mag nooit
+    // gebruikt of gereset worden door een test.
+    bestelnr: `TEST-${code}`,
+    status: 'Te beoordelen',
+  } as never);
+  createdHeaderIds.push(header.id);
+  await insertRow('bestellines', {
+    bestelheaderId: header.id,
+    code,
+    maatId: null,
+    materiaalId: null,
+    prijs: null,
+    quantity: 1,
+  } as never);
 }
 
 describe('kunstwerken.code', () => {
@@ -130,6 +166,87 @@ describe('PATCH /api/kunstwerken/[id]', () => {
     const response = await patchKunstwerk(patchRequest({ code: 'test-patch-onbekend' }, cookie), {
       params: { id: 'bestaat-niet' },
     });
+    expect(response.status).toBe(404);
+  });
+});
+
+describe('slot op een besteld kunstwerk', () => {
+  it('weigert een codewijziging als de code in een bestelregel voorkomt', async () => {
+    const id = await maakKunstwerk('test-slot-besteld');
+    await maakBestelregelMetCode('test-slot-besteld', 'slot-patch@example.com');
+    const cookie = await medewerkerCookie();
+
+    const response = await patchKunstwerk(patchRequest({ code: 'test-slot-nieuw' }, cookie), {
+      params: { id },
+    });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: 'code-in-bestelling' });
+
+    const [rows] = await getPool().query('SELECT code FROM kunstwerken WHERE id = ?', [id]);
+    expect((rows as Array<{ code: string }>)[0].code).toBe('test-slot-besteld');
+  });
+
+  it('staat opslaan zonder codewijziging toe bij een besteld kunstwerk', async () => {
+    const id = await maakKunstwerk('test-slot-onderhoud');
+    await maakBestelregelMetCode('test-slot-onderhoud', 'slot-onderhoud@example.com');
+    const cookie = await medewerkerCookie();
+
+    const response = await patchKunstwerk(
+      patchRequest({ code: 'test-slot-onderhoud', omschrijvingNl: 'Bijgewerkte tekst' }, cookie),
+      { params: { id } }
+    );
+    expect(response.status).toBe(200);
+    const [rows] = await getPool().query('SELECT omschrijvingNl FROM kunstwerken WHERE id = ?', [id]);
+    expect((rows as Array<{ omschrijvingNl: string }>)[0].omschrijvingNl).toBe('Bijgewerkte tekst');
+  });
+
+  it('weigert een wijziging die alleen de hoofdletters van de code aanpast bij een besteld kunstwerk', async () => {
+    const id = await maakKunstwerk('test-slot-hoofdletters');
+    await maakBestelregelMetCode('test-slot-hoofdletters', 'slot-hoofdletters@example.com');
+    const cookie = await medewerkerCookie();
+
+    const response = await patchKunstwerk(patchRequest({ code: 'TEST-SLOT-HOOFDLETTERS' }, cookie), {
+      params: { id },
+    });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: 'code-in-bestelling' });
+  });
+
+  it('weigert verwijderen als de code in een bestelregel voorkomt', async () => {
+    const id = await maakKunstwerk('test-slot-verwijder');
+    await maakBestelregelMetCode('test-slot-verwijder', 'slot-verwijder@example.com');
+    const cookie = await medewerkerCookie();
+
+    const response = await deleteKunstwerk(
+      new Request('http://localhost/api/kunstwerken/x', { method: 'DELETE', headers: { cookie } }),
+      { params: { id } }
+    );
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: 'in-use-bestelling' });
+
+    const [rows] = await getPool().query('SELECT 1 FROM kunstwerken WHERE id = ?', [id]);
+    expect((rows as unknown[]).length).toBe(1);
+  });
+
+  it('verwijdert een kunstwerk dat niet besteld is', async () => {
+    const id = await maakKunstwerk('test-slot-vrij');
+    const cookie = await medewerkerCookie();
+
+    const response = await deleteKunstwerk(
+      new Request('http://localhost/api/kunstwerken/x', { method: 'DELETE', headers: { cookie } }),
+      { params: { id } }
+    );
+    expect(response.status).toBe(200);
+    const [rows] = await getPool().query('SELECT 1 FROM kunstwerken WHERE id = ?', [id]);
+    expect((rows as unknown[]).length).toBe(0);
+  });
+
+  it('geeft 404 bij verwijderen van een kunstwerk dat niet bestaat', async () => {
+    const cookie = await medewerkerCookie();
+    const response = await deleteKunstwerk(
+      new Request('http://localhost/api/kunstwerken/x', { method: 'DELETE', headers: { cookie } }),
+      { params: { id: 'bestaat-niet' } }
+    );
     expect(response.status).toBe(404);
   });
 });
