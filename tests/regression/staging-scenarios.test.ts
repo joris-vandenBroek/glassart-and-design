@@ -127,12 +127,12 @@ async function opruimenKlanten(emails: string[]) {
 
 async function maakMaatMateriaal(label: string) {
   const soort = await insertRow<{ id: string }>('materiaalsoorten', {
-    omschrijving: `AUTOTEST soort ${label}`,
+    omschrijvingNl: `AUTOTEST soort ${label}`,
   } as never);
   const materiaal = await insertRow<{ id: string }>('materialen', {
     materiaalsoortId: soort.id,
     materiaaldikte: 6,
-    omschrijving: `AUTOTEST materiaal ${label}`,
+    omschrijvingNl: `AUTOTEST materiaal ${label}`,
   } as never);
   const maat = await insertRow<{ id: string }>('maten', { breedte: 40, hoogte: 60 } as never);
   return {
@@ -436,9 +436,9 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
         ],
         klanten: [],
         kunstwerken: [{ id: kunstwerkId, foto: '', code: 'AUTOTEST Kunstwerk Drukker', kunstenaarId: null, segmentIds: [], materiaalIds: [fixture.materiaalId], maatIds: [fixture.maatId], omschrijvingNl: '', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }],
-        materialen: [{ id: fixture.materiaalId, materiaalsoortId: 'x', materiaaldikte: 6, omschrijving: 'AUTOTEST' }],
+        materialen: [{ id: fixture.materiaalId, materiaalsoortId: 'x', materiaaldikte: 6, omschrijvingNl: 'AUTOTEST', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }],
         maten: [{ id: fixture.maatId, breedte: 40, hoogte: 60 }],
-        materiaalsoorten: [{ id: 'x', omschrijving: 'AUTOTEST soort' }],
+        materiaalsoorten: [{ id: 'x', omschrijvingNl: 'AUTOTEST soort', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }],
         bedrijfsgegevens: BEDRIJFSGEGEVENS_SEED,
       });
       // companyName fallback ("Onbekend klant" resolution) still yields one section per klant.
@@ -844,20 +844,20 @@ describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
       // wordt meteen als los record aangemaakt (niet pas bij het opslaan van het kunstwerk),
       // en pas daarna gekoppeld via de id in segmentIds/stijlIds/onderwerpIds.
       const segmentResponse = await postResource(
-        req('POST', { omschrijving: 'AUTOTEST Segment Inline' }, staff),
+        req('POST', { omschrijvingNl: 'AUTOTEST Segment Inline' }, staff),
         { params: { resource: 'segmenten' } }
       );
       expect(segmentResponse.status).toBe(201);
       segmentId = (await segmentResponse.json()).id;
 
-      const stijlResponse = await postResource(req('POST', { omschrijving: 'AUTOTEST Stijl Inline' }, staff), {
+      const stijlResponse = await postResource(req('POST', { omschrijvingNl: 'AUTOTEST Stijl Inline' }, staff), {
         params: { resource: 'stijlen' },
       });
       expect(stijlResponse.status).toBe(201);
       stijlId = (await stijlResponse.json()).id;
 
       const onderwerpResponse = await postResource(
-        req('POST', { omschrijving: 'AUTOTEST Onderwerp Inline' }, staff),
+        req('POST', { omschrijvingNl: 'AUTOTEST Onderwerp Inline' }, staff),
         { params: { resource: 'onderwerpen' } }
       );
       expect(onderwerpResponse.status).toBe(201);
@@ -888,13 +888,13 @@ describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
       // Staan de nieuwe stamgegevens echt in hun eigen tabel (niet alleen als losse id op
       // het kunstwerk)?
       const segmentenLijst = await (await listResource(req('GET'), { params: { resource: 'segmenten' } })).json();
-      expect(segmentenLijst.some((s: { id: string; omschrijving: string }) => s.id === segmentId && s.omschrijving === 'AUTOTEST Segment Inline')).toBe(true);
+      expect(segmentenLijst.some((s: { id: string; omschrijvingNl: string }) => s.id === segmentId && s.omschrijvingNl === 'AUTOTEST Segment Inline')).toBe(true);
       const stijlenLijst = await (await listResource(req('GET'), { params: { resource: 'stijlen' } })).json();
-      expect(stijlenLijst.some((s: { id: string; omschrijving: string }) => s.id === stijlId && s.omschrijving === 'AUTOTEST Stijl Inline')).toBe(true);
+      expect(stijlenLijst.some((s: { id: string; omschrijvingNl: string }) => s.id === stijlId && s.omschrijvingNl === 'AUTOTEST Stijl Inline')).toBe(true);
       const onderwerpenLijst = await (
         await listResource(req('GET'), { params: { resource: 'onderwerpen' } })
       ).json();
-      expect(onderwerpenLijst.some((o: { id: string; omschrijving: string }) => o.id === onderwerpId && o.omschrijving === 'AUTOTEST Onderwerp Inline')).toBe(true);
+      expect(onderwerpenLijst.some((o: { id: string; omschrijvingNl: string }) => o.id === onderwerpId && o.omschrijvingNl === 'AUTOTEST Onderwerp Inline')).toBe(true);
       stap(`Bevestigd: alle 3 staan echt als eigen rij in hun stamtabel (${segmentenLijst.length} segmenten, ${stijlenLijst.length} stijlen, ${onderwerpenLijst.length} onderwerpen totaal)`);
 
       // En staat de koppeling ook echt op het kunstwerk zelf?
