@@ -36,12 +36,15 @@ export function MaterialenSection({
   const [modalState, setModalState] = useState<ModalState>(null);
   const [materiaalsoortId, setMateriaalsoortId] = useState('');
   const [materiaaldikte, setMateriaaldikte] = useState('');
-  const [omschrijving, setOmschrijving] = useState('');
+  const [omschrijvingNl, setOmschrijvingNl] = useState('');
+  const [omschrijvingFr, setOmschrijvingFr] = useState('');
+  const [omschrijvingDe, setOmschrijvingDe] = useState('');
+  const [omschrijvingEn, setOmschrijvingEn] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
 
   const soortNameById = useMemo(() => {
     const map = new Map<string, string>();
-    (materiaalsoorten ?? []).forEach((soort) => map.set(soort.id, soort.omschrijving));
+    (materiaalsoorten ?? []).forEach((soort) => map.set(soort.id, soort.omschrijvingNl));
     return map;
   }, [materiaalsoorten]);
 
@@ -65,7 +68,10 @@ export function MaterialenSection({
   function openAdd() {
     setMateriaalsoortId((materiaalsoorten ?? [])[0]?.id ?? '');
     setMateriaaldikte('');
-    setOmschrijving('');
+    setOmschrijvingNl('');
+    setOmschrijvingFr('');
+    setOmschrijvingDe('');
+    setOmschrijvingEn('');
     setActionError(null);
     setModalState({ mode: 'add' });
   }
@@ -73,7 +79,10 @@ export function MaterialenSection({
   function openEdit(materiaal: Materiaal) {
     setMateriaalsoortId(materiaal.materiaalsoortId);
     setMateriaaldikte(String(materiaal.materiaaldikte));
-    setOmschrijving(materiaal.omschrijving);
+    setOmschrijvingNl(materiaal.omschrijvingNl);
+    setOmschrijvingFr(materiaal.omschrijvingFr);
+    setOmschrijvingDe(materiaal.omschrijvingDe);
+    setOmschrijvingEn(materiaal.omschrijvingEn);
     setActionError(null);
     setModalState({ mode: 'edit', materiaal });
   }
@@ -84,13 +93,20 @@ export function MaterialenSection({
 
   async function handleSave() {
     if (!modalState) return;
-    const data = { materiaalsoortId, materiaaldikte: Number(materiaaldikte), omschrijving };
+    const data = {
+      materiaalsoortId,
+      materiaaldikte: Number(materiaaldikte),
+      omschrijvingNl,
+      omschrijvingFr,
+      omschrijvingDe,
+      omschrijvingEn,
+    };
     const success =
       modalState.mode === 'add' ? await onAdd(data) : await onUpdate(modalState.materiaal.id, data);
     if (success) {
       void logActiviteit(
         modalState.mode === 'add' ? 'materiaal_toegevoegd' : 'materiaal_gewijzigd',
-        omschrijving
+        omschrijvingNl
       );
       closeModal();
     } else {
@@ -109,7 +125,7 @@ export function MaterialenSection({
     }
     const success = await onRemove(modalState.materiaal.id);
     if (success) {
-      void logActiviteit('materiaal_verwijderd', modalState.materiaal.omschrijving);
+      void logActiviteit('materiaal_verwijderd', modalState.materiaal.omschrijvingNl);
       closeModal();
     } else {
       setActionError(t('materialenActionError'));
@@ -119,7 +135,7 @@ export function MaterialenSection({
   const columns: Column<MateriaalRow>[] = [
     { key: 'materiaalsoortNaam', label: t('materialenColMateriaalsoort') },
     { key: 'materiaaldikte', label: t('materialenColDikte') },
-    { key: 'omschrijving', label: t('materialenColOmschrijving') },
+    { key: 'omschrijvingNl', label: t('materialenColOmschrijving') },
   ];
 
   return (
@@ -152,7 +168,7 @@ export function MaterialenSection({
             <button
               type="button"
               onClick={handleSave}
-              disabled={!materiaalsoortId || materiaaldikte === '' || !omschrijving}
+              disabled={!materiaalsoortId || materiaaldikte === '' || !omschrijvingNl}
               data-testid="materiaal-modal-opslaan"
               className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
             >
@@ -185,7 +201,7 @@ export function MaterialenSection({
             >
               {(materiaalsoorten ?? []).map((soort) => (
                 <option key={soort.id} value={soort.id}>
-                  {soort.omschrijving}
+                  {soort.omschrijvingNl}
                 </option>
               ))}
             </select>
@@ -205,14 +221,44 @@ export function MaterialenSection({
           </label>
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
             <span>
-              {t('materialenLabelOmschrijving')}
+              {t('materialenLabelOmschrijvingNl')}
               <RequiredMark />
             </span>
             <input
               type="text"
-              value={omschrijving}
-              onChange={(event) => setOmschrijving(event.target.value)}
+              value={omschrijvingNl}
+              onChange={(event) => setOmschrijvingNl(event.target.value)}
               data-testid="materiaal-modal-omschrijving"
+              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+            {t('materialenLabelOmschrijvingFr')}
+            <input
+              type="text"
+              value={omschrijvingFr}
+              onChange={(event) => setOmschrijvingFr(event.target.value)}
+              data-testid="materiaal-modal-omschrijving-fr"
+              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+            {t('materialenLabelOmschrijvingDe')}
+            <input
+              type="text"
+              value={omschrijvingDe}
+              onChange={(event) => setOmschrijvingDe(event.target.value)}
+              data-testid="materiaal-modal-omschrijving-de"
+              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+            {t('materialenLabelOmschrijvingEn')}
+            <input
+              type="text"
+              value={omschrijvingEn}
+              onChange={(event) => setOmschrijvingEn(event.target.value)}
+              data-testid="materiaal-modal-omschrijving-en"
               className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
             />
           </label>
