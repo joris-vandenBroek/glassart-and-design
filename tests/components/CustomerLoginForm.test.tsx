@@ -172,4 +172,89 @@ describe('CustomerLoginForm', () => {
     renderForm();
     expect(screen.getByTestId('login-verplicht-legende')).toHaveTextContent('* verplicht veld');
   });
+
+  describe('wachtwoord vergeten', () => {
+    function vraagResetAan(email: string) {
+      fireEvent.change(screen.getByTestId('login-email'), { target: { value: email } });
+      fireEvent.click(screen.getByTestId('login-forgot-password'));
+    }
+
+    it('vraagt om een e-mailadres wanneer het veld leeg is', async () => {
+      renderForm();
+      fireEvent.click(screen.getByTestId('login-forgot-password'));
+
+      expect(await screen.findByTestId('login-reset-message')).toHaveTextContent(
+        'Vul eerst uw e-mailadres in.'
+      );
+      // Alleen de /api/auth/me-aanroep van de provider, geen resetverzoek.
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('stuurt het verzoek met userType klant en de huidige locale', async () => {
+      fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true }) });
+      renderForm();
+      vraagResetAan('klant@example.com');
+
+      await waitFor(() =>
+        expect(fetchMock).toHaveBeenCalledWith(
+          '/api/auth/reset-password/request',
+          expect.objectContaining({
+            body: JSON.stringify({
+              email: 'klant@example.com',
+              userType: 'klant',
+              locale: 'nl',
+            }),
+          })
+        )
+      );
+    });
+
+    // De API lekt niet of een adres bestaat; de melding mag dat ook niet doen.
+    it('toont dezelfde bevestiging voor een bekend en een onbekend adres', async () => {
+      fetchMock.mockResolvedValue({ ok: true, json: async () => ({ ok: true }) });
+      const verwacht =
+        'Als dit e-mailadres bij ons bekend is, ontvangt u een e-mail om uw wachtwoord opnieuw in te stellen.';
+
+      renderForm();
+      vraagResetAan('bestaat@example.com');
+      expect(await screen.findByTestId('login-reset-message')).toHaveTextContent(verwacht);
+
+      vraagResetAan('bestaatniet@example.com');
+      expect(await screen.findByTestId('login-reset-message')).toHaveTextContent(verwacht);
+    });
+
+    it('meldt een fout in plaats van een verzonnen bevestiging als het verzoek mislukt', async () => {
+      fetchMock.mockRejectedValueOnce(new Error('network error'));
+      renderForm();
+      vraagResetAan('klant@example.com');
+
+      expect(await screen.findByTestId('login-reset-message')).toHaveTextContent(
+        'Er ging iets mis. Probeer het later opnieuw.'
+      );
+    });
+
+    it('vult een "testN" account aan met het bedrijfsdomein op staging', async () => {
+      process.env.NEXT_PUBLIC_ENVIRONMENT_LABEL = 'staging';
+      try {
+        fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true }) });
+        renderForm();
+        vraagResetAan('test1');
+
+        await waitFor(() =>
+          expect(fetchMock).toHaveBeenCalledWith(
+            '/api/auth/reset-password/request',
+            expect.objectContaining({
+              body: JSON.stringify({
+                email: 'test1@glassartanddesign.com',
+                userType: 'klant',
+                locale: 'nl',
+              }),
+            })
+          )
+        );
+      } finally {
+        delete process.env.NEXT_PUBLIC_ENVIRONMENT_LABEL;
+      }
+    });
+  });
 });

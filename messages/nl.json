@@ -193,7 +193,11 @@
     "pendingMessage": "Uw aanvraag wordt nog beoordeeld.",
     "rejectedMessage": "Uw aanvraag is helaas afgewezen.",
     "accountIncompleteMessage": "Er ging iets mis bij uw eerdere aanvraag. Neem contact met ons op.",
-    "verplichtVeldLegende": "* verplicht veld"
+    "verplichtVeldLegende": "* verplicht veld",
+    "forgotPassword": "Wachtwoord vergeten?",
+    "forgotPasswordMissingEmail": "Vul eerst uw e-mailadres in.",
+    "forgotPasswordSent": "Als dit e-mailadres bij ons bekend is, ontvangt u een e-mail om uw wachtwoord opnieuw in te stellen.",
+    "forgotPasswordError": "Er ging iets mis. Probeer het later opnieuw."
   },
   "resetPasswordPage": {
     "title": "Wachtwoord opnieuw instellen",

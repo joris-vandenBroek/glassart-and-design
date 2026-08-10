@@ -193,7 +193,11 @@
     "pendingMessage": "Your application is still being reviewed.",
     "rejectedMessage": "Unfortunately, your application has been rejected.",
     "accountIncompleteMessage": "Something went wrong with your previous application. Please contact us.",
-    "verplichtVeldLegende": "* required field"
+    "verplichtVeldLegende": "* required field",
+    "forgotPassword": "Forgot your password?",
+    "forgotPasswordMissingEmail": "Please enter your email address first.",
+    "forgotPasswordSent": "If this email address is known to us, you will receive an email to reset your password.",
+    "forgotPasswordError": "Something went wrong. Please try again later."
   },
   "resetPasswordPage": {
     "title": "Reset password",
