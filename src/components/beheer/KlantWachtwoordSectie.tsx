@@ -19,8 +19,14 @@ export function KlantWachtwoordSectie({ klantId }: { klantId: string }) {
   const [fase, setFase] = useState<Fase>('rust');
   const [wachtwoord, setWachtwoord] = useState<string | null>(null);
   const [fout, setFout] = useState<string | null>(null);
+  // De endpoint is niet idempotent (nieuw wachtwoord, hash overschreven, reset-tokens
+  // en sessies vervallen) en onomkeerbaar, dus een tweede klik terwijl het eerste
+  // verzoek nog loopt mag nooit een tweede aanvraag versturen.
+  const [bezig, setBezig] = useState(false);
 
   async function handleBevestigen() {
+    if (bezig) return;
+    setBezig(true);
     setFout(null);
     try {
       const response = await fetch(`/api/klanten/${klantId}/wachtwoord`, { method: 'POST' });
@@ -31,6 +37,8 @@ export function KlantWachtwoordSectie({ klantId }: { klantId: string }) {
     } catch {
       setFout(t('klantenWachtwoordFout'));
       setFase('rust');
+    } finally {
+      setBezig(false);
     }
   }
 
@@ -43,7 +51,10 @@ export function KlantWachtwoordSectie({ klantId }: { klantId: string }) {
       {fase === 'rust' && (
         <button
           type="button"
-          onClick={() => setFase('bevestigen')}
+          onClick={() => {
+            setFout(null);
+            setFase('bevestigen');
+          }}
           data-testid="klant-wachtwoord-uitgeven"
           className="btn-beheer-secondary self-start rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
         >
@@ -60,16 +71,21 @@ export function KlantWachtwoordSectie({ klantId }: { klantId: string }) {
             <button
               type="button"
               onClick={handleBevestigen}
+              disabled={bezig}
               data-testid="klant-wachtwoord-bevestigen"
-              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
             >
               {t('klantenWachtwoordBevestigen')}
             </button>
             <button
               type="button"
-              onClick={() => setFase('rust')}
+              onClick={() => {
+                setFout(null);
+                setFase('rust');
+              }}
+              disabled={bezig}
               data-testid="klant-wachtwoord-annuleren"
-              className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+              className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
             >
               {t('annuleren')}
             </button>

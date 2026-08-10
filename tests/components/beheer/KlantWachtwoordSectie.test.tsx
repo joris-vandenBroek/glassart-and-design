@@ -63,6 +63,46 @@ describe('KlantWachtwoordSectie', () => {
     expect(screen.queryByTestId('klant-wachtwoord-waarde')).toBeNull();
   });
 
+  // De endpoint is niet idempotent (nieuw wachtwoord, oude sessies vervallen), dus een
+  // tweede klik terwijl het eerste verzoek nog loopt mag nooit een tweede POST sturen.
+  it('stuurt bij dubbel klikken op bevestigen maar één verzoek', async () => {
+    let resolveFetch: (value: { ok: boolean; json: () => Promise<unknown> }) => void = () => {};
+    const fetchPromise = new Promise<{ ok: boolean; json: () => Promise<unknown> }>((resolve) => {
+      resolveFetch = resolve;
+    });
+    fetchMock.mockReturnValueOnce(fetchPromise);
+
+    renderSectie();
+    fireEvent.click(screen.getByTestId('klant-wachtwoord-uitgeven'));
+    fireEvent.click(screen.getByTestId('klant-wachtwoord-bevestigen'));
+
+    await waitFor(() => expect(screen.getByTestId('klant-wachtwoord-bevestigen')).toBeDisabled());
+
+    fireEvent.click(screen.getByTestId('klant-wachtwoord-bevestigen'));
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    resolveFetch({ ok: true, json: async () => ({ wachtwoord: 'k7fp-r2mq-x4tz' }) });
+
+    expect(await screen.findByTestId('klant-wachtwoord-waarde')).toHaveTextContent('k7fp-r2mq-x4tz');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  // Na een mislukte poging mag de foutmelding niet blijven hangen zodra de operator
+  // opnieuw naar het bevestigingsscherm gaat.
+  it('toont geen oude foutmelding meer na opnieuw bevestigen aanvragen', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: false });
+    renderSectie();
+    fireEvent.click(screen.getByTestId('klant-wachtwoord-uitgeven'));
+    fireEvent.click(screen.getByTestId('klant-wachtwoord-bevestigen'));
+
+    await screen.findByTestId('klant-wachtwoord-fout');
+
+    fireEvent.click(screen.getByTestId('klant-wachtwoord-uitgeven'));
+
+    expect(screen.queryByTestId('klant-wachtwoord-fout')).toBeNull();
+  });
+
   // Sluiten van de modal unmount deze component; daarna mag er niets bewaard zijn.
   it('toont het wachtwoord niet meer na opnieuw monteren', async () => {
     fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ wachtwoord: 'k7fp-r2mq-x4tz' }) });
