@@ -86,6 +86,23 @@ const KUNSTWERKEN: Kunstwerk[] = [
     omschrijvingDe: '',
     omschrijvingEn: '',
   },
+  {
+    id: 'kw-2',
+    foto: 'https://storage.example.com/kw-2.jpg',
+    code: 'Restaurant paneel 1',
+    kunstenaarId: null,
+    formaat: 'staand',
+    segmentIds: ['seg-2'],
+    // Deliberately has every materiaal/maat checked, unlike kw-1, so it never counts toward
+    // the "Materialen/maten aanvullen" backfill button — several existing tests assert that
+    // button's count assuming exactly one incomplete kunstwerk (kw-1) in the default fixture.
+    materiaalIds: ['mat-1', 'mat-2'],
+    maatIds: ['maat-1', 'maat-2', 'maat-3'],
+    omschrijvingNl: 'Restaurant paneel 1',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+  },
 ];
 
 function renderSection(overrides: Partial<React.ComponentProps<typeof KunstwerkenSection>> = {}) {
@@ -998,5 +1015,58 @@ describe('KunstwerkenSection', () => {
 
     fireEvent.click(screen.getByTestId('kunstwerk-modal-help'));
     expect(screen.getByTestId('kunstwerk-modal-help-popover')).toHaveTextContent('Formaat');
+  });
+
+  it('vraagt om bevestiging voordat een gewijzigde code wordt opgeslagen', async () => {
+    const { onUpdate } = renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Nieuwe-Code-1' } });
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
+
+    expect(screen.getByTestId('kunstwerk-modal-code-bevestiging')).toHaveTextContent(
+      'Als er al een masterbestand is, dan moet dit ook aangepast worden!'
+    );
+    expect(onUpdate).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-code-bevestigen'));
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith('kw-1', expect.objectContaining({ code: 'Nieuwe-Code-1' }))
+    );
+  });
+
+  it('slaat niets op als de bevestiging van de codewijziging geannuleerd wordt', () => {
+    const { onUpdate } = renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Nieuwe-Code-2' } });
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-code-annuleren'));
+
+    expect(onUpdate).not.toHaveBeenCalled();
+    // De modal blijft open op het formulier, met de ingetypte code nog in beeld.
+    expect(screen.getByTestId('kunstwerk-modal-code')).toHaveValue('Nieuwe-Code-2');
+  });
+
+  it('slaat zonder bevestiging op als de code niet gewijzigd is', async () => {
+    const { onUpdate } = renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), {
+      target: { value: 'Andere omschrijving' },
+    });
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
+
+    expect(screen.queryByTestId('kunstwerk-modal-code-bevestiging')).toBeNull();
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+  });
+
+  it('meldt een dubbele code en slaat niets op', () => {
+    const { onUpdate } = renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), {
+      target: { value: KUNSTWERKEN[1].code.toUpperCase() },
+    });
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
+
+    expect(screen.getByTestId('kunstwerk-modal-error')).toHaveTextContent('Deze code bestaat al.');
+    expect(onUpdate).not.toHaveBeenCalled();
   });
 });

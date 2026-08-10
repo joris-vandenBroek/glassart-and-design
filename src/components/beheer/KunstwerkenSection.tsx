@@ -113,6 +113,7 @@ export function KunstwerkenSection({
   const [actionError, setActionError] = useState<string | null>(null);
   const [isDraggingFoto, setIsDraggingFoto] = useState(false);
   const [backfillBezig, setBackfillBezig] = useState(false);
+  const [pendingCodeWijziging, setPendingCodeWijziging] = useState<string | null>(null);
   const formaatSessionRef = useRef(0);
 
   const [activeTab, setActiveTab] = useState<TabId>('algemeen');
@@ -436,6 +437,7 @@ export function KunstwerkenSection({
 
   function closeModal() {
     formaatSessionRef.current += 1;
+    setPendingCodeWijziging(null);
     setModalState(null);
   }
 
@@ -489,7 +491,7 @@ export function KunstwerkenSection({
     (isMaatloos && (!prijsPerM2 || Number(prijsPerM2) <= 0)) ||
     !omschrijvingNl;
 
-  async function handleSave() {
+  async function bewaarKunstwerk() {
     if (!modalState) return;
     const data = buildKunstwerkData();
     const success = modalState.mode === 'add' ? await onAdd(data) : await onUpdate(modalState.kunstwerk.id, data);
@@ -500,8 +502,42 @@ export function KunstwerkenSection({
       );
       closeModal();
     } else {
+      setPendingCodeWijziging(null);
       setActionError(t('kunstwerkenActionError'));
     }
+  }
+
+  async function handleSave() {
+    if (!modalState) return;
+    const schoneCode = code.trim();
+
+    // Dezelfde hoofdletterongevoelige vergelijking als de UNIQUE-index op de kolom,
+    // zodat scherm en database niet van mening verschillen. Dit is de nette melding;
+    // de 409 uit /api/kunstwerken is de harde grens.
+    const dubbel = (kunstwerken ?? []).some(
+      (bestaand) =>
+        bestaand.id !== (modalState.mode === 'edit' ? modalState.kunstwerk.id : '') &&
+        bestaand.code.trim().toLowerCase() === schoneCode.toLowerCase()
+    );
+    if (dubbel) {
+      setActionError(t('kunstwerkenCodeBestaatAl'));
+      return;
+    }
+
+    // Exacte vergelijking: ook een wijziging van alleen de schrijfwijze is een
+    // codewijziging, want de code belandt zo in bestellines en mogelijk in een
+    // masterbestand buiten dit systeem.
+    if (modalState.mode === 'edit' && schoneCode !== modalState.kunstwerk.code) {
+      setActionError(null);
+      setPendingCodeWijziging(schoneCode);
+      return;
+    }
+
+    await bewaarKunstwerk();
+  }
+
+  function handleAnnulerenCodeWijziging() {
+    setPendingCodeWijziging(null);
   }
 
   async function handleRemove() {
@@ -593,32 +629,67 @@ export function KunstwerkenSection({
         }
         wide
         footerActions={
-          <>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={opslaanDisabled}
-              data-testid="kunstwerk-modal-opslaan"
-              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
-            >
-              {t('kunstwerkenOpslaan')}
-            </button>
-            {modalState?.mode === 'edit' && !codeOpSlot && (
+          pendingCodeWijziging !== null ? (
+            <>
               <button
                 type="button"
-                onClick={handleRemove}
-                data-testid="kunstwerk-modal-verwijderen"
+                onClick={bewaarKunstwerk}
+                data-testid="kunstwerk-modal-code-bevestigen"
+                className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+              >
+                {t('kunstwerkenCodeWijzigenBevestig')}
+              </button>
+              <button
+                type="button"
+                onClick={handleAnnulerenCodeWijziging}
+                data-testid="kunstwerk-modal-code-annuleren"
                 className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
               >
-                {t('kunstwerkenVerwijderen')}
+                {t('annuleren')}
               </button>
-            )}
-          </>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={opslaanDisabled}
+                data-testid="kunstwerk-modal-opslaan"
+                className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+              >
+                {t('kunstwerkenOpslaan')}
+              </button>
+              {modalState?.mode === 'edit' && !codeOpSlot && (
+                <button
+                  type="button"
+                  onClick={handleRemove}
+                  data-testid="kunstwerk-modal-verwijderen"
+                  className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                >
+                  {t('kunstwerkenVerwijderen')}
+                </button>
+              )}
+            </>
+          )
         }
       >
-        <div
-          data-testid="kunstwerk-modal"
-          className="grid grid-cols-1 gap-6 text-sm text-white/80 lg:grid-cols-[minmax(0,1fr)_320px] min-[1432px]:grid-cols-[minmax(0,1fr)_560px]"
+        <>
+          {pendingCodeWijziging !== null && (
+            <div
+              data-testid="kunstwerk-modal-code-bevestiging"
+              className="flex flex-col gap-3 text-sm text-white/80"
+            >
+              <p className="font-semibold text-white">{t('kunstwerkenCodeWijzigenTitel')}</p>
+              <p>{t('kunstwerkenCodeWijzigenTekst')}</p>
+            </div>
+          )}
+          <div
+            data-testid="kunstwerk-modal"
+            className={
+              pendingCodeWijziging !== null
+                ? 'hidden'
+                : 'grid grid-cols-1 gap-6 text-sm text-white/80 lg:grid-cols-[minmax(0,1fr)_320px] min-[1432px]:grid-cols-[minmax(0,1fr)_560px]'
+            }
         >
           <div className="sticky top-0 z-10 col-span-full bg-charcoal pb-2">
             <ModalTabs
@@ -1057,6 +1128,7 @@ export function KunstwerkenSection({
             </div>
           </div>
         </div>
+        </>
       </Modal>
     </div>
   );
