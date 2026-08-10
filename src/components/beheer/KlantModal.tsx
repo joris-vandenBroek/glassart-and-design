@@ -95,6 +95,11 @@ export function KlantModal({
   const [fields, setFields] = useState<EditableFields | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Staat er een zojuist uitgegeven wachtwoord in beeld? Zolang dat zo is mag geen
+  // enkele voetknop de modal kunnen sluiten: Opslaan, Goedkeuren en Afwijzen roepen
+  // allemaal onUpdated aan, en dat sluit het venster -- met het wachtwoord erin, dat
+  // de beheerder op dat moment aan de telefoon aan het voorlezen is.
+  const [wachtwoordZichtbaar, setWachtwoordZichtbaar] = useState(false);
   const { user } = useAdminAuth();
 
   const land = fields ? fields.invoiceLand || fields.land || null : null;
@@ -279,8 +284,9 @@ export function KlantModal({
             <button
               type="button"
               onClick={handleOpslaan}
+              disabled={wachtwoordZichtbaar}
               data-testid="klant-modal-opslaan"
-              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
             >
               {t('klantenOpslaan')}
             </button>
@@ -288,7 +294,7 @@ export function KlantModal({
               <button
                 type="button"
                 onClick={handleGoedkeuren}
-                disabled={!prijsgroepId || !heeftGeldigBtwTarief}
+                disabled={!prijsgroepId || !heeftGeldigBtwTarief || wachtwoordZichtbaar}
                 data-testid="klant-modal-goedkeuren"
                 className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
               >
@@ -299,8 +305,9 @@ export function KlantModal({
               <button
                 type="button"
                 onClick={handleAfwijzen}
+                disabled={wachtwoordZichtbaar}
                 data-testid="klant-modal-afwijzen"
-                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
               >
                 {t('klantenAfwijzen')}
               </button>
@@ -595,7 +602,11 @@ export function KlantModal({
             </label>
           </div>
 
-          <KlantWachtwoordSectie key={klant.id} klantId={klant.id} />
+          <KlantWachtwoordSectie
+            key={klant.id}
+            klantId={klant.id}
+            onWachtwoordZichtbaar={setWachtwoordZichtbaar}
+          />
 
           <RequiredLegend testId="klant-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
 

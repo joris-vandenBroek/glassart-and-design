@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 type Fase = 'rust' | 'bevestigen' | 'getoond';
@@ -13,8 +13,20 @@ type Fase = 'rust' | 'bevestigen' | 'getoond';
  * Het wachtwoord staat alleen in deze component-state. De omliggende Modal
  * unmount bij sluiten, dus het verdwijnt vanzelf en is daarna nergens meer op
  * te vragen -- op de server staat alleen een hash.
+ *
+ * `onWachtwoordZichtbaar` meldt aan de modal wanneer er iets in beeld staat dat
+ * verloren gaat bij sluiten. De fase hieronder blijft de enige waarheid; de
+ * modal krijgt alleen de afgeleide ja/nee, zodat hij zijn voetknoppen kan
+ * blokkeren -- een klik op Opslaan sloot het venster anders midden in het
+ * telefoongesprek.
  */
-export function KlantWachtwoordSectie({ klantId }: { klantId: string }) {
+export function KlantWachtwoordSectie({
+  klantId,
+  onWachtwoordZichtbaar,
+}: {
+  klantId: string;
+  onWachtwoordZichtbaar?: (zichtbaar: boolean) => void;
+}) {
   const t = useTranslations('beheer');
   const [fase, setFase] = useState<Fase>('rust');
   const [wachtwoord, setWachtwoord] = useState<string | null>(null);
@@ -23,6 +35,16 @@ export function KlantWachtwoordSectie({ klantId }: { klantId: string }) {
   // en sessies vervallen) en onomkeerbaar, dus een tweede klik terwijl het eerste
   // verzoek nog loopt mag nooit een tweede aanvraag versturen.
   const [bezig, setBezig] = useState(false);
+
+  // Exact dezelfde voorwaarde als waaronder het blok hieronder rendert, zodat de
+  // modal nooit iets blokkeert wat niet in beeld staat -- of andersom.
+  const zichtbaar = fase === 'getoond' && Boolean(wachtwoord);
+  useEffect(() => {
+    onWachtwoordZichtbaar?.(zichtbaar);
+    // Bij unmount is er per definitie niets meer te verliezen; zonder deze
+    // opruiming zou de modal blijven denken dat er nog een wachtwoord staat.
+    return () => onWachtwoordZichtbaar?.(false);
+  }, [zichtbaar, onWachtwoordZichtbaar]);
 
   async function handleBevestigen() {
     if (bezig) return;

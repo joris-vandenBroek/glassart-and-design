@@ -446,7 +446,7 @@
     "klantenWachtwoordUitgeven": "Nieuw wachtwoord uitgeven",
     "klantenWachtwoordWaarschuwing": "Het huidige wachtwoord van deze klant vervalt en hij wordt overal uitgelogd.",
     "klantenWachtwoordBevestigen": "Ja, wachtwoord uitgeven",
-    "klantenWachtwoordUitleg": "Geef dit door aan de klant. Zodra je dit venster sluit, is het niet meer op te vragen.",
+    "klantenWachtwoordUitleg": "Geef dit door aan de klant. Zodra dit venster dichtgaat — met de sluitknop, met Esc of met een klik ernaast — is het weg en niet meer op te vragen. De knoppen onderaan zijn zolang geblokkeerd, want ook die sluiten het venster.",
     "klantenWachtwoordKopieren": "Kopiëren",
     "klantenWachtwoordFout": "Het uitgeven van een nieuw wachtwoord is mislukt.",
     "klantenOpslaan": "Opslaan",

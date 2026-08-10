@@ -7,10 +7,10 @@ import messages from '../../../messages/nl.json';
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
 
-function renderSectie() {
+function renderSectie(onWachtwoordZichtbaar?: (zichtbaar: boolean) => void) {
   return render(
     <NextIntlClientProvider locale="nl" messages={messages}>
-      <KlantWachtwoordSectie klantId="uid-1" />
+      <KlantWachtwoordSectie klantId="uid-1" onWachtwoordZichtbaar={onWachtwoordZichtbaar} />
     </NextIntlClientProvider>
   );
 }
@@ -101,6 +101,40 @@ describe('KlantWachtwoordSectie', () => {
     fireEvent.click(screen.getByTestId('klant-wachtwoord-uitgeven'));
 
     expect(screen.queryByTestId('klant-wachtwoord-fout')).toBeNull();
+  });
+
+  /**
+   * De modal moet weten wanneer er iets in beeld staat dat verloren gaat bij
+   * sluiten -- daarop blokkeert hij zijn voetknoppen. Zolang er niets staat mag
+   * hij niets blokkeren.
+   */
+  it('meldt aan de modal wanneer een wachtwoord in beeld komt', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ wachtwoord: 'k7fp-r2mq-x4tz' }) });
+    const onWachtwoordZichtbaar = vi.fn();
+    renderSectie(onWachtwoordZichtbaar);
+
+    expect(onWachtwoordZichtbaar).toHaveBeenLastCalledWith(false);
+
+    fireEvent.click(screen.getByTestId('klant-wachtwoord-uitgeven'));
+    expect(onWachtwoordZichtbaar).toHaveBeenLastCalledWith(false);
+
+    fireEvent.click(screen.getByTestId('klant-wachtwoord-bevestigen'));
+    await screen.findByTestId('klant-wachtwoord-waarde');
+
+    expect(onWachtwoordZichtbaar).toHaveBeenLastCalledWith(true);
+  });
+
+  // Een mislukte poging toont geen wachtwoord, dus mag de modal ook niets blokkeren.
+  it('meldt niets zichtbaar na een mislukte poging', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: false });
+    const onWachtwoordZichtbaar = vi.fn();
+    renderSectie(onWachtwoordZichtbaar);
+
+    fireEvent.click(screen.getByTestId('klant-wachtwoord-uitgeven'));
+    fireEvent.click(screen.getByTestId('klant-wachtwoord-bevestigen'));
+    await screen.findByTestId('klant-wachtwoord-fout');
+
+    expect(onWachtwoordZichtbaar).toHaveBeenLastCalledWith(false);
   });
 
   // Sluiten van de modal unmount deze component; daarna mag er niets bewaard zijn.
