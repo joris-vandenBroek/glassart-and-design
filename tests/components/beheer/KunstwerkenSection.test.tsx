@@ -62,6 +62,7 @@ const ONDERWERPEN: Onderwerp[] = [
 const KUNSTENAARS: Kunstenaar[] = [
   {
     id: 'ka-1',
+    kunstenaarnr: 'KU-00001',
     naam: 'Sabrina Glasser',
     foto: null,
     omschrijvingNl: 'Werkt met glas.',

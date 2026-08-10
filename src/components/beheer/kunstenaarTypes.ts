@@ -1,5 +1,8 @@
 export interface Kunstenaar {
   id: string;
+  // Uniek volgnummer (KU-00001), door de server uitgegeven en niet te wijzigen.
+  // kunstwerken en klanten verwijzen hiermee naar de kunstenaar.
+  kunstenaarnr: string;
   naam: string;
   foto: string | null;
   omschrijvingNl: string;

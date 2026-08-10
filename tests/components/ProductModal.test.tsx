@@ -94,6 +94,7 @@ const MATERIAALLOOS_MET_ONVERWACHTE_MAATIDS_KUNSTWERK: Kunstwerk = {
 const KUNSTENAARS: Kunstenaar[] = [
   {
     id: 'ka-open',
+    kunstenaarnr: 'KU-00001',
     naam: 'Open Artiest',
     foto: null,
     omschrijvingNl: '',
@@ -104,6 +105,7 @@ const KUNSTENAARS: Kunstenaar[] = [
   },
   {
     id: 'ka-exclusief',
+    kunstenaarnr: 'KU-00002',
     naam: 'Exclusieve Artiest',
     foto: null,
     omschrijvingNl: '',
@@ -114,6 +116,7 @@ const KUNSTENAARS: Kunstenaar[] = [
   },
   {
     id: 'ka-eigen',
+    kunstenaarnr: 'KU-00003',
     naam: 'Eigen Artiest',
     foto: null,
     omschrijvingNl: '',

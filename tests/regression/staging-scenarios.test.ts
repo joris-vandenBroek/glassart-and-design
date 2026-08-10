@@ -164,6 +164,7 @@ describe('Deel C1 -- klant-kunstenaar exclusiviteit (echte workflow)', () => {
 
     try {
       const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+        kunstenaarnr: 'AT-K-REG-1',
         naam: 'AUTOTEST Kunstenaar Exclusief',
       } as never);
       kunstenaarId = kunstenaar.id;
@@ -259,6 +260,7 @@ describe('Deel C2 -- kunstenaarsopslag + prijsgroep (prijsopbouw van een bestell
       const staff = await medewerkerCookie();
 
       const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+        kunstenaarnr: 'AT-K-REG-2',
         naam: 'AUTOTEST Kunstenaar Opslag',
       } as never);
       kunstenaarId = kunstenaar.id;
@@ -930,6 +932,7 @@ describe('Klant van een kunstenaar kan diens werk gewoon bestellen zonder exclus
       const staff = await medewerkerCookie();
 
       const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+        kunstenaarnr: 'AT-K-REG-3',
         naam: 'AUTOTEST Kunstenaar Eigen Werk',
       } as never);
       kunstenaarId = kunstenaar.id;
@@ -991,6 +994,7 @@ describe('Klant met alleenrecht voor één kunstenaar', () => {
       const staff = await medewerkerCookie();
 
       const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+        kunstenaarnr: 'AT-K-REG-4',
         naam: 'AUTOTEST Kunstenaar Alleenrecht',
       } as never);
       kunstenaarId = kunstenaar.id;

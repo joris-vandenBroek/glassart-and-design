@@ -61,6 +61,7 @@ export const TABLE_COLUMNS: Record<string, readonly string[]> = {
   prijsmatrix: ['id', 'maatId', 'materiaalId', 'prijs'],
   kunstenaars: [
     'id',
+    'kunstenaarnr',
     'naam',
     'foto',
     'omschrijvingNl',

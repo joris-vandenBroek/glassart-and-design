@@ -112,13 +112,15 @@ CREATE TABLE prijsmatrix (
 
 CREATE TABLE kunstenaars (
   id CHAR(36) PRIMARY KEY,
+  kunstenaarnr VARCHAR(20) NOT NULL,
   naam VARCHAR(255) NOT NULL,
   foto VARCHAR(500),
   omschrijvingNl TEXT,
   omschrijvingFr TEXT,
   omschrijvingDe TEXT,
   omschrijvingEn TEXT,
-  exclusieveKlantIds JSON
+  exclusieveKlantIds JSON,
+  UNIQUE KEY uniek_kunstenaarnr (kunstenaarnr)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE kunstenaarAfspraken (
@@ -194,6 +196,7 @@ CREATE TABLE counters (
 INSERT INTO counters (id, value) VALUES ('bestelnummer', 0);
 INSERT INTO counters (id, value) VALUES ('zendingnummer', 0);
 INSERT INTO counters (id, value) VALUES ('klantnummer', 0);
+INSERT INTO counters (id, value) VALUES ('kunstenaarnummer', 0);
 
 CREATE TABLE bestelheaders (
   id CHAR(36) PRIMARY KEY,

@@ -91,8 +91,11 @@ async function maakMateriaal(dikte: number) {
   return materiaal.id;
 }
 
+let kunstenaarTeller = 0;
+
 async function maakKunstenaarMetOpslag(prijsopslag: number) {
   const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+    kunstenaarnr: `AT-K-PM-${++kunstenaarTeller}`,
     naam: 'Test kunstenaar',
   } as never);
   createdKunstenaarIds.push(kunstenaar.id);
@@ -154,6 +157,7 @@ describe('prijsopslagVoorKunstenaar', () => {
 
   it('returns 0 for a kunstenaar with no kunstenaarAfspraken row', async () => {
     const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+      kunstenaarnr: 'AT-K-PM-X',
       naam: 'Geen afspraken',
     } as never);
     createdKunstenaarIds.push(kunstenaar.id);

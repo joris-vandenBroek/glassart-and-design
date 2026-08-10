@@ -4,6 +4,7 @@ import type { Kunstenaar } from '@/components/beheer/kunstenaarTypes';
 
 const BASE_KUNSTENAAR: Kunstenaar = {
   id: 'ka-1',
+  kunstenaarnr: 'KU-00001',
   naam: 'Sabrina Glasser',
   foto: null,
   omschrijvingNl: 'Nederlandse tekst',

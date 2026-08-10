@@ -33,7 +33,8 @@ export const PATCH = withApiErrorHandling(
     if (!(await requireMedewerker(request))) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
-    const data = await request.json();
+    // Zie POST: het nummer is server-eigendom en ligt na uitgifte vast.
+    const { kunstenaarnr: _genegeerd, ...data } = (await request.json()) as Record<string, unknown>;
     await updateRow('kunstenaars', params.id, data, KUNSTENAARS_JSON_COLUMNS);
     return NextResponse.json({ ok: true });
   }

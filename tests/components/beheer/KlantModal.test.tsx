@@ -54,6 +54,7 @@ const PRIJSGROEPEN: Prijsgroep[] = [
 const KUNSTENAARS: Kunstenaar[] = [
   {
     id: 'ka-1',
+    kunstenaarnr: 'KU-00001',
     naam: 'Sabrina Glasser',
     foto: null,
     omschrijvingNl: 'Werkt met glas.',
@@ -64,6 +65,7 @@ const KUNSTENAARS: Kunstenaar[] = [
   },
   {
     id: 'ka-2',
+    kunstenaarnr: 'KU-00002',
     naam: 'Bram Steen',
     foto: null,
     omschrijvingNl: 'Werkt met steen.',

@@ -11,7 +11,7 @@ import type { PoolConnection } from 'mysql2/promise';
  */
 const PADDING = 5;
 
-export type CounterNaam = 'bestelnummer' | 'zendingnummer' | 'klantnummer';
+export type CounterNaam = 'bestelnummer' | 'zendingnummer' | 'klantnummer' | 'kunstenaarnummer' | 'drukkernummer';
 
 export async function volgendNummer(
   connection: Pick<PoolConnection, 'query'>,

@@ -185,6 +185,7 @@ describe('bestelheaders routes', () => {
     const maatId = await maakMaat(43, 63);
     const materiaalId = await maakMateriaal();
     const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+      kunstenaarnr: 'AT-K-BH-1',
       naam: 'Opslag Artiest',
     } as never);
     createdKunstenaarIds.push(kunstenaar.id);
@@ -220,6 +221,7 @@ describe('bestelheaders routes', () => {
     const maatId = await maakMaat(56, 76);
     const materiaalId = await maakMateriaal();
     const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+      kunstenaarnr: 'AT-K-BH-2',
       naam: 'Opslag Artiest 2',
     } as never);
     createdKunstenaarIds.push(kunstenaar.id);
@@ -752,7 +754,7 @@ describe('bestelheaders routes', () => {
     const materiaalId = await maakMateriaal();
     const kunstenaar = await insertRow<{ id: string }>(
       'kunstenaars',
-      { naam: 'Exclusieve Artiest', exclusieveKlantIds: [klantB.id] } as never,
+      { kunstenaarnr: 'AT-K-BH-3', naam: 'Exclusieve Artiest', exclusieveKlantIds: [klantB.id] } as never,
       ['exclusieveKlantIds']
     );
     createdKunstenaarIds.push(kunstenaar.id);
@@ -834,7 +836,7 @@ describe('bestelheaders routes', () => {
     const materiaalId = await maakMateriaal();
     const kunstenaar = await insertRow<{ id: string }>(
       'kunstenaars',
-      { naam: 'Twee-klanten Artiest', exclusieveKlantIds: [klantA.id, klantB.id] } as never,
+      { kunstenaarnr: 'AT-K-BH-4', naam: 'Twee-klanten Artiest', exclusieveKlantIds: [klantA.id, klantB.id] } as never,
       ['exclusieveKlantIds']
     );
     createdKunstenaarIds.push(kunstenaar.id);

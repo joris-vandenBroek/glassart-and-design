@@ -5,6 +5,7 @@ import type { Kunstenaar } from '@/components/beheer/kunstenaarTypes';
 function kunstenaar(overrides: Partial<Kunstenaar> = {}): Kunstenaar {
   return {
     id: 'ka-1',
+    kunstenaarnr: 'KU-00001',
     naam: 'Sabrina Glasser',
     foto: null,
     omschrijvingNl: '',
