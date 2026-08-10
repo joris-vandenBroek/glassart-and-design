@@ -686,6 +686,7 @@
     "kunstenaarsActionError": "Er is iets misgegaan. Probeer het opnieuw.",
     "kunstenaarsAfsprakenLoadError": "De prijsafspraken konden niet geladen worden. Sluit dit venster en probeer het opnieuw.",
     "kunstenaarsEmpty": "Geen kunstenaars gevonden.",
+    "kunstenaarsColKunstenaarnr": "Kunstenaarnr.",
     "kunstenaarsColNaam": "Naam",
     "kunstenaarsColKlant": "Exclusief verkooprecht voor klant",
     "kunstenaarsLabelFoto": "Portretfoto",

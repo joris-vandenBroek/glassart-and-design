@@ -343,6 +343,7 @@ export function KunstenaarsSection({
   }
 
   const columns: Column<KunstenaarRow>[] = [
+    { key: 'kunstenaarnr', label: t('kunstenaarsColKunstenaarnr') },
     { key: 'naam', label: t('kunstenaarsColNaam') },
     { key: 'exclusiviteitLabel', label: t('kunstenaarsColKlant') },
   ];
@@ -376,6 +377,11 @@ export function KunstenaarsSection({
             {modalState?.mode === 'edit' ? t('kunstenaarsModalTitelBewerken') : t('kunstenaarsModalTitelToevoegen')}
             <HelpHint text={t('kunstenaarsHelp')} testId="kunstenaar-modal-help" />
           </span>
+        }
+        subtitle={
+          modalState?.mode === 'edit' ? (
+            <span data-testid="kunstenaar-modal-kunstenaarnr">{modalState.kunstenaar.kunstenaarnr}</span>
+          ) : undefined
         }
         footerActions={
           <>
