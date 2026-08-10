@@ -135,6 +135,7 @@ const KUNSTENAARS: Kunstenaar[] = [
     kunstenaarnr: 'KU-00007',
     naam: 'Sabrina Glasser',
     foto: null,
+    website: null,
     omschrijvingNl: 'Werkt met gesmolten glas.',
     omschrijvingFr: '',
     omschrijvingDe: '',
@@ -249,6 +250,7 @@ describe('KunstenaarsSection', () => {
     expect(JSON.parse(kunstenaarPostCall()![1].body as string)).toEqual({
       foto: 'https://storage.example.com/nieuw.jpg',
       naam: 'Nieuwe Kunstenaar',
+      website: '',
       omschrijvingNl: 'Werkt met glas.',
       omschrijvingFr: '',
       omschrijvingDe: '',
@@ -267,6 +269,43 @@ describe('KunstenaarsSection', () => {
       'kunstenaar_toegevoegd',
       'Nieuwe Kunstenaar'
     );
+  });
+
+  it('adds a new kunstenaar with a website filled in', async () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstenaars-add'));
+    fireEvent.change(screen.getByTestId('kunstenaar-modal-naam'), { target: { value: 'Nieuwe Kunstenaar' } });
+    fireEvent.change(screen.getByTestId('kunstenaar-modal-omschrijving-nl'), { target: { value: 'Werkt met glas.' } });
+    fireEvent.change(screen.getByTestId('kunstenaar-modal-website'), {
+      target: { value: 'https://www.voorbeeld.nl/' },
+    });
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
+
+    await waitFor(() => expect(kunstenaarPostCall()).toBeDefined());
+    expect(JSON.parse(kunstenaarPostCall()![1].body as string)).toEqual({
+      foto: null,
+      naam: 'Nieuwe Kunstenaar',
+      website: 'https://www.voorbeeld.nl/',
+      omschrijvingNl: 'Werkt met glas.',
+      omschrijvingFr: '',
+      omschrijvingDe: '',
+      omschrijvingEn: '',
+      exclusieveKlantIds: [],
+    });
+  });
+
+  it('pre-fills the website field when opening an existing kunstenaar, leaving it blank when null', async () => {
+    renderSection({
+      kunstenaars: [{ ...KUNSTENAARS[0], website: 'https://www.jacksart.nl/' }],
+    });
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+    expect(screen.getByTestId('kunstenaar-modal-website')).toHaveValue('https://www.jacksart.nl/');
+  });
+
+  it('leaves the website field blank when the kunstenaar has none', async () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+    expect(screen.getByTestId('kunstenaar-modal-website')).toHaveValue('');
   });
 
   it('a new kunstenaar cannot select a second exclusieve klant -- there is no own account yet to satisfy the rule', async () => {
@@ -465,6 +504,7 @@ describe('KunstenaarsSection', () => {
       expect(onUpdate).toHaveBeenCalledWith('ka-1', {
         foto: null,
         naam: 'Sabrina G.',
+        website: '',
         omschrijvingNl: 'Werkt met gesmolten glas.',
         omschrijvingFr: '',
         omschrijvingDe: '',

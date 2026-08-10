@@ -7,13 +7,13 @@ import {
 import type { Kunstwerk, Materiaal, Materiaalsoort } from '@/components/beheer/materiaalTypes';
 
 const MATERIAALSOORTEN: Materiaalsoort[] = [
-  { id: 'soort-glas', omschrijving: 'Veiligheidsglas' },
-  { id: 'soort-acryl', omschrijving: 'Acryl' },
+  { id: 'soort-glas', omschrijvingNl: 'Veiligheidsglas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'soort-acryl', omschrijvingNl: 'Acryl', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const MATERIALEN: Materiaal[] = [
-  { id: 'mat-glas-4', materiaalsoortId: 'soort-glas', materiaaldikte: 4, omschrijving: 'Glas' },
-  { id: 'mat-acryl-3', materiaalsoortId: 'soort-acryl', materiaaldikte: 3, omschrijving: 'Acryl' },
-  { id: 'mat-acryl-5', materiaalsoortId: 'soort-acryl', materiaaldikte: 5, omschrijving: 'Acryl' },
+  { id: 'mat-glas-4', materiaalsoortId: 'soort-glas', materiaaldikte: 4, omschrijvingNl: 'Glas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'mat-acryl-3', materiaalsoortId: 'soort-acryl', materiaaldikte: 3, omschrijvingNl: 'Acryl', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'mat-acryl-5', materiaalsoortId: 'soort-acryl', materiaaldikte: 5, omschrijvingNl: 'Acryl', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const BASE_KUNSTWERK: Kunstwerk = {
   id: 'kw-1',

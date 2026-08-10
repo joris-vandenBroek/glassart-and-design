@@ -56,22 +56,34 @@ CREATE TABLE passwordResetTokens (
 
 CREATE TABLE segmenten (
   id CHAR(36) PRIMARY KEY,
-  omschrijving VARCHAR(255) NOT NULL
+  omschrijvingNl VARCHAR(255) NOT NULL,
+  omschrijvingFr VARCHAR(255),
+  omschrijvingDe VARCHAR(255),
+  omschrijvingEn VARCHAR(255)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE stijlen (
   id CHAR(36) PRIMARY KEY,
-  omschrijving VARCHAR(255) NOT NULL
+  omschrijvingNl VARCHAR(255) NOT NULL,
+  omschrijvingFr VARCHAR(255),
+  omschrijvingDe VARCHAR(255),
+  omschrijvingEn VARCHAR(255)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE onderwerpen (
   id CHAR(36) PRIMARY KEY,
-  omschrijving VARCHAR(255) NOT NULL
+  omschrijvingNl VARCHAR(255) NOT NULL,
+  omschrijvingFr VARCHAR(255),
+  omschrijvingDe VARCHAR(255),
+  omschrijvingEn VARCHAR(255)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE materiaalsoorten (
   id CHAR(36) PRIMARY KEY,
-  omschrijving VARCHAR(255) NOT NULL,
+  omschrijvingNl VARCHAR(255) NOT NULL,
+  omschrijvingFr VARCHAR(255),
+  omschrijvingDe VARCHAR(255),
+  omschrijvingEn VARCHAR(255),
   staatEigenMaatToe BOOLEAN DEFAULT FALSE,
   maxBreedte INT,
   maxHoogte INT,
@@ -82,7 +94,10 @@ CREATE TABLE materialen (
   id CHAR(36) PRIMARY KEY,
   materiaalsoortId CHAR(36) NOT NULL,
   materiaaldikte DECIMAL(5,1) NOT NULL,
-  omschrijving VARCHAR(255) NOT NULL,
+  omschrijvingNl VARCHAR(255) NOT NULL,
+  omschrijvingFr VARCHAR(255),
+  omschrijvingDe VARCHAR(255),
+  omschrijvingEn VARCHAR(255),
   FOREIGN KEY (materiaalsoortId) REFERENCES materiaalsoorten(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -116,6 +131,7 @@ CREATE TABLE kunstenaars (
   kunstenaarnr VARCHAR(20) NOT NULL,
   naam VARCHAR(255) NOT NULL,
   foto VARCHAR(500),
+  website VARCHAR(500),
   omschrijvingNl TEXT,
   omschrijvingFr TEXT,
   omschrijvingDe TEXT,

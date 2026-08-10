@@ -31,13 +31,29 @@ const KUNSTWERKEN: Kunstwerk[] = [
 ];
 
 const SOORTEN: Materiaalsoort[] = [
-  { id: 'soort-1', omschrijving: 'Veiligheidsglas' },
-  { id: 'soort-2', omschrijving: 'Acryl' },
+  { id: 'soort-1', omschrijvingNl: 'Veiligheidsglas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'soort-2', omschrijvingNl: 'Acryl', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 
 const MATERIALEN: Materiaal[] = [
-  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Kristalhelder' },
-  { id: 'mat-2', materiaalsoortId: 'soort-2', materiaaldikte: 3, omschrijving: 'Licht en helder' },
+  {
+    id: 'mat-1',
+    materiaalsoortId: 'soort-1',
+    materiaaldikte: 4,
+    omschrijvingNl: 'Kristalhelder',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+  },
+  {
+    id: 'mat-2',
+    materiaalsoortId: 'soort-2',
+    materiaaldikte: 3,
+    omschrijvingNl: 'Licht en helder',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+  },
 ];
 
 function renderSection(overrides: Partial<React.ComponentProps<typeof MaterialenSection>> = {}) {
@@ -103,7 +119,10 @@ describe('MaterialenSection', () => {
       expect(onAdd).toHaveBeenCalledWith({
         materiaalsoortId: 'soort-2',
         materiaaldikte: 5,
-        omschrijving: 'Extra diepte',
+        omschrijvingNl: 'Extra diepte',
+        omschrijvingFr: '',
+        omschrijvingDe: '',
+        omschrijvingEn: '',
       })
     );
   });
@@ -119,7 +138,10 @@ describe('MaterialenSection', () => {
       expect(onUpdate).toHaveBeenCalledWith('mat-1', {
         materiaalsoortId: 'soort-1',
         materiaaldikte: 6,
-        omschrijving: 'Kristalhelder',
+        omschrijvingNl: 'Kristalhelder',
+        omschrijvingFr: '',
+        omschrijvingDe: '',
+        omschrijvingEn: '',
       })
     );
   });

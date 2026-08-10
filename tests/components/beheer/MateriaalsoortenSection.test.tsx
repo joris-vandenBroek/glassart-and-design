@@ -19,12 +19,20 @@ beforeEach(() => {
 });
 
 const SOORTEN: Materiaalsoort[] = [
-  { id: 'soort-1', omschrijving: 'Veiligheidsglas' },
-  { id: 'soort-2', omschrijving: 'Dibond' },
+  { id: 'soort-1', omschrijvingNl: 'Veiligheidsglas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'soort-2', omschrijvingNl: 'Dibond', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 
 const MATERIALEN: Materiaal[] = [
-  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Test' },
+  {
+    id: 'mat-1',
+    materiaalsoortId: 'soort-1',
+    materiaaldikte: 4,
+    omschrijvingNl: 'Test',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+  },
 ];
 
 function renderSection(overrides: Partial<React.ComponentProps<typeof MateriaalsoortenSection>> = {}) {
@@ -74,7 +82,10 @@ describe('MateriaalsoortenSection', () => {
     fireEvent.click(screen.getByTestId('materiaalsoort-modal-opslaan'));
     await waitFor(() =>
       expect(onAdd).toHaveBeenCalledWith({
-        omschrijving: 'Acryl',
+        omschrijvingNl: 'Acryl',
+        omschrijvingFr: '',
+        omschrijvingDe: '',
+        omschrijvingEn: '',
         staatEigenMaatToe: false,
         maxBreedte: null,
         maxHoogte: null,
@@ -100,7 +111,10 @@ describe('MateriaalsoortenSection', () => {
     fireEvent.click(screen.getByTestId('materiaalsoort-modal-opslaan'));
     await waitFor(() =>
       expect(onUpdate).toHaveBeenCalledWith('soort-2', {
-        omschrijving: 'Dibond 3mm',
+        omschrijvingNl: 'Dibond 3mm',
+        omschrijvingFr: '',
+        omschrijvingDe: '',
+        omschrijvingEn: '',
         staatEigenMaatToe: false,
         maxBreedte: null,
         maxHoogte: null,
@@ -217,7 +231,10 @@ describe('MateriaalsoortenSection', () => {
     fireEvent.click(screen.getByTestId('materiaalsoort-modal-opslaan'));
     await waitFor(() =>
       expect(onAdd).toHaveBeenCalledWith({
-        omschrijving: 'Acryl',
+        omschrijvingNl: 'Acryl',
+        omschrijvingFr: '',
+        omschrijvingDe: '',
+        omschrijvingEn: '',
         staatEigenMaatToe: true,
         maxBreedte: 200,
         maxHoogte: 300,
@@ -229,7 +246,15 @@ describe('MateriaalsoortenSection', () => {
   it('pre-fills the eigen-maat fields when editing a materiaalsoort that has them set', () => {
     renderSection({
       materiaalsoorten: [
-        { id: 'soort-1', omschrijving: 'Veiligheidsglas', staatEigenMaatToe: true, levertijdMaandenEigenMaat: 3 },
+        {
+          id: 'soort-1',
+          omschrijvingNl: 'Veiligheidsglas',
+          omschrijvingFr: '',
+          omschrijvingDe: '',
+          omschrijvingEn: '',
+          staatEigenMaatToe: true,
+          levertijdMaandenEigenMaat: 3,
+        },
       ],
     });
     fireEvent.click(screen.getByTestId('data-table-row-soort-1'));

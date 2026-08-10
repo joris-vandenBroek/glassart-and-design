@@ -86,9 +86,13 @@ const KUNSTWERKEN: Kunstwerk[] = [
     formaat: 'staand',
   },
 ];
-const MATERIALEN: Materiaal[] = [{ id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 6, omschrijving: 'Helder' }];
+const MATERIALEN: Materiaal[] = [
+  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 6, omschrijvingNl: 'Helder', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+];
 const MATEN: Maat[] = [{ id: 'maat-1', breedte: 40, hoogte: 60 }];
-const MATERIAALSOORTEN: Materiaalsoort[] = [{ id: 'soort-1', omschrijving: 'Glas' }];
+const MATERIAALSOORTEN: Materiaalsoort[] = [
+  { id: 'soort-1', omschrijvingNl: 'Glas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+];
 
 function bestelling(overrides: Partial<Bestelling> = {}): Bestelling {
   return {

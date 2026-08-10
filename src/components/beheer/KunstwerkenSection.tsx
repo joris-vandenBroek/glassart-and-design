@@ -133,7 +133,7 @@ export function KunstwerkenSection({
 
   useEffect(() => {
     if (!pendingNieuweSegmentNaam) return;
-    const gevonden = (segmenten ?? []).find((segment) => segment.omschrijving === pendingNieuweSegmentNaam);
+    const gevonden = (segmenten ?? []).find((segment) => segment.omschrijvingNl === pendingNieuweSegmentNaam);
     if (gevonden) {
       setSegmentIds((current) => (current.includes(gevonden.id) ? current : [...current, gevonden.id]));
       setPendingNieuweSegmentNaam(null);
@@ -143,7 +143,7 @@ export function KunstwerkenSection({
 
   useEffect(() => {
     if (!pendingNieuweStijlNaam) return;
-    const gevonden = (stijlen ?? []).find((stijl) => stijl.omschrijving === pendingNieuweStijlNaam);
+    const gevonden = (stijlen ?? []).find((stijl) => stijl.omschrijvingNl === pendingNieuweStijlNaam);
     if (gevonden) {
       setStijlIds((current) => (current.includes(gevonden.id) ? current : [...current, gevonden.id]));
       setPendingNieuweStijlNaam(null);
@@ -153,7 +153,7 @@ export function KunstwerkenSection({
 
   useEffect(() => {
     if (!pendingNieuweOnderwerpNaam) return;
-    const gevonden = (onderwerpen ?? []).find((onderwerp) => onderwerp.omschrijving === pendingNieuweOnderwerpNaam);
+    const gevonden = (onderwerpen ?? []).find((onderwerp) => onderwerp.omschrijvingNl === pendingNieuweOnderwerpNaam);
     if (gevonden) {
       setOnderwerpIds((current) => (current.includes(gevonden.id) ? current : [...current, gevonden.id]));
       setPendingNieuweOnderwerpNaam(null);
@@ -166,7 +166,7 @@ export function KunstwerkenSection({
     if (!naam) return;
     setSegmentToevoegenError(null);
     const bestaande = (segmenten ?? []).find(
-      (segment) => segment.omschrijving.toLowerCase() === naam.toLowerCase()
+      (segment) => segment.omschrijvingNl.toLowerCase() === naam.toLowerCase()
     );
     if (bestaande) {
       setSegmentIds((current) => (current.includes(bestaande.id) ? current : [...current, bestaande.id]));
@@ -174,7 +174,7 @@ export function KunstwerkenSection({
       return;
     }
     setPendingNieuweSegmentNaam(naam);
-    const success = await onAddSegment({ omschrijving: naam });
+    const success = await onAddSegment({ omschrijvingNl: naam, omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' });
     if (success) {
       void logActiviteit('segment_toegevoegd', naam);
     } else {
@@ -187,14 +187,14 @@ export function KunstwerkenSection({
     const naam = nieuweStijlNaam.trim();
     if (!naam) return;
     setStijlToevoegenError(null);
-    const bestaande = (stijlen ?? []).find((stijl) => stijl.omschrijving.toLowerCase() === naam.toLowerCase());
+    const bestaande = (stijlen ?? []).find((stijl) => stijl.omschrijvingNl.toLowerCase() === naam.toLowerCase());
     if (bestaande) {
       setStijlIds((current) => (current.includes(bestaande.id) ? current : [...current, bestaande.id]));
       setNieuweStijlNaam('');
       return;
     }
     setPendingNieuweStijlNaam(naam);
-    const success = await onAddStijl({ omschrijving: naam });
+    const success = await onAddStijl({ omschrijvingNl: naam, omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' });
     if (success) {
       void logActiviteit('stijl_toegevoegd');
     } else {
@@ -208,7 +208,7 @@ export function KunstwerkenSection({
     if (!naam) return;
     setOnderwerpToevoegenError(null);
     const bestaande = (onderwerpen ?? []).find(
-      (onderwerp) => onderwerp.omschrijving.toLowerCase() === naam.toLowerCase()
+      (onderwerp) => onderwerp.omschrijvingNl.toLowerCase() === naam.toLowerCase()
     );
     if (bestaande) {
       setOnderwerpIds((current) => (current.includes(bestaande.id) ? current : [...current, bestaande.id]));
@@ -216,7 +216,7 @@ export function KunstwerkenSection({
       return;
     }
     setPendingNieuweOnderwerpNaam(naam);
-    const success = await onAddOnderwerp({ omschrijving: naam });
+    const success = await onAddOnderwerp({ omschrijvingNl: naam, omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' });
     if (success) {
       void logActiviteit('onderwerp_toegevoegd');
     } else {
@@ -227,13 +227,13 @@ export function KunstwerkenSection({
 
   const segmentNaamById = useMemo(() => {
     const map = new Map<string, string>();
-    (segmenten ?? []).forEach((segment) => map.set(segment.id, segment.omschrijving));
+    (segmenten ?? []).forEach((segment) => map.set(segment.id, segment.omschrijvingNl));
     return map;
   }, [segmenten]);
 
   const materiaalsoortNaamById = useMemo(() => {
     const map = new Map<string, string>();
-    (materiaalsoorten ?? []).forEach((soort) => map.set(soort.id, soort.omschrijving));
+    (materiaalsoorten ?? []).forEach((soort) => map.set(soort.id, soort.omschrijvingNl));
     return map;
   }, [materiaalsoorten]);
 
@@ -886,7 +886,7 @@ export function KunstwerkenSection({
                   onChange={() => setSegmentIds((current) => toggle(current, segment.id))}
                   data-testid={`kunstwerk-modal-segment-${segment.id}`}
                 />
-                {segment.omschrijving}
+                {segment.omschrijvingNl}
               </label>
             ))}
             <div className="mt-1 flex gap-2">
@@ -1008,7 +1008,7 @@ export function KunstwerkenSection({
                   onChange={() => setStijlIds((current) => toggle(current, stijl.id))}
                   data-testid={`kunstwerk-modal-stijl-${stijl.id}`}
                 />
-                {stijl.omschrijving}
+                {stijl.omschrijvingNl}
               </label>
             ))}
             <div className="mt-1 flex gap-2">
@@ -1049,7 +1049,7 @@ export function KunstwerkenSection({
                   onChange={() => setOnderwerpIds((current) => toggle(current, onderwerp.id))}
                   data-testid={`kunstwerk-modal-onderwerp-${onderwerp.id}`}
                 />
-                {onderwerp.omschrijving}
+                {onderwerp.omschrijvingNl}
               </label>
             ))}
             <div className="mt-1 flex gap-2">
