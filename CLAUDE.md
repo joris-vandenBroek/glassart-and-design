@@ -48,7 +48,7 @@ It follows the same real-staging-database, no-production-possible, scoped-cleanu
 ### API routes (`src/app/api`)
 
 - `src/app/api/[resource]/route.ts` is a **generic catch-all CRUD route** for simple lookup tables. `src/lib/server/lookupResources.ts` is the allow-list (`LOOKUP_RESOURCES`) of which resource names it serves, which JSON columns each has, and whether writes require `authRequired: 'medewerker'`. Any resource not in that map 404s.
-- Resources with extra logic (`klanten`, `bestelheaders`/`bestellines`, `activiteitenlog`, `instellingen`, `kunstenaars`/`kunstenaarAfspraken`, `drukkers`-related shipments, `auth`) have their own dedicated route files instead of going through `[resource]` — check `src/lib/server/lookupResources.ts` before assuming a resource is generic.
+- Resources with extra logic (`klanten`, `bestelheaders`/`bestellines`, `activiteitenlog`, `instellingen`, `kunstenaars`/`kunstenaarAfspraken`, `kunstwerken`, `drukkers`-related shipments, `auth`) have their own dedicated route files instead of going through `[resource]` — check `src/lib/server/lookupResources.ts` before assuming a resource is generic. `kunstwerken` moved off the catch-all because it needs a unique-code check, a lock on the code once it's been ordered, and a delete guard.
 - `src/lib/server/requireAuth.ts` (`requireMedewerker`) reads the session cookie and gates staff-only reads/writes — there is no Firestore-rules-style layer anymore, so this check is the only thing enforcing it.
 
 ### Client data hooks (`src/lib`)
