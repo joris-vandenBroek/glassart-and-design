@@ -12,6 +12,10 @@ scripts/import-kunstwerken-cli.ts <subcommando> [opties]` (of `npm run import:ku
 <subcommando> [opties]`), uitgevoerd vanuit de projectroot
 (`C:\projecten\Glassart and design`).
 
+**Aangeroepen vanuit `import-kunstwerken` (Stap A.4)?** Dan heb je al een `<omgeving>` en
+`<cookie>`. Sla Stap 5 hieronder over en hergebruik die twee in elke CLI-aanroep van de
+overige stappen — niet opnieuw inloggen.
+
 ## Stap 1: website vragen
 
 Vraag: "Wat is de website van de kunstenaar? (laat leeg als die er niet is)".
@@ -55,7 +59,7 @@ geen bruikbare kandidaat, of heeft de URL geen herkenbare extensie: ga verder zo
 (`foto: null` in Stap 6), en meld dit in de eindsamenvatting. Niets hiervan blokkeert het
 aanmaken van de kunstenaar.
 
-## Stap 5: omgeving
+## Stap 5: omgeving (overslaan als je al een `<omgeving>`/`<cookie>` hebt vanuit een aanroepende skill)
 
 Vraag: "staging" of "productie", default staging. Log in:
 
@@ -133,5 +137,7 @@ website is meegegeven, en het teruggegeven record (bevat `id` en `kunstenaarnr` 
 - Wijzigt geen bestaande kunstenaars — uitsluitend aanmaken.
 - Garandeert niet dat de gevonden naam/omschrijving/foto correct is — de website is de enige
   bron; bij twijfel valt het terug op handmatige input of wordt de foto overgeslagen.
-- Wordt nog niet automatisch aangeroepen vanuit `import-kunstwerken` — dat is een losse,
-  latere aanpassing aan die skill.
+- Wordt aangeroepen vanuit `import-kunstwerken`'s Stap A.4 (nieuwe import, kunstenaar staat
+  niet in de lijst). Wordt **niet** aangeroepen vanuit Stap B2 (batch doorzetten) — daar is
+  vaak geen website bekend voor een ontbrekende kunstenaar, dus dat pad blijft handmatig (zie
+  `import-kunstwerken`'s Foutafhandeling).

@@ -65,7 +65,15 @@ Vraag dit als allereerste:
 
    Dit geeft `{ kunstenaars, segmenten, stijlen, onderwerpen, materialen, maten, kunstwerkCodes }`.
 4. **Kunstenaar** — toon `referentie.kunstenaars` (kunstenaarnr + naam), laat de gebruiker
-   kiezen. Onthoud het gekozen `kunstenaarnr` voor de hele batch.
+   kiezen. Staat de gewenste kunstenaar er niet bij, bied dan de optie "nieuwe kunstenaar
+   toevoegen" aan. Kiest de gebruiker die optie: volg Stap 1 t/m 4 en 6 t/m 9 van
+   `.claude/skills/toevoegen-kunstenaar/SKILL.md` (dat is die skill in zijn geheel, min Stap 5)
+   — sla **Stap 5 (omgeving + login)** van die skill over en hergebruik in plaats daarvan de
+   `<omgeving>` en `<cookie>` die je hier al hebt (Stap A.1/A.2) in elke CLI-aanroep van de
+   overgenomen stappen. Voeg na het aanmaken (Stap 8/9 van die skill) het teruggegeven
+   `{kunstenaarnr, naam}` toe aan je eigen `referentie.kunstenaars` in het geheugen — geen
+   nieuwe `dump-referentie`-aanroep nodig — en kies deze kunstenaar voor de batch. Onthoud het
+   gekozen `kunstenaarnr` voor de hele batch.
 5. **AI-gegenereerd?** — ja/nee, geldt voor de hele batch.
 6. **Brondirectory** — pad naar de map met afbeeldingen.
 7. **Collectiecode** — bijv. `GLA-AFR`, `GLA-PRO`, `GLA-SAB`. Vrije tekst, geen validatie
