@@ -11,6 +11,9 @@ import { PATCH as patchKlant, DELETE as deleteKlant } from '@/app/api/klanten/[i
 // a table-wide DELETE -- so this suite is safe to run against a klanten table that
 // already holds real customer registrations.
 const createdKlantIds: string[] = [];
+// Kunstenaar-fixtures voor de kunstenaarnr-FK-tests. Opgeruimd ná de klanten die
+// ernaar verwijzen (zie afterEach).
+const createdKunstenaarIds: string[] = [];
 
 afterEach(async () => {
   // medewerkerCookie() uses a fixed fake userId (no real medewerker row exists for it), so
@@ -20,6 +23,10 @@ afterEach(async () => {
     await getPool().query("DELETE FROM sessions WHERE userType = 'klant' AND userId IN (?)", [createdKlantIds]);
     await getPool().query('DELETE FROM klanten WHERE id IN (?)', [createdKlantIds]);
     createdKlantIds.length = 0;
+  }
+  if (createdKunstenaarIds.length > 0) {
+    await getPool().query('DELETE FROM kunstenaars WHERE id IN (?)', [createdKunstenaarIds]);
+    createdKunstenaarIds.length = 0;
   }
 });
 
@@ -234,25 +241,39 @@ describe('klanten admin routes', () => {
     expect((rows as unknown[]).length).toBe(1);
   });
 
-  it('round-trips kunstenaarId as a plain scalar', async () => {
+  it('round-trips kunstenaarnr as a plain scalar', async () => {
+    const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+      naam: 'AUTOTEST Klanten FK',
+      kunstenaarnr: 'AT-K-KL-1',
+      exclusieveKlantIds: [],
+    } as never, ['exclusieveKlantIds']);
+    createdKunstenaarIds.push(kunstenaar.id);
     const klant = await insertRow<{ id: string }>('klanten', {
       email: 'd@example.com',
       wachtwoordHash: await hashPassword('x'),
       status: 'Goedgekeurd',
     } as never);
     createdKlantIds.push(klant.id);
-    await patchKlant(req('PATCH', { kunstenaarId: 'kunstenaar-1' }, await medewerkerCookie()), {
+    await patchKlant(req('PATCH', { kunstenaarnr: 'AT-K-KL-1' }, await medewerkerCookie()), {
       params: { id: klant.id },
     });
     const response = await listKlanten(req('GET', undefined, await medewerkerCookie()));
     const body = await response.json();
     const updated = body.find((row: { id: string }) => row.id === klant.id);
-    expect(updated.kunstenaarId).toBe('kunstenaar-1');
+    expect(updated.kunstenaarnr).toBe('AT-K-KL-1');
   });
 
-  it('rejects linking a second klant to a kunstenaarId already claimed by another klant', async () => {
-    // No FK from klanten.kunstenaarId to kunstenaars.id, so a bare literal id is fine here --
-    // only the UNIQUE KEY on klanten.kunstenaarId is under test.
+  it('rejects linking a second klant to a kunstenaarnr already claimed by another klant', async () => {
+    // Sinds deze migratie is er wél een FK van klanten.kunstenaarnr naar
+    // kunstenaars.kunstenaarnr, dus een kaal literal nummer kan niet meer -- de
+    // fixture hieronder moet een echte kunstenaar zijn. De UNIQUE KEY op
+    // klanten.kunstenaarnr is nog steeds wat hier getest wordt.
+    const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+      naam: 'AUTOTEST Klanten FK Dubbel',
+      kunstenaarnr: 'AT-K-KL-2',
+      exclusieveKlantIds: [],
+    } as never, ['exclusieveKlantIds']);
+    createdKunstenaarIds.push(kunstenaar.id);
     const klantEen = await insertRow<{ id: string }>('klanten', {
       email: 'i@example.com',
       wachtwoordHash: await hashPassword('x'),
@@ -267,21 +288,21 @@ describe('klanten admin routes', () => {
     createdKlantIds.push(klantTwee.id);
 
     const eerste = await patchKlant(
-      req('PATCH', { kunstenaarId: 'kunstenaar-dubbel' }, await medewerkerCookie()),
+      req('PATCH', { kunstenaarnr: 'AT-K-KL-2' }, await medewerkerCookie()),
       { params: { id: klantEen.id } }
     );
     expect(eerste.status).toBe(200);
 
     const tweede = await patchKlant(
-      req('PATCH', { kunstenaarId: 'kunstenaar-dubbel' }, await medewerkerCookie()),
+      req('PATCH', { kunstenaarnr: 'AT-K-KL-2' }, await medewerkerCookie()),
       { params: { id: klantTwee.id } }
     );
     expect(tweede.status).toBe(500);
     const body = await tweede.json();
     expect(body.error).toBe('server-error');
 
-    const [rows] = await getPool().query('SELECT kunstenaarId FROM klanten WHERE id = ?', [klantTwee.id]);
-    expect((rows as Array<{ kunstenaarId: string | null }>)[0].kunstenaarId).toBeNull();
+    const [rows] = await getPool().query('SELECT kunstenaarnr FROM klanten WHERE id = ?', [klantTwee.id]);
+    expect((rows as Array<{ kunstenaarnr: string | null }>)[0].kunstenaarnr).toBeNull();
   });
 
   it('assigns a klantnummer when a klant is approved', async () => {

@@ -93,9 +93,12 @@ async function maakMateriaal(dikte: number) {
 
 let kunstenaarTeller = 0;
 
-async function maakKunstenaarMetOpslag(prijsopslag: number) {
+// Retourneert het kunstenaarnr (niet de UUID): kunstwerken en de prijsmodule-functies
+// verwijzen sinds deze migratie naar een kunstenaar via dat nummer.
+async function maakKunstenaarMetOpslag(prijsopslag: number): Promise<string> {
+  const kunstenaarnr = `AT-K-PM-${++kunstenaarTeller}`;
   const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
-    kunstenaarnr: `AT-K-PM-${++kunstenaarTeller}`,
+    kunstenaarnr,
     naam: 'Test kunstenaar',
   } as never);
   createdKunstenaarIds.push(kunstenaar.id);
@@ -103,7 +106,7 @@ async function maakKunstenaarMetOpslag(prijsopslag: number) {
     'INSERT INTO kunstenaarAfspraken (id, prijsopslag) VALUES (?, ?)',
     [kunstenaar.id, prijsopslag]
   );
-  return kunstenaar.id;
+  return kunstenaarnr;
 }
 
 describe('combineerPrijs', () => {
@@ -151,7 +154,7 @@ describe('prijsgroepVoorKlant', () => {
 });
 
 describe('prijsopslagVoorKunstenaar', () => {
-  it('returns 0 for a null kunstenaarId', async () => {
+  it('returns 0 for a null kunstenaarnr', async () => {
     expect(await prijsopslagVoorKunstenaar(getPool(), null)).toBe(0);
   });
 
@@ -161,12 +164,12 @@ describe('prijsopslagVoorKunstenaar', () => {
       naam: 'Geen afspraken',
     } as never);
     createdKunstenaarIds.push(kunstenaar.id);
-    expect(await prijsopslagVoorKunstenaar(getPool(), kunstenaar.id)).toBe(0);
+    expect(await prijsopslagVoorKunstenaar(getPool(), 'AT-K-PM-X')).toBe(0);
   });
 
   it('returns the stored prijsopslag for a kunstenaar that has one', async () => {
-    const kunstenaarId = await maakKunstenaarMetOpslag(25);
-    expect(await prijsopslagVoorKunstenaar(getPool(), kunstenaarId)).toBe(25);
+    const kunstenaarnr = await maakKunstenaarMetOpslag(25);
+    expect(await prijsopslagVoorKunstenaar(getPool(), kunstenaarnr)).toBe(25);
   });
 });
 
@@ -178,9 +181,9 @@ describe('berekenPrijzenVoorCombinaties', () => {
       'INSERT INTO prijsmatrix (id, maatId, materiaalId, prijs) VALUES (UUID(), ?, ?, ?)',
       [maatId, materiaalId, 150]
     );
-    const kunstenaarId = await maakKunstenaarMetOpslag(20);
+    const kunstenaarnr = await maakKunstenaarMetOpslag(20);
 
-    const result = await berekenPrijzenVoorCombinaties(getPool(), kunstenaarId, [materiaalId], [maatId]);
+    const result = await berekenPrijzenVoorCombinaties(getPool(), kunstenaarnr, [materiaalId], [maatId]);
     expect(result).toEqual([{ maatId, materiaalId, prijs: 170 }]);
   });
 
@@ -200,10 +203,10 @@ describe('berekenPrijzenVoorAlleKunstwerken', () => {
       'INSERT INTO prijsmatrix (id, maatId, materiaalId, prijs) VALUES (UUID(), ?, ?, ?)',
       [maatId, materiaalId, 200]
     );
-    const kunstenaarId = await maakKunstenaarMetOpslag(30);
+    const kunstenaarnr = await maakKunstenaarMetOpslag(30);
     const kunstwerk = await insertRow<{ id: string }>(
       'kunstwerken',
-      { code: 'test-prijsmodule-basis', kunstenaarId, materiaalIds: [materiaalId], maatIds: [maatId] } as never,
+      { code: 'test-prijsmodule-basis', kunstenaarnr, materiaalIds: [materiaalId], maatIds: [maatId] } as never,
       ['materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(kunstwerk.id);
@@ -230,10 +233,10 @@ describe('berekenPrijzenVoorAlleKunstwerken', () => {
       'INSERT INTO prijsmatrix (id, maatId, materiaalId, prijs) VALUES (UUID(), ?, ?, ?)',
       [maatId, materiaalId, 200]
     );
-    const kunstenaarId = await maakKunstenaarMetOpslag(30);
+    const kunstenaarnr = await maakKunstenaarMetOpslag(30);
     const kunstwerk = await insertRow<{ id: string }>(
       'kunstwerken',
-      { code: 'test-prijsmodule-korting', kunstenaarId, materiaalIds: [materiaalId], maatIds: [maatId] } as never,
+      { code: 'test-prijsmodule-korting', kunstenaarnr, materiaalIds: [materiaalId], maatIds: [maatId] } as never,
       ['materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(kunstwerk.id);
@@ -256,7 +259,7 @@ describe('berekenBestellijnPrijs', () => {
     );
     const result = await berekenBestellijnPrijs(
       getPool(),
-      { kunstenaarId: null, maatIds: [maatId], prijsPerM2: null },
+      { kunstenaarnr: null, maatIds: [maatId], prijsPerM2: null },
       { maatId, materiaalId }
     );
     expect(result).toEqual({ status: 'vast', prijs: 300 });
@@ -267,7 +270,7 @@ describe('berekenBestellijnPrijs', () => {
     const materiaalId = await maakMateriaal(4);
     const result = await berekenBestellijnPrijs(
       getPool(),
-      { kunstenaarId: null, maatIds: [maatId], prijsPerM2: null },
+      { kunstenaarnr: null, maatIds: [maatId], prijsPerM2: null },
       { maatId, materiaalId }
     );
     expect(result).toEqual({ status: 'onbekend' });
@@ -277,7 +280,7 @@ describe('berekenBestellijnPrijs', () => {
     const materiaalId = await maakMateriaal(4);
     const result = await berekenBestellijnPrijs(
       getPool(),
-      { kunstenaarId: null, maatIds: ['echte-maat-id'], prijsPerM2: null },
+      { kunstenaarnr: null, maatIds: ['echte-maat-id'], prijsPerM2: null },
       { maatId: '', materiaalId }
     );
     expect(result).toEqual({ status: 'op-aanvraag' });
@@ -287,7 +290,7 @@ describe('berekenBestellijnPrijs', () => {
     const materiaalId = await maakMateriaal(3);
     const result = await berekenBestellijnPrijs(
       getPool(),
-      { kunstenaarId: null, maatIds: [], prijsPerM2: 100 },
+      { kunstenaarnr: null, maatIds: [], prijsPerM2: 100 },
       { maatId: '', materiaalId, breedte: 120, hoogte: 60 }
     );
     expect(result).toEqual({ status: 'vast', prijs: 72 });
@@ -297,7 +300,7 @@ describe('berekenBestellijnPrijs', () => {
     const materiaalId = await maakMateriaal(3);
     const result = await berekenBestellijnPrijs(
       getPool(),
-      { kunstenaarId: null, maatIds: [], prijsPerM2: 100 },
+      { kunstenaarnr: null, maatIds: [], prijsPerM2: 100 },
       { maatId: '', materiaalId }
     );
     expect(result).toEqual({ status: 'onbekend' });
@@ -315,7 +318,7 @@ describe('berekenBestellijnPrijs', () => {
 
     const result = await berekenBestellijnPrijs(
       getPool(),
-      { kunstenaarId: null, maatIds: [maatId], prijsPerM2: null },
+      { kunstenaarnr: null, maatIds: [maatId], prijsPerM2: null },
       { maatId, materiaalId },
       klantId
     );
@@ -329,7 +332,7 @@ describe('berekenBestellijnPrijs', () => {
 
     const result = await berekenBestellijnPrijs(
       getPool(),
-      { kunstenaarId: null, maatIds: [], prijsPerM2: 100 },
+      { kunstenaarnr: null, maatIds: [], prijsPerM2: 100 },
       { maatId: '', materiaalId, breedte: 120, hoogte: 60 },
       klantId
     );

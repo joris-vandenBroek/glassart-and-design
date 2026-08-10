@@ -163,8 +163,9 @@ describe('Deel C1 -- klant-kunstenaar exclusiviteit (echte workflow)', () => {
     let fixture: Awaited<ReturnType<typeof maakMaatMateriaal>> | null = null;
 
     try {
+      const kunstenaarnr = 'AT-K-REG-1';
       const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
-        kunstenaarnr: 'AT-K-REG-1',
+        kunstenaarnr,
         naam: 'AUTOTEST Kunstenaar Exclusief',
       } as never);
       kunstenaarId = kunstenaar.id;
@@ -177,7 +178,7 @@ describe('Deel C1 -- klant-kunstenaar exclusiviteit (echte workflow)', () => {
         'kunstwerken',
         {
           code: 'AUTOTEST Kunstwerk Exclusief',
-          kunstenaarId,
+          kunstenaarnr,
           materiaalIds: [fixture.materiaalId],
           maatIds: [fixture.maatId],
         } as never,
@@ -199,7 +200,7 @@ describe('Deel C1 -- klant-kunstenaar exclusiviteit (echte workflow)', () => {
       const staff = await medewerkerCookie();
 
       // "Dit klantaccount is van kunstenaar" -- koppel eigenAccount aan de kunstenaar.
-      const linkKlant = await patchKlant(req('PATCH', { kunstenaarId }, staff), {
+      const linkKlant = await patchKlant(req('PATCH', { kunstenaarnr }, staff), {
         params: { id: eigenAccount.id },
       });
       expect(linkKlant.status).toBe(200);
@@ -259,8 +260,9 @@ describe('Deel C2 -- kunstenaarsopslag + prijsgroep (prijsopbouw van een bestell
     try {
       const staff = await medewerkerCookie();
 
+      const kunstenaarnr = 'AT-K-REG-2';
       const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
-        kunstenaarnr: 'AT-K-REG-2',
+        kunstenaarnr,
         naam: 'AUTOTEST Kunstenaar Opslag',
       } as never);
       kunstenaarId = kunstenaar.id;
@@ -276,7 +278,7 @@ describe('Deel C2 -- kunstenaarsopslag + prijsgroep (prijsopbouw van een bestell
         'kunstwerken',
         {
           code: 'AUTOTEST Kunstwerk Opslag',
-          kunstenaarId,
+          kunstenaarnr,
           materiaalIds: [fixtureA.materiaalId, fixtureB.materiaalId],
           maatIds: [fixtureA.maatId, fixtureB.maatId],
         } as never,
@@ -437,7 +439,7 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
           { id: headerY.id, klantId: klantY.id, companyName: klantY.email, bestelnr: headerY.bestelnr, besteldatum: '', status: 'Te versturen naar drukker', lineCount: 1, totalQuantity: 1, lines: [{ id: 'l2', code: 'AUTOTEST Kunstwerk Drukker', maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 80, quantity: 1 }] },
         ],
         klanten: [],
-        kunstwerken: [{ id: kunstwerkId, foto: '', code: 'AUTOTEST Kunstwerk Drukker', kunstenaarId: null, segmentIds: [], materiaalIds: [fixture.materiaalId], maatIds: [fixture.maatId], omschrijvingNl: '', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }],
+        kunstwerken: [{ id: kunstwerkId, foto: '', code: 'AUTOTEST Kunstwerk Drukker', kunstenaarnr: null, segmentIds: [], materiaalIds: [fixture.materiaalId], maatIds: [fixture.maatId], omschrijvingNl: '', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }],
         materialen: [{ id: fixture.materiaalId, materiaalsoortId: 'x', materiaaldikte: 6, omschrijving: 'AUTOTEST' }],
         maten: [{ id: fixture.maatId, breedte: 40, hoogte: 60 }],
         materiaalsoorten: [{ id: 'x', omschrijving: 'AUTOTEST soort' }],
@@ -922,7 +924,7 @@ describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
 });
 
 describe('Klant van een kunstenaar kan diens werk gewoon bestellen zonder exclusiviteit', () => {
-  it('koppelen van een klant aan een kunstenaar (kunstenaarId) beperkt op zichzelf niets -- die klant én andere klanten kunnen het werk gewoon bestellen', async () => {
+  it('koppelen van een klant aan een kunstenaar (kunstenaarnr) beperkt op zichzelf niets -- die klant én andere klanten kunnen het werk gewoon bestellen', async () => {
     const klantEmails: string[] = [];
     let kunstenaarId: string | null = null;
     let kunstwerkId: string | null = null;
@@ -931,8 +933,9 @@ describe('Klant van een kunstenaar kan diens werk gewoon bestellen zonder exclus
     try {
       const staff = await medewerkerCookie();
 
+      const kunstenaarnr = 'AT-K-REG-3';
       const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
-        kunstenaarnr: 'AT-K-REG-3',
+        kunstenaarnr,
         naam: 'AUTOTEST Kunstenaar Eigen Werk',
       } as never);
       kunstenaarId = kunstenaar.id;
@@ -943,7 +946,7 @@ describe('Klant van een kunstenaar kan diens werk gewoon bestellen zonder exclus
         'kunstwerken',
         {
           code: 'AUTOTEST Kunstwerk Eigen Werk',
-          kunstenaarId,
+          kunstenaarnr,
           materiaalIds: [fixture.materiaalId],
           maatIds: [fixture.maatId],
         } as never,
@@ -957,9 +960,9 @@ describe('Klant van een kunstenaar kan diens werk gewoon bestellen zonder exclus
       klantEmails.push(anderKlant.email);
       stap(`2 klanten aangemaakt: ${eigenKlant.email} (wordt gekoppeld), ${anderKlant.email} (blijft los)`);
 
-      const koppeling = await patchKlant(req('PATCH', { kunstenaarId }, staff), { params: { id: eigenKlant.id } });
+      const koppeling = await patchKlant(req('PATCH', { kunstenaarnr }, staff), { params: { id: eigenKlant.id } });
       expect(koppeling.status).toBe(200);
-      stap(`eigenKlant gekoppeld aan de kunstenaar (kunstenaarId), geen exclusiviteit ingesteld`);
+      stap(`eigenKlant gekoppeld aan de kunstenaar (kunstenaarnr), geen exclusiviteit ingesteld`);
 
       const lijn = { kunstwerkId, maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 1, quantity: 1 };
       const bestellingEigenKlant = await createHeader(req('POST', { lines: [lijn] }, eigenKlant.cookie));
@@ -993,8 +996,9 @@ describe('Klant met alleenrecht voor één kunstenaar', () => {
     try {
       const staff = await medewerkerCookie();
 
+      const kunstenaarnr = 'AT-K-REG-4';
       const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
-        kunstenaarnr: 'AT-K-REG-4',
+        kunstenaarnr,
         naam: 'AUTOTEST Kunstenaar Alleenrecht',
       } as never);
       kunstenaarId = kunstenaar.id;
@@ -1005,7 +1009,7 @@ describe('Klant met alleenrecht voor één kunstenaar', () => {
         'kunstwerken',
         {
           code: 'AUTOTEST Kunstwerk Alleenrecht',
-          kunstenaarId,
+          kunstenaarnr,
           materiaalIds: [fixture.materiaalId],
           maatIds: [fixture.maatId],
         } as never,

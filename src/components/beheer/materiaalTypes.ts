@@ -45,7 +45,7 @@ export interface Kunstwerk {
   id: string;
   foto: string;
   code: string;
-  kunstenaarId: string | null;
+  kunstenaarnr: string | null;
   formaat?: KunstwerkFormaat | null;
   segmentIds: string[];
   materiaalIds: string[];

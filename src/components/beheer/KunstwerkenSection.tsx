@@ -53,7 +53,7 @@ function toggle(list: string[], id: string): string[] {
 const LEGE_FORM = {
   foto: '',
   code: '',
-  kunstenaarId: '' as string,
+  kunstenaarnr: '' as string,
   formaat: null as KunstwerkFormaat | null,
   segmentIds: [] as string[],
   materiaalIds: [] as string[],
@@ -93,7 +93,7 @@ export function KunstwerkenSection({
   const [modalState, setModalState] = useState<ModalState>(null);
   const [foto, setFoto] = useState(LEGE_FORM.foto);
   const [code, setCode] = useState(LEGE_FORM.code);
-  const [kunstenaarId, setKunstenaarId] = useState(LEGE_FORM.kunstenaarId);
+  const [kunstenaarnr, setKunstenaarnr] = useState(LEGE_FORM.kunstenaarnr);
   const [formaat, setFormaatState] = useState<KunstwerkFormaat | null>(LEGE_FORM.formaat);
   const [segmentIds, setSegmentIds] = useState<string[]>(LEGE_FORM.segmentIds);
   const [materiaalIds, setMateriaalIds] = useState<string[]>(LEGE_FORM.materiaalIds);
@@ -237,9 +237,9 @@ export function KunstwerkenSection({
     return map;
   }, [materiaalsoorten]);
 
-  const kunstenaarNaamById = useMemo(() => {
+  const kunstenaarNaamByNr = useMemo(() => {
     const map = new Map<string, string>();
-    (kunstenaars ?? []).forEach((kunstenaar) => map.set(kunstenaar.id, kunstenaar.naam));
+    (kunstenaars ?? []).forEach((kunstenaar) => map.set(kunstenaar.kunstenaarnr, kunstenaar.naam));
     return map;
   }, [kunstenaars]);
 
@@ -259,7 +259,7 @@ export function KunstwerkenSection({
     const params = new URLSearchParams({
       materiaalIds: materiaalIds.join(','),
       maatIds: maatIds.join(','),
-      ...(kunstenaarId ? { kunstenaarId } : {}),
+      ...(kunstenaarnr ? { kunstenaarnr } : {}),
     });
     fetch(`/api/kunstwerken/prijzen?${params.toString()}`)
       .then((response) => {
@@ -282,13 +282,13 @@ export function KunstwerkenSection({
     return () => {
       cancelled = true;
     };
-  }, [materiaalIds, maatIds, kunstenaarId, isMaatloos]);
+  }, [materiaalIds, maatIds, kunstenaarnr, isMaatloos]);
 
   function buildKunstwerkData(): Omit<Kunstwerk, 'id'> {
     const basis = {
       foto,
       code: code.trim(),
-      kunstenaarId: kunstenaarId || null,
+      kunstenaarnr: kunstenaarnr || null,
       formaat,
       segmentIds,
       materiaalIds,
@@ -313,7 +313,7 @@ export function KunstwerkenSection({
     [
       foto,
       code,
-      kunstenaarId,
+      kunstenaarnr,
       formaat,
       segmentIds,
       materiaalIds,
@@ -373,13 +373,13 @@ export function KunstwerkenSection({
   const rows: KunstwerkRow[] = kunstwerken.map((kunstwerk) => ({
     ...kunstwerk,
     segmentNamen: kunstwerk.segmentIds.map((id) => segmentNaamById.get(id) ?? id).join(', '),
-    kunstenaarNaam: kunstwerk.kunstenaarId ? kunstenaarNaamById.get(kunstwerk.kunstenaarId) ?? '' : '',
+    kunstenaarNaam: kunstwerk.kunstenaarnr ? kunstenaarNaamByNr.get(kunstwerk.kunstenaarnr) ?? '' : '',
   }));
 
   function resetForm() {
     setFoto(LEGE_FORM.foto);
     setCode(LEGE_FORM.code);
-    setKunstenaarId(LEGE_FORM.kunstenaarId);
+    setKunstenaarnr(LEGE_FORM.kunstenaarnr);
     setFormaatState(LEGE_FORM.formaat);
     setSegmentIds(LEGE_FORM.segmentIds);
     setNieuweSegmentNaam('');
@@ -419,7 +419,7 @@ export function KunstwerkenSection({
     const session = formaatSessionRef.current;
     setFoto(kunstwerk.foto);
     setCode(kunstwerk.code ?? '');
-    setKunstenaarId(kunstwerk.kunstenaarId ?? '');
+    setKunstenaarnr(kunstwerk.kunstenaarnr ?? '');
     setSegmentIds(kunstwerk.segmentIds);
     setMateriaalIds(kunstwerk.materiaalIds);
     setMaatIds(kunstwerk.maatIds);
@@ -814,14 +814,14 @@ export function KunstwerkenSection({
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
             {t('kunstwerkenLabelKunstenaar')}
             <select
-              value={kunstenaarId}
-              onChange={(event) => setKunstenaarId(event.target.value)}
+              value={kunstenaarnr}
+              onChange={(event) => setKunstenaarnr(event.target.value)}
               data-testid="kunstwerk-modal-kunstenaar"
               className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
             >
               <option value="">{t('kunstwerkenKunstenaarGeen')}</option>
               {(kunstenaars ?? []).map((kunstenaar) => (
-                <option key={kunstenaar.id} value={kunstenaar.id}>
+                <option key={kunstenaar.id} value={kunstenaar.kunstenaarnr}>
                   {kunstenaar.naam}
                 </option>
               ))}

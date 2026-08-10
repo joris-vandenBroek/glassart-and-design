@@ -77,7 +77,7 @@ const KUNSTWERKEN: Kunstwerk[] = [
     id: 'kw-1',
     foto: 'https://storage.example.com/kw-1.jpg',
     code: 'Hotel paneel 1',
-    kunstenaarId: null,
+    kunstenaarnr: null,
     formaat: 'staand',
     segmentIds: ['seg-1'],
     materiaalIds: ['mat-1'],
@@ -91,7 +91,7 @@ const KUNSTWERKEN: Kunstwerk[] = [
     id: 'kw-2',
     foto: 'https://storage.example.com/kw-2.jpg',
     code: 'Restaurant paneel 1',
-    kunstenaarId: null,
+    kunstenaarnr: null,
     formaat: 'staand',
     segmentIds: ['seg-2'],
     // Deliberately has every materiaal/maat checked, unlike kw-1, so it never counts toward
@@ -253,7 +253,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
     fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Vibrant Spirit' } });
-    fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'ka-1' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'KU-00001' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Nieuw kunstwerk' } });
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
 
@@ -261,7 +261,7 @@ describe('KunstwerkenSection', () => {
       expect(onAdd).toHaveBeenCalledWith({
         foto: 'https://storage.example.com/nieuw.jpg',
         code: 'Vibrant Spirit',
-        kunstenaarId: 'ka-1',
+        kunstenaarnr: 'KU-00001',
         formaat: 'staand',
         segmentIds: ['seg-1'],
         materiaalIds: ['mat-1'],
@@ -293,7 +293,7 @@ describe('KunstwerkenSection', () => {
       expect(onUpdate).toHaveBeenCalledWith('kw-1', {
         foto: 'https://storage.example.com/kw-1.jpg',
         code: 'Hotel paneel 1',
-        kunstenaarId: null,
+        kunstenaarnr: null,
         formaat: 'staand',
         segmentIds: ['seg-1'],
         materiaalIds: ['mat-1'],
@@ -569,7 +569,7 @@ describe('KunstwerkenSection', () => {
       expect(onAdd).toHaveBeenCalledWith({
         foto: 'https://storage.example.com/nieuw.jpg',
         code: 'Akoestisch paneel',
-        kunstenaarId: null,
+        kunstenaarnr: null,
         formaat: 'vierkant',
         segmentIds: ['seg-1'],
         materiaalIds: [],

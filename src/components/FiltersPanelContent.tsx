@@ -22,7 +22,7 @@ interface FiltersPanelContentProps {
   segmentCountBase: Kunstwerk[];
   kunstenaars: Kunstenaar[] | null;
   kunstenaarFilter: string | null;
-  onKunstenaarFilterChange: (kunstenaarId: string | null) => void;
+  onKunstenaarFilterChange: (kunstenaarnr: string | null) => void;
   formaatFilters: Set<Exclude<KunstwerkFormaat, 'alle'>>;
   onToggleFormaat: (formaat: Exclude<KunstwerkFormaat, 'alle'>) => void;
   formaatCountBase: Kunstwerk[];
@@ -95,7 +95,7 @@ export function FiltersPanelContent({
 
       <FilterSection title={t('kunstenaarFacetTitle')} testId="kunstenaar">
         <Combobox
-          options={(kunstenaars ?? []).map((kunstenaar) => ({ value: kunstenaar.id, label: kunstenaar.naam }))}
+          options={(kunstenaars ?? []).map((kunstenaar) => ({ value: kunstenaar.kunstenaarnr, label: kunstenaar.naam }))}
           value={kunstenaarFilter}
           onChange={onKunstenaarFilterChange}
           placeholder={t('kunstenaarFilterPlaceholder')}

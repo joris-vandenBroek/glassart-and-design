@@ -31,7 +31,7 @@ const KUNSTWERKEN = [
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
     formaat: 'staand',
-    kunstenaarId: 'ka-1',
+    kunstenaarnr: 'ka-1',
     stijlIds: ['stijl-abstract'],
     onderwerpIds: ['onderwerp-bloemen'],
     omschrijvingNl: 'Hotel paneel',
@@ -86,6 +86,7 @@ const MATERIAALSOORTEN = [{ id: 'soort-1', omschrijving: 'Veiligheidsglas' }];
 const KUNSTENAARS = [
   {
     id: 'ka-1',
+    kunstenaarnr: 'ka-1',
     naam: 'Sabrina Glasser',
     foto: null,
     omschrijvingNl: 'Werkt met gesmolten glas.',
@@ -217,7 +218,7 @@ describe('ProductsGrid', () => {
   it('shows the artiest/collectie/stijl/onderwerp info block once the dialog is opened', async () => {
     renderProductsGrid();
     const cards = await screen.findAllByTestId('product-card');
-    fireEvent.click(cards[0]); // kw-1: kunstenaarId 'ka-1', segmentIds ['seg-hotel'], stijlIds ['stijl-abstract'], onderwerpIds ['onderwerp-bloemen']
+    fireEvent.click(cards[0]); // kw-1: kunstenaarnr 'ka-1', segmentIds ['seg-hotel'], stijlIds ['stijl-abstract'], onderwerpIds ['onderwerp-bloemen']
     expect(screen.getByTestId('product-modal-artiest')).toHaveTextContent('Sabrina Glasser');
     expect(screen.getByTestId('product-modal-collecties')).toHaveTextContent('Hotel');
     expect(screen.getByTestId('product-modal-stijl')).toHaveTextContent('Abstract');

@@ -1,15 +1,24 @@
 import { describe, expect, it, afterEach } from 'vitest';
 import { getPool } from '@/lib/server/db';
+import { insertRow } from '@/lib/server/crud';
+import { hashPassword } from '@/lib/server/password';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { POST as createKunstenaar } from '@/app/api/kunstenaars/route';
-import { PATCH as patchKunstenaar } from '@/app/api/kunstenaars/[id]/route';
+import { PATCH as patchKunstenaar, DELETE as deleteKunstenaar } from '@/app/api/kunstenaars/[id]/route';
 
 const createdKunstenaarIds: string[] = [];
+const createdKlantEmails: string[] = [];
 
 afterEach(async () => {
   // createSession('medewerker', 'staff-1') gebruikt een vast nep-userId (er bestaat geen
   // medewerkerrij voor), dus elke aanroep laat een losse sessions-rij achter.
   await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
+  // De klant verwijst naar de kunstenaar, dus die moet eerst weg voordat de kunstenaar
+  // zelf wordt opgeruimd.
+  if (createdKlantEmails.length > 0) {
+    await getPool().query('DELETE FROM klanten WHERE email IN (?)', [createdKlantEmails]);
+    createdKlantEmails.length = 0;
+  }
   if (createdKunstenaarIds.length > 0) {
     await getPool().query('DELETE FROM kunstenaars WHERE id IN (?)', [createdKunstenaarIds]);
     createdKunstenaarIds.length = 0;
@@ -83,5 +92,42 @@ describe('kunstenaarnr', () => {
     const rij = (rows as Array<{ kunstenaarnr: string; naam: string }>)[0];
     expect(rij.kunstenaarnr).toBe(created.kunstenaarnr);
     expect(rij.naam).toBe('AUTOTEST Nummer Vast 2');
+  });
+});
+
+function deleteRequest(cookie: string): Request {
+  return new Request('http://localhost/api/kunstenaars/x', { method: 'DELETE', headers: { cookie } });
+}
+
+describe('kunstenaar verwijderen met een gekoppelde klant', () => {
+  it('weigert verwijderen zolang een klant aan de kunstenaar gekoppeld is', async () => {
+    const cookie = await medewerkerCookie();
+    const kunstenaar = await maakViaApi('AUTOTEST Kunstenaar Met Klant', cookie);
+    const email = 'autotest-kunstenaarnr-klant@example.com';
+    await insertRow('klanten', {
+      email,
+      wachtwoordHash: await hashPassword('x'),
+      status: 'Goedgekeurd',
+      kunstenaarnr: kunstenaar.kunstenaarnr,
+    } as never);
+    createdKlantEmails.push(email);
+
+    const geweigerd = await deleteKunstenaar(deleteRequest(cookie), { params: { id: kunstenaar.id } });
+    expect(geweigerd.status).toBe(409);
+    expect(await geweigerd.json()).toEqual({ error: 'in-use' });
+
+    const [rows] = await getPool().query('SELECT 1 FROM kunstenaars WHERE id = ?', [kunstenaar.id]);
+    expect((rows as unknown[]).length).toBe(1);
+  });
+
+  it('staat verwijderen toe zodra de koppeling weg is', async () => {
+    const cookie = await medewerkerCookie();
+    const kunstenaar = await maakViaApi('AUTOTEST Kunstenaar Zonder Klant', cookie);
+
+    const response = await deleteKunstenaar(deleteRequest(cookie), { params: { id: kunstenaar.id } });
+    expect(response.status).toBe(200);
+    const [rows] = await getPool().query('SELECT 1 FROM kunstenaars WHERE id = ?', [kunstenaar.id]);
+    expect((rows as unknown[]).length).toBe(0);
+    createdKunstenaarIds.length = 0;
   });
 });

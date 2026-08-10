@@ -38,15 +38,15 @@ async function checkOrderRight(
   klantId: string
 ): Promise<boolean> {
   const [kunstwerkRows] = await connection.query(
-    'SELECT kunstenaarId FROM kunstwerken WHERE id = ?',
+    'SELECT kunstenaarnr FROM kunstwerken WHERE id = ?',
     [kunstwerkId]
   );
-  const kunstenaarId = (kunstwerkRows as Array<{ kunstenaarId: string | null }>)[0]?.kunstenaarId;
-  if (!kunstenaarId) return true;
+  const kunstenaarnr = (kunstwerkRows as Array<{ kunstenaarnr: string | null }>)[0]?.kunstenaarnr;
+  if (!kunstenaarnr) return true;
 
   const [kunstenaarRows] = await connection.query(
-    'SELECT exclusieveKlantIds FROM kunstenaars WHERE id = ?',
-    [kunstenaarId]
+    'SELECT exclusieveKlantIds FROM kunstenaars WHERE kunstenaarnr = ?',
+    [kunstenaarnr]
   );
   const kunstenaar = (kunstenaarRows as Array<{ exclusieveKlantIds: string | string[] | null }>)[0];
   if (!kunstenaar) return false;
@@ -97,13 +97,13 @@ export const POST = withApiErrorHandling('POST /api/bestelheaders', async (reque
       // De code komt hier uit de database, niet uit de request -- dat is bewust: een
       // client kan zo geen code van een ander werk meesturen.
       const [kunstwerkRows] = await connection.query(
-        'SELECT code, kunstenaarId, maatIds, materiaalIds, prijsPerM2 FROM kunstwerken WHERE id = ?',
+        'SELECT code, kunstenaarnr, maatIds, materiaalIds, prijsPerM2 FROM kunstwerken WHERE id = ?',
         [line.kunstwerkId]
       );
       const kunstwerkRow = (
         kunstwerkRows as Array<{
           code: string;
-          kunstenaarId: string | null;
+          kunstenaarnr: string | null;
           maatIds: string | string[] | null;
           materiaalIds: string | string[] | null;
           prijsPerM2: string | null;
@@ -145,7 +145,7 @@ export const POST = withApiErrorHandling('POST /api/bestelheaders', async (reque
       const resultaat = await berekenBestellijnPrijs(
         connection,
         {
-          kunstenaarId: kunstwerkRow.kunstenaarId,
+          kunstenaarnr: kunstwerkRow.kunstenaarnr,
           maatIds,
           prijsPerM2: kunstwerkRow.prijsPerM2 != null ? Number(kunstwerkRow.prijsPerM2) : null,
         },

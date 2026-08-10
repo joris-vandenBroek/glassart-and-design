@@ -78,11 +78,11 @@ export function KunstenaarsSection({
     return map;
   }, [klanten]);
 
-  // De klant (indien aanwezig) wiens kunstenaarId naar déze kunstenaar wijst -- gebruikt
+  // De klant (indien aanwezig) wiens kunstenaarnr naar déze kunstenaar wijst -- gebruikt
   // om de "bij 2 klanten moet 1 de kunstenaar zelf zijn"-regel te valideren.
-  function eigenKlantId(kunstenaarId: string | null): string | null {
-    if (kunstenaarId === null) return null;
-    return (klanten ?? []).find((klant) => klant.kunstenaarId === kunstenaarId)?.id ?? null;
+  function eigenKlantId(kunstenaarnr: string | null): string | null {
+    if (kunstenaarnr === null) return null;
+    return (klanten ?? []).find((klant) => klant.kunstenaarnr === kunstenaarnr)?.id ?? null;
   }
 
   const exclusieveKlantIds = [klant1Id, klant2Id].filter((id): id is string => id !== null);
@@ -204,12 +204,12 @@ export function KunstenaarsSection({
   }
 
   function selectKlant(slot: 'klant1' | 'klant2', nextId: string | null) {
-    const huidigeKunstenaarId = modalState?.mode === 'edit' ? modalState.kunstenaar.id : null;
+    const huidigeKunstenaarnr = modalState?.mode === 'edit' ? modalState.kunstenaar.kunstenaarnr : null;
     const nextKlant1 = slot === 'klant1' ? nextId : klant1Id;
     const nextKlant2 = slot === 'klant2' ? nextId : klant2Id;
     const nextIds = [nextKlant1, nextKlant2].filter((id): id is string => id !== null);
     if (nextIds.length === 2) {
-      const eigenId = eigenKlantId(huidigeKunstenaarId);
+      const eigenId = eigenKlantId(huidigeKunstenaarnr);
       if (eigenId === null || !nextIds.includes(eigenId)) {
         setActionError(t('kunstenaarsExclusiviteitOngeldig'));
         return;
@@ -231,8 +231,8 @@ export function KunstenaarsSection({
     // zou opslaan van een niet-gerelateerd veld die ongeldige lijst stilzwijgend
     // verbatim wegschrijven.
     if (exclusieveKlantIds.length === 2) {
-      const huidigeKunstenaarId = modalState.mode === 'edit' ? modalState.kunstenaar.id : null;
-      const eigenId = eigenKlantId(huidigeKunstenaarId);
+      const huidigeKunstenaarnr = modalState.mode === 'edit' ? modalState.kunstenaar.kunstenaarnr : null;
+      const eigenId = eigenKlantId(huidigeKunstenaarnr);
       if (eigenId === null || !exclusieveKlantIds.includes(eigenId)) {
         setActionError(t('kunstenaarsExclusiviteitOngeldig'));
         return;
@@ -306,14 +306,24 @@ export function KunstenaarsSection({
   async function handleRemove() {
     if (modalState?.mode !== 'edit') return;
     // Nog niet geladen kunstwerken mogen niet als "niet in gebruik" gelezen worden: dat
-    // zou een kunstwerk met een dangling kunstenaarId achterlaten.
+    // zou een kunstwerk met een dangling kunstenaarnr achterlaten.
     if (kunstwerken === null) {
       setActionError(t('kunstenaarsVerwijderOnbekend'));
       return;
     }
-    const inUse = kunstwerken.some((kunstwerk) => kunstwerk.kunstenaarId === modalState.kunstenaar.id);
+    const inUse = kunstwerken.some((kunstwerk) => kunstwerk.kunstenaarnr === modalState.kunstenaar.kunstenaarnr);
     if (inUse) {
       setActionError(t('kunstenaarsVerwijderBlocked'));
+      return;
+    }
+    // Spiegelt de servercontrole in DELETE /api/kunstenaars/[id]. Nog niet geladen
+    // klanten mogen niet als "geen koppeling" gelezen worden.
+    if (klanten === null) {
+      setActionError(t('kunstenaarsVerwijderOnbekend'));
+      return;
+    }
+    if (klanten.some((klant) => klant.kunstenaarnr === modalState.kunstenaar.kunstenaarnr)) {
+      setActionError(t('kunstenaarsVerwijderBlockedKlant'));
       return;
     }
     let success: boolean;

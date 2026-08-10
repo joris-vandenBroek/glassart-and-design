@@ -22,11 +22,12 @@ CREATE TABLE klanten (
   invoiceLand VARCHAR(2),
   status VARCHAR(50) NOT NULL DEFAULT 'Beoordelen',
   prijsgroepId CHAR(36),
-  kunstenaarId CHAR(36),
+  kunstenaarnr VARCHAR(20),
   minimaleAfname INT,
   klantnr VARCHAR(20),
   createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uniq_klanten_kunstenaarId (kunstenaarId)
+  UNIQUE KEY uniq_klanten_kunstenaarnr (kunstenaarnr),
+  FOREIGN KEY (kunstenaarnr) REFERENCES kunstenaars(kunstenaarnr)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE medewerkers (
@@ -159,7 +160,7 @@ CREATE TABLE kunstwerken (
   id CHAR(36) PRIMARY KEY,
   foto VARCHAR(500),
   code VARCHAR(255) NOT NULL DEFAULT '',
-  kunstenaarId CHAR(36),
+  kunstenaarnr VARCHAR(20),
   formaat VARCHAR(20),
   omschrijvingNl TEXT,
   omschrijvingFr TEXT,
@@ -173,7 +174,7 @@ CREATE TABLE kunstwerken (
   aiGegenereerd BOOLEAN DEFAULT FALSE,
   prijsPerM2 DECIMAL(10,2),
   UNIQUE KEY uniek_code (code),
-  FOREIGN KEY (kunstenaarId) REFERENCES kunstenaars(id)
+  FOREIGN KEY (kunstenaarnr) REFERENCES kunstenaars(kunstenaarnr)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE instellingen (

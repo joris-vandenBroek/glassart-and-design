@@ -38,7 +38,7 @@ const KLANTEN: Klant[] = [
     invoiceCity: '',
     status: 'Beoordelen',
     prijsgroepId: null,
-    kunstenaarId: null,
+    kunstenaarnr: null,
     klantnr: 'KL-00001',
   },
   {
@@ -62,7 +62,7 @@ const KLANTEN: Klant[] = [
     invoiceCity: '',
     status: 'Goedgekeurd',
     prijsgroepId: 'pg-1',
-    kunstenaarId: null,
+    kunstenaarnr: null,
   },
 ];
 

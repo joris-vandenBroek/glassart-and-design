@@ -51,7 +51,7 @@ const KUNSTWERKEN: Kunstwerk[] = [
     id: 'kw-1',
     foto: 'https://example.com/kw-1.jpg',
     code: 'Hotel paneel',
-    kunstenaarId: null,
+    kunstenaarnr: null,
     segmentIds: [],
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
@@ -87,7 +87,7 @@ const KLANTEN: Klant[] = [
     invoiceCity: '',
     status: 'Goedgekeurd',
     prijsgroepId: 'pg-1',
-    kunstenaarId: null,
+    kunstenaarnr: null,
   },
 ];
 

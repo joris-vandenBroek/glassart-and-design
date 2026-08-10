@@ -28,7 +28,7 @@ const KUNSTWERKEN: Kunstwerk[] = [
     id: 'kw-1',
     foto: 'https://example.com/kw-1.jpg',
     code: 'Landschapspaneel',
-    kunstenaarId: null,
+    kunstenaarnr: null,
     segmentIds: [],
     materiaalIds: [],
     maatIds: [],

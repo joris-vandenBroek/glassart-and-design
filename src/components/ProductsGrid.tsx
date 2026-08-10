@@ -104,7 +104,7 @@ export function ProductsGrid() {
     return !aiGegenereerdFilter || kunstwerk.aiGegenereerd === true;
   }
   function matchesKunstenaar(kunstwerk: Kunstwerk) {
-    return kunstenaarFilter === null || kunstwerk.kunstenaarId === kunstenaarFilter;
+    return kunstenaarFilter === null || kunstwerk.kunstenaarnr === kunstenaarFilter;
   }
 
   const visibleKunstwerken = allKunstwerken.filter(

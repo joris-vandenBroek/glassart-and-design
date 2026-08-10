@@ -23,7 +23,7 @@ const KUNSTWERK: Kunstwerk = {
   id: 'kw-1',
   foto: 'https://example.com/kw-1.jpg',
   code: 'Hotel paneel',
-  kunstenaarId: null,
+  kunstenaarnr: null,
   segmentIds: ['seg-1'],
   materiaalIds: ['mat-1', 'mat-2'],
   maatIds: ['maat-1', 'maat-2'],
@@ -57,7 +57,7 @@ const MATERIAALLOOS_KUNSTWERK: Kunstwerk = {
   id: 'kw-akoestisch',
   foto: 'https://example.com/akoestisch.jpg',
   code: 'Akoestisch paneel',
-  kunstenaarId: null,
+  kunstenaarnr: null,
   segmentIds: [],
   materiaalIds: [],
   maatIds: [],
@@ -71,7 +71,7 @@ const MAATLOOS_MET_MATERIAAL_KUNSTWERK: Kunstwerk = {
   id: 'kw-veiligheidsglas-per-m2',
   foto: 'https://example.com/veiligheidsglas.jpg',
   code: '4mm veiligheidsglas per m2',
-  kunstenaarId: null,
+  kunstenaarnr: null,
   segmentIds: [],
   materiaalIds: ['mat-1'],
   maatIds: [],
@@ -194,7 +194,7 @@ describe('ProductModal', () => {
   });
 
   it('disables the confirm button and explains why for a kunstwerk exclusive to another klant', () => {
-    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-exclusief' });
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarnr: 'KU-00002' });
     expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
     expect(screen.getByTestId('product-modal-order-blocked')).toHaveTextContent(
       'Dit kunstwerk is exclusief voorbehouden aan een andere klant.'
@@ -202,30 +202,30 @@ describe('ProductModal', () => {
   });
 
   it('does not block ordering for a kunstwerk with no kunstenaar or an open one', () => {
-    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: null });
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarnr: null });
     expect(screen.queryByTestId('product-modal-order-blocked')).not.toBeInTheDocument();
-    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-open' });
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarnr: 'KU-00001' });
     expect(screen.queryByTestId('product-modal-order-blocked')).not.toBeInTheDocument();
   });
 
-  it('keeps a legacy kunstwerk document without a kunstenaarId field orderable', () => {
+  it('keeps a legacy kunstwerk document without a kunstenaarnr field orderable', () => {
     // Zoals useApiCollection het via de API leest: het veld ontbreekt gewoon.
-    const { kunstenaarId: _weg, ...legacyKunstwerk } = KUNSTWERK;
+    const { kunstenaarnr: _weg, ...legacyKunstwerk } = KUNSTWERK;
     renderModal(() => {}, legacyKunstwerk as Kunstwerk);
     expect(screen.queryByTestId('product-modal-order-blocked')).not.toBeInTheDocument();
     expect(screen.getByTestId('product-modal-confirm')).not.toBeDisabled();
   });
 
   it('fails closed while the kunstenaars collection has not loaded yet', () => {
-    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-open' }, null);
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarnr: 'KU-00001' }, null);
     expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
     expect(screen.getByTestId('product-modal-order-blocked')).toHaveTextContent(
       'Dit kunstwerk kan op dit moment niet besteld worden. Probeer het later opnieuw.'
     );
   });
 
-  it('fails closed for a kunstenaarId that no longer exists in the loaded kunstenaars', () => {
-    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-verwijderd' });
+  it('fails closed for a kunstenaarnr that no longer exists in the loaded kunstenaars', () => {
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarnr: 'KU-99999' });
     expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
     expect(screen.getByTestId('product-modal-order-blocked')).toHaveTextContent(
       'Dit kunstwerk kan op dit moment niet besteld worden. Probeer het later opnieuw.'
@@ -238,7 +238,7 @@ describe('ProductModal', () => {
     // an explicit entry in exclusieveKlantIds does.
     vi.useRealTimers();
     authUser = { id: 'kunstenaar-uid', email: 'ka@example.com', status: 'Goedgekeurd', companyName: 'Atelier' };
-    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-eigen' });
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarnr: 'KU-00003' });
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
@@ -1082,7 +1082,7 @@ describe('ProductModal', () => {
   it('shows artiest, collectie, stijl and onderwerp when the kunstwerk has them', () => {
     renderModal(() => {}, {
       ...KUNSTWERK,
-      kunstenaarId: 'ka-open',
+      kunstenaarnr: 'KU-00001',
       segmentIds: ['seg-1'],
       stijlIds: ['stijl-1'],
       onderwerpIds: ['onderwerp-1'],
@@ -1095,12 +1095,12 @@ describe('ProductModal', () => {
   });
 
   it('omits the whole info block when the kunstwerk has no artiest, collectie, stijl or onderwerp', () => {
-    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: null, segmentIds: [], stijlIds: [], onderwerpIds: [] });
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarnr: null, segmentIds: [], stijlIds: [], onderwerpIds: [] });
     expect(screen.queryByTestId('product-modal-meta')).not.toBeInTheDocument();
   });
 
   it('only shows the fields that have data, omitting the rest', () => {
-    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: null, segmentIds: ['seg-1'], stijlIds: [], onderwerpIds: [] });
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarnr: null, segmentIds: ['seg-1'], stijlIds: [], onderwerpIds: [] });
     expect(screen.getByTestId('product-modal-collecties')).toHaveTextContent('Hotel');
     expect(screen.queryByTestId('product-modal-artiest')).not.toBeInTheDocument();
     expect(screen.queryByTestId('product-modal-stijl')).not.toBeInTheDocument();

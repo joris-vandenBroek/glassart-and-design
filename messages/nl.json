@@ -717,6 +717,7 @@
     "kunstenaarsHelp": "Hier beheer je een kunstenaar en de prijsafspraken die je met hem of haar hebt.",
     "kunstenaarsModalTitelBewerken": "Kunstenaar bewerken",
     "kunstenaarsVerwijderBlocked": "Deze kunstenaar is nog aan een kunstwerk gekoppeld en kan niet verwijderd worden.",
+    "kunstenaarsVerwijderBlockedKlant": "Deze kunstenaar is nog aan een klant gekoppeld en kan niet verwijderd worden.",
     "prijsmatrixLoadError": "Kon de prijsmatrix niet laden. Probeer de pagina te verversen.",
     "prijsmatrixActionError": "Er is iets misgegaan. Probeer het opnieuw.",
     "prijsmatrixTitle": "Prijs per maat en materiaal",

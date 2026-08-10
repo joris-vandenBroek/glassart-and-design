@@ -31,7 +31,7 @@ export interface Klant {
   klantnr?: string | null;
   status: 'Beoordelen' | 'Goedgekeurd' | 'Afgewezen';
   prijsgroepId: string | null;
-  kunstenaarId: string | null;
+  kunstenaarnr: string | null;
   minimaleAfname?: number | null;
 }
 

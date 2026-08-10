@@ -128,7 +128,7 @@ async function maakGeprijsdKunstwerk(
   maatId: string,
   materiaalId: string,
   matrixPrijs: number,
-  kunstenaarId: string | null = null
+  kunstenaarnr: string | null = null
 ): Promise<string> {
   await getPool().query('INSERT INTO prijsmatrix (id, maatId, materiaalId, prijs) VALUES (UUID(), ?, ?, ?)', [
     maatId,
@@ -139,7 +139,7 @@ async function maakGeprijsdKunstwerk(
     'kunstwerken',
     {
       code: `test-bestelheaders-werk-${++kunstwerkTeller}`,
-      kunstenaarId,
+      kunstenaarnr,
       materiaalIds: [materiaalId],
       maatIds: [maatId],
     } as never,
@@ -190,7 +190,7 @@ describe('bestelheaders routes', () => {
     } as never);
     createdKunstenaarIds.push(kunstenaar.id);
     await getPool().query('INSERT INTO kunstenaarAfspraken (id, prijsopslag) VALUES (?, ?)', [kunstenaar.id, 40]);
-    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100, kunstenaar.id);
+    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100, 'AT-K-BH-1');
 
     const response = await createHeader(
       postRequest({ lines: [{ kunstwerkId, maatId, materiaalId, prijs: 1, quantity: 1 }] }, cookie)
@@ -226,7 +226,7 @@ describe('bestelheaders routes', () => {
     } as never);
     createdKunstenaarIds.push(kunstenaar.id);
     await getPool().query('INSERT INTO kunstenaarAfspraken (id, prijsopslag) VALUES (?, ?)', [kunstenaar.id, 40]);
-    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100, kunstenaar.id);
+    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100, 'AT-K-BH-2');
 
     const response = await createHeader(
       postRequest({ lines: [{ kunstwerkId, maatId, materiaalId, prijs: 1, quantity: 1 }] }, cookie)
@@ -758,7 +758,7 @@ describe('bestelheaders routes', () => {
       ['exclusieveKlantIds']
     );
     createdKunstenaarIds.push(kunstenaar.id);
-    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100, kunstenaar.id);
+    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100, 'AT-K-BH-3');
 
     const response = await createHeader(
       postRequest({ lines: [{ kunstwerkId, maatId, materiaalId, prijs: 100, quantity: 1 }] }, klantA.cookie)
@@ -840,7 +840,7 @@ describe('bestelheaders routes', () => {
       ['exclusieveKlantIds']
     );
     createdKunstenaarIds.push(kunstenaar.id);
-    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100, kunstenaar.id);
+    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100, 'AT-K-BH-4');
 
     const line = { kunstwerkId, maatId, materiaalId, prijs: 100, quantity: 1 };
     expect((await createHeader(postRequest({ lines: [line] }, klantA.cookie))).status).toBe(201);

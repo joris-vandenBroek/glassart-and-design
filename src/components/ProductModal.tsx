@@ -137,7 +137,7 @@ export function ProductModal({
 
   // Dezelfde helper als CartPanel gebruikt bij het plaatsen van de bestelling, zodat de
   // UI-blokkade niet uit de pas kan lopen met de controle vlak vóór het wegschrijven.
-  const { canOrder, blockedReason } = resolveOrderRight(kunstwerk.kunstenaarId, kunstenaars, user?.uid);
+  const { canOrder, blockedReason } = resolveOrderRight(kunstwerk.kunstenaarnr, kunstenaars, user?.uid);
 
   const beschikbareMaterialen = (materialen ?? []).filter((materiaal) =>
     kunstwerk.materiaalIds.includes(materiaal.id)
@@ -164,8 +164,8 @@ export function ProductModal({
     : undefined;
   const omschrijving = resolveKunstwerkOmschrijving(kunstwerk, locale);
 
-  const artiestNaam = kunstwerk.kunstenaarId
-    ? (kunstenaars ?? []).find((kunstenaar) => kunstenaar.id === kunstwerk.kunstenaarId)?.naam ?? ''
+  const artiestNaam = kunstwerk.kunstenaarnr
+    ? (kunstenaars ?? []).find((kunstenaar) => kunstenaar.kunstenaarnr === kunstwerk.kunstenaarnr)?.naam ?? ''
     : '';
   const collectieLabels = kunstwerk.segmentIds.map(
     (segmentId) => (segmenten ?? []).find((segment) => segment.id === segmentId)?.omschrijving ?? segmentId

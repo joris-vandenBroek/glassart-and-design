@@ -41,10 +41,10 @@ const KLANT: Klant = {
   invoiceLand: '',
   status: 'Beoordelen',
   prijsgroepId: null,
-  kunstenaarId: null,
+  kunstenaarnr: null,
 };
 
-const ANDERE_KLANT: Klant = { ...KLANT, id: 'uid-2', companyName: 'Ander Bedrijf BV', kunstenaarId: 'ka-2' };
+const ANDERE_KLANT: Klant = { ...KLANT, id: 'uid-2', companyName: 'Ander Bedrijf BV', kunstenaarnr: 'KU-00002' };
 
 const PRIJSGROEPEN: Prijsgroep[] = [
   { id: 'pg-1', naam: 'Standaard', kortingspercentage: 0, opslagpercentage: null },
@@ -492,15 +492,15 @@ describe('KlantModal', () => {
     expect(screen.queryByTestId('klant-modal-exclusief-ka-2')).not.toBeInTheDocument();
   });
 
-  it('links this klant account to a kunstenaar via the combobox and saves kunstenaarId', async () => {
+  it('links this klant account to a kunstenaar via the combobox and saves kunstenaarnr', async () => {
     const { onUpdated } = renderModal(KLANT);
     fireEvent.focus(screen.getByTestId('klant-modal-kunstenaar'));
-    fireEvent.click(screen.getByTestId('klant-modal-kunstenaar-option-ka-1'));
+    fireEvent.click(screen.getByTestId('klant-modal-kunstenaar-option-KU-00001'));
     fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
 
     await waitFor(() => expect(patchCall()).toBeDefined());
-    expect(patchBody()).toEqual({ kunstenaarId: 'ka-1' });
-    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, kunstenaarId: 'ka-1' }));
+    expect(patchBody()).toEqual({ kunstenaarnr: 'KU-00001' });
+    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, kunstenaarnr: 'KU-00001' }));
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'klant_kunstenaarkoppeling_gewijzigd',
       'Testbedrijf BV'
@@ -510,7 +510,7 @@ describe('KlantModal', () => {
   it('blocks linking a kunstenaar that another klant already claims', () => {
     renderModal(KLANT);
     fireEvent.focus(screen.getByTestId('klant-modal-kunstenaar'));
-    fireEvent.click(screen.getByTestId('klant-modal-kunstenaar-option-ka-2'));
+    fireEvent.click(screen.getByTestId('klant-modal-kunstenaar-option-KU-00002'));
     expect(screen.getByTestId('klant-modal-error')).toHaveTextContent(
       'Deze kunstenaar is al gekoppeld aan een ander klantaccount.'
     );
@@ -518,14 +518,14 @@ describe('KlantModal', () => {
   });
 
   it('allows clearing an existing kunstenaar-koppeling', async () => {
-    const { onUpdated } = renderModal({ ...KLANT, kunstenaarId: 'ka-1' });
+    const { onUpdated } = renderModal({ ...KLANT, kunstenaarnr: 'KU-00001' });
     fireEvent.focus(screen.getByTestId('klant-modal-kunstenaar'));
     fireEvent.click(screen.getByTestId('klant-modal-kunstenaar-option-clear'));
     fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
 
     await waitFor(() => expect(patchCall()).toBeDefined());
-    expect(patchBody()).toEqual({ kunstenaarId: null });
-    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, kunstenaarId: null }));
+    expect(patchBody()).toEqual({ kunstenaarnr: null });
+    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, kunstenaarnr: null }));
   });
 
   it('shows a help popover with an explanation of the screen', () => {

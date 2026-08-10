@@ -32,7 +32,7 @@ const KLANT_DATA = {
   invoiceCity: '',
   status: 'Beoordelen',
   prijsgroepId: null,
-  kunstenaarId: null,
+  kunstenaarnr: null,
   minimaleAfname: null,
 };
 
@@ -185,7 +185,7 @@ describe('BeheerShell', () => {
     mockCollections({
       klanten: [{ id: 'uid-1', ...KLANT_DATA }],
       kunstenaars: [
-        { id: 'ka-1', naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', exclusieveKlantIds: [] },
+        { id: 'ka-1', kunstenaarnr: 'ka-1', naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', exclusieveKlantIds: [] },
       ],
     });
     renderShell();
@@ -204,7 +204,7 @@ describe('BeheerShell', () => {
         '/api/klanten/uid-1',
         expect.objectContaining({
           method: 'PATCH',
-          body: JSON.stringify({ kunstenaarId: 'ka-1' }),
+          body: JSON.stringify({ kunstenaarnr: 'ka-1' }),
         })
       )
     );
@@ -378,7 +378,7 @@ describe('BeheerShell', () => {
   it('shows the count and switches to the Kunstenaars section', async () => {
     mockCollections({
       kunstenaars: [
-        { id: 'ka-1', naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', exclusieveKlantIds: [] },
+        { id: 'ka-1', kunstenaarnr: 'ka-1', naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', exclusieveKlantIds: [] },
       ],
     });
     renderShell();

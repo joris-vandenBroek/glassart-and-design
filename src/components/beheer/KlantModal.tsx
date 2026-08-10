@@ -90,7 +90,7 @@ export function KlantModal({
 }: KlantModalProps) {
   const t = useTranslations('beheer');
   const [prijsgroepId, setPrijsgroepId] = useState('');
-  const [kunstenaarId, setKunstenaarId] = useState<string | null>(null);
+  const [kunstenaarnr, setKunstenaarnr] = useState<string | null>(null);
   const [minimaleAfname, setMinimaleAfname] = useState('');
   const [fields, setFields] = useState<EditableFields | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -113,7 +113,7 @@ export function KlantModal({
   useEffect(() => {
     if (klant) {
       setPrijsgroepId(klant.prijsgroepId ?? '');
-      setKunstenaarId(klant.kunstenaarId);
+      setKunstenaarnr(klant.kunstenaarnr);
       setMinimaleAfname(klant.minimaleAfname != null ? String(klant.minimaleAfname) : '');
       setFields(fieldsFromKlant(klant));
       setIsEditing(false);
@@ -136,10 +136,10 @@ export function KlantModal({
     setIsEditing(false);
   }
 
-  function handleKunstenaarChange(nextKunstenaarId: string | null) {
-    if (nextKunstenaarId) {
+  function handleKunstenaarChange(nextKunstenaarnr: string | null) {
+    if (nextKunstenaarnr) {
       const alreadyClaimedBy = (klanten ?? []).find(
-        (other) => other.id !== klant?.id && other.kunstenaarId === nextKunstenaarId
+        (other) => other.id !== klant?.id && other.kunstenaarnr === nextKunstenaarnr
       );
       if (alreadyClaimedBy) {
         setError(t('klantenKunstenaarBlocked'));
@@ -147,7 +147,7 @@ export function KlantModal({
       }
     }
     setError(null);
-    setKunstenaarId(nextKunstenaarId);
+    setKunstenaarnr(nextKunstenaarnr);
   }
 
   async function handleOpslaan() {
@@ -175,7 +175,7 @@ export function KlantModal({
       isEditing && (Object.keys(origineleFields) as (keyof EditableFields)[]).some((key) => fields[key] !== origineleFields[key]);
     const prijsgroepGewijzigd =
       klant.status === 'Goedgekeurd' && prijsgroepId !== '' && prijsgroepId !== (klant.prijsgroepId ?? '');
-    const kunstenaarIdGewijzigd = kunstenaarId !== (klant.kunstenaarId ?? null);
+    const kunstenaarIdGewijzigd = kunstenaarnr !== (klant.kunstenaarnr ?? null);
     const trimmedMinimaleAfname = minimaleAfname.trim();
     const parsedMinimaleAfname =
       trimmedMinimaleAfname === '' ? null : Math.max(1, Math.round(Number(trimmedMinimaleAfname)) || 1);
@@ -190,7 +190,7 @@ export function KlantModal({
       const updates: Partial<Klant> = {};
       if (veldenGewijzigd) Object.assign(updates, teBewarenFields);
       if (prijsgroepGewijzigd) updates.prijsgroepId = prijsgroepId;
-      if (kunstenaarIdGewijzigd) updates.kunstenaarId = kunstenaarId;
+      if (kunstenaarIdGewijzigd) updates.kunstenaarnr = kunstenaarnr;
       if (minimaleAfnameGewijzigd) updates.minimaleAfname = parsedMinimaleAfname;
 
       const response = await fetch(`/api/klanten/${klant.id}`, {
@@ -559,8 +559,8 @@ export function KlantModal({
             <label className="flex flex-1 flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
               {t('klantenLabelKunstenaar')}
               <Combobox
-                options={(kunstenaars ?? []).map((kunstenaar) => ({ value: kunstenaar.id, label: kunstenaar.naam }))}
-                value={kunstenaarId}
+                options={(kunstenaars ?? []).map((kunstenaar) => ({ value: kunstenaar.kunstenaarnr, label: kunstenaar.naam }))}
+                value={kunstenaarnr}
                 onChange={handleKunstenaarChange}
                 placeholder={t('klantenKunstenaarPlaceholder')}
                 noResultsLabel={t('klantenKunstenaarGeenResultaten')}
