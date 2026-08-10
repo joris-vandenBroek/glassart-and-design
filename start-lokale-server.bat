@@ -1,5 +1,5 @@
 @echo off
-cd /d "C:\Temp\Glassart and design"
+cd /d "%~dp0"
 echo Lokale server wordt gestart op http://localhost:3000 ...
 call npm run dev
 pause
