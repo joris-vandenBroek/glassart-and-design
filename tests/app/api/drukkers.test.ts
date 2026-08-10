@@ -73,6 +73,7 @@ describe('drukkers routes', () => {
   it('clears standaard on every other drukker when a new drukker is created as standaard', async () => {
     const cookie = await medewerkerCookie();
     const existing = await insertRow<{ id: string }>('drukkers', {
+      drukkernr: 'AT-D-DRK-1',
       naam: 'Drukkerij Eerste',
       email: 'eerste@example.com',
       standaard: true,
@@ -94,12 +95,14 @@ describe('drukkers routes', () => {
   it('clears standaard on every other drukker when an existing drukker is patched to standaard', async () => {
     const cookie = await medewerkerCookie();
     const drukkerA = await insertRow<{ id: string }>('drukkers', {
+      drukkernr: 'AT-D-DRK-2',
       naam: 'Drukkerij A',
       email: 'a@example.com',
       standaard: true,
     } as never);
     createdDrukkerIds.push(drukkerA.id);
     const drukkerB = await insertRow<{ id: string }>('drukkers', {
+      drukkernr: 'AT-D-DRK-3',
       naam: 'Drukkerij B',
       email: 'b@example.com',
       standaard: false,
@@ -116,14 +119,15 @@ describe('drukkers routes', () => {
 
   it('blocks deleting a drukker with verzonden zendingen, allows it once the zendingen are gone', async () => {
     const cookie = await medewerkerCookie();
-    const drukker = await insertRow<{ id: string }>('drukkers', {
+    const drukker = await insertRow<{ id: string; drukkernr: string }>('drukkers', {
+      drukkernr: 'AT-D-DRK-4',
       naam: 'Drukkerij Met Zending',
       email: 'zending@example.com',
     } as never);
     createdDrukkerIds.push(drukker.id);
     await getPool().query(
-      'INSERT INTO drukkerZendingen (id, drukkerId, onderwerp, body, bestellingIds, aantalKlanten, aantalRegels) VALUES (UUID(), ?, ?, ?, ?, 1, 1)',
-      [drukker.id, 'Test zending', 'Body', JSON.stringify(['header-1'])]
+      'INSERT INTO drukkerZendingen (id, drukkernr, onderwerp, body, bestellingIds, aantalKlanten, aantalRegels) VALUES (UUID(), ?, ?, ?, ?, 1, 1)',
+      [drukker.drukkernr, 'Test zending', 'Body', JSON.stringify(['header-1'])]
     );
 
     const blocked = await deleteDrukker(req('DELETE', undefined, cookie), { params: { id: drukker.id } });
@@ -133,9 +137,9 @@ describe('drukkers routes', () => {
     const stillThere = await getDrukker(req('GET', undefined, cookie), { params: { id: drukker.id } });
     expect(stillThere.status).toBe(200);
 
-    // drukkerZendingen.drukkerId is ON DELETE CASCADE, so removing the zending directly is
-    // the only way to get back to an unreferenced state for the second half of this test.
-    await getPool().query('DELETE FROM drukkerZendingen WHERE drukkerId = ?', [drukker.id]);
+    // drukkerZendingen.drukkernr cascadeert niet meer, dus het handmatig weghalen van de
+    // zending is nu wat de foreign key vereist om weer bij een onverwezen staat te komen.
+    await getPool().query('DELETE FROM drukkerZendingen WHERE drukkernr = ?', [drukker.drukkernr]);
     const allowed = await deleteDrukker(req('DELETE', undefined, cookie), { params: { id: drukker.id } });
     expect(allowed.status).toBe(200);
     createdDrukkerIds.length = 0;

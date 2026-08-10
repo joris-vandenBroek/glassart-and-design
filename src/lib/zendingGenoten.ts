@@ -2,7 +2,7 @@ import type { Bestelling } from '@/components/beheer/BestellingenSection';
 
 export interface Zending {
   id: string;
-  drukkerId: string;
+  drukkernr: string;
   drukkerNaam: string;
   verzondenOp: Date | null;
   bestellingIds: string[];
@@ -29,14 +29,14 @@ async function fetchZendingenBatch(bestellingIds: string[]): Promise<Zending[]> 
   }
   const rows = (await response.json()) as Array<{
     id: string;
-    drukkerId: string;
+    drukkernr: string;
     drukkerNaam: string;
     verzondenOp: string | null;
     bestellingIds: string[] | null;
   }>;
   return rows.map((row) => ({
     id: row.id,
-    drukkerId: row.drukkerId,
+    drukkernr: row.drukkernr,
     drukkerNaam: row.drukkerNaam,
     verzondenOp: row.verzondenOp ? new Date(row.verzondenOp) : null,
     bestellingIds: row.bestellingIds ?? [],

@@ -420,11 +420,13 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
       stap('Beide bestellingen goedgekeurd -> "Te versturen naar drukker"');
 
       const drukkerStandaard = await insertRow<{ id: string; naam: string }>('drukkers', {
+        drukkernr: 'AT-D-REG-1',
         naam: 'AUTOTEST Drukker Standaard',
         email: 'autotest-standaard@example.com',
         standaard: true,
       } as never);
       const drukkerAlternatief = await insertRow<{ id: string; naam: string }>('drukkers', {
+        drukkernr: 'AT-D-REG-2',
         naam: 'AUTOTEST Drukker Alternatief',
         email: 'autotest-alternatief@example.com',
         standaard: false,
@@ -499,7 +501,14 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
       const pool = getPool();
       if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
       if (fixture) await fixture.opruimen();
-      if (drukkerIds.length > 0) await pool.query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]); // cascades drukkerZendingen
+      if (drukkerIds.length > 0) {
+        // drukkerZendingen cascadeert niet meer mee met een verwijderde drukker; eerst die weg.
+        await pool.query(
+          'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
+          [drukkerIds]
+        );
+        await pool.query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]);
+      }
     }
   });
 });
@@ -692,6 +701,7 @@ describe('Bestelling-levenscyclus -- plaatsen tot verstuurd naar drukker', () =>
       stap('Bestelling goedgekeurd -> "Te versturen naar drukker"');
 
       const drukker = await insertRow<{ id: string; naam: string }>('drukkers', {
+        drukkernr: 'AT-D-REG-3',
         naam: 'AUTOTEST Drukker Levenscyclus',
         email: 'autotest-levenscyclus-drukker@example.com',
         standaard: false,
@@ -724,7 +734,14 @@ describe('Bestelling-levenscyclus -- plaatsen tot verstuurd naar drukker', () =>
       const pool = getPool();
       if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
       if (fixture) await fixture.opruimen();
-      if (drukkerIds.length > 0) await pool.query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]);
+      if (drukkerIds.length > 0) {
+        // drukkerZendingen cascadeert niet meer mee met een verwijderde drukker; eerst die weg.
+        await pool.query(
+          'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
+          [drukkerIds]
+        );
+        await pool.query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]);
+      }
       stap('Opgeruimd: klant, kunstwerk, maat/materiaal, drukker.');
     }
   });
@@ -1193,6 +1210,7 @@ describe('Bestelling afronden -- van plaatsing tot "Afgerond" met bestelstatusHi
       expect(goedkeuren.status).toBe(200);
 
       const drukker = await insertRow<{ id: string; naam: string }>('drukkers', {
+        drukkernr: 'AT-D-REG-4',
         naam: 'AUTOTEST Drukker Afronden',
         email: 'autotest-afronden-drukker@example.com',
         standaard: false,
@@ -1245,7 +1263,14 @@ describe('Bestelling afronden -- van plaatsing tot "Afgerond" met bestelstatusHi
       // opruimenKlanten verwijdert ook de bestelheader (via klantId IN (...)) -- geen
       // apart headerId-cleanup nodig, zelfde patroon als de andere scenario's in dit bestand.
       await opruimenKlanten(klantEmails);
-      if (drukkerIds.length > 0) await getPool().query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]); // cascades drukkerZendingen
+      if (drukkerIds.length > 0) {
+        // drukkerZendingen cascadeert niet meer mee met een verwijderde drukker; eerst die weg.
+        await getPool().query(
+          'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
+          [drukkerIds]
+        );
+        await getPool().query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]);
+      }
     }
   });
 });

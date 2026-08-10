@@ -24,7 +24,7 @@ const GENOTEN: ZendingGenoten[] = [
   {
     zending: {
       id: 'z1',
-      drukkerId: 'drukker-1',
+      drukkernr: 'DR-00001',
       drukkerNaam: 'Drukkerij Janssen',
       verzondenOp: new Date('2026-08-03T10:00:00Z'),
       bestellingIds: ['header-1', 'header-2'],

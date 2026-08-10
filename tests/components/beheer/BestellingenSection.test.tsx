@@ -92,7 +92,7 @@ const KLANTEN: Klant[] = [
 ];
 
 const DRUKKERS: Drukker[] = [
-  { id: 'drukker-1', naam: 'Drukkerij Janssen', adres: 'Perslaan 1', postcode: '1000 AA', plaats: 'Utrecht', email: 'info@janssen.nl', prijsafspraken: '' },
+  { id: 'drukker-1', drukkernr: 'DR-00003', naam: 'Drukkerij Janssen', adres: 'Perslaan 1', postcode: '1000 AA', plaats: 'Utrecht', email: 'info@janssen.nl', prijsafspraken: '' },
 ];
 
 const BESTELLINGEN: Bestelling[] = [
@@ -498,7 +498,7 @@ describe('BestellingenSection', () => {
       mockLookup([
         {
           id: 'z1',
-          drukkerId: 'drukker-1',
+          drukkernr: 'DR-00003',
           drukkerNaam: 'Drukkerij Janssen',
           verzondenOp: '2026-08-03T10:00:00Z',
           bestellingIds: ['header-2', 'header-9'],
@@ -523,7 +523,7 @@ describe('BestellingenSection', () => {
       mockLookup([
         {
           id: 'z1',
-          drukkerId: 'drukker-1',
+          drukkernr: 'DR-00003',
           drukkerNaam: 'Drukkerij Janssen',
           verzondenOp: '2026-08-03T10:00:00Z',
           bestellingIds: ['header-2', 'header-9'],
@@ -635,7 +635,7 @@ describe('BestellingenSection', () => {
       mockLookup([
         {
           id: 'z1',
-          drukkerId: 'drukker-1',
+          drukkernr: 'DR-00003',
           drukkerNaam: 'Drukkerij Janssen',
           verzondenOp: '2026-08-03T10:00:00Z',
           bestellingIds: ['header-2', 'header-9'],
@@ -705,7 +705,7 @@ describe('BestellingenSection', () => {
               json: async () => [
                 {
                   id: 'z1',
-                  drukkerId: 'drukker-1',
+                  drukkernr: 'DR-00003',
                   drukkerNaam: 'Drukkerij Janssen',
                   verzondenOp: '2026-08-03T10:00:00Z',
                   bestellingIds: ['header-2', 'header-9'],
@@ -825,7 +825,7 @@ describe('BestellingenSection', () => {
                 json: async () => [
                   {
                     id: 'z1',
-                    drukkerId: 'drukker-1',
+                    drukkernr: 'DR-00003',
                     drukkerNaam: 'Drukkerij Janssen',
                     verzondenOp: '2026-08-03T10:00:00Z',
                     bestellingIds: ['header-2', 'header-9'],
@@ -889,7 +889,7 @@ describe('BestellingenSection', () => {
                 json: async () => [
                   {
                     id: 'z1',
-                    drukkerId: 'drukker-1',
+                    drukkernr: 'DR-00003',
                     drukkerNaam: 'Drukkerij Janssen',
                     verzondenOp: '2026-08-03T10:00:00Z',
                     bestellingIds: ['header-2', 'header-9'],
@@ -903,7 +903,7 @@ describe('BestellingenSection', () => {
                 json: async () => [
                   {
                     id: 'z2',
-                    drukkerId: 'drukker-1',
+                    drukkernr: 'DR-00003',
                     drukkerNaam: 'Drukkerij Janssen',
                     verzondenOp: '2026-08-03T10:00:00Z',
                     bestellingIds: ['header-5', 'header-10'],
@@ -952,7 +952,7 @@ describe('BestellingenSection', () => {
               json: async () => [
                 {
                   id: 'z1',
-                  drukkerId: 'drukker-1',
+                  drukkernr: 'DR-00003',
                   drukkerNaam: 'Drukkerij Janssen',
                   verzondenOp: '2026-08-03T10:00:00Z',
                   bestellingIds: ['header-2', 'header-9'],

@@ -25,9 +25,9 @@ export const GET = withMedewerker('GET /api/drukkerzendingen', async (request: R
   // MySQL 8.0.17+, terwijl JSON_CONTAINS vanaf 5.7 beschikbaar is.
   const where = ids.map(() => 'JSON_CONTAINS(z.bestellingIds, JSON_QUOTE(?))').join(' OR ');
   const [rows] = await getPool().query(
-    `SELECT z.id, z.drukkerId, z.verzondenOp, z.bestellingIds, d.naam AS drukkerNaam
+    `SELECT z.id, z.drukkernr, z.verzondenOp, z.bestellingIds, d.naam AS drukkerNaam
      FROM drukkerZendingen z
-     JOIN drukkers d ON d.id = z.drukkerId
+     JOIN drukkers d ON d.drukkernr = z.drukkernr
      WHERE ${where}
      ORDER BY z.verzondenOp DESC`,
     ids

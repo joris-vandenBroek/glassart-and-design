@@ -69,6 +69,7 @@ export interface Prijsgroep {
 
 export interface Drukker {
   id: string;
+  drukkernr: string;
   naam: string;
   adres: string;
   postcode: string;

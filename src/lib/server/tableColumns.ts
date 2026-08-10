@@ -71,10 +71,10 @@ export const TABLE_COLUMNS: Record<string, readonly string[]> = {
     'exclusieveKlantIds',
   ],
   kunstenaarAfspraken: ['id', 'prijsafspraken', 'prijsopslag'],
-  drukkers: ['id', 'naam', 'adres', 'postcode', 'plaats', 'email', 'prijsafspraken', 'standaard'],
+  drukkers: ['id', 'drukkernr', 'naam', 'adres', 'postcode', 'plaats', 'email', 'prijsafspraken', 'standaard'],
   drukkerZendingen: [
     'id',
-    'drukkerId',
+    'drukkernr',
     'verzondenOp',
     'onderwerp',
     'body',

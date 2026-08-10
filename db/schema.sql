@@ -133,18 +133,20 @@ CREATE TABLE kunstenaarAfspraken (
 
 CREATE TABLE drukkers (
   id CHAR(36) PRIMARY KEY,
+  drukkernr VARCHAR(20) NOT NULL,
   naam VARCHAR(255) NOT NULL,
   adres VARCHAR(255),
   postcode VARCHAR(20),
   plaats VARCHAR(255),
   email VARCHAR(255),
   prijsafspraken TEXT,
-  standaard BOOLEAN DEFAULT FALSE
+  standaard BOOLEAN DEFAULT FALSE,
+  UNIQUE KEY uniek_drukkernr (drukkernr)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE drukkerZendingen (
   id CHAR(36) PRIMARY KEY,
-  drukkerId CHAR(36) NOT NULL,
+  drukkernr VARCHAR(20) NOT NULL,
   verzondenOp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   onderwerp VARCHAR(255),
   body TEXT,
@@ -153,7 +155,7 @@ CREATE TABLE drukkerZendingen (
   aantalRegels INT NOT NULL DEFAULT 0,
   verzondDoor VARCHAR(255),
   zendingnummer VARCHAR(20),
-  FOREIGN KEY (drukkerId) REFERENCES drukkers(id) ON DELETE CASCADE
+  FOREIGN KEY (drukkernr) REFERENCES drukkers(drukkernr)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE kunstwerken (
@@ -198,6 +200,7 @@ INSERT INTO counters (id, value) VALUES ('bestelnummer', 0);
 INSERT INTO counters (id, value) VALUES ('zendingnummer', 0);
 INSERT INTO counters (id, value) VALUES ('klantnummer', 0);
 INSERT INTO counters (id, value) VALUES ('kunstenaarnummer', 0);
+INSERT INTO counters (id, value) VALUES ('drukkernummer', 0);
 
 CREATE TABLE bestelheaders (
   id CHAR(36) PRIMARY KEY,

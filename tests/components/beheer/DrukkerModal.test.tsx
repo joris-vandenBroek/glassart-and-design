@@ -21,6 +21,7 @@ vi.mock('@/lib/logActiviteit', () => ({
 
 const DRUKKER: Drukker = {
   id: 'drukker-1',
+  drukkernr: 'DR-00004',
   naam: 'Drukkerij Janssen',
   adres: 'Perslaan 1',
   postcode: '1000 AA',
