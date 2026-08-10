@@ -14,7 +14,7 @@ import { Modal } from './Modal';
 import { Breadcrumb } from './Breadcrumb';
 import { FiltersPanelContent, ALL_FILTER } from './FiltersPanelContent';
 import { useIsDesktop } from '@/lib/useIsDesktop';
-import { resolveKunstenaarOmschrijving } from '@/lib/resolveKunstenaarOmschrijving';
+import { resolveKunstenaarOmschrijving, appendKunstenaarWebsiteZin } from '@/lib/resolveKunstenaarOmschrijving';
 import { LinkifiedText } from './LinkifiedText';
 import type { Segment, Kunstwerk, Materiaal, Maat, Materiaalsoort, KunstwerkFormaat, Stijl, Onderwerp } from './beheer/materiaalTypes';
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
@@ -307,7 +307,15 @@ export function ProductsGrid() {
           <div>
             <p className="font-head text-sm font-semibold text-white">{geselecteerdeKunstenaar.naam}</p>
             <LinkifiedText
-              text={resolveKunstenaarOmschrijving(geselecteerdeKunstenaar, locale)}
+              text={appendKunstenaarWebsiteZin(
+                resolveKunstenaarOmschrijving(geselecteerdeKunstenaar, locale),
+                geselecteerdeKunstenaar.website
+                  ? tCollections('kunstenaarWebsiteZin', {
+                      naam: geselecteerdeKunstenaar.naam,
+                      website: geselecteerdeKunstenaar.website,
+                    })
+                  : null
+              )}
               className="text-xs text-white/70"
             />
           </div>
