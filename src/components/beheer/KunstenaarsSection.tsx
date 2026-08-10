@@ -30,6 +30,7 @@ type KunstenaarRow = Kunstenaar & { exclusiviteitLabel: string };
 const LEGE_FORM = {
   foto: null as string | null,
   naam: '',
+  website: '' as string,
   omschrijvingNl: '',
   omschrijvingFr: '',
   omschrijvingDe: '',
@@ -53,6 +54,7 @@ export function KunstenaarsSection({
   const [modalState, setModalState] = useState<ModalState>(null);
   const [foto, setFoto] = useState<string | null>(LEGE_FORM.foto);
   const [naam, setNaam] = useState(LEGE_FORM.naam);
+  const [website, setWebsite] = useState(LEGE_FORM.website);
   const [omschrijvingNl, setOmschrijvingNl] = useState(LEGE_FORM.omschrijvingNl);
   const [omschrijvingFr, setOmschrijvingFr] = useState(LEGE_FORM.omschrijvingFr);
   const [omschrijvingDe, setOmschrijvingDe] = useState(LEGE_FORM.omschrijvingDe);
@@ -110,6 +112,7 @@ export function KunstenaarsSection({
   function resetForm() {
     setFoto(LEGE_FORM.foto);
     setNaam(LEGE_FORM.naam);
+    setWebsite(LEGE_FORM.website);
     setOmschrijvingNl(LEGE_FORM.omschrijvingNl);
     setOmschrijvingFr(LEGE_FORM.omschrijvingFr);
     setOmschrijvingDe(LEGE_FORM.omschrijvingDe);
@@ -132,6 +135,7 @@ export function KunstenaarsSection({
   async function openEdit(kunstenaar: Kunstenaar) {
     setFoto(kunstenaar.foto);
     setNaam(kunstenaar.naam);
+    setWebsite(kunstenaar.website ?? '');
     setOmschrijvingNl(kunstenaar.omschrijvingNl);
     setOmschrijvingFr(kunstenaar.omschrijvingFr);
     setOmschrijvingDe(kunstenaar.omschrijvingDe);
@@ -241,6 +245,7 @@ export function KunstenaarsSection({
     const data = {
       foto,
       naam,
+      website,
       omschrijvingNl,
       omschrijvingFr,
       omschrijvingDe,
@@ -444,6 +449,17 @@ export function KunstenaarsSection({
               value={naam}
               onChange={(event) => setNaam(event.target.value)}
               data-testid="kunstenaar-modal-naam"
+              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+            {t('kunstenaarsLabelWebsite')}
+            <input
+              type="text"
+              value={website}
+              onChange={(event) => setWebsite(event.target.value)}
+              data-testid="kunstenaar-modal-website"
               className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
             />
           </label>

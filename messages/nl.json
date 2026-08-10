@@ -694,6 +694,7 @@
     "kunstenaarsFotoUploadError": "De foto kon niet geüpload worden. Probeer het opnieuw.",
     "kunstenaarsFotoTooLarge": "Het bestand is te groot, ook na compressie. Kies een kleinere foto.",
     "kunstenaarsLabelNaam": "Naam",
+    "kunstenaarsLabelWebsite": "Website",
     "kunstenaarsLabelOmschrijvingNl": "Omschrijving (NL)",
     "kunstenaarsLabelOmschrijvingFr": "Omschrijving (FR)",
     "kunstenaarsLabelOmschrijvingDe": "Omschrijving (DE)",
