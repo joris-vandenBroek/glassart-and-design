@@ -15,6 +15,7 @@ import type { Kunstwerk, Segment, Materiaal, Materiaalsoort, Maat, KunstwerkForm
 import { isVierkanteMaat } from './materiaalTypes';
 import type { Kunstenaar } from './kunstenaarTypes';
 import { detectFormaatFromFile, detectFormaatFromImageUrl } from '@/lib/detectKunstwerkFormaat';
+import { stelVolgendeCodeVoor, vindBekendePrefixen } from '@/lib/kunstwerkCodeVoorstel';
 
 interface KunstwerkenSectionProps {
   kunstwerken: Kunstwerk[] | null;
@@ -53,6 +54,7 @@ function toggle(list: string[], id: string): string[] {
 const LEGE_FORM = {
   foto: '',
   code: '',
+  prefix: '',
   kunstenaarnr: '' as string,
   formaat: null as KunstwerkFormaat | null,
   segmentIds: [] as string[],
@@ -93,6 +95,7 @@ export function KunstwerkenSection({
   const [modalState, setModalState] = useState<ModalState>(null);
   const [foto, setFoto] = useState(LEGE_FORM.foto);
   const [code, setCode] = useState(LEGE_FORM.code);
+  const [prefix, setPrefix] = useState(LEGE_FORM.prefix);
   const [kunstenaarnr, setKunstenaarnr] = useState(LEGE_FORM.kunstenaarnr);
   const [formaat, setFormaatState] = useState<KunstwerkFormaat | null>(LEGE_FORM.formaat);
   const [segmentIds, setSegmentIds] = useState<string[]>(LEGE_FORM.segmentIds);
@@ -243,6 +246,8 @@ export function KunstwerkenSection({
     return map;
   }, [kunstenaars]);
 
+  const bekendePrefixen = useMemo(() => vindBekendePrefixen(kunstwerken ?? []), [kunstwerken]);
+
   const isMateriaalloos = materiaalIds.length === 0;
   // Superset of isMateriaalloos: also true when a materiaal is chosen but every maat is
   // deliberately unchecked (e.g. "4mm veiligheidsglas, custom size, priced per m²").
@@ -379,6 +384,7 @@ export function KunstwerkenSection({
   function resetForm() {
     setFoto(LEGE_FORM.foto);
     setCode(LEGE_FORM.code);
+    setPrefix(LEGE_FORM.prefix);
     setKunstenaarnr(LEGE_FORM.kunstenaarnr);
     setFormaatState(LEGE_FORM.formaat);
     setSegmentIds(LEGE_FORM.segmentIds);
@@ -783,6 +789,31 @@ export function KunstwerkenSection({
             <p data-testid="kunstwerk-modal-foto-error" className="text-xs text-red-400">
               {t(fotoUploadError === 'too-large' ? 'kunstwerkenFotoTooLarge' : 'kunstwerkenFotoUploadError')}
             </p>
+          )}
+
+          {modalState?.mode === 'add' && (
+            <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+              <span>{t('kunstwerkenLabelPrefix')}</span>
+              <input
+                type="text"
+                list="kunstwerk-modal-prefixen"
+                value={prefix}
+                onChange={(event) => {
+                  const waarde = event.target.value;
+                  setPrefix(waarde);
+                  if (waarde.trim()) {
+                    setCode(stelVolgendeCodeVoor(kunstwerken ?? [], waarde));
+                  }
+                }}
+                data-testid="kunstwerk-modal-prefix"
+                className="rounded-sm border border-transparent bg-black/40 px-3 py-2 text-sm text-white"
+              />
+              <datalist id="kunstwerk-modal-prefixen">
+                {bekendePrefixen.map((optie) => (
+                  <option key={optie} value={optie} />
+                ))}
+              </datalist>
+            </label>
           )}
 
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
