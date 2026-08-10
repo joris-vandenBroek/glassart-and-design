@@ -19,8 +19,8 @@ beforeEach(() => {
 });
 
 const SEGMENTEN: Segment[] = [
-  { id: 'seg-1', omschrijving: 'Hotel' },
-  { id: 'seg-2', omschrijving: 'Restaurant' },
+  { id: 'seg-1', omschrijvingNl: 'Hotel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'seg-2', omschrijvingNl: 'Restaurant', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 
 const KUNSTWERKEN: Kunstwerk[] = [
@@ -95,7 +95,14 @@ describe('SegmentenSection', () => {
     fireEvent.click(screen.getByTestId('segmenten-add'));
     fireEvent.change(screen.getByTestId('segment-modal-omschrijving'), { target: { value: 'Wellness' } });
     fireEvent.click(screen.getByTestId('segment-modal-opslaan'));
-    await waitFor(() => expect(onAdd).toHaveBeenCalledWith({ omschrijving: 'Wellness' }));
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith({
+        omschrijvingNl: 'Wellness',
+        omschrijvingFr: '',
+        omschrijvingDe: '',
+        omschrijvingEn: '',
+      })
+    );
     await waitFor(() => expect(screen.queryByTestId('segment-modal')).not.toBeInTheDocument());
   });
 
@@ -113,7 +120,14 @@ describe('SegmentenSection', () => {
     expect(screen.getByTestId('segment-modal-omschrijving')).toHaveValue('Restaurant');
     fireEvent.change(screen.getByTestId('segment-modal-omschrijving'), { target: { value: 'Restaurants' } });
     fireEvent.click(screen.getByTestId('segment-modal-opslaan'));
-    await waitFor(() => expect(onUpdate).toHaveBeenCalledWith('seg-2', { omschrijving: 'Restaurants' }));
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith('seg-2', {
+        omschrijvingNl: 'Restaurants',
+        omschrijvingFr: '',
+        omschrijvingDe: '',
+        omschrijvingEn: '',
+      })
+    );
   });
 
   it('deletes a segment that is not linked to any kunstwerk', async () => {

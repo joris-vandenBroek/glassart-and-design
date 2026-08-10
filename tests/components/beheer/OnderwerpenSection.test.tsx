@@ -19,8 +19,8 @@ beforeEach(() => {
 });
 
 const ONDERWERPEN: Onderwerp[] = [
-  { id: 'ond-1', omschrijving: 'Abstract' },
-  { id: 'ond-2', omschrijving: 'Landschap' },
+  { id: 'ond-1', omschrijvingNl: 'Abstract', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'ond-2', omschrijvingNl: 'Landschap', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 
 const KUNSTWERKEN: Kunstwerk[] = [
@@ -82,7 +82,14 @@ describe('OnderwerpenSection', () => {
     fireEvent.click(screen.getByTestId('onderwerpen-add'));
     fireEvent.change(screen.getByTestId('onderwerp-modal-omschrijving'), { target: { value: 'Portret' } });
     fireEvent.click(screen.getByTestId('onderwerp-modal-opslaan'));
-    await waitFor(() => expect(onAdd).toHaveBeenCalledWith({ omschrijving: 'Portret' }));
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith({
+        omschrijvingNl: 'Portret',
+        omschrijvingFr: '',
+        omschrijvingDe: '',
+        omschrijvingEn: '',
+      })
+    );
     await waitFor(() => expect(screen.queryByTestId('onderwerp-modal')).not.toBeInTheDocument());
   });
 
@@ -100,7 +107,14 @@ describe('OnderwerpenSection', () => {
     expect(screen.getByTestId('onderwerp-modal-omschrijving')).toHaveValue('Landschap');
     fireEvent.change(screen.getByTestId('onderwerp-modal-omschrijving'), { target: { value: 'Landschappen' } });
     fireEvent.click(screen.getByTestId('onderwerp-modal-opslaan'));
-    await waitFor(() => expect(onUpdate).toHaveBeenCalledWith('ond-2', { omschrijving: 'Landschappen' }));
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith('ond-2', {
+        omschrijvingNl: 'Landschappen',
+        omschrijvingFr: '',
+        omschrijvingDe: '',
+        omschrijvingEn: '',
+      })
+    );
   });
 
   it('deletes an onderwerp that is not linked to any kunstwerk', async () => {

@@ -25,7 +25,10 @@ import type { Kunstwerk } from './materiaalTypes';
  */
 export interface LookupItem {
   id: string;
-  omschrijving: string;
+  omschrijvingNl: string;
+  omschrijvingFr: string;
+  omschrijvingDe: string;
+  omschrijvingEn: string;
 }
 
 export interface LookupSectionProps<T extends LookupItem> {
@@ -65,7 +68,10 @@ export function LookupSection<T extends LookupItem>({
 }: LookupSectionProps<T>) {
   const t = useTranslations('beheer');
   const [modalState, setModalState] = useState<ModalState<T>>(null);
-  const [omschrijving, setOmschrijving] = useState('');
+  const [omschrijvingNl, setOmschrijvingNl] = useState('');
+  const [omschrijvingFr, setOmschrijvingFr] = useState('');
+  const [omschrijvingDe, setOmschrijvingDe] = useState('');
+  const [omschrijvingEn, setOmschrijvingEn] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
   const [pendingVerwijderCount, setPendingVerwijderCount] = useState<number | null>(null);
 
@@ -82,14 +88,20 @@ export function LookupSection<T extends LookupItem>({
   }
 
   function openAdd() {
-    setOmschrijving('');
+    setOmschrijvingNl('');
+    setOmschrijvingFr('');
+    setOmschrijvingDe('');
+    setOmschrijvingEn('');
     setActionError(null);
     setPendingVerwijderCount(null);
     setModalState({ mode: 'add' });
   }
 
   function openEdit(item: T) {
-    setOmschrijving(item.omschrijving);
+    setOmschrijvingNl(item.omschrijvingNl);
+    setOmschrijvingFr(item.omschrijvingFr);
+    setOmschrijvingDe(item.omschrijvingDe);
+    setOmschrijvingEn(item.omschrijvingEn);
     setActionError(null);
     setPendingVerwijderCount(null);
     setModalState({ mode: 'edit', item });
@@ -102,14 +114,13 @@ export function LookupSection<T extends LookupItem>({
 
   async function handleSave() {
     if (!modalState) return;
+    const data = { omschrijvingNl, omschrijvingFr, omschrijvingDe, omschrijvingEn } as Omit<T, 'id'>;
     const success =
-      modalState.mode === 'add'
-        ? await onAdd({ omschrijving } as Omit<T, 'id'>)
-        : await onUpdate(modalState.item.id, { omschrijving } as Omit<T, 'id'>);
+      modalState.mode === 'add' ? await onAdd(data) : await onUpdate(modalState.item.id, data);
     if (success) {
       void logActiviteit(
         modalState.mode === 'add' ? activiteitTypes.toegevoegd : activiteitTypes.gewijzigd,
-        omschrijving
+        omschrijvingNl
       );
       closeModal();
     } else {
@@ -130,7 +141,7 @@ export function LookupSection<T extends LookupItem>({
     }
     const success = await onRemove(modalState.item.id);
     if (success) {
-      void logActiviteit(activiteitTypes.verwijderd, modalState.item.omschrijving);
+      void logActiviteit(activiteitTypes.verwijderd, modalState.item.omschrijvingNl);
       closeModal();
     } else {
       setActionError(t(`${meervoud}ActionError`));
@@ -141,7 +152,7 @@ export function LookupSection<T extends LookupItem>({
     setPendingVerwijderCount(null);
   }
 
-  const columns: Column<T>[] = [{ key: 'omschrijving', label: t(`${meervoud}ColOmschrijving`) }];
+  const columns: Column<T>[] = [{ key: 'omschrijvingNl', label: t(`${meervoud}ColOmschrijving`) }];
 
   return (
     <div data-testid={`${meervoud}-section`}>
@@ -197,7 +208,7 @@ export function LookupSection<T extends LookupItem>({
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={!omschrijving}
+                disabled={!omschrijvingNl}
                 data-testid={`${enkelvoud}-modal-opslaan`}
                 className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
               >
@@ -226,14 +237,44 @@ export function LookupSection<T extends LookupItem>({
             <>
               <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
                 <span>
-                  {t(`${meervoud}LabelOmschrijving`)}
+                  {t(`${meervoud}LabelOmschrijvingNl`)}
                   <RequiredMark />
                 </span>
                 <input
                   type="text"
-                  value={omschrijving}
-                  onChange={(event) => setOmschrijving(event.target.value)}
+                  value={omschrijvingNl}
+                  onChange={(event) => setOmschrijvingNl(event.target.value)}
                   data-testid={`${enkelvoud}-modal-omschrijving`}
+                  className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+                {t(`${meervoud}LabelOmschrijvingFr`)}
+                <input
+                  type="text"
+                  value={omschrijvingFr}
+                  onChange={(event) => setOmschrijvingFr(event.target.value)}
+                  data-testid={`${enkelvoud}-modal-omschrijving-fr`}
+                  className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+                {t(`${meervoud}LabelOmschrijvingDe`)}
+                <input
+                  type="text"
+                  value={omschrijvingDe}
+                  onChange={(event) => setOmschrijvingDe(event.target.value)}
+                  data-testid={`${enkelvoud}-modal-omschrijving-de`}
+                  className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+                {t(`${meervoud}LabelOmschrijvingEn`)}
+                <input
+                  type="text"
+                  value={omschrijvingEn}
+                  onChange={(event) => setOmschrijvingEn(event.target.value)}
+                  data-testid={`${enkelvoud}-modal-omschrijving-en`}
                   className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
                 />
               </label>
