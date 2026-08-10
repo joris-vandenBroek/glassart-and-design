@@ -33,7 +33,7 @@ Vraag dit als allereerste:
 
   Bij een foutmelding: toon die aan de gebruiker en stop. Bij `OK -- N kunstwerk(en)`: lees
   het bestand zelf in (Read-tool) om `collectiecode`, `kunstenaarNaam`, `aiGegenereerd`,
-  `brondirectory` en de lijst `kunstwerken` te kennen, vraag allleen de doelomgeving (Stap A.1),
+  `brondirectory` en de lijst `kunstwerken` te kennen, vraag alléén de doelomgeving (Stap A.1),
   en ga direct naar **Stap B2** (per-kunstwerk, replay-variant) — sla A.2 t/m A.5 over. Er
   wordt in dit pad geen nieuw manifest geschreven; Stap C vervalt.
 
