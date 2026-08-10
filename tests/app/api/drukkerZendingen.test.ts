@@ -69,4 +69,38 @@ describe('drukkerZendingen route', () => {
     expect(body[0].onderwerp).toBe('Bestellingen week 30');
     expect(body[0].bestellingIds).toEqual(['b1', 'b2']);
   });
+
+  it('ignores a body-supplied drukkernr and files the zending under the drukker from the URL', async () => {
+    const drukker = await insertRow<{ id: string }>('drukkers', { drukkernr: 'AT-D-DZ-3', naam: 'PrintCo' } as never);
+    createdDrukkerIds.push(drukker.id);
+    const ander = await insertRow<{ id: string }>('drukkers', { drukkernr: 'AT-D-DZ-4', naam: 'AnderPrintCo' } as never);
+    createdDrukkerIds.push(ander.id);
+    const sessionId = await createSession('medewerker', 'staff-1');
+    const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
+
+    const createResponse = await createZending(
+      new Request('http://localhost/api', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie },
+        body: JSON.stringify({
+          drukkernr: 'AT-D-DZ-4',
+          onderwerp: 'Poging tot overname',
+          body: 'Zie bijlage',
+          bestellingIds: ['b3'],
+          aantalKlanten: 1,
+          aantalRegels: 1,
+          verzondDoor: 'Paul',
+        }),
+      }),
+      { params: { id: drukker.id } }
+    );
+    const created = await createResponse.json();
+    expect(created.drukkernr).toBe('AT-D-DZ-3');
+
+    const response = await listZendingen(
+      new Request('http://localhost/api', { headers: { cookie } }),
+      { params: { id: ander.id } }
+    );
+    expect(await response.json()).toEqual([]);
+  });
 });

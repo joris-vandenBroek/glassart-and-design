@@ -31,8 +31,8 @@ export const POST = withMedewerker<Context>(
     // nette 404 op in plaats van een onafgevangen foreign-key-fout.
     const drukker = await getRow<{ drukkernr: string }>('drukkers', params.id);
     if (!drukker) return NextResponse.json({ error: 'drukker-not-found' }, { status: 404 });
-    const data = await request.json();
-    const created = await insertRow('drukkerZendingen', { drukkernr: drukker.drukkernr, ...data }, [
+    const { drukkernr: _genegeerd, ...data } = (await request.json()) as Record<string, unknown>;
+    const created = await insertRow('drukkerZendingen', { ...data, drukkernr: drukker.drukkernr }, [
       'bestellingIds',
     ]);
     return NextResponse.json(created, { status: 201 });
