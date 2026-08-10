@@ -393,6 +393,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             kunstenaars={kunstenaars.items}
             loadError={kunstwerken.error === 'load' ? t('kunstwerkenLoadError') : null}
             bestelCodes={bestelCodes}
+            actionErrorCode={kunstwerken.lastMutationErrorCode}
             onAdd={kunstwerken.add}
             onUpdate={kunstwerken.update}
             onRemove={kunstwerken.remove}

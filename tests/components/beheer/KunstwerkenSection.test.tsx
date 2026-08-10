@@ -127,6 +127,7 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Kunstwerke
             kunstenaars={KUNSTENAARS}
             loadError={null}
             bestelCodes={new Set<string>()}
+            actionErrorCode={null}
             onAdd={onAdd}
             onUpdate={onUpdate}
             onRemove={onRemove}
@@ -358,6 +359,52 @@ describe('KunstwerkenSection', () => {
     );
     expect(screen.getByTestId('kunstwerk-modal')).toBeInTheDocument();
     expect(onUpdate).toHaveBeenCalled();
+  });
+
+  it('shows "Deze code bestaat al." when the server rejects an update with 409 code-bestaat-al', async () => {
+    renderSection({
+      onUpdate: vi.fn().mockResolvedValue(false),
+      actionErrorCode: 'code-bestaat-al',
+    });
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
+    expect(await screen.findByTestId('kunstwerk-modal-error')).toHaveTextContent('Deze code bestaat al.');
+  });
+
+  it('shows the locked-code reason when the server rejects an update with 409 code-in-bestelling', async () => {
+    renderSection({
+      onUpdate: vi.fn().mockResolvedValue(false),
+      actionErrorCode: 'code-in-bestelling',
+    });
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
+    expect(await screen.findByTestId('kunstwerk-modal-error')).toHaveTextContent(
+      'De code ligt vast omdat dit kunstwerk al in een bestelling voorkomt.'
+    );
+  });
+
+  it('shows the locked-code reason when the server rejects a delete with 409 in-use-bestelling', async () => {
+    renderSection({
+      onRemove: vi.fn().mockResolvedValue(false),
+      actionErrorCode: 'in-use-bestelling',
+    });
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-verwijderen'));
+    expect(await screen.findByTestId('kunstwerk-modal-error')).toHaveTextContent(
+      'De code ligt vast omdat dit kunstwerk al in een bestelling voorkomt.'
+    );
+  });
+
+  it('falls back to the generic action error for a plain 500 (no recognisable error code)', async () => {
+    renderSection({
+      onUpdate: vi.fn().mockResolvedValue(false),
+      actionErrorCode: null,
+    });
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
+    expect(await screen.findByTestId('kunstwerk-modal-error')).toHaveTextContent(
+      'Er is iets misgegaan. Probeer het opnieuw.'
+    );
   });
 
   it('shows an upload error message when the upload hook reports an error', () => {
@@ -884,6 +931,7 @@ describe('KunstwerkenSection', () => {
               kunstenaars={KUNSTENAARS}
               loadError={null}
               bestelCodes={new Set<string>()}
+              actionErrorCode={null}
               onAdd={vi.fn().mockResolvedValue(true)}
               onUpdate={vi.fn().mockResolvedValue(true)}
               onRemove={vi.fn().mockResolvedValue(true)}
@@ -925,6 +973,7 @@ describe('KunstwerkenSection', () => {
               kunstenaars={KUNSTENAARS}
               loadError={null}
               bestelCodes={new Set<string>()}
+              actionErrorCode={null}
               onAdd={vi.fn().mockResolvedValue(true)}
               onUpdate={vi.fn().mockResolvedValue(true)}
               onRemove={vi.fn().mockResolvedValue(true)}
