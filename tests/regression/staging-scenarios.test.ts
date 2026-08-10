@@ -52,6 +52,7 @@ import { POST as requestReset } from '@/app/api/auth/reset-password/request/rout
 import { POST as confirmReset } from '@/app/api/auth/reset-password/confirm/route';
 import { GET as getInstelling } from '@/app/api/instellingen/[id]/route';
 import { POST as postResource, GET as listResource } from '@/app/api/[resource]/route';
+import { POST as createKunstwerk } from '@/app/api/kunstwerken/route';
 import { buildDrukkerMail } from '@/lib/buildDrukkerMail';
 import { resolveBtwPercentage } from '@/lib/resolveBtw';
 import type { BtwTarieven } from '@/components/beheer/btwTarievenTypes';
@@ -863,7 +864,10 @@ describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
       onderwerpId = (await onderwerpResponse.json()).id;
       stap(`Inline aangemaakt: segment=${segmentId}, stijl=${stijlId}, onderwerp=${onderwerpId}`);
 
-      const kunstwerkResponse = await postResource(
+      // Kunstwerken had een generieke CRUD-route via /api/[resource], maar heeft sinds de
+      // kunstwerkcode-migratie een eigen route (unieke code, wijzig-/verwijderslot) -- zie
+      // src/app/api/kunstwerken/route.ts.
+      const kunstwerkResponse = await createKunstwerk(
         req(
           'POST',
           {
@@ -875,8 +879,7 @@ describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
             maatIds: [],
           },
           staff
-        ),
-        { params: { resource: 'kunstwerken' } }
+        )
       );
       expect(kunstwerkResponse.status).toBe(201);
       kunstwerkId = (await kunstwerkResponse.json()).id;

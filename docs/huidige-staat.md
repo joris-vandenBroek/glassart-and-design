@@ -44,7 +44,7 @@ Firebase is volledig verwijderd — geen Firestore, geen Firebase Auth, geen Fir
 klanten ──prijsgroepId──> prijsgroepen
    │  └──kunstenaarId──> kunstenaars        (klantaccount van een kunstenaar)
    │
-   └──< bestelheaders ──< bestellines >── kunstwerken
+   └──< bestelheaders ──< bestellines ··code··> kunstwerken
               │                    ├──> maten
               │                    └──> materialen ──> materiaalsoorten
               └──< bestelstatusHistorie
@@ -59,6 +59,7 @@ drukkers ──< drukkerZendingen
 Aandachtspunten die afwijken van wat je zou verwachten:
 
 - De N-op-N-relaties van een kunstwerk zijn **JSON-kolommen** (`segmentIds`, `materiaalIds`, `maatIds`, `stijlIds`, `onderwerpIds`), geen koppeltabellen.
+- `kunstwerken.code` is de unieke, hoofdletterongevoelige identificatie van een kunstwerk (`UNIQUE KEY uniek_code`) — er is geen `naam`-kolom meer. Een bestelregel (`bestellines.code`) legt die code vast op het moment van bestellen; dat is een gekopieerde waarde, geen foreign key. Zodra een code ergens in `bestellines` voorkomt, ligt hij vast: het kunstwerk kan dan niet meer verwijderd worden en de code zelf kan niet meer wijzigen (zie API hieronder).
 - `instellingen` is één tabel met een `data JSON`-kolom en drie rijen: `bedrijfsgegevens`, `bestelinstellingen` en `btwtarieven`.
 - `counters` bevat drie losse nummerreeksen: `bestelnummer`, `zendingnummer`, `klantnummer`.
 - `medewerkers` heeft **geen rolveld** — toegang is platte ja/nee.
@@ -69,11 +70,13 @@ Alle routes onder `src/app/api/`.
 
 **Generieke CRUD** — `src/app/api/[resource]/route.ts` bedient alleen de resources in de allowlist `LOOKUP_RESOURCES` (`src/lib/server/lookupResources.ts`); alles daarbuiten geeft 404:
 
-`segmenten`, `stijlen`, `onderwerpen`, `materiaalsoorten`, `materialen`, `maten`, `prijsgroepen`, `kunstwerken`
+`segmenten`, `stijlen`, `onderwerpen`, `materiaalsoorten`, `materialen`, `maten`, `prijsgroepen`
 
 Schrijven vereist altijd een medewerker-sessie. Lezen is publiek, behalve `prijsgroepen` (alleen medewerkers).
 
-**Eigen routes** met extra logica: `klanten` (incl. `/me`), `bestelheaders` (incl. `bestellines` en `statushistorie`), `kunstenaars`, `kunstenaarAfspraken`, `drukkers` (incl. `zendingen` en `zendingen/nummer`), `drukkerzendingen`, `activiteitenlog`, `instellingen`, `kunstwerken/prijzen`, `prijsmatrix`, `health/schema` en de `auth/*`-routes.
+**Eigen routes** met extra logica: `klanten` (incl. `/me`), `bestelheaders` (incl. `bestellines` en `statushistorie`), `kunstenaars`, `kunstenaarAfspraken`, `drukkers` (incl. `zendingen` en `zendingen/nummer`), `drukkerzendingen`, `activiteitenlog`, `instellingen`, `kunstwerken` (incl. `/prijzen`), `prijsmatrix`, `health/schema` en de `auth/*`-routes.
+
+`kunstwerken` had oorspronkelijk een generieke CRUD-route, maar kreeg een eigen `POST`/`PATCH`/`DELETE` (`src/app/api/kunstwerken/[id]/route.ts` en `route.ts`) vanwege drie regels die de generieke route niet kan afdwingen: `code` is verplicht en moet uniek zijn (`ER_DUP_ENTRY` → `409 code-bestaat-al`), een `PATCH` die de `code` van een reeds besteld kunstwerk wijzigt geeft `409 code-in-bestelling`, en een `DELETE` van een besteld kunstwerk geeft `409 in-use-bestelling`. "Besteld" wordt bepaald door `codeKomtVoorInBestelling` (`src/lib/server/kunstwerkCode.ts`), die kijkt of de code al in `bestellines` voorkomt. Lezen (`GET`) bleef ongewijzigd publiek.
 
 **Autorisatie** loopt uitsluitend via `requireMedewerker` in `src/lib/server/requireAuth.ts`. Er is geen laag daaronder — als die check ontbreekt in een route, is de route open.
 
