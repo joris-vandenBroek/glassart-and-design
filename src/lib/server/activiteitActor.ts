@@ -48,8 +48,8 @@ export async function actorUitSessie(request: Request): Promise<ActiviteitActor>
 /**
  * Schrijft één regel in het activiteitenlog. Het record wordt veld voor veld
  * opgebouwd in plaats van een doorgegeven object: de sleutels van zo'n object
- * worden kolomnamen in de INSERT, en de aanroepende route staat open voor
- * iedereen.
+ * worden kolomnamen in de INSERT, en de open activiteitenlog-route accepteert
+ * invoer van iedereen -- die verdediging moet dus ook hier blijven staan.
  */
 export async function schrijfActiviteit(
   type: ActiviteitType,

@@ -47,6 +47,7 @@ export const ACTIVITEIT_TYPES = [
   'bestelinstellingen_gewijzigd',
   'btwtarieven_gewijzigd',
   'klant_minimale_afname_gewijzigd',
+  'klant_wachtwoord_uitgegeven',
   'stijl_toegevoegd',
   'stijl_gewijzigd',
   'stijl_verwijderd',

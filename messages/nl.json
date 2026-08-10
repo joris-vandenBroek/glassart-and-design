@@ -348,6 +348,7 @@
     "activiteitTypeKlantGoedgekeurd": "Klant goedgekeurd",
     "activiteitTypeKlantAfgewezen": "Klant afgewezen",
     "activiteitTypeKlantGewijzigd": "Klantgegevens gewijzigd",
+    "activiteitTypeKlantWachtwoordUitgegeven": "Nieuw wachtwoord uitgegeven",
     "activiteitTypeKlantPrijsgroepGewijzigd": "Prijsgroep gewijzigd voor klant",
     "activiteitTypeBestellingGoedgekeurd": "Bestelling goedgekeurd",
     "activiteitTypeBestellingAfgewezen": "Bestelling afgewezen",
