@@ -4,12 +4,20 @@ import { mimeTypeVoorBestand, vindExacteMatch } from './importKunstwerken';
 
 const SESSION_COOKIE_NAME = 'session_id';
 
+interface MeertaligeOmschrijving {
+  id: string;
+  omschrijvingNl: string;
+  omschrijvingFr: string;
+  omschrijvingDe: string;
+  omschrijvingEn: string;
+}
+
 export interface ReferentieData {
   kunstenaars: Array<{ kunstenaarnr: string; naam: string }>;
-  segmenten: Array<{ id: string; omschrijving: string }>;
-  stijlen: Array<{ id: string; omschrijving: string }>;
-  onderwerpen: Array<{ id: string; omschrijving: string }>;
-  materialen: Array<{ id: string; omschrijving: string }>;
+  segmenten: MeertaligeOmschrijving[];
+  stijlen: MeertaligeOmschrijving[];
+  onderwerpen: MeertaligeOmschrijving[];
+  materialen: Array<MeertaligeOmschrijving & { materiaalsoortId: string; materiaaldikte: number }>;
   maten: Array<{ id: string; breedte: number; hoogte: number }>;
   kunstwerkCodes: string[];
 }
@@ -50,10 +58,10 @@ export async function haalReferentieOp(
 
   const [kunstenaars, segmenten, stijlen, onderwerpen, materialen, maten, kunstwerken] = await Promise.all([
     haalOp<Array<{ kunstenaarnr: string; naam: string }>>('/api/kunstenaars'),
-    haalOp<Array<{ id: string; omschrijving: string }>>('/api/segmenten'),
-    haalOp<Array<{ id: string; omschrijving: string }>>('/api/stijlen'),
-    haalOp<Array<{ id: string; omschrijving: string }>>('/api/onderwerpen'),
-    haalOp<Array<{ id: string; omschrijving: string }>>('/api/materialen'),
+    haalOp<MeertaligeOmschrijving[]>('/api/segmenten'),
+    haalOp<MeertaligeOmschrijving[]>('/api/stijlen'),
+    haalOp<MeertaligeOmschrijving[]>('/api/onderwerpen'),
+    haalOp<Array<MeertaligeOmschrijving & { materiaalsoortId: string; materiaaldikte: number }>>('/api/materialen'),
     haalOp<Array<{ id: string; breedte: number; hoogte: number }>>('/api/maten'),
     haalOp<Array<{ code: string }>>('/api/kunstwerken'),
   ]);
@@ -96,15 +104,18 @@ export async function maakOfHergebruikLookupWaarde(
   baseUrl: string,
   sessieCookie: string,
   tabel: 'segmenten' | 'stijlen' | 'onderwerpen',
-  omschrijving: string,
+  omschrijvingNl: string,
+  omschrijvingFr: string,
+  omschrijvingDe: string,
+  omschrijvingEn: string,
   fetchImpl: typeof fetch = fetch
-): Promise<{ id: string; omschrijving: string; hergebruikt: boolean }> {
+): Promise<MeertaligeOmschrijving & { hergebruikt: boolean }> {
   const lijstResponse = await fetchImpl(`${baseUrl}/api/${tabel}`, { headers: { cookie: sessieCookie } });
   if (!lijstResponse.ok) {
     throw new Error(`Ophalen van ${tabel} op ${baseUrl} mislukt (status ${lijstResponse.status}).`);
   }
-  const bestaande = (await lijstResponse.json()) as Array<{ id: string; omschrijving: string }>;
-  const match = vindExacteMatch(bestaande, omschrijving);
+  const bestaande = (await lijstResponse.json()) as MeertaligeOmschrijving[];
+  const match = vindExacteMatch(bestaande, omschrijvingNl);
   if (match) {
     return { ...match, hergebruikt: true };
   }
@@ -112,14 +123,14 @@ export async function maakOfHergebruikLookupWaarde(
   const createResponse = await fetchImpl(`${baseUrl}/api/${tabel}`, {
     method: 'POST',
     headers: { cookie: sessieCookie, 'content-type': 'application/json' },
-    body: JSON.stringify({ omschrijving }),
+    body: JSON.stringify({ omschrijvingNl, omschrijvingFr, omschrijvingDe, omschrijvingEn }),
   });
   if (!createResponse.ok) {
     throw new Error(
-      `Aanmaken van '${omschrijving}' in ${tabel} op ${baseUrl} mislukt (status ${createResponse.status}).`
+      `Aanmaken van '${omschrijvingNl}' in ${tabel} op ${baseUrl} mislukt (status ${createResponse.status}).`
     );
   }
-  const created = (await createResponse.json()) as { id: string; omschrijving: string };
+  const created = (await createResponse.json()) as MeertaligeOmschrijving;
   return { ...created, hergebruikt: false };
 }
 
@@ -166,6 +177,15 @@ export async function maakKunstwerk(
   return { status: 'aangemaakt', id: created.id, code: created.code };
 }
 
+// Leest en parseert een JSON-payload uit een bestand -- gebruikt door de CLI's
+// --json-bestand-optie (maak-kunstwerk/maak-kunstenaar) zodat de agent verkoopteksten met
+// apostrofs eerst wegschrijft met de Write-tool in plaats van ze als shell-argument te
+// moeten quoten.
+export async function leesJsonBestand(pad: string): Promise<unknown> {
+  const inhoud = await fs.readFile(pad, 'utf8');
+  return JSON.parse(inhoud);
+}
+
 export async function downloadBestand(
   url: string,
   naarPad: string,
@@ -176,12 +196,14 @@ export async function downloadBestand(
     throw new Error(`Downloaden van ${url} mislukt (status ${response.status}).`);
   }
   const buffer = Buffer.from(await response.arrayBuffer());
+  await fs.mkdir(path.dirname(naarPad), { recursive: true });
   await fs.writeFile(naarPad, buffer);
 }
 
 export interface NieuweKunstenaar {
   naam: string;
   foto: string | null;
+  website: string | null;
   omschrijvingNl: string;
   omschrijvingEn: string;
   omschrijvingDe: string;

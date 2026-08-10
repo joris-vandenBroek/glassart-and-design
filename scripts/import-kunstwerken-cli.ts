@@ -14,11 +14,17 @@ import {
   maakKunstwerk,
   downloadBestand,
   maakKunstenaar,
+  leesJsonBestand,
   type NieuwKunstwerk,
   type NieuweKunstenaar,
 } from './lib/importHttp';
 import { leesManifest } from './lib/importBatchManifest';
 import type { KunstwerkFormaat } from '../src/components/beheer/materiaalTypes';
+
+// --sessie-cookie geeft de sessiecookie mee als CLI-argument. Dat lekt geen wachtwoord (het
+// is een sessie-token, geen credential), maar de waarde is wel zichtbaar in argv/de
+// proceslijst en in het agent-transcript -- een geaccepteerde afweging voor deze eenvoudige
+// multi-process CLI, niet een oversight.
 
 const SUBCOMMANDS = [
   'login',
@@ -49,6 +55,21 @@ function verplichteOptie(opts: Record<string, string>, naam: string): string {
   return waarde;
 }
 
+// Leest de payload voor maak-kunstwerk/maak-kunstenaar. --json-bestand (een pad, gelezen met
+// de Write-tool door de agent) is de aanbevolen route -- die omzeilt shell-quoting van
+// apostrofs in verkoopteksten volledig. --json (de rauwe JSON-string) blijft werken voor
+// directe/handmatige aanroepen. --json-bestand wint als beide zijn opgegeven.
+async function leesJsonOptie(opts: Record<string, string>): Promise<unknown> {
+  if (opts['json-bestand']) {
+    return leesJsonBestand(opts['json-bestand']);
+  }
+  if (opts.json) {
+    return JSON.parse(opts.json);
+  }
+  console.error('Weigering: geef --json-bestand <pad> of --json <tekst> op.');
+  process.exit(2);
+}
+
 function omgevingOptie(opts: Record<string, string>): Omgeving {
   const waarde = verplichteOptie(opts, 'omgeving');
   if (waarde !== 'staging' && waarde !== 'productie') {
@@ -59,7 +80,14 @@ function omgevingOptie(opts: Record<string, string>): Omgeving {
 }
 
 async function main(): Promise<void> {
-  const { subcommand, opts } = parseArgs(process.argv.slice(2));
+  let subcommand: string;
+  let opts: Record<string, string>;
+  try {
+    ({ subcommand, opts } = parseArgs(process.argv.slice(2)));
+  } catch (error) {
+    console.error((error as Error).message);
+    process.exit(2);
+  }
   if (!SUBCOMMANDS.includes(subcommand as (typeof SUBCOMMANDS)[number])) {
     gebruik();
   }
@@ -121,12 +149,18 @@ async function main(): Promise<void> {
         console.error(`Weigering: --tabel moet segmenten, stijlen of onderwerpen zijn, kreeg '${tabel}'.`);
         process.exit(2);
       }
-      const omschrijving = verplichteOptie(opts, 'omschrijving');
+      const omschrijvingNl = verplichteOptie(opts, 'omschrijving-nl');
+      const omschrijvingFr = verplichteOptie(opts, 'omschrijving-fr');
+      const omschrijvingDe = verplichteOptie(opts, 'omschrijving-de');
+      const omschrijvingEn = verplichteOptie(opts, 'omschrijving-en');
       const resultaat = await maakOfHergebruikLookupWaarde(
         baseUrlVoorOmgeving(omgeving),
         sessieCookie,
         tabel,
-        omschrijving
+        omschrijvingNl,
+        omschrijvingFr,
+        omschrijvingDe,
+        omschrijvingEn
       );
       console.log(JSON.stringify(resultaat));
       return;
@@ -134,7 +168,7 @@ async function main(): Promise<void> {
     case 'maak-kunstwerk': {
       const omgeving = omgevingOptie(opts);
       const sessieCookie = verplichteOptie(opts, 'sessie-cookie');
-      const kunstwerk = JSON.parse(verplichteOptie(opts, 'json')) as NieuwKunstwerk;
+      const kunstwerk = (await leesJsonOptie(opts)) as NieuwKunstwerk;
       const resultaat = await maakKunstwerk(baseUrlVoorOmgeving(omgeving), sessieCookie, kunstwerk);
       console.log(JSON.stringify(resultaat));
       return;
@@ -149,7 +183,7 @@ async function main(): Promise<void> {
     case 'maak-kunstenaar': {
       const omgeving = omgevingOptie(opts);
       const sessieCookie = verplichteOptie(opts, 'sessie-cookie');
-      const kunstenaar = JSON.parse(verplichteOptie(opts, 'json')) as NieuweKunstenaar;
+      const kunstenaar = (await leesJsonOptie(opts)) as NieuweKunstenaar;
       const resultaat = await maakKunstenaar(baseUrlVoorOmgeving(omgeving), sessieCookie, kunstenaar);
       console.log(JSON.stringify(resultaat));
       return;

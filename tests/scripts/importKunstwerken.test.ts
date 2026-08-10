@@ -70,7 +70,7 @@ describe('mimeTypeVoorBestand', () => {
 });
 
 describe('vindExacteMatch', () => {
-  const bestaande = [{ id: '1', omschrijving: 'Afrika' }];
+  const bestaande = [{ id: '1', omschrijvingNl: 'Afrika' }];
 
   it('vindt een match ongeacht hoofdletters en spaties', () => {
     expect(vindExacteMatch(bestaande, '  afrika ')).toEqual(bestaande[0]);

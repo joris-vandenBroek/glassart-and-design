@@ -1,6 +1,6 @@
 ---
 name: toevoegen-kunstenaar
-description: Maak een nieuwe kunstenaar aan op basis van diens website — naam bepalen (met bevestiging), 4-talige omschrijving met "meer weten"-verwijzing, best-effort portretfoto, op staging of productie.
+description: Maak een nieuwe kunstenaar aan op basis van diens website — naam bepalen (met bevestiging), 4-talige omschrijving, website-veld, best-effort portretfoto, op staging of productie.
 ---
 
 # Toevoegen-kunstenaar
@@ -17,9 +17,9 @@ scripts/import-kunstwerken-cli.ts <subcommando> [opties]` (of `npm run import:ku
 Vraag: "Wat is de website van de kunstenaar? (laat leeg als die er niet is)".
 
 - **Leeg** → vraag de naam direct, vraag een korte omschrijving (een paar zinnen) waarmee
-  je zelf een 4-talige omschrijving schrijft (geen "meer weten"-zin, geen fotopoging). Ga
+  je zelf een 4-talige omschrijving schrijft (geen fotopoging). `website` wordt `null`. Ga
   naar Stap 5.
-- **Ingevuld** → onthoud de URL, ga naar Stap 2.
+- **Ingevuld** → onthoud de URL (dit wordt het `website`-veld in Stap 8), ga naar Stap 2.
 
 ## Stap 2: naam bepalen
 
@@ -31,20 +31,13 @@ zowel hier als in Stap 3 en 4.
   `<gevonden naam>`?" Bij een correctie, gebruik de door de gebruiker opgegeven naam.
 - **Niet herkend** → vraag de naam direct.
 
-Bepaal de **voornaam** als het eerste woord van de (bevestigde) naam — die gebruik je in
-Stap 3.
-
 ## Stap 3: omschrijving schrijven
 
 Schrijf een compacte, wervende omschrijving (2-4 zinnen) op basis van wat er daadwerkelijk
-op de website staat — niets verzinnen. In het Nederlands, Engels, Duits en Frans.
-
-Voeg aan elke taalversie, als laatste zin, de vertaalde verwijzing toe:
-
-- NL: `Meer weten over <Voornaam>? Bekijk <website>`
-- EN: `Want to know more about <Voornaam>? Visit <website>`
-- DE: `Mehr über <Voornaam> erfahren? Besuchen Sie <website>`
-- FR: `En savoir plus sur <Voornaam>? Visitez <website>`
+op de website staat — niets verzinnen. In het Nederlands, Engels, Duits en Frans. De
+omschrijving is uitsluitend de bio — de website zelf wordt apart als `website`-veld
+meegestuurd (Stap 8), niet als "meer weten"-zin in de omschrijvingstekst; de collectiepagina
+rendert die verwijzing al zelf op basis van dat veld.
 
 ## Stap 4: foto zoeken (best-effort)
 
@@ -93,15 +86,34 @@ meld het.
 
 ## Stap 8: aanmaken
 
+Schrijf het kunstenaar-object eerst met de Write-tool naar een scratchpad-bestand (bijv.
+`<scratchpad>/kunstenaar.json`), en geef dat pad mee met `--json-bestand` — niet met inline
+`--json '<...>'`. Omschrijvingen bevatten bijna altijd apostrofs, en dit omzeilt
+shell-quoting volledig (ook op PowerShell, de primaire shell van deze repo, waar een inline
+`--json '<object>'` met apostrofs sowieso al stuk zou gaan):
+
+```json
+{
+  "naam": "<naam>",
+  "foto": "<foto-url of null>",
+  "website": "<website-url of null>",
+  "omschrijvingNl": "...",
+  "omschrijvingEn": "...",
+  "omschrijvingDe": "...",
+  "omschrijvingFr": "...",
+  "exclusieveKlantIds": []
+}
 ```
-npx tsx scripts/import-kunstwerken-cli.ts maak-kunstenaar --omgeving <omgeving> --sessie-cookie "<cookie>" --json '{"naam":"<naam>","foto":<foto-url of null>,"omschrijvingNl":"...","omschrijvingEn":"...","omschrijvingDe":"...","omschrijvingFr":"...","exclusieveKlantIds":[]}'
+
+```
+npx tsx scripts/import-kunstwerken-cli.ts maak-kunstenaar --omgeving <omgeving> --sessie-cookie "<cookie>" --json-bestand "<scratchpad>/kunstenaar.json"
 ```
 
 ## Stap 9: samenvatting
 
-Meld: naam, omgeving, of er een foto is meegenomen (en zo niet: waarom niet), of de "meer
-weten"-zin is toegevoegd, en het teruggegeven record (bevat `id`, en zodra de
-kunstenaarnummer-migratie geland is ook `kunstenaarnr`).
+Meld: naam, omgeving, of er een foto is meegenomen (en zo niet: waarom niet), of er een
+website is meegegeven, en het teruggegeven record (bevat `id` en `kunstenaarnr` —
+`POST /api/kunstenaars` geeft dat laatste veld inmiddels altijd terug).
 
 ## Foutafhandeling
 
@@ -109,6 +121,9 @@ kunstenaarnummer-migratie geland is ook `kunstenaarnr`).
   Stap 1's lege-website-pad (naam en omschrijving handmatig).
 - Naam-dubbele-check-treffer + gebruiker bevestigt niet → stop, geen aanmaak.
 - Inloggen mislukt (Stap 5) → stop, er is nog niets geschreven.
+- Foto groter dan ongeveer 8 MB → de upload-endpoint weigert deze met fout `te-groot`;
+  behandel dit zoals een mislukte foto-upload (Stap 7): `foto: null`, meld het, ga door met
+  het aanmaken van de kunstenaar zonder die foto.
 - `maak-kunstenaar` mislukt (bijv. serverfout) → toon de foutmelding, stop; geen automatische
   retry (in tegenstelling tot `import-kunstwerken`'s codeconflict-retry — hier is er geen
   vergelijkbare, onschadelijke oorzaak om blind opnieuw te proberen).

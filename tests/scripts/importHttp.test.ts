@@ -7,6 +7,7 @@ import {
   maakKunstwerk,
   downloadBestand,
   maakKunstenaar,
+  leesJsonBestand,
 } from '../../scripts/lib/importHttp';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -54,7 +55,13 @@ describe('haalReferentieOp', () => {
       if (url.endsWith('/api/kunstenaars')) {
         return Promise.resolve(jsonResponse(200, [{ kunstenaarnr: 'KU-00001', naam: 'Sabrino', extra: 'x' }]));
       }
-      if (url.endsWith('/api/segmenten')) return Promise.resolve(jsonResponse(200, [{ id: 's1', omschrijving: 'Afrika' }]));
+      if (url.endsWith('/api/segmenten')) {
+        return Promise.resolve(
+          jsonResponse(200, [
+            { id: 's1', omschrijvingNl: 'Afrika', omschrijvingFr: 'Afrique', omschrijvingDe: 'Afrika', omschrijvingEn: 'Africa' },
+          ])
+        );
+      }
       if (url.endsWith('/api/stijlen')) return Promise.resolve(jsonResponse(200, []));
       if (url.endsWith('/api/onderwerpen')) return Promise.resolve(jsonResponse(200, []));
       if (url.endsWith('/api/materialen')) return Promise.resolve(jsonResponse(200, []));
@@ -68,7 +75,9 @@ describe('haalReferentieOp', () => {
     const referentie = await haalReferentieOp('https://staging.glassartanddesign.com', 'session_id=abc', fetchMock);
 
     expect(referentie.kunstenaars).toEqual([{ kunstenaarnr: 'KU-00001', naam: 'Sabrino' }]);
-    expect(referentie.segmenten).toEqual([{ id: 's1', omschrijving: 'Afrika' }]);
+    expect(referentie.segmenten).toEqual([
+      { id: 's1', omschrijvingNl: 'Afrika', omschrijvingFr: 'Afrique', omschrijvingDe: 'Afrika', omschrijvingEn: 'Africa' },
+    ]);
     expect(referentie.kunstwerkCodes).toEqual(['GLA-PRO-001']);
     for (const call of fetchMock.mock.calls) {
       expect(call[1].headers.cookie).toBe('session_id=abc');
@@ -102,35 +111,76 @@ describe('uploadFoto', () => {
 });
 
 describe('maakOfHergebruikLookupWaarde', () => {
-  it('hergebruikt een bestaande waarde en maakt niets nieuws aan', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, [{ id: 's1', omschrijving: 'Afrika' }]));
+  it('hergebruikt een bestaande waarde (matcht op omschrijvingNl) en maakt niets nieuws aan', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse(200, [
+        { id: 's1', omschrijvingNl: 'Afrika', omschrijvingFr: 'Afrique', omschrijvingDe: 'Afrika', omschrijvingEn: 'Africa' },
+      ])
+    );
     const resultaat = await maakOfHergebruikLookupWaarde(
       'https://staging.glassartanddesign.com',
       'session_id=abc',
       'segmenten',
       'afrika',
+      'affrique-verkeerd',
+      'afrika-verkeerd',
+      'africa-verkeerd',
       fetchMock
     );
-    expect(resultaat).toEqual({ id: 's1', omschrijving: 'Afrika', hergebruikt: true });
+    expect(resultaat).toEqual({
+      id: 's1',
+      omschrijvingNl: 'Afrika',
+      omschrijvingFr: 'Afrique',
+      omschrijvingDe: 'Afrika',
+      omschrijvingEn: 'Africa',
+      hergebruikt: true,
+    });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('maakt een nieuwe waarde aan als er niets past', async () => {
+  it('maakt een nieuwe waarde aan (4-talig) als er niets past', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse(200, [{ id: 's1', omschrijving: 'Afrika' }]))
-      .mockResolvedValueOnce(jsonResponse(201, { id: 's2', omschrijving: 'Safari' }));
+      .mockResolvedValueOnce(
+        jsonResponse(200, [
+          { id: 's1', omschrijvingNl: 'Afrika', omschrijvingFr: 'Afrique', omschrijvingDe: 'Afrika', omschrijvingEn: 'Africa' },
+        ])
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(201, {
+          id: 's2',
+          omschrijvingNl: 'Safari',
+          omschrijvingFr: 'Safari-fr',
+          omschrijvingDe: 'Safari-de',
+          omschrijvingEn: 'Safari-en',
+        })
+      );
     const resultaat = await maakOfHergebruikLookupWaarde(
       'https://staging.glassartanddesign.com',
       'session_id=abc',
       'segmenten',
       'Safari',
+      'Safari-fr',
+      'Safari-de',
+      'Safari-en',
       fetchMock
     );
-    expect(resultaat).toEqual({ id: 's2', omschrijving: 'Safari', hergebruikt: false });
+    expect(resultaat).toEqual({
+      id: 's2',
+      omschrijvingNl: 'Safari',
+      omschrijvingFr: 'Safari-fr',
+      omschrijvingDe: 'Safari-de',
+      omschrijvingEn: 'Safari-en',
+      hergebruikt: false,
+    });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const [, createOptions] = fetchMock.mock.calls[1];
-    expect(JSON.parse(createOptions.body)).toEqual({ omschrijving: 'Safari' });
+    expect(JSON.parse(createOptions.body)).toEqual({
+      omschrijvingNl: 'Safari',
+      omschrijvingFr: 'Safari-fr',
+      omschrijvingDe: 'Safari-de',
+      omschrijvingEn: 'Safari-en',
+    });
   });
 });
 
@@ -195,12 +245,48 @@ describe('downloadBestand', () => {
     await expect(downloadBestand('https://example.com/weg.jpg', pad, fetchMock)).rejects.toThrow('mislukt');
     expect(fs.existsSync(pad)).toBe(false);
   });
+
+  it('maakt de doelmap aan als die nog niet bestaat', async () => {
+    const inhoud = new TextEncoder().encode('foto-inhoud').buffer;
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      arrayBuffer: async () => inhoud,
+    });
+    const map = path.join(os.tmpdir(), `download-bestand-test-nieuwe-map-${Date.now()}`);
+    const pad = path.join(map, 'sub', 'foto.jpg');
+    try {
+      expect(fs.existsSync(map)).toBe(false);
+      await downloadBestand('https://example.com/foto.jpg', pad, fetchMock);
+      expect(fs.readFileSync(pad, 'utf8')).toBe('foto-inhoud');
+    } finally {
+      fs.rmSync(map, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('leesJsonBestand', () => {
+  it('leest en parseert een JSON-bestand', async () => {
+    const pad = path.join(os.tmpdir(), `lees-json-bestand-test-${Date.now()}.json`);
+    fs.writeFileSync(pad, JSON.stringify({ naam: 'Jack', getal: 42 }));
+    try {
+      await expect(leesJsonBestand(pad)).resolves.toEqual({ naam: 'Jack', getal: 42 });
+    } finally {
+      fs.unlinkSync(pad);
+    }
+  });
+
+  it('gooit een fout bij een niet-bestaand bestand', async () => {
+    const pad = path.join(os.tmpdir(), `lees-json-bestand-test-ontbreekt-${Date.now()}.json`);
+    await expect(leesJsonBestand(pad)).rejects.toThrow();
+  });
 });
 
 describe('maakKunstenaar', () => {
   const kunstenaar = {
     naam: 'Jack',
     foto: 'https://cdn.example.com/jack.jpg',
+    website: 'https://jack.example.com',
     omschrijvingNl: 'Nl',
     omschrijvingEn: 'En',
     omschrijvingDe: 'De',

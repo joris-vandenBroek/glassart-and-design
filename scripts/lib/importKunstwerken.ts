@@ -49,12 +49,12 @@ export function mimeTypeVoorBestand(bestandsnaam: string): string {
   return mimeType;
 }
 
-export function vindExacteMatch<T extends { omschrijving: string }>(
+export function vindExacteMatch<T extends { omschrijvingNl: string }>(
   bestaande: T[],
-  omschrijving: string
+  omschrijvingNl: string
 ): T | null {
-  const genormaliseerd = omschrijving.trim().toLowerCase();
-  return bestaande.find((item) => item.omschrijving.trim().toLowerCase() === genormaliseerd) ?? null;
+  const genormaliseerd = omschrijvingNl.trim().toLowerCase();
+  return bestaande.find((item) => item.omschrijvingNl.trim().toLowerCase() === genormaliseerd) ?? null;
 }
 
 export async function bepaalFormaatVanBestand(

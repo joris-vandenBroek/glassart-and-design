@@ -7,10 +7,9 @@ description: Importeer kunstwerken in bulk vanaf een lokale map afbeeldingen naa
 
 Ontwerp: `docs/superpowers/specs/2026-08-10-import-kunstwerken-skill-design.md`.
 
-**Harde afhankelijkheid.** Deze skill stuurt `kunstenaarnr` mee naar `POST /api/kunstwerken`.
-Bestaat de kolom `kunstenaars.kunstenaarnr` nog niet op de doelomgeving, dan faalt
-`maak-kunstwerk` met een serverfout. Controleer dit desnoods vooraf met een medewerker die
-weet of dat werk al is uitgerold, vóór je met een echte run begint.
+**Afhankelijkheid van `kunstenaarnr`.** Deze skill stuurt `kunstenaarnr` mee naar
+`POST /api/kunstwerken`. De migratie die deze kolom aan `kunstenaars` toevoegt is geland en
+staat live op zowel staging als productie, dus deze afhankelijkheid is voldaan.
 
 Alle CLI-aanroepen hieronder gebruiken `npx tsx scripts/import-kunstwerken-cli.ts <subcommando>
 [opties]` (of `npm run import:kunstwerken -- <subcommando> [opties]`), uitgevoerd vanuit de
@@ -33,9 +32,17 @@ Vraag dit als allereerste:
 
   Bij een foutmelding: toon die aan de gebruiker en stop. Bij `OK -- N kunstwerk(en)`: lees
   het bestand zelf in (Read-tool) om `collectiecode`, `kunstenaarNaam`, `aiGegenereerd`,
-  `brondirectory` en de lijst `kunstwerken` te kennen, vraag alléén de doelomgeving (Stap A.1),
-  en ga direct naar **Stap B2** (per-kunstwerk, replay-variant) — sla A.2 t/m A.5 over. Er
-  wordt in dit pad geen nieuw manifest geschreven; Stap C vervalt.
+  `brondirectory` en de lijst `kunstwerken` te kennen. Vraag alléén de doelomgeving (Stap A.1),
+  en voer daarna gewoon A.2 (inloggen) en A.3 (referentie ophalen) uit tegen die nieuwe
+  omgeving — dit pad zet een batch door naar een *andere* omgeving, dus je hebt daar zowel een
+  sessiecookie als de referentiedata van nodig; elke aanroep in Stap B2 gebruikt
+  `--sessie-cookie` en B2.1 heeft `referentie.kunstenaars` nodig. Sla alléén A.4 t/m A.7 over —
+  dat zijn de vragen naar kunstenaar/ai-gegenereerd/brondirectory/collectiecode, en die
+  antwoorden komen nu uit het manifest in plaats van van de gebruiker. Zet daarna, net als aan
+  het eind van Stap A, een lokale `toegekendeCodes` op een kopie van de zojuist opgehaalde
+  `referentie.kunstwerkCodes` (de platte bestandslijst uit Stap A is hier niet nodig — dat is
+  alleen voor een nieuwe import). Ga daarna direct naar **Stap B2** (per-kunstwerk,
+  replay-variant). Er wordt in dit pad geen nieuw manifest geschreven; Stap C vervalt.
 
 ## Stap A: vragen vooraf (alleen bij een nieuwe import)
 
@@ -90,16 +97,18 @@ Voor elk bestand in de brondirectory-lijst, in volgorde:
    Geeft een JSON-array van maat-id's — dit wordt `maatIds`.
 4. Kies, op basis van de afbeelding en `referentie.segmenten`/`stijlen`/`onderwerpen`, het
    best passende **bestaande** segment (en eventueel stijl/onderwerp — dit mogen er meerdere
-   zijn). Bestaat er echt niets passends, bedenk dan een nieuwe, korte omschrijving. Voor elke
-   gekozen waarde (bestaand of nieuw):
+   zijn). De match gebeurt alléén op de Nederlandse tekst (`omschrijvingNl`). Bestaat er echt
+   niets passends, bedenk dan een nieuwe, korte omschrijving — en schrijf die, net als de
+   kunstwerkomschrijving in stap 8, in alle vier de talen (Nederlands, Engels, Duits, Frans).
+   Voor elke gekozen waarde (bestaand of nieuw):
 
    ```
-   npx tsx scripts/import-kunstwerken-cli.ts maak-lookup-waarde --omgeving <omgeving> --sessie-cookie "<cookie>" --tabel <segmenten|stijlen|onderwerpen> --omschrijving "<tekst>"
+   npx tsx scripts/import-kunstwerken-cli.ts maak-lookup-waarde --omgeving <omgeving> --sessie-cookie "<cookie>" --tabel <segmenten|stijlen|onderwerpen> --omschrijving-nl "<tekst-nl>" --omschrijving-fr "<tekst-fr>" --omschrijving-de "<tekst-de>" --omschrijving-en "<tekst-en>"
    ```
 
-   Geeft `{"id":...,"omschrijving":...,"hergebruikt":true|false}`. Gebruik de teruggegeven
-   `id` in `segmentIds`/`stijlIds`/`onderwerpIds`. Onthoud elke `hergebruikt:false`-waarde voor
-   de eindsamenvatting.
+   Geeft `{"id":...,"omschrijvingNl":...,"omschrijvingFr":...,"omschrijvingDe":...,"omschrijvingEn":...,"hergebruikt":true|false}`.
+   Gebruik de teruggegeven `id` in `segmentIds`/`stijlIds`/`onderwerpIds`. Onthoud elke
+   `hergebruikt:false`-waarde voor de eindsamenvatting.
 5. `materiaalIds` = alle `id`'s uit `referentie.materialen` (rechtstreeks, geen CLI-aanroep).
 6. `prijsPerM2` blijft weg uit het object dat je straks meestuurt (de server laat het dan op
    `NULL` staan).
@@ -119,10 +128,14 @@ Voor elk bestand in de brondirectory-lijst, in volgorde:
    ```
 
    Geeft `{"url":"..."}`.
-10. Maak het kunstwerk aan:
+10. Maak het kunstwerk aan. Schrijf het `<kunstwerk-object>` eerst met de Write-tool naar een
+    scratchpad-bestand (bijv. `<scratchpad>/kunstwerk.json`), en geef dat pad mee met
+    `--json-bestand` — niet met inline `--json '<...>'`. Verkoopteksten bevatten bijna altijd
+    apostrofs, en dit omzeilt shell-quoting volledig (ook op PowerShell, de primaire shell van
+    deze repo, waar een inline `--json '<object>'` met apostrofs sowieso al stuk zou gaan):
 
     ```
-    npx tsx scripts/import-kunstwerken-cli.ts maak-kunstwerk --omgeving <omgeving> --sessie-cookie "<cookie>" --json '<kunstwerk-object>'
+    npx tsx scripts/import-kunstwerken-cli.ts maak-kunstwerk --omgeving <omgeving> --sessie-cookie "<cookie>" --json-bestand "<scratchpad>/kunstwerk.json"
     ```
 
     Het `<kunstwerk-object>` bevat: `code`, `foto` (de url uit stap 9), `kunstenaarnr`,
@@ -149,20 +162,32 @@ opzoek/aanmaak-stappen op de nieuwe omgeving:
 
 1. Zoek `manifest.kunstenaarNaam` op in de (nieuw opgehaalde) `referentie.kunstenaars` op
    naam. Niet gevonden → meld dit, sla dit kunstwerk over en ga door (kunstenaars aanmaken
-   valt buiten deze skill — dat gaat via het bestaande beheerscherm).
-2. `maatIds`: `kies-maten --formaat <manifest-item.formaat> --maten-json '<referentie.maten>'`
-   (stap B.3, met het formaat uit het manifest — geen nieuwe foto-analyse nodig).
+   valt buiten deze skill — gebruik daarvoor de losse `toevoegen-kunstenaar`-skill, of het
+   bestaande beheerscherm).
+2. `maatIds`: gebruik **niet** `kies-maten` (dat leidt de maten opnieuw af van het formaat, en
+   `maten`-tabellen kunnen tussen staging en productie verschillen — juist daarom bewaart het
+   manifest de exacte `{breedte, hoogte}`-paren). Vergelijk in plaats daarvan elk
+   `{breedte, hoogte}`-paar uit `manifest-item.maten` met de (nieuw opgehaalde)
+   `referentie.maten` op de nieuwe omgeving, en gebruik het `id` van elke rij met een exacte
+   `breedte`- én `hoogte`-match. Vind je voor een paar geen exacte match: sla dat paar over en
+   meld dit expliciet in de statusregel van dit kunstwerk (stap 8 hieronder).
 3. Voor elke tekst in `manifest-item.segmenten`/`stijlen`/`onderwerpen`: `maak-lookup-waarde`
-   op de nieuwe omgeving (stap B.4, ongewijzigd — hergebruikt-of-maakt-aan op de nieuwe
-   omgeving).
+   op de nieuwe omgeving (stap B.4 — hergebruikt-of-maakt-aan, matcht op `omschrijvingNl`). Het
+   manifest bewaart alleen de Nederlandse tekst; geef die ook mee als `--omschrijving-fr`/
+   `-de`/`-en` als er een treffer is (dan worden die vlaggen toch niet gebruikt — er wordt dan
+   niets aangemaakt). Is er geen treffer en moet de waarde dus echt worden aangemaakt: gebruik
+   bij gebrek aan opgeslagen vertalingen dezelfde Nederlandse tekst voor alle vier de vlaggen
+   (dit is een zeldzame situatie, aangezien segmenten/stijlen/onderwerpen catalogusdata is die
+   op staging en productie doorgaans al hetzelfde is).
 4. `materiaalIds` = alle `id`'s uit de nieuwe `referentie.materialen`.
-5. Code: `volgende-code` op de nieuwe omgeving se eigen `toegekendeCodes` (stap B.7,
+5. Code: `volgende-code`, met de `toegekendeCodes` van de nieuwe omgeving (stap B.7,
    ongewijzigd).
 6. Omschrijvingen: letterlijk uit het manifest-item, ongewijzigd overnemen.
 7. Foto: het bronbestand moet nog bestaan op `manifest.brondirectory + '/' + bestandsnaam` —
-   upload opnieuw (stap B.9) en maak het kunstwerk aan (stap B.10), inclusief dezelfde
-   409-retry.
-8. Print dezelfde statusregel als in stap B.11.
+   upload opnieuw (stap B.9) en maak het kunstwerk aan (stap B.10, met `--json-bestand`),
+   inclusief dezelfde 409-retry.
+8. Print dezelfde statusregel als in stap B.11, aangevuld met eventuele overgeslagen maten uit
+   stap 2.
 
 Er wordt in dit pad geen nieuw manifest geschreven.
 
@@ -209,11 +234,16 @@ Meld:
   doorgaan met het volgende.
 - Inloggen mislukt (Stap A.2) → meteen stoppen, er is dan nog niets geschreven.
 - Foto-upload mislukt (stap B.9) → dit kunstwerk overslaan, melden, doorgaan.
+- Foto groter dan ongeveer 8 MB → de upload-endpoint weigert deze met fout `te-groot`;
+  behandel dit als een mislukte upload (dit kunstwerk zonder foto niet aanmaken; overslaan,
+  melden, doorgaan).
 - `409 code-bestaat-al` ondanks de lokale `toegekendeCodes`-boekhouding → exact één retry
   (zie stap B.10), daarna overslaan en melden.
 - Bij Stap B2: kunstenaar/segment/stijl/onderwerp niet gevonden op naam/tekst op de nieuwe
   omgeving → voor segment/stijl/onderwerp automatisch aanmaken (stap B2.3 doet dit al); voor
-  de kunstenaar zelf: overslaan en melden (zie B2.1).
+  de kunstenaar zelf: overslaan en melden (zie B2.1) — de praktische vervolgstap voor een mens
+  is dan de `toevoegen-kunstenaar`-skill los te starten (deze skill roept die niet automatisch
+  aan).
 
 ## Wat deze skill bewust niet doet
 

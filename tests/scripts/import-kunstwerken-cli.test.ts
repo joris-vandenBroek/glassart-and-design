@@ -31,6 +31,12 @@ describe('import-kunstwerken-cli argumentvalidatie', () => {
     expect(result.stderr).toContain('Gebruik:');
   });
 
+  it('weigert een kapotte vlag (geen --prefix) met exitcode 2, zoals elke andere weigering', () => {
+    const result = runCli(['login', 'zonder-dashes']);
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('Ongeldig argument');
+  });
+
   it('weigert login zonder --omgeving', () => {
     const result = runCli(['login']);
     expect(result.status).toBe(2);
@@ -58,11 +64,47 @@ describe('import-kunstwerken-cli argumentvalidatie', () => {
       'session_id=x',
       '--tabel',
       'foo',
-      '--omschrijving',
+      '--omschrijving-nl',
       'Afrika',
+      '--omschrijving-fr',
+      'Afrique',
+      '--omschrijving-de',
+      'Afrika',
+      '--omschrijving-en',
+      'Africa',
     ]);
     expect(result.status).toBe(2);
     expect(result.stderr).toContain('moet segmenten, stijlen of onderwerpen zijn');
+  });
+
+  it('weigert maak-lookup-waarde zonder --omschrijving-fr', () => {
+    const result = runCli([
+      'maak-lookup-waarde',
+      '--omgeving',
+      'staging',
+      '--sessie-cookie',
+      'session_id=x',
+      '--tabel',
+      'segmenten',
+      '--omschrijving-nl',
+      'Afrika',
+    ]);
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('--omschrijving-fr is verplicht');
+  });
+
+  it('weigert maak-kunstwerk zonder --json en zonder --json-bestand', () => {
+    const result = runCli(['maak-kunstwerk', '--omgeving', 'staging', '--sessie-cookie', 'session_id=x']);
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('--json-bestand');
+    expect(result.stderr).toContain('--json');
+  });
+
+  it('weigert maak-kunstenaar zonder --json en zonder --json-bestand', () => {
+    const result = runCli(['maak-kunstenaar', '--omgeving', 'staging', '--sessie-cookie', 'session_id=x']);
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('--json-bestand');
+    expect(result.stderr).toContain('--json');
   });
 
   it('weigert download-bestand zonder --url', () => {
