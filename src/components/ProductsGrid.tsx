@@ -15,6 +15,7 @@ import { Breadcrumb } from './Breadcrumb';
 import { FiltersPanelContent, ALL_FILTER } from './FiltersPanelContent';
 import { useIsDesktop } from '@/lib/useIsDesktop';
 import { resolveKunstenaarOmschrijving } from '@/lib/resolveKunstenaarOmschrijving';
+import { resolveOmschrijving } from '@/lib/resolveOmschrijving';
 import { LinkifiedText } from './LinkifiedText';
 import type { Segment, Kunstwerk, Materiaal, Maat, Materiaalsoort, KunstwerkFormaat, Stijl, Onderwerp } from './beheer/materiaalTypes';
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
@@ -195,14 +196,18 @@ export function ProductsGrid() {
     geselecteerdSegment
       ? { label: tCollections('title'), href: '/collecties' }
       : { label: tCollections('title') },
-    ...(geselecteerdSegment ? [{ label: geselecteerdSegment.omschrijving }] : []),
+    ...(geselecteerdSegment ? [{ label: resolveOmschrijving(geselecteerdSegment, locale) }] : []),
   ];
 
-  const stijlNaamById = new Map((stijlen.items ?? []).map((stijl) => [stijl.id, stijl.omschrijving]));
-  const onderwerpNaamById = new Map((onderwerpen.items ?? []).map((onderwerp) => [onderwerp.id, onderwerp.omschrijving]));
+  const stijlNaamById = new Map((stijlen.items ?? []).map((stijl) => [stijl.id, resolveOmschrijving(stijl, locale)]));
+  const onderwerpNaamById = new Map(
+    (onderwerpen.items ?? []).map((onderwerp) => [onderwerp.id, resolveOmschrijving(onderwerp, locale)])
+  );
 
   const activeChips: { key: string; label: string; onRemove: () => void }[] = [
-    ...(geselecteerdSegment ? [{ key: 'segment', label: geselecteerdSegment.omschrijving, onRemove: () => setActiveFilter(ALL_FILTER) }] : []),
+    ...(geselecteerdSegment
+      ? [{ key: 'segment', label: resolveOmschrijving(geselecteerdSegment, locale), onRemove: () => setActiveFilter(ALL_FILTER) }]
+      : []),
     ...(geselecteerdeKunstenaar
       ? [{ key: 'kunstenaar', label: geselecteerdeKunstenaar.naam, onRemove: () => setKunstenaarFilter(null) }]
       : []),
@@ -237,6 +242,7 @@ export function ProductsGrid() {
 
   const filtersPanelProps = {
     segmenten: segmenten.items,
+    locale,
     activeFilter,
     onSelectFilter: setActiveFilter,
     segmentCountBase,
