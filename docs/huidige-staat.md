@@ -73,7 +73,7 @@ Alle routes onder `src/app/api/`.
 
 Schrijven vereist altijd een medewerker-sessie. Lezen is publiek, behalve `prijsgroepen` (alleen medewerkers).
 
-**Eigen routes** met extra logica: `klanten` (incl. `/me`), `bestelheaders` (incl. `bestellines` en `statushistorie`), `kunstenaars`, `kunstenaarAfspraken`, `drukkers` (incl. `zendingen` en `zendingen/nummer`), `drukkerzendingen`, `activiteitenlog`, `instellingen`, `kunstwerken/prijzen`, `prijsmatrix`, `health/schema` en de `auth/*`-routes.
+**Eigen routes** met extra logica: `klanten` (incl. `/me` en `/[id]/wachtwoord`), `bestelheaders` (incl. `bestellines` en `statushistorie`), `kunstenaars`, `kunstenaarAfspraken`, `drukkers` (incl. `zendingen` en `zendingen/nummer`), `drukkerzendingen`, `activiteitenlog`, `instellingen`, `kunstwerken/prijzen`, `prijsmatrix`, `health/schema` en de `auth/*`-routes.
 
 **Autorisatie** loopt uitsluitend via `requireMedewerker` in `src/lib/server/requireAuth.ts`. Er is geen laag daaronder — als die check ontbreekt in een route, is de route open.
 
@@ -147,7 +147,7 @@ Een klant met openstaande bestellingen kan zijn account **niet** zelf verwijdere
 - **Stamgegevens (groep):** Materiaalsoorten, Materialen, Maten, Segmenten, Stijlen, Onderwerpen, Prijsgroepen
 - **Onder:** Kunstwerken, Kunstenaars, Prijsmatrix, Drukkers, Activiteit, Glassart & Design, Instellingen
 
-Alle beheerhandelingen die ertoe doen worden gelogd in `activiteitenlog` via `src/lib/logActiviteit.ts`.
+Alle beheerhandelingen die ertoe doen worden gelogd in `activiteitenlog` via `src/lib/logActiviteit.ts` — fire-and-forget vanuit de browser, dus een mislukte logregel valt geruisloos weg. Eén uitzondering: het uitgeven van een klantwachtwoord wordt server-side gelogd, in `POST /api/klanten/[id]/wachtwoord` zelf en binnen dezelfde transactie als de wachtwoordwijziging, zodat die regel niet stil kan verdwijnen.
 
 ## Testen
 
