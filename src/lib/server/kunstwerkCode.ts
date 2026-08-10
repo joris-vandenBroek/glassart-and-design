@@ -46,9 +46,44 @@ export async function codeKomtVoorInBestelling(code: string): Promise<boolean> {
  * langs. `FOR UPDATE` neemt InnoDB's gap lock op de buurt van deze code (mogelijk
  * gemaakt door de index op bestellines.code, zie
  * db/migrations/2026-08-10-bestelline-code-index.sql) en blokkeert daarmee een
- * gelijktijdige INSERT met dezelfde code totdat deze transactie commit of
- * rollbackt -- de verwijdering en de bestelregel kunnen zo niet meer langs elkaar
- * heen glippen.
+ * gelijktijdige INSERT met dezelfde code totdat deze transactie commit of rollbackt.
+ *
+ * Dat sluit precies één interleaving: een bestelling waarvan de bestellines-INSERT
+ * al onderweg is wanneer deze check draait, wordt tegengehouden en levert de
+ * medewerker een 409 op. Het sluit niét de omgekeerde volgorde: draait deze
+ * transactie eerst, dan vindt ze niets, deelt ze een gap lock uit, verwijdert en
+ * committeert -- en de bestelling die vlak daarna zijn INSERT doet, gaat gewoon
+ * door. `POST /api/bestelheaders` leest het kunstwerk namelijk met een gewone,
+ * niet-blokkerende SELECT, ruim vóór deze transactie, en valideert niet opnieuw
+ * vlak voor het schrijven. Resultaat: een bestellines-rij met deze code, zonder dat
+ * er nog een kunstwerk met die code bestaat.
+ *
+ * Dat is volgens het ontwerp (`docs/superpowers/specs/2026-08-10-kunstwerk-code-design.md`,
+ * beslissing 3) geen probleem op zich: een bestelregel legt de code vast als
+ * historische waarde, niet als verwijzing, en er is bewust geen foreign key. Het
+ * enige dat wél moet blijven gelden, is dat zo'n vrijgekomen code nooit aan een
+ * ánder kunstwerk gegeven wordt -- anders wijst de historische bestelregel straks
+ * stil naar het verkeerde werk. Dát wordt niet hier voorkomen, maar bij het
+ * uitgeven van een code: `POST /api/kunstwerken` en `PATCH /api/kunstwerken/[id]`
+ * controleren met `codeKomtVoorInBestelling` of een code al in bestellines
+ * voorkomt, ook als geen enkel kunstwerk hem op dit moment nog draagt, en weigeren
+ * hem dan met dezelfde `code-bestaat-al` als een code die een ander kunstwerk al
+ * heeft.
+ *
+ * Die controle sluit definitief af wat al zíchtbaar -- gecommit -- in bestellines
+ * staat: zo'n code komt nooit opnieuw uit. Ze sluit niet de driewegs-race
+ * hierboven, want `codeKomtVoorInBestelling` is zelf ook maar een gewone,
+ * niet-blokkerende SELECT: staat de bestellines-INSERT van een bestelling nog
+ * open op het moment dat die controle draait, dan is die rij voor haar
+ * onzichtbaar -- precies hetzelfde tijdgat als bij deze DELETE. Loopt dan eerst
+ * deze DELETE (ná de leesactie van de bestelling, maar vóór haar INSERT), gevolgd
+ * door een POST /api/kunstwerken met dezelfde code, en pas dáárna de INSERT van
+ * die bestelling, dan krijgt een ánder kunstwerk alsnog de code van een bestaande
+ * historische bestelregel. Dat zou pas dichtgaan met een lockende lezing bij het
+ * uitgeven zelf, of doordat `POST /api/bestelheaders` het kunstwerk vlak vóór zijn
+ * eigen INSERT nog eens met een lockende lezing herbevestigt -- een gewone
+ * herhaalde SELECT volstaat daar niet voor, want onder REPEATABLE READ levert die
+ * dezelfde snapshot als de eerste keer.
  */
 export async function codeKomtVoorInBestellingForUpdate(
   code: string,

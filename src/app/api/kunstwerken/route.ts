@@ -4,6 +4,7 @@ import { withApiErrorHandling, withMedewerker } from '@/lib/server/apiRoute';
 import {
   KUNSTWERKEN_JSON_COLUMNS,
   codeIsInGebruik,
+  codeKomtVoorInBestelling,
   isDuplicateCodeError,
 } from '@/lib/server/kunstwerkCode';
 
@@ -25,7 +26,12 @@ export const POST = withMedewerker('POST /api/kunstwerken', async (request: Requ
   if (!code) {
     return NextResponse.json({ error: 'code-verplicht' }, { status: 400 });
   }
-  if (await codeIsInGebruik(code, null)) {
+  // Ook een code die op dit moment op géén kunstwerk staat, maar al wel in bestellines
+  // voorkomt, is bezet: het is de vrijgekomen code van een eerder verwijderd kunstwerk.
+  // Wordt die code hier zonder controle uitgegeven, dan wijst de historische bestelregel
+  // straks stil naar het verkeerde werk -- zie het commentaar bij DELETE
+  // /api/kunstwerken/[id] voor waarom die controle hier moet staan en niet daar.
+  if ((await codeIsInGebruik(code, null)) || (await codeKomtVoorInBestelling(code))) {
     return NextResponse.json({ error: 'code-bestaat-al' }, { status: 409 });
   }
   try {
