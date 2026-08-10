@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveKunstenaarOmschrijving } from '@/lib/resolveKunstenaarOmschrijving';
+import { resolveKunstenaarOmschrijving, appendKunstenaarWebsiteZin } from '@/lib/resolveKunstenaarOmschrijving';
 import type { Kunstenaar } from '@/components/beheer/kunstenaarTypes';
 
 const BASE_KUNSTENAAR: Kunstenaar = {
@@ -37,5 +37,17 @@ describe('resolveKunstenaarOmschrijving', () => {
 
   it('falls back to Dutch for an unrecognized locale', () => {
     expect(resolveKunstenaarOmschrijving(BASE_KUNSTENAAR, 'es')).toBe('Nederlandse tekst');
+  });
+});
+
+describe('appendKunstenaarWebsiteZin', () => {
+  it('appends the sentence after a blank line when a sentence is given', () => {
+    expect(appendKunstenaarWebsiteZin('Basistekst.', 'Meer weten? Bekijk https://example.com/')).toBe(
+      'Basistekst.\n\nMeer weten? Bekijk https://example.com/'
+    );
+  });
+
+  it('returns the description unchanged when there is no sentence', () => {
+    expect(appendKunstenaarWebsiteZin('Basistekst.', null)).toBe('Basistekst.');
   });
 });
