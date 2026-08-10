@@ -8,10 +8,21 @@
 -- kunstenaars/kunstwerken, die TEXT gebruiken).
 --
 -- Uitrolvolgorde: draai deze migratie tegen een omgeving VOORDAT de code die hem
--- gebruikt daar gedeployd wordt -- zelfde eis als 2026-08-10-kunstwerk-code.sql. Tussen
--- migratie en deploy geeft de dan nog draaiende oude code (die `omschrijving`
--- selecteert/schrijft) ER_BAD_FIELD_ERROR op deze 5 tabellen; dat venster is bewust
--- geaccepteerd, zoals bij de kunstwerkcode-migratie.
+-- gebruikt daar gedeployd wordt -- zelfde eis als 2026-08-10-kunstwerk-code.sql. Het
+-- faalgedrag in dat venster is hier anders dan bij de kunstwerkcode-migratie, en
+-- asymmetrisch tussen lezen en schrijven:
+--   - LEZEN blijft gewoon werken: `selectLijst()` in src/lib/server/crud.ts doet
+--     `SELECT *` voor deze 5 tabellen (geen entry in VERBORGEN_KOLOMMEN), dus GET-requests
+--     leveren gewoon de nieuwe omschrijvingNl/Fr/De/En-vorm. Maar de dan nog draaiende oude
+--     frontend leest nog `segment.omschrijving`, wat nu `undefined` is -- dat degradeert
+--     stil naar lege filterlabels/chips/productomschrijvingen op de publieke
+--     collectiepagina, zonder enige foutmelding.
+--   - SCHRIJVEN faalt wel hard in dat venster, met `Onbekende kolom(men) voor tabel
+--     <tabel>` (gegooid door `controleerKolommen` in src/lib/server/tableColumns.ts) --
+--     geen MySQL ER_BAD_FIELD_ERROR.
+-- Omdat lege labels op de publieke site makkelijk een tijdje onopgemerkt kunnen blijven:
+-- draai de productiemigratie vlak vóór het dispatchen van de productiedeploy, met iemand
+-- klaar om meteen daarna de RESTART-knop in DirectAdmin te klikken.
 
 ALTER TABLE segmenten CHANGE omschrijving omschrijvingNl VARCHAR(255) NOT NULL;
 ALTER TABLE segmenten ADD COLUMN omschrijvingFr VARCHAR(255) AFTER omschrijvingNl;

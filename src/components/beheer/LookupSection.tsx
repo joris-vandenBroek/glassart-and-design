@@ -9,8 +9,8 @@ import { logActiviteit, type ActiviteitType } from '@/lib/logActiviteit';
 import type { Kunstwerk } from './materiaalTypes';
 
 /**
- * De gedeelde beheersectie voor de catalogustabellen die uit niets anders dan
- * een `omschrijving` bestaan: segmenten, stijlen en onderwerpen.
+ * De gedeelde beheersectie voor de catalogustabellen die verder niets bevatten dan
+ * de vier omschrijving-velden (Nl/Fr/De/En): segmenten, stijlen en onderwerpen.
  *
  * Die drie schermen waren regel voor regel identiek op de entiteitsnaam na --
  * inclusief de bevestigingsstroom voor verwijderen en de "nog in gebruik door N
@@ -98,10 +98,10 @@ export function LookupSection<T extends LookupItem>({
   }
 
   function openEdit(item: T) {
-    setOmschrijvingNl(item.omschrijvingNl);
-    setOmschrijvingFr(item.omschrijvingFr);
-    setOmschrijvingDe(item.omschrijvingDe);
-    setOmschrijvingEn(item.omschrijvingEn);
+    setOmschrijvingNl(item.omschrijvingNl ?? '');
+    setOmschrijvingFr(item.omschrijvingFr ?? '');
+    setOmschrijvingDe(item.omschrijvingDe ?? '');
+    setOmschrijvingEn(item.omschrijvingEn ?? '');
     setActionError(null);
     setPendingVerwijderCount(null);
     setModalState({ mode: 'edit', item });

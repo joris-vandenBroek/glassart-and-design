@@ -254,6 +254,30 @@ describe('ProductModal', () => {
     expect(screen.getByTestId('product-modal-quantity-value')).toHaveValue(1);
   });
 
+  it('shows the German omschrijving instead of the Dutch one when locale is de', () => {
+    render(
+      <NextIntlClientProvider locale="de" messages={messages}>
+        <CustomerAuthProvider>
+          <CartProvider>
+            <ProductModal
+              kunstwerk={{ ...KUNSTWERK, omschrijvingNl: 'Wellness paneel', omschrijvingDe: 'Wellness Panel DE' }}
+              prijzen={KUNSTWERK_PRIJZEN}
+              materialen={MATERIALEN}
+              maten={MATEN}
+              materiaalsoorten={MATERIAALSOORTEN}
+              kunstenaars={KUNSTENAARS}
+              segmenten={SEGMENTEN}
+              stijlen={STIJLEN}
+              onderwerpen={ONDERWERPEN}
+              onClose={() => {}}
+            />
+          </CartProvider>
+        </CustomerAuthProvider>
+      </NextIntlClientProvider>
+    );
+    expect(screen.getByTestId('product-modal-omschrijving')).toHaveTextContent('Wellness Panel DE');
+  });
+
   it('defaults to the 4mm Veiligheidsglas materiaal when available, instead of the first-listed materiaal', () => {
     const MATERIALEN_ACRYL_EERST: Materiaal[] = [
       { id: 'mat-2', materiaalsoortId: 'soort-2', materiaaldikte: 3, omschrijvingNl: 'Lichtgewicht en flexibel voor grote oppervlaktes.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },

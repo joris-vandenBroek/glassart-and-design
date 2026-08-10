@@ -67,10 +67,10 @@ export function MateriaalsoortenSection({
   }
 
   function openEdit(materiaalsoort: Materiaalsoort) {
-    setOmschrijvingNl(materiaalsoort.omschrijvingNl);
-    setOmschrijvingFr(materiaalsoort.omschrijvingFr);
-    setOmschrijvingDe(materiaalsoort.omschrijvingDe);
-    setOmschrijvingEn(materiaalsoort.omschrijvingEn);
+    setOmschrijvingNl(materiaalsoort.omschrijvingNl ?? '');
+    setOmschrijvingFr(materiaalsoort.omschrijvingFr ?? '');
+    setOmschrijvingDe(materiaalsoort.omschrijvingDe ?? '');
+    setOmschrijvingEn(materiaalsoort.omschrijvingEn ?? '');
     setStaatEigenMaatToe(materiaalsoort.staatEigenMaatToe ?? false);
     setMaxBreedte(materiaalsoort.maxBreedte != null ? String(materiaalsoort.maxBreedte) : '');
     setMaxHoogte(materiaalsoort.maxHoogte != null ? String(materiaalsoort.maxHoogte) : '');

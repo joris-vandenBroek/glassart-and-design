@@ -79,10 +79,10 @@ export function MaterialenSection({
   function openEdit(materiaal: Materiaal) {
     setMateriaalsoortId(materiaal.materiaalsoortId);
     setMateriaaldikte(String(materiaal.materiaaldikte));
-    setOmschrijvingNl(materiaal.omschrijvingNl);
-    setOmschrijvingFr(materiaal.omschrijvingFr);
-    setOmschrijvingDe(materiaal.omschrijvingDe);
-    setOmschrijvingEn(materiaal.omschrijvingEn);
+    setOmschrijvingNl(materiaal.omschrijvingNl ?? '');
+    setOmschrijvingFr(materiaal.omschrijvingFr ?? '');
+    setOmschrijvingDe(materiaal.omschrijvingDe ?? '');
+    setOmschrijvingEn(materiaal.omschrijvingEn ?? '');
     setActionError(null);
     setModalState({ mode: 'edit', materiaal });
   }

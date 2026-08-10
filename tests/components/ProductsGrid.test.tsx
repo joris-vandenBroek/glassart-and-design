@@ -280,6 +280,23 @@ describe('ProductsGrid', () => {
     expect(cards[0]).not.toHaveTextContent('4mm Veiligheidsglas');
   });
 
+  it('shows the German omschrijving on the card instead of the Dutch one when locale is de', async () => {
+    mockCollections({
+      kunstwerken: [{ ...KUNSTWERKEN[0], omschrijvingNl: 'Hotel paneel', omschrijvingDe: 'Hotel Panel DE' }],
+    });
+    render(
+      <NextIntlClientProvider locale="de" messages={messages}>
+        <CustomerAuthProvider>
+          <CartProvider>
+            <ProductsGrid />
+          </CartProvider>
+        </CustomerAuthProvider>
+      </NextIntlClientProvider>
+    );
+    const cards = await screen.findAllByTestId('product-card');
+    expect(cards[0]).toHaveTextContent('Hotel Panel DE');
+  });
+
   it('shows a breadcrumb that ends on "Collecties" when no segment is selected, and on the segment name once one is', async () => {
     renderProductsGrid();
     await screen.findAllByTestId('product-card');
