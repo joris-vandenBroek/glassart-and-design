@@ -135,7 +135,7 @@ export function ProductsGrid() {
   );
 
   const geselecteerdeKunstenaar = kunstenaarFilter
-    ? (kunstenaars.items ?? []).find((kunstenaar) => kunstenaar.id === kunstenaarFilter) ?? null
+    ? (kunstenaars.items ?? []).find((kunstenaar) => kunstenaar.kunstenaarnr === kunstenaarFilter) ?? null
     : null;
 
   function handleSelect(kunstwerk: Kunstwerk) {

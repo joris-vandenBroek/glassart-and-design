@@ -185,7 +185,7 @@ describe('BeheerShell', () => {
     mockCollections({
       klanten: [{ id: 'uid-1', ...KLANT_DATA }],
       kunstenaars: [
-        { id: 'ka-1', kunstenaarnr: 'ka-1', naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', exclusieveKlantIds: [] },
+        { id: 'ka-1', kunstenaarnr: 'KU-00001', naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', exclusieveKlantIds: [] },
       ],
     });
     renderShell();
@@ -196,7 +196,7 @@ describe('BeheerShell', () => {
     expect(await screen.findByTestId('klant-modal')).toBeInTheDocument();
 
     fireEvent.focus(screen.getByTestId('klant-modal-kunstenaar'));
-    fireEvent.click(screen.getByTestId('klant-modal-kunstenaar-option-ka-1'));
+    fireEvent.click(screen.getByTestId('klant-modal-kunstenaar-option-KU-00001'));
     fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
 
     await waitFor(() =>
@@ -204,7 +204,7 @@ describe('BeheerShell', () => {
         '/api/klanten/uid-1',
         expect.objectContaining({
           method: 'PATCH',
-          body: JSON.stringify({ kunstenaarnr: 'ka-1' }),
+          body: JSON.stringify({ kunstenaarnr: 'KU-00001' }),
         })
       )
     );
@@ -378,7 +378,7 @@ describe('BeheerShell', () => {
   it('shows the count and switches to the Kunstenaars section', async () => {
     mockCollections({
       kunstenaars: [
-        { id: 'ka-1', kunstenaarnr: 'ka-1', naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', exclusieveKlantIds: [] },
+        { id: 'ka-1', kunstenaarnr: 'KU-00001', naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', exclusieveKlantIds: [] },
       ],
     });
     renderShell();

@@ -31,7 +31,7 @@ const KUNSTWERKEN = [
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
     formaat: 'staand',
-    kunstenaarnr: 'ka-1',
+    kunstenaarnr: 'KU-00001',
     stijlIds: ['stijl-abstract'],
     onderwerpIds: ['onderwerp-bloemen'],
     omschrijvingNl: 'Hotel paneel',
@@ -86,7 +86,7 @@ const MATERIAALSOORTEN = [{ id: 'soort-1', omschrijving: 'Veiligheidsglas' }];
 const KUNSTENAARS = [
   {
     id: 'ka-1',
-    kunstenaarnr: 'ka-1',
+    kunstenaarnr: 'KU-00001',
     naam: 'Sabrina Glasser',
     foto: null,
     omschrijvingNl: 'Werkt met gesmolten glas.',
@@ -218,7 +218,7 @@ describe('ProductsGrid', () => {
   it('shows the artiest/collectie/stijl/onderwerp info block once the dialog is opened', async () => {
     renderProductsGrid();
     const cards = await screen.findAllByTestId('product-card');
-    fireEvent.click(cards[0]); // kw-1: kunstenaarnr 'ka-1', segmentIds ['seg-hotel'], stijlIds ['stijl-abstract'], onderwerpIds ['onderwerp-bloemen']
+    fireEvent.click(cards[0]); // kw-1: kunstenaarnr 'KU-00001', segmentIds ['seg-hotel'], stijlIds ['stijl-abstract'], onderwerpIds ['onderwerp-bloemen']
     expect(screen.getByTestId('product-modal-artiest')).toHaveTextContent('Sabrina Glasser');
     expect(screen.getByTestId('product-modal-collecties')).toHaveTextContent('Hotel');
     expect(screen.getByTestId('product-modal-stijl')).toHaveTextContent('Abstract');
@@ -299,7 +299,7 @@ describe('ProductsGrid', () => {
     renderProductsGrid();
     await screen.findAllByTestId('product-card');
     fireEvent.focus(screen.getByTestId('kunstenaar-filter'));
-    fireEvent.click(screen.getByTestId('kunstenaar-filter-option-ka-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-filter-option-KU-00001'));
     expect(screen.getByTestId('kunstenaar-banner')).toHaveTextContent('Sabrina Glasser');
     expect(screen.getByTestId('kunstenaar-banner')).toHaveTextContent('Werkt met gesmolten glas.');
     expect(screen.getAllByTestId('product-card')).toHaveLength(1);
@@ -367,7 +367,7 @@ describe('ProductsGrid', () => {
 
     fireEvent.click(screen.getByTestId('filter-seg-hotel'));
     fireEvent.focus(screen.getByTestId('kunstenaar-filter'));
-    fireEvent.click(screen.getByTestId('kunstenaar-filter-option-ka-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-filter-option-KU-00001'));
     fireEvent.click(screen.getByTestId('facet-formaat-option-staand'));
     fireEvent.click(screen.getByTestId('facet-stijl-option-stijl-abstract'));
     fireEvent.click(screen.getByTestId('facet-onderwerp-option-onderwerp-bloemen'));

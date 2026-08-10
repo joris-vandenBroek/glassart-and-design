@@ -252,9 +252,9 @@ describe('CartPanel', () => {
     // The item was added while the kunstwerk was still free; only afterwards was it linked
     // to a kunstenaar who may only sell their own work.
     mockCollections({
-      kunstwerken: [{ id: 'kw-1', kunstenaarnr: 'ka-1' }],
+      kunstwerken: [{ id: 'kw-1', kunstenaarnr: 'KU-00001' }],
       kunstenaars: [
-        { id: 'ka-1', kunstenaarnr: 'ka-1', naam: 'Solo Artiest', exclusieveKlantIds: ['andere-uid'] },
+        { id: 'ka-1', kunstenaarnr: 'KU-00001', naam: 'Solo Artiest', exclusieveKlantIds: ['andere-uid'] },
       ],
     });
     await renderCartPanel();
@@ -274,8 +274,8 @@ describe('CartPanel', () => {
 
   it('places the order normally when the cart item is linked to an open kunstenaar', async () => {
     mockCollections({
-      kunstwerken: [{ id: 'kw-1', kunstenaarnr: 'ka-1' }],
-      kunstenaars: [{ id: 'ka-1', kunstenaarnr: 'ka-1', naam: 'Open Artiest', exclusieveKlantIds: [] }],
+      kunstwerken: [{ id: 'kw-1', kunstenaarnr: 'KU-00001' }],
+      kunstenaars: [{ id: 'ka-1', kunstenaarnr: 'KU-00001', naam: 'Open Artiest', exclusieveKlantIds: [] }],
     });
     await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
