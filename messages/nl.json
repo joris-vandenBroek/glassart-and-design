@@ -653,6 +653,7 @@
     "kunstwerkenFotoUploadError": "De foto kon niet geüpload worden. Probeer het opnieuw.",
     "kunstwerkenFotoTooLarge": "Het bestand is te groot, ook na compressie. Kies een kleinere foto.",
     "kunstwerkenFotoVerplicht": "Voeg een foto toe.",
+    "kunstwerkenLabelPrefix": "Prefix (voorstel volgnummer)",
     "kunstwerkenLabelCode": "Code",
     "kunstwerkenCodeVerplicht": "Vul een code in.",
     "kunstwerkenCodeVast": "De code ligt vast omdat dit kunstwerk al in een bestelling voorkomt.",

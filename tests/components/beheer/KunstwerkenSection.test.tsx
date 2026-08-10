@@ -1147,4 +1147,55 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-error')).toHaveTextContent('Deze code bestaat al.');
     expect(onUpdate).not.toHaveBeenCalled();
   });
+
+  it('toont het prefixveld bij het aanmaken van een nieuw kunstwerk', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    expect(screen.getByTestId('kunstwerk-modal-prefix')).toBeInTheDocument();
+  });
+
+  it('toont geen prefixveld bij het bewerken van een bestaand kunstwerk', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+    expect(screen.queryByTestId('kunstwerk-modal-prefix')).toBeNull();
+  });
+
+  it('vult het codeveld met een voorstel zodra een prefix wordt gekozen', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-prefix'), { target: { value: 'GLA-AFR' } });
+    expect(screen.getByTestId('kunstwerk-modal-code')).toHaveValue('GLA-AFR-00001');
+  });
+
+  it('vult het codeveld met een voorstel op basis van een bestaand prefix, niet alleen een nieuw prefix', () => {
+    const kunstwerkenMetPrefix: Kunstwerk[] = [
+      ...KUNSTWERKEN,
+      {
+        id: 'kw-3',
+        foto: 'https://storage.example.com/kw-3.jpg',
+        code: 'GLA-AFR-00007',
+        kunstenaarnr: null,
+        formaat: 'staand',
+        segmentIds: ['seg-1'],
+        materiaalIds: ['mat-1'],
+        maatIds: ['maat-1'],
+        omschrijvingNl: 'Testwerk met prefix',
+        omschrijvingFr: '',
+        omschrijvingDe: '',
+        omschrijvingEn: '',
+      },
+    ];
+    renderSection({ kunstwerken: kunstwerkenMetPrefix });
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-prefix'), { target: { value: 'GLA-AFR' } });
+    expect(screen.getByTestId('kunstwerk-modal-code')).toHaveValue('GLA-AFR-00008');
+  });
+
+  it('laat het codeveld na het voorstel gewoon vrij overschrijfbaar', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-prefix'), { target: { value: 'GLA-AFR' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'GLA-AFR-eigen' } });
+    expect(screen.getByTestId('kunstwerk-modal-code')).toHaveValue('GLA-AFR-eigen');
+  });
 });
