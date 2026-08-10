@@ -17,12 +17,17 @@ SET
     CONCAT(CHAR(10), CHAR(10), 'Meer weten over Jack? Bekijk https://www.jacksart.nl/'),
     ''
   ),
-  -- The French sentence uses a non-breaking space (CHAR(160)) before "?", per
-  -- French typographic convention -- confirmed byte-for-byte against the actual
+  -- The French sentence uses a non-breaking space before "?", per French
+  -- typographic convention -- confirmed byte-for-byte against the actual
   -- staging row; a plain space here would silently no-op the REPLACE.
+  -- In utf8mb4, NBSP (U+00A0) is the two-byte sequence C2 A0 -- CHAR(160) alone
+  -- returns a single-byte *binary* string (0xA0), which makes the whole CONCAT
+  -- binary and REPLACE compares byte-wise, so it can never match the real
+  -- two-byte column value. CHAR(194), CHAR(160) reproduces both bytes and
+  -- matches. Verified directly against the live staging row before fixing.
   omschrijvingFr = REPLACE(
     omschrijvingFr,
-    CONCAT(CHAR(10), CHAR(10), 'En savoir plus sur Jack', CHAR(160), '? Rendez-vous sur https://www.jacksart.nl/en/'),
+    CONCAT(CHAR(10), CHAR(10), 'En savoir plus sur Jack', CHAR(194), CHAR(160), '? Rendez-vous sur https://www.jacksart.nl/en/'),
     ''
   ),
   omschrijvingDe = REPLACE(
