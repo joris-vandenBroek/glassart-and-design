@@ -26,7 +26,7 @@ const KUNSTWERKEN = [
   {
     id: 'kw-1',
     foto: 'https://example.com/kw-1.jpg',
-    naam: 'Kunstwerk 1',
+    code: 'Kunstwerk 1',
     segmentIds: ['seg-hotel'],
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
@@ -42,7 +42,7 @@ const KUNSTWERKEN = [
   {
     id: 'kw-2',
     foto: 'https://example.com/kw-2.jpg',
-    naam: 'Kunstwerk 2',
+    code: 'Kunstwerk 2',
     segmentIds: ['seg-wellness'],
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
@@ -58,7 +58,7 @@ const KUNSTWERKEN = [
   {
     id: 'kw-3',
     foto: 'https://example.com/kw-3.jpg',
-    naam: 'Kunstwerk 3',
+    code: 'Kunstwerk 3',
     segmentIds: ['seg-hotel', 'seg-wellness'],
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
@@ -259,7 +259,7 @@ describe('ProductsGrid', () => {
     await waitFor(() =>
       expect(logActiviteitMock).toHaveBeenCalledWith(
         'kunstwerk_bekeken',
-        KUNSTWERKEN[0].naam
+        KUNSTWERKEN[0].code
       )
     );
   });

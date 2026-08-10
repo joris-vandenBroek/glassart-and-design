@@ -18,7 +18,7 @@ const MATERIALEN: Materiaal[] = [
 const BASE_KUNSTWERK: Kunstwerk = {
   id: 'kw-1',
   foto: '',
-  naam: '',
+  code: '',
   kunstenaarId: null,
   segmentIds: [],
   materiaalIds: [],

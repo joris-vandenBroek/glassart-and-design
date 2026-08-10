@@ -47,7 +47,7 @@ const KUNSTWERKEN: Kunstwerk[] = [
   {
     id: 'kw-1',
     foto: '',
-    naam: 'Hotel paneel',
+    code: 'Hotel paneel',
     kunstenaarId: null,
     segmentIds: [],
     materiaalIds: ['mat-1'],
@@ -60,7 +60,7 @@ const KUNSTWERKEN: Kunstwerk[] = [
   {
     id: 'kw-2',
     foto: '',
-    naam: 'Raampaneel',
+    code: 'Raampaneel',
     kunstenaarId: null,
     segmentIds: [],
     materiaalIds: ['mat-1'],
@@ -74,7 +74,7 @@ const KUNSTWERKEN: Kunstwerk[] = [
   {
     id: 'kw-3',
     foto: '',
-    naam: 'Deurpaneel',
+    code: 'Deurpaneel',
     kunstenaarId: null,
     segmentIds: [],
     materiaalIds: ['mat-1'],

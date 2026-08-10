@@ -86,7 +86,7 @@ export const TABLE_COLUMNS: Record<string, readonly string[]> = {
   kunstwerken: [
     'id',
     'foto',
-    'naam',
+    'code',
     'kunstenaarId',
     'formaat',
     'omschrijvingNl',

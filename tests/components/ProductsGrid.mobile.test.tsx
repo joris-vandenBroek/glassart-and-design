@@ -25,7 +25,7 @@ const KUNSTWERKEN = [
   {
     id: 'kw-1',
     foto: 'https://example.com/kw-1.jpg',
-    naam: 'Kunstwerk 1',
+    code: 'Kunstwerk 1',
     segmentIds: ['seg-hotel'],
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
@@ -39,7 +39,7 @@ const KUNSTWERKEN = [
   {
     id: 'kw-2',
     foto: 'https://example.com/kw-2.jpg',
-    naam: 'Kunstwerk 2',
+    code: 'Kunstwerk 2',
     segmentIds: ['seg-wellness'],
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],

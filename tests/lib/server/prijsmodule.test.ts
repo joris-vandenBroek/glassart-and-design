@@ -199,7 +199,7 @@ describe('berekenPrijzenVoorAlleKunstwerken', () => {
     const kunstenaarId = await maakKunstenaarMetOpslag(30);
     const kunstwerk = await insertRow<{ id: string }>(
       'kunstwerken',
-      { naam: 'Test werk', kunstenaarId, materiaalIds: [materiaalId], maatIds: [maatId] } as never,
+      { code: 'test-prijsmodule-basis', kunstenaarId, materiaalIds: [materiaalId], maatIds: [maatId] } as never,
       ['materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(kunstwerk.id);
@@ -211,7 +211,7 @@ describe('berekenPrijzenVoorAlleKunstwerken', () => {
   it('gives an empty array for a maatloos kunstwerk (no maatIds)', async () => {
     const kunstwerk = await insertRow<{ id: string }>(
       'kunstwerken',
-      { naam: 'Maatloos werk', maatIds: [], materiaalIds: [] } as never,
+      { code: 'test-prijsmodule-maatloos', maatIds: [], materiaalIds: [] } as never,
       ['materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(kunstwerk.id);
@@ -229,7 +229,7 @@ describe('berekenPrijzenVoorAlleKunstwerken', () => {
     const kunstenaarId = await maakKunstenaarMetOpslag(30);
     const kunstwerk = await insertRow<{ id: string }>(
       'kunstwerken',
-      { naam: 'Test werk met korting', kunstenaarId, materiaalIds: [materiaalId], maatIds: [maatId] } as never,
+      { code: 'test-prijsmodule-korting', kunstenaarId, materiaalIds: [materiaalId], maatIds: [maatId] } as never,
       ['materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(kunstwerk.id);

@@ -286,7 +286,7 @@ export function ProductModal({
         prijs: null,
         quantity: quantityNum,
       });
-      void logActiviteit('mandje_eigen_maat_toegevoegd', kunstwerk.naam);
+      void logActiviteit('mandje_eigen_maat_toegevoegd', kunstwerk.code);
     } else {
       const gekozenMaat = beschikbareMaten.find((maat) => maat.id === maatId);
       if (!gekozenMaat || !prijsRegel) {
@@ -303,7 +303,7 @@ export function ProductModal({
         prijs: prijsRegel.prijs,
         quantity: quantityNum,
       });
-      void logActiviteit('mandje_toegevoegd', kunstwerk.naam);
+      void logActiviteit('mandje_toegevoegd', kunstwerk.code);
     }
     setIsConfirmed(true);
     closeTimeoutRef.current = setTimeout(() => {
@@ -354,11 +354,11 @@ export function ProductModal({
                 </dd>
               </>
             )}
-            {kunstwerk.naam && (
+            {kunstwerk.code && (
               <>
                 <dt className="font-head text-[10px] uppercase tracking-wide text-gold/90">{t('nameLabel')}</dt>
-                <dd data-testid="product-modal-kunstwerknaam" className="text-white/75">
-                  {kunstwerk.naam}
+                <dd data-testid="product-modal-kunstwerkcode" className="text-white/75">
+                  {kunstwerk.code}
                 </dd>
               </>
             )}

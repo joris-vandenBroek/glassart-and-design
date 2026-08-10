@@ -22,7 +22,7 @@ vi.mock('@/lib/logActiviteit', () => ({
 const KUNSTWERK: Kunstwerk = {
   id: 'kw-1',
   foto: 'https://example.com/kw-1.jpg',
-  naam: 'Hotel paneel',
+  code: 'Hotel paneel',
   kunstenaarId: null,
   segmentIds: ['seg-1'],
   materiaalIds: ['mat-1', 'mat-2'],
@@ -56,7 +56,7 @@ const ONDERWERPEN: Onderwerp[] = [{ id: 'onderwerp-1', omschrijving: 'Bloemen' }
 const MATERIAALLOOS_KUNSTWERK: Kunstwerk = {
   id: 'kw-akoestisch',
   foto: 'https://example.com/akoestisch.jpg',
-  naam: 'Akoestisch paneel',
+  code: 'Akoestisch paneel',
   kunstenaarId: null,
   segmentIds: [],
   materiaalIds: [],
@@ -70,7 +70,7 @@ const MATERIAALLOOS_KUNSTWERK: Kunstwerk = {
 const MAATLOOS_MET_MATERIAAL_KUNSTWERK: Kunstwerk = {
   id: 'kw-veiligheidsglas-per-m2',
   foto: 'https://example.com/veiligheidsglas.jpg',
-  naam: '4mm veiligheidsglas per m2',
+  code: '4mm veiligheidsglas per m2',
   kunstenaarId: null,
   segmentIds: [],
   materiaalIds: ['mat-1'],
@@ -1085,7 +1085,7 @@ describe('ProductModal', () => {
       onderwerpIds: ['onderwerp-1'],
     });
     expect(screen.getByTestId('product-modal-artiest')).toHaveTextContent('Open Artiest');
-    expect(screen.getByTestId('product-modal-kunstwerknaam')).toHaveTextContent('Hotel paneel');
+    expect(screen.getByTestId('product-modal-kunstwerkcode')).toHaveTextContent('Hotel paneel');
     expect(screen.getByTestId('product-modal-collecties')).toHaveTextContent('Hotel');
     expect(screen.getByTestId('product-modal-stijl')).toHaveTextContent('Abstract');
     expect(screen.getByTestId('product-modal-onderwerp')).toHaveTextContent('Bloemen');

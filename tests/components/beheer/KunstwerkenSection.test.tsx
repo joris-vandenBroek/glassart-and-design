@@ -75,7 +75,7 @@ const KUNSTWERKEN: Kunstwerk[] = [
   {
     id: 'kw-1',
     foto: 'https://storage.example.com/kw-1.jpg',
-    naam: 'Hotel paneel 1',
+    code: 'Hotel paneel 1',
     kunstenaarId: null,
     formaat: 'staand',
     segmentIds: ['seg-1'],
@@ -204,7 +204,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
     expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled(); // naam, prijs and omschrijving still missing
 
-    fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Test' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Test' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Test' } });
     expect(screen.getByTestId('kunstwerk-modal-opslaan')).not.toBeDisabled();
   });
@@ -232,7 +232,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
-    fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Vibrant Spirit' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Vibrant Spirit' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'ka-1' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Nieuw kunstwerk' } });
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
@@ -240,7 +240,7 @@ describe('KunstwerkenSection', () => {
     await waitFor(() =>
       expect(onAdd).toHaveBeenCalledWith({
         foto: 'https://storage.example.com/nieuw.jpg',
-        naam: 'Vibrant Spirit',
+        code: 'Vibrant Spirit',
         kunstenaarId: 'ka-1',
         formaat: 'staand',
         segmentIds: ['seg-1'],
@@ -263,7 +263,7 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-segment-seg-1')).toBeChecked();
     expect(screen.getByTestId('kunstwerk-modal-materiaal-mat-1')).toBeChecked();
     expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).toBeChecked();
-    expect(screen.getByTestId('kunstwerk-modal-naam')).toHaveValue('Hotel paneel 1');
+    expect(screen.getByTestId('kunstwerk-modal-code')).toHaveValue('Hotel paneel 1');
     expect(screen.getByTestId('kunstwerk-modal-omschrijving-nl')).toHaveValue('Hotel paneel 1');
     expect(screen.getByTestId('kunstwerk-modal-formaat-staand')).toBeChecked();
 
@@ -272,7 +272,7 @@ describe('KunstwerkenSection', () => {
     await waitFor(() =>
       expect(onUpdate).toHaveBeenCalledWith('kw-1', {
         foto: 'https://storage.example.com/kw-1.jpg',
-        naam: 'Hotel paneel 1',
+        code: 'Hotel paneel 1',
         kunstenaarId: null,
         formaat: 'staand',
         segmentIds: ['seg-1'],
@@ -327,7 +327,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
-    fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Nieuw kunstwerk' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Nieuw kunstwerk' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Nieuw kunstwerk' } });
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
 
@@ -377,7 +377,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
-    fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Nieuw kunstwerk' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Nieuw kunstwerk' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Nieuw kunstwerk' } });
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
 
@@ -432,39 +432,6 @@ describe('KunstwerkenSection', () => {
     expect(onUpdate).not.toHaveBeenCalledWith('kw-akoestisch', expect.anything());
   });
 
-  it('shows a backfill button for kunstwerken without a naam and fills naam from the NL description on click', async () => {
-    const zonderNaam: Kunstwerk = {
-      ...KUNSTWERKEN[0],
-      id: 'kw-2',
-      naam: '',
-      omschrijvingNl: 'Restaurant paneel 3',
-    };
-    const onUpdate = vi.fn().mockResolvedValue(true);
-    renderSection({ kunstwerken: [...KUNSTWERKEN, zonderNaam], onUpdate });
-
-    const backfillButton = screen.getByTestId('kunstwerken-backfill-namen');
-    expect(backfillButton).toHaveTextContent('1');
-    fireEvent.click(backfillButton);
-
-    await waitFor(() =>
-      expect(onUpdate).toHaveBeenCalledWith(
-        'kw-2',
-        expect.objectContaining({ naam: 'Restaurant paneel 3' })
-      )
-    );
-    await waitFor(() =>
-      expect(logActiviteitMock).toHaveBeenCalledWith(
-        'kunstwerk_gewijzigd',
-        'Restaurant paneel 3'
-      )
-    );
-  });
-
-  it('does not show the backfill button when every kunstwerk already has a naam', () => {
-    renderSection();
-    expect(screen.queryByTestId('kunstwerken-backfill-namen')).not.toBeInTheDocument();
-  });
-
   it('keeps the materialen/maten panel collapsed by default and expands it when clicked', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('kunstwerken-add'));
@@ -489,7 +456,7 @@ describe('KunstwerkenSection', () => {
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-vierkant'));
-    fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Akoestisch paneel' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Akoestisch paneel' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Verbetert de akoestiek.' } });
     expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled();
 
@@ -500,7 +467,7 @@ describe('KunstwerkenSection', () => {
     await waitFor(() =>
       expect(onAdd).toHaveBeenCalledWith({
         foto: 'https://storage.example.com/nieuw.jpg',
-        naam: 'Akoestisch paneel',
+        code: 'Akoestisch paneel',
         kunstenaarId: null,
         formaat: 'vierkant',
         segmentIds: ['seg-1'],
@@ -535,7 +502,7 @@ describe('KunstwerkenSection', () => {
     const file = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
-    fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: '4mm veiligheidsglas per m2' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: '4mm veiligheidsglas per m2' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Op maat gezaagd.' } });
     expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled();
 
@@ -796,7 +763,7 @@ describe('KunstwerkenSection', () => {
 
     expect(resolvers).toHaveLength(2);
     resolvers[0]('liggend');
-    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-naam')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-code')).toBeInTheDocument());
 
     expect(screen.getByTestId('kunstwerk-modal-formaat-liggend')).not.toBeChecked();
 
@@ -811,7 +778,7 @@ describe('KunstwerkenSection', () => {
     const file = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
-    fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Test' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Test' } });
     fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
     // Pick the formaat first, then narrow down to just mat-1 + maat-1: choosing a formaat
     // re-checks every materiaal and every compatible maat, so narrowing before that point
@@ -981,12 +948,12 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-tab-algemeen')).toHaveAttribute('aria-selected', 'false');
   });
 
-  it('shows an error dot on the Algemeen tab when naam is empty, and on the Omschrijvingen tab when omschrijvingNl is empty', () => {
+  it('shows an error dot on the Algemeen tab when code is empty, and on the Omschrijvingen tab when omschrijvingNl is empty', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('kunstwerken-add'));
     expect(screen.getByTestId('kunstwerk-modal-tab-algemeen-error-dot')).toBeInTheDocument();
     expect(screen.getByTestId('kunstwerk-modal-tab-omschrijvingen-error-dot')).toBeInTheDocument();
-    fireEvent.change(screen.getByTestId('kunstwerk-modal-naam'), { target: { value: 'Nieuw kunstwerk' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Nieuw kunstwerk' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Omschrijving' } });
     expect(screen.queryByTestId('kunstwerk-modal-tab-omschrijvingen-error-dot')).not.toBeInTheDocument();
   });

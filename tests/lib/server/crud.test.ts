@@ -72,9 +72,9 @@ describe('generic CRUD helpers (against segmenten table)', () => {
   });
 
   it('serializes and deserializes JSON columns', async () => {
-    const created = await insertRow<{ id: string; naam: string; segmentIds: string[] }>(
+    const created = await insertRow<{ id: string; code: string; segmentIds: string[] }>(
       'kunstwerken',
-      { naam: 'Test', segmentIds: ['a', 'b'] } as never,
+      { code: 'test-crud-json', segmentIds: ['a', 'b'] } as never,
       ['segmentIds', 'materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(created.id);
@@ -88,9 +88,9 @@ describe('generic CRUD helpers (against segmenten table)', () => {
   });
 
   it('defaults a NULL JSON column to an empty array instead of returning null', async () => {
-    const created = await insertRow<{ id: string; naam: string }>(
+    const created = await insertRow<{ id: string; code: string }>(
       'kunstwerken',
-      { naam: 'Zonder materialen' } as never,
+      { code: 'test-crud-zonder-materialen' } as never,
       ['segmentIds', 'materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(created.id);

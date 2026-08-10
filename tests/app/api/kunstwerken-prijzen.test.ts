@@ -98,7 +98,7 @@ describe('GET /api/kunstwerken/prijzen', () => {
     ]);
     const kunstwerk = await insertRow<{ id: string }>(
       'kunstwerken',
-      { naam: 'Bulk test werk', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
+      { code: 'test-prijzen-bulk', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
       ['materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(kunstwerk.id);
@@ -119,7 +119,7 @@ describe('GET /api/kunstwerken/prijzen', () => {
     ]);
     const kunstwerk = await insertRow<{ id: string }>(
       'kunstwerken',
-      { naam: 'Bulk korting werk', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
+      { code: 'test-prijzen-bulk-korting', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
       ['materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(kunstwerk.id);

@@ -95,7 +95,7 @@ describe('kunstenaars + kunstenaarAfspraken routes', () => {
     createdKunstenaarIds.push(kunstenaar.id);
     const kunstwerk = await insertRow<{ id: string }>(
       'kunstwerken',
-      { naam: 'Werk van Referenced Artiest', kunstenaarId: kunstenaar.id, materiaalIds: [], maatIds: [] } as never,
+      { code: 'test-kunstenaars-referenced', kunstenaarId: kunstenaar.id, materiaalIds: [], maatIds: [] } as never,
       ['materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(kunstwerk.id);

@@ -1,0 +1,21 @@
+-- Migratie voor de kunstwerkcode (2026-08-10), deel 1 van 2.
+-- Ontwerp: docs/superpowers/specs/2026-08-10-kunstwerk-code-design.md
+--
+-- `naam` was op kunstwerken in de praktijk al een artikelcode (Dan-02424, Duc-04038).
+-- Deze migratie geeft de kolom die naam en maakt hem uniek.
+--
+-- Volgorde van uitrol: draai deze migratie tegen een omgeving VOORDAT de code die
+-- hem gebruikt daar gedeployd wordt. De dan nog draaiende versie selecteert `naam`
+-- en krijgt daarna ER_BAD_FIELD_ERROR. Dat venster is bewust geaccepteerd (ontwerp,
+-- beslissing 6): tussen migratie en herstart is de collectiepagina stuk.
+--
+-- CHANGE behoudt de bestaande waarden, inclusief de DEFAULT ''. Die default blijft
+-- staan: met de UNIQUE-index kan hoogstens één rij een lege code hebben, en de API
+-- weigert een lege code sowieso.
+--
+-- De UNIQUE-index gebruikt de standaardcollatie van de tabel (utf8mb4_general_ci) en
+-- is daarmee hoofdletterongevoelig -- dezelfde vergelijking die het beheerscherm doet
+-- vóór opslaan. Er is geen opschoonstap nodig: op 2026-08-10 had staging 112
+-- kunstwerken met unieke, niet-lege namen en productie nul.
+ALTER TABLE kunstwerken CHANGE naam code VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE kunstwerken ADD UNIQUE KEY uniek_code (code);

@@ -153,7 +153,7 @@ describe('OrdersSection', () => {
       {
         id: 'kw-1',
         foto: 'https://example.com/kw-1.jpg',
-        naam: 'Hotel paneel',
+        code: 'Hotel paneel',
         kunstenaarId: null,
         segmentIds: [],
         materiaalIds: [],
@@ -189,7 +189,7 @@ describe('OrdersSection', () => {
     kunstwerkenResponse = ['kw-1', 'kw-2', 'kw-3', 'kw-4'].map((id) => ({
       id,
       foto: `https://example.com/${id}.jpg`,
-      naam: id,
+      code: id,
       kunstenaarId: null,
       segmentIds: [],
       materiaalIds: [],
@@ -232,7 +232,7 @@ describe('OrdersSection', () => {
       {
         id: 'kw-1',
         foto: 'https://example.com/kw-1.jpg',
-        naam: 'Hotel paneel',
+        code: 'Hotel paneel',
         kunstenaarId: null,
         segmentIds: [],
         materiaalIds: [],
@@ -270,7 +270,7 @@ describe('OrdersSection', () => {
     kunstwerkenResponse = ['kw-1', 'kw-2', 'kw-3'].map((id) => ({
       id,
       foto: `https://example.com/${id}.jpg`,
-      naam: id,
+      code: id,
       kunstenaarId: null,
       segmentIds: [],
       materiaalIds: [],

@@ -44,7 +44,7 @@ function toggle(list: string[], id: string): string[] {
 
 const LEGE_FORM = {
   foto: '',
-  naam: '',
+  code: '',
   kunstenaarId: '' as string,
   formaat: null as KunstwerkFormaat | null,
   segmentIds: [] as string[],
@@ -82,7 +82,7 @@ export function KunstwerkenSection({
   const { user } = useAdminAuth();
   const [modalState, setModalState] = useState<ModalState>(null);
   const [foto, setFoto] = useState(LEGE_FORM.foto);
-  const [naam, setNaam] = useState(LEGE_FORM.naam);
+  const [code, setCode] = useState(LEGE_FORM.code);
   const [kunstenaarId, setKunstenaarId] = useState(LEGE_FORM.kunstenaarId);
   const [formaat, setFormaatState] = useState<KunstwerkFormaat | null>(LEGE_FORM.formaat);
   const [segmentIds, setSegmentIds] = useState<string[]>(LEGE_FORM.segmentIds);
@@ -268,7 +268,7 @@ export function KunstwerkenSection({
   function buildKunstwerkData(): Omit<Kunstwerk, 'id'> {
     const basis = {
       foto,
-      naam,
+      code: code.trim(),
       kunstenaarId: kunstenaarId || null,
       formaat,
       segmentIds,
@@ -293,7 +293,7 @@ export function KunstwerkenSection({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       foto,
-      naam,
+      code,
       kunstenaarId,
       formaat,
       segmentIds,
@@ -359,7 +359,7 @@ export function KunstwerkenSection({
 
   function resetForm() {
     setFoto(LEGE_FORM.foto);
-    setNaam(LEGE_FORM.naam);
+    setCode(LEGE_FORM.code);
     setKunstenaarId(LEGE_FORM.kunstenaarId);
     setFormaatState(LEGE_FORM.formaat);
     setSegmentIds(LEGE_FORM.segmentIds);
@@ -397,7 +397,7 @@ export function KunstwerkenSection({
     setActiveTab('algemeen');
     const session = formaatSessionRef.current;
     setFoto(kunstwerk.foto);
-    setNaam(kunstwerk.naam ?? '');
+    setCode(kunstwerk.code ?? '');
     setKunstenaarId(kunstwerk.kunstenaarId ?? '');
     setSegmentIds(kunstwerk.segmentIds);
     setMateriaalIds(kunstwerk.materiaalIds);
@@ -470,7 +470,7 @@ export function KunstwerkenSection({
     await handleFotoFile(file);
   }
 
-  const algemeenHeeftFout = !foto || !naam || formaat === null;
+  const algemeenHeeftFout = !foto || !code.trim() || formaat === null;
   const kenmerkenHeeftFout =
     segmentIds.length === 0 || (isMaatloos && (!prijsPerM2 || Number(prijsPerM2) <= 0));
   const omschrijvingenHeeftFout = !omschrijvingNl;
@@ -478,7 +478,7 @@ export function KunstwerkenSection({
     !foto ||
     formaat === null ||
     uploading ||
-    !naam ||
+    !code.trim() ||
     segmentIds.length === 0 ||
     (isMaatloos && (!prijsPerM2 || Number(prijsPerM2) <= 0)) ||
     !omschrijvingNl;
@@ -490,7 +490,7 @@ export function KunstwerkenSection({
     if (success) {
       void logActiviteit(
         modalState.mode === 'add' ? 'kunstwerk_toegevoegd' : 'kunstwerk_gewijzigd',
-        naam
+        code.trim()
       );
       closeModal();
     } else {
@@ -502,26 +502,11 @@ export function KunstwerkenSection({
     if (modalState?.mode !== 'edit') return;
     const success = await onRemove(modalState.kunstwerk.id);
     if (success) {
-      void logActiviteit('kunstwerk_verwijderd', modalState.kunstwerk.naam);
+      void logActiviteit('kunstwerk_verwijderd', modalState.kunstwerk.code);
       closeModal();
     } else {
       setActionError(t('kunstwerkenActionError'));
     }
-  }
-
-  const kunstwerkenZonderNaam = kunstwerken.filter((kunstwerk) => !kunstwerk.naam);
-
-  async function handleBackfillNamen() {
-    setBackfillBezig(true);
-    for (const kunstwerk of kunstwerkenZonderNaam) {
-      const { id, ...data } = kunstwerk;
-      const nieuweNaam = kunstwerk.omschrijvingNl || kunstwerk.id;
-      const success = await onUpdate(id, { ...data, naam: nieuweNaam });
-      if (success) {
-        void logActiviteit('kunstwerk_gewijzigd', nieuweNaam);
-      }
-    }
-    setBackfillBezig(false);
   }
 
   const alleMateriaalIds = (materialen ?? []).map((materiaal) => materiaal.id);
@@ -553,7 +538,7 @@ export function KunstwerkenSection({
       sortable: false,
       render: (row) => <img src={row.foto} alt="" className="h-10 w-10 rounded object-cover" />,
     },
-    { key: 'naam', label: t('kunstwerkenColNaam') },
+    { key: 'code', label: t('kunstwerkenColCode') },
     { key: 'kunstenaarNaam', label: t('kunstwerkenColKunstenaar') },
     { key: 'segmentNamen', label: t('kunstwerkenColSegmenten') },
     { key: 'omschrijvingNl', label: t('kunstwerkenColOmschrijving') },
@@ -562,17 +547,6 @@ export function KunstwerkenSection({
   return (
     <div data-testid="kunstwerken-section">
       <div className="mb-3 flex justify-end gap-2">
-        {kunstwerkenZonderNaam.length > 0 && (
-          <button
-            type="button"
-            onClick={handleBackfillNamen}
-            disabled={backfillBezig}
-            data-testid="kunstwerken-backfill-namen"
-            className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
-          >
-            {t('kunstwerkenBackfillNamen', { count: kunstwerkenZonderNaam.length })}
-          </button>
-        )}
         {kunstwerkenZonderAlleMaterialenMaten.length > 0 && (
           <button
             type="button"
@@ -698,21 +672,21 @@ export function KunstwerkenSection({
 
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
             <span>
-              {t('kunstwerkenLabelNaam')}
+              {t('kunstwerkenLabelCode')}
               <RequiredMark />
             </span>
             <input
               type="text"
-              value={naam}
-              onChange={(event) => setNaam(event.target.value)}
-              data-testid="kunstwerk-modal-naam"
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+              data-testid="kunstwerk-modal-code"
               className={`rounded-sm border bg-black/40 px-3 py-2 text-sm text-white ${
-                naam ? 'border-transparent' : 'border-red-500/70'
+                code.trim() ? 'border-transparent' : 'border-red-500/70'
               }`}
             />
-            {!naam && (
-              <span data-testid="kunstwerk-modal-naam-hint" className="normal-case tracking-normal text-red-400">
-                {t('kunstwerkenNaamVerplicht')}
+            {!code.trim() && (
+              <span data-testid="kunstwerk-modal-code-hint" className="normal-case tracking-normal text-red-400">
+                {t('kunstwerkenCodeVerplicht')}
               </span>
             )}
           </label>

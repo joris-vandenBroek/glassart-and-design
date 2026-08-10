@@ -122,6 +122,8 @@ async function maakMateriaal(): Promise<string> {
   return materiaal.id;
 }
 
+let kunstwerkTeller = 0;
+
 async function maakGeprijsdKunstwerk(
   maatId: string,
   materiaalId: string,
@@ -135,7 +137,12 @@ async function maakGeprijsdKunstwerk(
   ]);
   const kunstwerk = await insertRow<{ id: string }>(
     'kunstwerken',
-    { naam: 'Test werk', kunstenaarId, materiaalIds: [materiaalId], maatIds: [maatId] } as never,
+    {
+      code: `test-bestelheaders-werk-${++kunstwerkTeller}`,
+      kunstenaarId,
+      materiaalIds: [materiaalId],
+      maatIds: [maatId],
+    } as never,
     ['materiaalIds', 'maatIds']
   );
   createdKunstwerkIds.push(kunstwerk.id);
@@ -234,7 +241,7 @@ describe('bestelheaders routes', () => {
     const materiaalId = await maakMateriaal();
     const kunstwerk = await insertRow<{ id: string }>(
       'kunstwerken',
-      { naam: 'Ongeprijsd werk', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
+      { code: 'test-bestelheaders-ongeprijsd', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
       ['materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(kunstwerk.id);
@@ -264,7 +271,7 @@ describe('bestelheaders routes', () => {
     const { cookie } = await klant('maatloos@example.com');
     const kunstwerk = await insertRow<{ id: string }>(
       'kunstwerken',
-      { naam: 'Maatloos werk', materiaalIds: [], maatIds: [], prijsPerM2: 100 } as never,
+      { code: 'test-bestelheaders-maatloos', materiaalIds: [], maatIds: [], prijsPerM2: 100 } as never,
       ['materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(kunstwerk.id);
@@ -291,7 +298,7 @@ describe('bestelheaders routes', () => {
     const materiaalId = await maakMateriaal();
     const kunstwerk = await insertRow<{ id: string }>(
       'kunstwerken',
-      { naam: 'Eigen maat werk', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
+      { code: 'test-bestelheaders-eigenmaat', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
       ['materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(kunstwerk.id);
@@ -379,7 +386,7 @@ describe('bestelheaders routes', () => {
     const materiaalId = await maakMateriaal();
     const kunstwerk = await insertRow<{ id: string }>(
       'kunstwerken',
-      { naam: 'Eigen maat werk 2', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
+      { code: 'test-bestelheaders-eigenmaat-2', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
       ['materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(kunstwerk.id);
@@ -567,7 +574,7 @@ describe('bestelheaders routes', () => {
     const materiaalId = await maakMateriaal();
     const kunstwerk = await insertRow<{ id: string }>(
       'kunstwerken',
-      { naam: 'Eigen maat werk 3', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
+      { code: 'test-bestelheaders-eigenmaat-3', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
       ['materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(kunstwerk.id);
@@ -610,7 +617,7 @@ describe('bestelheaders routes', () => {
     const { cookie } = await klant('badafmeting@example.com');
     const kunstwerk = await insertRow<{ id: string }>(
       'kunstwerken',
-      { naam: 'Maatloos werk 2', materiaalIds: [], maatIds: [], prijsPerM2: 100 } as never,
+      { code: 'test-bestelheaders-maatloos-2', materiaalIds: [], maatIds: [], prijsPerM2: 100 } as never,
       ['materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(kunstwerk.id);
@@ -634,7 +641,7 @@ describe('bestelheaders routes', () => {
     const { cookie } = await klant('zeroprijsperm2@example.com');
     const kunstwerk = await insertRow<{ id: string }>(
       'kunstwerken',
-      { naam: 'Maatloos werk gratis', materiaalIds: [], maatIds: [], prijsPerM2: 0 } as never,
+      { code: 'test-bestelheaders-maatloos-gratis', materiaalIds: [], maatIds: [], prijsPerM2: 0 } as never,
       ['materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(kunstwerk.id);
@@ -711,7 +718,7 @@ describe('bestelheaders routes', () => {
     const materiaalId = await maakMateriaal();
     const kunstwerk = await insertRow<{ id: string }>(
       'kunstwerken',
-      { naam: 'Eigen maat zonder afmeting', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
+      { code: 'test-bestelheaders-eigenmaat-zonder-afmeting', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
       ['materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(kunstwerk.id);
@@ -769,7 +776,7 @@ describe('bestelheaders routes', () => {
     const kunstwerk = await insertRow<{ id: string }>(
       'kunstwerken',
       {
-        naam: 'Maatloos met materialen werk',
+        code: 'test-bestelheaders-maatloos-met-materialen',
         materiaalIds: [materiaalIdA],
         maatIds: [],
         prijsPerM2: 50,

@@ -174,7 +174,7 @@ describe('Deel C1 -- klant-kunstenaar exclusiviteit (echte workflow)', () => {
       const kunstwerk = await insertRow<{ id: string }>(
         'kunstwerken',
         {
-          naam: 'AUTOTEST Kunstwerk Exclusief',
+          code: 'AUTOTEST Kunstwerk Exclusief',
           kunstenaarId,
           materiaalIds: [fixture.materiaalId],
           maatIds: [fixture.maatId],
@@ -272,7 +272,7 @@ describe('Deel C2 -- kunstenaarsopslag + prijsgroep (prijsopbouw van een bestell
       const kunstwerk = await insertRow<{ id: string }>(
         'kunstwerken',
         {
-          naam: 'AUTOTEST Kunstwerk Opslag',
+          code: 'AUTOTEST Kunstwerk Opslag',
           kunstenaarId,
           materiaalIds: [fixtureA.materiaalId, fixtureB.materiaalId],
           maatIds: [fixtureA.maatId, fixtureB.maatId],
@@ -381,7 +381,7 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
       const kunstwerk = await insertRow<{ id: string }>(
         'kunstwerken',
         {
-          naam: 'AUTOTEST Kunstwerk Drukker',
+          code: 'AUTOTEST Kunstwerk Drukker',
           materiaalIds: [fixture.materiaalId],
           maatIds: [fixture.maatId],
         } as never,
@@ -434,7 +434,7 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
           { id: headerY.id, klantId: klantY.id, companyName: klantY.email, bestelnr: headerY.bestelnr, besteldatum: '', status: 'Te versturen naar drukker', lineCount: 1, totalQuantity: 1, lines: [{ id: 'l2', kunstwerkId, maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 80, quantity: 1 }] },
         ],
         klanten: [],
-        kunstwerken: [{ id: kunstwerkId, foto: '', naam: 'AUTOTEST Kunstwerk Drukker', kunstenaarId: null, segmentIds: [], materiaalIds: [fixture.materiaalId], maatIds: [fixture.maatId], omschrijvingNl: '', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }],
+        kunstwerken: [{ id: kunstwerkId, foto: '', code: 'AUTOTEST Kunstwerk Drukker', kunstenaarId: null, segmentIds: [], materiaalIds: [fixture.materiaalId], maatIds: [fixture.maatId], omschrijvingNl: '', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }],
         materialen: [{ id: fixture.materiaalId, materiaalsoortId: 'x', materiaaldikte: 6, omschrijving: 'AUTOTEST' }],
         maten: [{ id: fixture.maatId, breedte: 40, hoogte: 60 }],
         materiaalsoorten: [{ id: 'x', omschrijving: 'AUTOTEST soort' }],
@@ -629,7 +629,7 @@ describe('Bestelling-levenscyclus -- plaatsen tot verstuurd naar drukker', () =>
       // "stores a null prijs for an eigen-maat line on a kunstwerk that is not maatloos".
       const kunstwerk = await insertRow<{ id: string }>(
         'kunstwerken',
-        { naam: 'AUTOTEST Kunstwerk Eigen Maat', materiaalIds: [fixture.materiaalId], maatIds: [fixture.maatId] } as never,
+        { code: 'AUTOTEST Kunstwerk Eigen Maat', materiaalIds: [fixture.materiaalId], maatIds: [fixture.maatId] } as never,
         ['materiaalIds', 'maatIds']
       );
       kunstwerkId = kunstwerk.id;
@@ -734,7 +734,7 @@ describe('Materiaalloos kunstwerk (prijs per m2) + prijsgroep', () => {
     try {
       const kunstwerk = await insertRow<{ id: string }>(
         'kunstwerken',
-        { naam: 'AUTOTEST Maatloos Kunstwerk', materiaalIds: [], maatIds: [], prijsPerM2: 100 } as never,
+        { code: 'AUTOTEST Maatloos Kunstwerk', materiaalIds: [], maatIds: [], prijsPerM2: 100 } as never,
         ['materiaalIds', 'maatIds']
       );
       kunstwerkId = kunstwerk.id;
@@ -867,7 +867,7 @@ describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
         req(
           'POST',
           {
-            naam: 'AUTOTEST Kunstwerk Met Nieuwe Stamgegevens',
+            code: 'AUTOTEST Kunstwerk Met Nieuwe Stamgegevens',
             segmentIds: [segmentId],
             stijlIds: [stijlId],
             onderwerpIds: [onderwerpId],
@@ -936,7 +936,7 @@ describe('Klant van een kunstenaar kan diens werk gewoon bestellen zonder exclus
       const kunstwerk = await insertRow<{ id: string }>(
         'kunstwerken',
         {
-          naam: 'AUTOTEST Kunstwerk Eigen Werk',
+          code: 'AUTOTEST Kunstwerk Eigen Werk',
           kunstenaarId,
           materiaalIds: [fixture.materiaalId],
           maatIds: [fixture.maatId],
@@ -997,7 +997,7 @@ describe('Klant met alleenrecht voor één kunstenaar', () => {
       const kunstwerk = await insertRow<{ id: string }>(
         'kunstwerken',
         {
-          naam: 'AUTOTEST Kunstwerk Alleenrecht',
+          code: 'AUTOTEST Kunstwerk Alleenrecht',
           kunstenaarId,
           materiaalIds: [fixture.materiaalId],
           maatIds: [fixture.maatId],

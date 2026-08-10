@@ -141,7 +141,7 @@ export function ProductsGrid() {
   function handleSelect(kunstwerk: Kunstwerk) {
     setSelectedKunstwerk(kunstwerk);
     if (user) {
-      void logActiviteit('kunstwerk_bekeken', kunstwerk.naam);
+      void logActiviteit('kunstwerk_bekeken', kunstwerk.code);
     }
   }
 

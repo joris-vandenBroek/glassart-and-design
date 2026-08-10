@@ -156,7 +156,7 @@ CREATE TABLE drukkerZendingen (
 CREATE TABLE kunstwerken (
   id CHAR(36) PRIMARY KEY,
   foto VARCHAR(500),
-  naam VARCHAR(255) NOT NULL DEFAULT '',
+  code VARCHAR(255) NOT NULL DEFAULT '',
   kunstenaarId CHAR(36),
   formaat VARCHAR(20),
   omschrijvingNl TEXT,
@@ -170,6 +170,7 @@ CREATE TABLE kunstwerken (
   onderwerpIds JSON,
   aiGegenereerd BOOLEAN DEFAULT FALSE,
   prijsPerM2 DECIMAL(10,2),
+  UNIQUE KEY uniek_code (code),
   FOREIGN KEY (kunstenaarId) REFERENCES kunstenaars(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
