@@ -134,6 +134,7 @@ const KUNSTENAARS: Kunstenaar[] = [
     id: 'ka-1',
     naam: 'Sabrina Glasser',
     foto: null,
+    website: null,
     omschrijvingNl: 'Werkt met gesmolten glas.',
     omschrijvingFr: '',
     omschrijvingDe: '',

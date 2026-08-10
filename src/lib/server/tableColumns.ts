@@ -63,6 +63,7 @@ export const TABLE_COLUMNS: Record<string, readonly string[]> = {
     'id',
     'naam',
     'foto',
+    'website',
     'omschrijvingNl',
     'omschrijvingFr',
     'omschrijvingDe',

@@ -114,6 +114,7 @@ CREATE TABLE kunstenaars (
   id CHAR(36) PRIMARY KEY,
   naam VARCHAR(255) NOT NULL,
   foto VARCHAR(500),
+  website VARCHAR(500),
   omschrijvingNl TEXT,
   omschrijvingFr TEXT,
   omschrijvingDe TEXT,

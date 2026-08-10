@@ -6,6 +6,7 @@ const BASE_KUNSTENAAR: Kunstenaar = {
   id: 'ka-1',
   naam: 'Sabrina Glasser',
   foto: null,
+  website: null,
   omschrijvingNl: 'Nederlandse tekst',
   omschrijvingFr: 'Texte français',
   omschrijvingDe: 'Deutscher Text',
