@@ -5,7 +5,9 @@ out/
 .worktrees/
 next-env.d.ts
 tsconfig.tsbuildinfo
-.claude/
+.claude/*
+!.claude/skills/
+.claude/skills/*/runs/
 .env*.local
 Beheer_users.txt
 mijnhost-herstelcodes.txt
