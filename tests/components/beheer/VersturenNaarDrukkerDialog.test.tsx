@@ -67,9 +67,21 @@ const DRUKKERS_MET_STANDAARD: Drukker[] = [
 const KUNSTWERKEN: Kunstwerk[] = [
   { id: 'kw-1', foto: 'https://example.com/hotel-paneel.jpg', code: 'Hotel paneel', kunstenaarId: null, segmentIds: [], materiaalIds: ['mat-1'], maatIds: ['maat-1'], omschrijvingNl: 'Hotel paneel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
-const MATERIALEN: Materiaal[] = [{ id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 6, omschrijving: 'Helder' }];
+const MATERIALEN: Materiaal[] = [
+  {
+    id: 'mat-1',
+    materiaalsoortId: 'soort-1',
+    materiaaldikte: 6,
+    omschrijvingNl: 'Helder',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+  },
+];
 const MATEN: Maat[] = [{ id: 'maat-1', breedte: 40, hoogte: 60 }];
-const MATERIAALSOORTEN: Materiaalsoort[] = [{ id: 'soort-1', omschrijving: 'Glas' }];
+const MATERIAALSOORTEN: Materiaalsoort[] = [
+  { id: 'soort-1', omschrijvingNl: 'Glas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+];
 
 const BESTELLING: Bestelling = {
   id: 'header-1',

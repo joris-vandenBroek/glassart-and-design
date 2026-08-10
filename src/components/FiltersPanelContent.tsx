@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { Combobox } from './Combobox';
 import { FilterSection } from './FilterSection';
+import { resolveOmschrijving } from '@/lib/resolveOmschrijving';
 import type { Segment, Kunstwerk, KunstwerkFormaat, Stijl, Onderwerp } from './beheer/materiaalTypes';
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
 
@@ -17,6 +18,7 @@ function filterButtonClass(isActive: boolean) {
 
 interface FiltersPanelContentProps {
   segmenten: Segment[];
+  locale: string;
   activeFilter: string;
   onSelectFilter: (segmentId: string) => void;
   segmentCountBase: Kunstwerk[];
@@ -41,6 +43,7 @@ interface FiltersPanelContentProps {
 
 export function FiltersPanelContent({
   segmenten,
+  locale,
   activeFilter,
   onSelectFilter,
   segmentCountBase,
@@ -86,7 +89,7 @@ export function FiltersPanelContent({
               onClick={() => onSelectFilter(segment.id)}
               className={filterButtonClass(activeFilter === segment.id)}
             >
-              {segment.omschrijving} (
+              {resolveOmschrijving(segment, locale)} (
               {segmentCountBase.filter((kunstwerk) => kunstwerk.segmentIds.includes(segment.id)).length})
             </button>
           ))}
@@ -146,7 +149,7 @@ export function FiltersPanelContent({
                 onChange={() => onToggleStijl(stijl.id)}
                 className="h-3.5 w-3.5 accent-gold"
               />
-              <span className={isChecked ? 'text-white' : ''}>{stijl.omschrijving}</span>
+              <span className={isChecked ? 'text-white' : ''}>{resolveOmschrijving(stijl, locale)}</span>
               <span className="ml-auto text-[11px] text-white/40">{count}</span>
             </label>
           );
@@ -169,7 +172,7 @@ export function FiltersPanelContent({
                 onChange={() => onToggleOnderwerp(onderwerp.id)}
                 className="h-3.5 w-3.5 accent-gold"
               />
-              <span className={isChecked ? 'text-white' : ''}>{onderwerp.omschrijving}</span>
+              <span className={isChecked ? 'text-white' : ''}>{resolveOmschrijving(onderwerp, locale)}</span>
               <span className="ml-auto text-[11px] text-white/40">{count}</span>
             </label>
           );

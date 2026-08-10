@@ -15,8 +15,12 @@ const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
 
 const MATEN = [{ id: 'maat-1', breedte: 40, hoogte: 60 }];
-const MATERIAALSOORTEN = [{ id: 'soort-1', omschrijving: 'Acryl' }];
-const MATERIALEN = [{ id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 3, omschrijving: 'Acryl 3mm' }];
+const MATERIAALSOORTEN = [
+  { id: 'soort-1', omschrijvingNl: 'Acryl', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+];
+const MATERIALEN = [
+  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 3, omschrijvingNl: 'Acryl 3mm', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+];
 const PRIJSMATRIX = [{ maatId: 'maat-1', materiaalId: 'mat-1', prijs: null }];
 
 function renderSection(overrides = {}) {
@@ -84,8 +88,8 @@ describe('PrijsmatrixSection', () => {
   it('saves all gewijzigde cellen in one bulk PUT call when Opslaan is clicked', async () => {
     const onRegelUpdated = vi.fn();
     const materialen = [
-      { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 3, omschrijving: 'Acryl 3mm' },
-      { id: 'mat-2', materiaalsoortId: 'soort-1', materiaaldikte: 5, omschrijving: 'Acryl 5mm' },
+      { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 3, omschrijvingNl: 'Acryl 3mm', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+      { id: 'mat-2', materiaalsoortId: 'soort-1', materiaaldikte: 5, omschrijvingNl: 'Acryl 5mm', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
     ];
     const prijsmatrix = [
       { maatId: 'maat-1', materiaalId: 'mat-1', prijs: null },
@@ -133,8 +137,8 @@ describe('PrijsmatrixSection', () => {
 
   it('disables inputs during an in-flight save so a mid-save edit cannot be discarded', async () => {
     const materialen = [
-      { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 3, omschrijving: 'Acryl 3mm' },
-      { id: 'mat-2', materiaalsoortId: 'soort-1', materiaaldikte: 5, omschrijving: 'Acryl 5mm' },
+      { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 3, omschrijvingNl: 'Acryl 3mm', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+      { id: 'mat-2', materiaalsoortId: 'soort-1', materiaaldikte: 5, omschrijvingNl: 'Acryl 5mm', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
     ];
     const prijsmatrix = [
       { maatId: 'maat-1', materiaalId: 'mat-1', prijs: null },
@@ -189,14 +193,14 @@ describe('PrijsmatrixSection', () => {
 
   it('renders materialen columns grouped by materiaalsoort then sorted by dikte ascending', () => {
     const materiaalsoorten = [
-      { id: 'soort-A', omschrijving: 'Acryl' },
-      { id: 'soort-B', omschrijving: 'Glas' },
+      { id: 'soort-A', omschrijvingNl: 'Acryl', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+      { id: 'soort-B', omschrijvingNl: 'Glas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
     ];
     const unsortedMaterialen = [
-      { id: 'mat-glas-5', materiaalsoortId: 'soort-B', materiaaldikte: 5, omschrijving: 'Glas 5mm' },
-      { id: 'mat-acryl-3', materiaalsoortId: 'soort-A', materiaaldikte: 3, omschrijving: 'Acryl 3mm' },
-      { id: 'mat-glas-3', materiaalsoortId: 'soort-B', materiaaldikte: 3, omschrijving: 'Glas 3mm' },
-      { id: 'mat-acryl-5', materiaalsoortId: 'soort-A', materiaaldikte: 5, omschrijving: 'Acryl 5mm' },
+      { id: 'mat-glas-5', materiaalsoortId: 'soort-B', materiaaldikte: 5, omschrijvingNl: 'Glas 5mm', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+      { id: 'mat-acryl-3', materiaalsoortId: 'soort-A', materiaaldikte: 3, omschrijvingNl: 'Acryl 3mm', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+      { id: 'mat-glas-3', materiaalsoortId: 'soort-B', materiaaldikte: 3, omschrijvingNl: 'Glas 3mm', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+      { id: 'mat-acryl-5', materiaalsoortId: 'soort-A', materiaaldikte: 5, omschrijvingNl: 'Acryl 5mm', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
     ];
     const prijsmatrix = unsortedMaterialen.map((mat) => ({
       maatId: 'maat-1',

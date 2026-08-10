@@ -19,8 +19,8 @@ vi.mock('@/lib/logActiviteit', () => ({
   logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),}));
 
 const SEGMENTEN = [
-  { id: 'seg-hotel', omschrijving: 'Hotel' },
-  { id: 'seg-wellness', omschrijving: 'Wellness' },
+  { id: 'seg-hotel', omschrijvingNl: 'Hotel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'seg-wellness', omschrijvingNl: 'Wellness', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const KUNSTWERKEN = [
   {
@@ -79,10 +79,10 @@ const KUNSTWERKEN_PRIJZEN: Record<string, Array<{ materiaalId: string; maatId: s
   'kw-alle': [],
 };
 const MATERIALEN = [
-  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Veiligheidsglas' },
+  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijvingNl: 'Veiligheidsglas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const MATEN = [{ id: 'maat-1', breedte: 40, hoogte: 60 }];
-const MATERIAALSOORTEN = [{ id: 'soort-1', omschrijving: 'Veiligheidsglas' }];
+const MATERIAALSOORTEN = [{ id: 'soort-1', omschrijvingNl: 'Veiligheidsglas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }];
 const KUNSTENAARS = [
   {
     id: 'ka-1',
@@ -96,12 +96,12 @@ const KUNSTENAARS = [
   },
 ];
 const STIJLEN = [
-  { id: 'stijl-abstract', omschrijving: 'Abstract' },
-  { id: 'stijl-minimalistisch', omschrijving: 'Minimalistisch' },
+  { id: 'stijl-abstract', omschrijvingNl: 'Abstract', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'stijl-minimalistisch', omschrijvingNl: 'Minimalistisch', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const ONDERWERPEN = [
-  { id: 'onderwerp-bloemen', omschrijving: 'Bloemen' },
-  { id: 'onderwerp-dieren', omschrijving: 'Dieren' },
+  { id: 'onderwerp-bloemen', omschrijvingNl: 'Bloemen', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'onderwerp-dieren', omschrijvingNl: 'Dieren', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 
 let collections: Record<string, unknown[]> = {};
@@ -278,6 +278,23 @@ describe('ProductsGrid', () => {
     expect(cards[0]).toHaveAttribute('aria-label', 'Hotel paneel');
     expect(cards[0]).toHaveTextContent('Hotel paneel');
     expect(cards[0]).not.toHaveTextContent('4mm Veiligheidsglas');
+  });
+
+  it('shows the German omschrijving on the card instead of the Dutch one when locale is de', async () => {
+    mockCollections({
+      kunstwerken: [{ ...KUNSTWERKEN[0], omschrijvingNl: 'Hotel paneel', omschrijvingDe: 'Hotel Panel DE' }],
+    });
+    render(
+      <NextIntlClientProvider locale="de" messages={messages}>
+        <CustomerAuthProvider>
+          <CartProvider>
+            <ProductsGrid />
+          </CartProvider>
+        </CustomerAuthProvider>
+      </NextIntlClientProvider>
+    );
+    const cards = await screen.findAllByTestId('product-card');
+    expect(cards[0]).toHaveTextContent('Hotel Panel DE');
   });
 
   it('shows a breadcrumb that ends on "Collecties" when no segment is selected, and on the segment name once one is', async () => {

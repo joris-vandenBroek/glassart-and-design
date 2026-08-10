@@ -18,8 +18,8 @@ vi.mock('@/lib/logActiviteit', () => ({
 }));
 
 const SEGMENTEN = [
-  { id: 'seg-hotel', omschrijving: 'Hotel' },
-  { id: 'seg-wellness', omschrijving: 'Wellness' },
+  { id: 'seg-hotel', omschrijvingNl: 'Hotel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'seg-wellness', omschrijvingNl: 'Wellness', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const KUNSTWERKEN = [
   {

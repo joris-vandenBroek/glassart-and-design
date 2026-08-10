@@ -35,12 +35,12 @@ async function maakMaat(breedte: number, hoogte: number) {
 }
 
 async function maakMateriaal() {
-  const soort = await insertRow<{ id: string }>('materiaalsoorten', { omschrijving: 'Test soort' } as never);
+  const soort = await insertRow<{ id: string }>('materiaalsoorten', { omschrijvingNl: 'Test soort' } as never);
   createdMateriaalsoortIds.push(soort.id);
   const materiaal = await insertRow<{ id: string }>('materialen', {
     materiaalsoortId: soort.id,
     materiaaldikte: 4,
-    omschrijving: 'Test materiaal',
+    omschrijvingNl: 'Test materiaal',
   } as never);
   createdMateriaalIds.push(materiaal.id);
   return materiaal.id;

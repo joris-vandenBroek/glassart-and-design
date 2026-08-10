@@ -98,7 +98,7 @@ export function BestellingModal({
   }, [bestelling?.id]);
 
   const materiaalsoortNaamById = new Map(
-    (materiaalsoorten ?? []).map((soort) => [soort.id, soort.omschrijving])
+    (materiaalsoorten ?? []).map((soort) => [soort.id, soort.omschrijvingNl])
   );
 
   const heeftOngeprijsdeRegel = (bestelling?.lines ?? []).some((line) => line.prijs === null);
@@ -440,7 +440,7 @@ export function BestellingModal({
                                 ? `${materiaal.materiaaldikte}mm ${
                                     materiaalsoortNaamById.get(materiaal.materiaalsoortId) ??
                                     materiaal.materiaalsoortId
-                                  } — ${materiaal.omschrijving}`
+                                  } — ${materiaal.omschrijvingNl}`
                                 : line.materiaalId}
                             </span>
                             <span className="text-white/35">{t('bestellingenModalLabelMaat')}</span>

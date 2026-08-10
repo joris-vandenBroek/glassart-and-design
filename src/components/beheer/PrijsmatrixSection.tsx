@@ -42,7 +42,7 @@ export function PrijsmatrixSection({
 
   const soortNaamById = useMemo(() => {
     const map = new Map<string, string>();
-    (materiaalsoorten ?? []).forEach((soort) => map.set(soort.id, soort.omschrijving));
+    (materiaalsoorten ?? []).forEach((soort) => map.set(soort.id, soort.omschrijvingNl));
     return map;
   }, [materiaalsoorten]);
 
@@ -125,7 +125,7 @@ export function PrijsmatrixSection({
 
       regels.forEach(({ maatId, materiaalId, prijs }) => {
         onRegelUpdated(maatId, materiaalId, prijs);
-        const materiaalNaam = materialen!.find((m) => m.id === materiaalId)?.omschrijving ?? materiaalId;
+        const materiaalNaam = materialen!.find((m) => m.id === materiaalId)?.omschrijvingNl ?? materiaalId;
         const maat = maten!.find((m) => m.id === maatId);
         void logActiviteit(
           'prijsmatrix_gewijzigd',
