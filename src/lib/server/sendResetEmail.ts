@@ -1,7 +1,17 @@
 import { verstuurMail } from './mailRelay';
 
-export async function sendResetEmail(email: string, token: string, origin: string): Promise<void> {
-  const resetLink = `${origin}/nl/wachtwoord-resetten?token=${encodeURIComponent(token)}`;
+/**
+ * De locale komt van de aanroeper en zit al gevalideerd in `locale` -- deze
+ * functie bouwt er een pad mee en controleert niets meer. De tekst van de mail
+ * blijft bewust Nederlands; alleen de link volgt de taal van de gebruiker.
+ */
+export async function sendResetEmail(
+  email: string,
+  token: string,
+  origin: string,
+  locale: string
+): Promise<void> {
+  const resetLink = `${origin}/${locale}/wachtwoord-resetten?token=${encodeURIComponent(token)}`;
   const subject = 'Wachtwoord opnieuw instellen — Glassart & Design';
   const body =
     'Er is een verzoek binnengekomen om het wachtwoord van dit account opnieuw in te stellen.\n\n' +

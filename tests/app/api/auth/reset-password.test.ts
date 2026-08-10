@@ -6,6 +6,7 @@ import { createSession, validateSession } from '@/lib/server/session';
 
 vi.mock('@/lib/server/sendResetEmail', () => ({ sendResetEmail: vi.fn().mockResolvedValue(undefined) }));
 
+import { sendResetEmail } from '@/lib/server/sendResetEmail';
 import { POST as requestReset } from '@/app/api/auth/reset-password/request/route';
 import { POST as confirmReset } from '@/app/api/auth/reset-password/confirm/route';
 
@@ -162,5 +163,47 @@ describe('password reset routes', () => {
       })
     );
     expect(response.status).toBe(400);
+  });
+
+  // De locale belandt in een URL in een uitgaande e-mail, dus een waarde uit de
+  // request-body mag daar nooit ongecontroleerd in terechtkomen.
+  describe('locale in de resetlink', () => {
+    async function vraagResetAan(body: Record<string, unknown>) {
+      const klant = await insertRow<{ id: string }>('klanten', {
+        email: 'reset-locale@example.com',
+        wachtwoordHash: await hashPassword('oudwachtwoord'),
+        status: 'Goedgekeurd',
+      } as never);
+      vi.mocked(sendResetEmail).mockClear();
+      await requestReset(
+        new Request('http://localhost/api', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email: 'reset-locale@example.com', userType: 'klant', ...body }),
+        })
+      );
+      return klant;
+    }
+
+    it('geeft een geldige locale door aan de mail', async () => {
+      await vraagResetAan({ locale: 'de' });
+      expect(vi.mocked(sendResetEmail).mock.calls[0][3]).toBe('de');
+    });
+
+    it('valt terug op nl bij een onbekende locale', async () => {
+      await vraagResetAan({ locale: 'klingon' });
+      expect(vi.mocked(sendResetEmail).mock.calls[0][3]).toBe('nl');
+    });
+
+    it('valt terug op nl wanneer er geen locale wordt meegestuurd', async () => {
+      await vraagResetAan({});
+      expect(vi.mocked(sendResetEmail).mock.calls[0][3]).toBe('nl');
+    });
+
+    // Een niet-string mag niet als pad in de URL belanden.
+    it('valt terug op nl bij een locale die geen string is', async () => {
+      await vraagResetAan({ locale: { toString: 'nee' } });
+      expect(vi.mocked(sendResetEmail).mock.calls[0][3]).toBe('nl');
+    });
   });
 });
