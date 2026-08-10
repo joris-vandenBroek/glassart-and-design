@@ -387,4 +387,27 @@ describe('klanten admin routes', () => {
     const [rows] = await getPool().query('SELECT klantnr FROM klanten WHERE id = ?', [klant.id]);
     expect((rows as Array<{ klantnr: string | null }>)[0].klantnr).toBeNull();
   });
+
+  it('stores and returns an afwijsreden when a klant is rejected', async () => {
+    const klant = await insertRow<{ id: string }>('klanten', {
+      email: 'afwijsreden@example.com',
+      wachtwoordHash: await hashPassword('x'),
+      status: 'Beoordelen',
+    } as never);
+    createdKlantIds.push(klant.id);
+
+    await patchKlant(
+      req(
+        'PATCH',
+        { status: 'Afgewezen', afwijsreden: 'Onvoldoende gegevens aangeleverd.' },
+        await medewerkerCookie()
+      ),
+      { params: { id: klant.id } }
+    );
+
+    const [rows] = await getPool().query('SELECT status, afwijsreden FROM klanten WHERE id = ?', [klant.id]);
+    const rij = (rows as Array<{ status: string; afwijsreden: string | null }>)[0];
+    expect(rij.status).toBe('Afgewezen');
+    expect(rij.afwijsreden).toBe('Onvoldoende gegevens aangeleverd.');
+  });
 });

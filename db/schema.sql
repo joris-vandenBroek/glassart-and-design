@@ -26,6 +26,7 @@ CREATE TABLE klanten (
   minimaleAfname INT,
   klantnr VARCHAR(20),
   createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  afwijsreden TEXT,
   UNIQUE KEY uniq_klanten_kunstenaarId (kunstenaarId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -218,6 +219,7 @@ CREATE TABLE bestelheaders (
   besteldatum TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   status VARCHAR(50) NOT NULL DEFAULT 'Te beoordelen',
   zendingnummer VARCHAR(20),
+  afwijsreden TEXT,
   FOREIGN KEY (klantId) REFERENCES klanten(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

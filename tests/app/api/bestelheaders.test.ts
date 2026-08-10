@@ -845,4 +845,25 @@ describe('bestelheaders routes', () => {
     expect((await createHeader(postRequest({ lines: [line] }, klantB.cookie))).status).toBe(201);
     expect((await createHeader(postRequest({ lines: [line] }, klantC.cookie))).status).toBe(403);
   });
+
+  it('stores and returns an afwijsreden when a bestelling is rejected', async () => {
+    const { cookie } = await klant('test-afwijsreden-bestelling@example.com');
+    const created = await createHeader(postRequest({ lines: [] }, cookie));
+    const header = await created.json();
+    const staffCookie = await medewerkerCookie();
+
+    await patchHeader(
+      new Request('http://localhost/api', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', cookie: staffCookie },
+        body: JSON.stringify({ status: 'Afgewezen', afwijsreden: 'Klant heeft nog een openstaande factuur.' }),
+      }),
+      { params: { id: header.id } }
+    );
+
+    const [rows] = await getPool().query('SELECT status, afwijsreden FROM bestelheaders WHERE id = ?', [header.id]);
+    const rij = (rows as Array<{ status: string; afwijsreden: string | null }>)[0];
+    expect(rij.status).toBe('Afgewezen');
+    expect(rij.afwijsreden).toBe('Klant heeft nog een openstaande factuur.');
+  });
 });
