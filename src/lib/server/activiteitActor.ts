@@ -1,3 +1,4 @@
+import type { Pool } from 'mysql2/promise';
 import { insertRow } from './crud';
 import { getPool } from './db';
 import { ONBEKENDE_ACTOR, type ActiviteitActor, type ActiviteitType } from '@/lib/logActiviteit';
@@ -50,17 +51,27 @@ export async function actorUitSessie(request: Request): Promise<ActiviteitActor>
  * opgebouwd in plaats van een doorgegeven object: de sleutels van zo'n object
  * worden kolomnamen in de INSERT, en de open activiteitenlog-route accepteert
  * invoer van iedereen -- die verdediging moet dus ook hier blijven staan.
+ *
+ * `connection` is optioneel: een aanroeper die de logregel bij de handeling zelf
+ * hoort te horen (zoals het uitgeven van een klantwachtwoord) geeft zijn
+ * transactie mee, zodat de handeling niet kan slagen zonder logregel.
  */
 export async function schrijfActiviteit(
   type: ActiviteitType,
   omschrijving: string | null,
-  actor: ActiviteitActor
+  actor: ActiviteitActor,
+  connection?: Pick<Pool, 'query'>
 ): Promise<void> {
-  await insertRow('activiteitenlog', {
-    type,
-    actorId: actor.id,
-    actorEmail: actor.email,
-    actorNaam: actor.naam,
-    omschrijving,
-  } as never);
+  await insertRow(
+    'activiteitenlog',
+    {
+      type,
+      actorId: actor.id,
+      actorEmail: actor.email,
+      actorNaam: actor.naam,
+      omschrijving,
+    } as never,
+    [],
+    connection
+  );
 }

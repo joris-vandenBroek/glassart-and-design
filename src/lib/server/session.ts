@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import type { Pool } from 'mysql2/promise';
 import { getPool } from './db';
 
 export const SESSION_COOKIE_NAME = 'session_id';
@@ -54,9 +55,20 @@ export async function destroySession(sessionId: string): Promise<void> {
  * wijziging: wie zijn wachtwoord verandert omdat het gelekt is, verwacht dat de
  * ander er daarmee uit ligt -- en dat gebeurde niet zolang alleen de hash werd
  * bijgewerkt.
+ *
+ * `connection` is optioneel, net als bij `updateRow`/`insertRow`: het uitlogeffect
+ * hoort bij dezelfde transactie als de nieuwe hash, anders kan het één van tweeën
+ * blijven staan.
  */
-export async function destroySessionsForUser(userType: UserType, userId: string): Promise<void> {
-  await getPool().query('DELETE FROM sessions WHERE userType = ? AND userId = ?', [userType, userId]);
+export async function destroySessionsForUser(
+  userType: UserType,
+  userId: string,
+  connection?: Pick<Pool, 'query'>
+): Promise<void> {
+  await (connection ?? getPool()).query('DELETE FROM sessions WHERE userType = ? AND userId = ?', [
+    userType,
+    userId,
+  ]);
 }
 
 /**

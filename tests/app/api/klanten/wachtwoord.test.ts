@@ -1,10 +1,29 @@
-import { describe, expect, it, afterEach } from 'vitest';
+import { describe, expect, it, afterEach, vi } from 'vitest';
 import { randomUUID } from 'crypto';
 import { getPool } from '@/lib/server/db';
 import { insertRow } from '@/lib/server/crud';
 import { hashPassword, verifyPassword } from '@/lib/server/password';
 import { createSession, validateSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { POST as geefWachtwoordUit } from '@/app/api/klanten/[id]/wachtwoord/route';
+import { POST as login } from '@/app/api/auth/login/route';
+
+/**
+ * Schakelaar om de logregel -- de laatste van de vier mutaties -- te laten
+ * struikelen. Alleen zo is te testen dat een fout halverwege de handeling niet
+ * een klant achterlaat met een nieuwe hash waarvan niemand het wachtwoord kent.
+ */
+const logregelFaalt = vi.hoisted(() => ({ actief: false }));
+
+vi.mock('@/lib/server/activiteitActor', async (importOriginal) => {
+  const origineel = await importOriginal<typeof import('@/lib/server/activiteitActor')>();
+  return {
+    ...origineel,
+    schrijfActiviteit: async (...args: Parameters<typeof origineel.schrijfActiviteit>) => {
+      if (logregelFaalt.actief) throw new Error('logregel mislukt');
+      return origineel.schrijfActiviteit(...args);
+    },
+  };
+});
 
 // Alleen de rijen die deze tests zelf maken worden opgeruimd, op onthouden id --
 // nooit een tabelbrede DELETE, want klanten, medewerkers en activiteitenlog
@@ -13,6 +32,7 @@ const createdKlantIds: string[] = [];
 const createdMedewerkerIds: string[] = [];
 
 afterEach(async () => {
+  logregelFaalt.actief = false;
   if (createdMedewerkerIds.length > 0) {
     await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId IN (?)", [createdMedewerkerIds]);
     await getPool().query('DELETE FROM activiteitenlog WHERE actorId IN (?)', [createdMedewerkerIds]);
@@ -52,14 +72,27 @@ function req(cookie?: string) {
 }
 
 async function maakKlant(oudWachtwoord: string) {
+  const email = `wachtwoord-${randomUUID()}@example.com`;
   const klant = await insertRow<{ id: string }>('klanten', {
-    email: `wachtwoord-${randomUUID()}@example.com`,
+    email,
     wachtwoordHash: await hashPassword(oudWachtwoord),
     companyName: 'Testbedrijf BV',
     status: 'Goedgekeurd',
   } as never);
   createdKlantIds.push(klant.id);
-  return klant;
+  return { ...klant, email };
+}
+
+/** Probeert écht in te loggen; 200 betekent dat dit wachtwoord werkt. */
+async function inlogStatus(email: string, wachtwoord: string): Promise<number> {
+  const response = await login(
+    new Request('http://localhost/api/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email, password: wachtwoord }),
+    })
+  );
+  return response.status;
 }
 
 describe('POST /api/klanten/[id]/wachtwoord', () => {
@@ -80,17 +113,54 @@ describe('POST /api/klanten/[id]/wachtwoord', () => {
     expect(response.status).toBe(404);
   });
 
+  // Bewust via de échte inlogroute en niet alleen tegen de hash: dat is wat de klant
+  // aan de telefoon zo meteen doet, en het dekt ook de weg ernaartoe mee.
   it('zet het teruggegeven wachtwoord echt en maakt het oude ongeldig', async () => {
     const klant = await maakKlant('oudwachtwoord');
     const { cookie } = await medewerkerCookie();
+    expect(await inlogStatus(klant.email, 'oudwachtwoord')).toBe(200);
+
     const response = await geefWachtwoordUit(req(cookie), { params: { id: klant.id } });
     expect(response.status).toBe(200);
     const { wachtwoord } = (await response.json()) as { wachtwoord: string };
 
+    expect(await inlogStatus(klant.email, 'oudwachtwoord')).toBe(401);
+    expect(await inlogStatus(klant.email, wachtwoord)).toBe(200);
+
+    // De hash blijft ook los de moeite waard: hij bewijst dat het wachtwoord niet
+    // ergens in plaintext is beland, maar echt gehasht is opgeslagen.
     const [rows] = await getPool().query('SELECT wachtwoordHash FROM klanten WHERE id = ?', [klant.id]);
     const hash = (rows as Array<{ wachtwoordHash: string }>)[0].wachtwoordHash;
+    expect(hash).not.toContain(wachtwoord);
     expect(await verifyPassword(wachtwoord, hash)).toBe(true);
-    expect(await verifyPassword('oudwachtwoord', hash)).toBe(false);
+  });
+
+  /**
+   * Zonder transactie stond de nieuwe hash er al zodra stap 1 klaar was. Een fout
+   * in een latere stap gaf de beheerder dan een 500 -- terwijl het bijbehorende
+   * wachtwoord alleen nog in die afgebroken request bestond. De klant kwam er met
+   * geen van beide wachtwoorden meer in.
+   */
+  it('laat het oude wachtwoord staan als een latere stap misgaat', async () => {
+    const klant = await maakKlant('oudwachtwoord');
+    const sessieId = await createSession('klant', klant.id);
+    const { cookie, id: medewerkerId } = await medewerkerCookie();
+    logregelFaalt.actief = true;
+    // withApiErrorHandling logt de fout die we hier expres veroorzaken; die hoort
+    // niet als ruis in een geslaagde testrun te staan.
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const response = await geefWachtwoordUit(req(cookie), { params: { id: klant.id } });
+    expect(response.status).toBe(500);
+    consoleError.mockRestore();
+
+    expect(await inlogStatus(klant.email, 'oudwachtwoord')).toBe(200);
+    expect(await validateSession(sessieId)).not.toBeNull();
+    const [rows] = await getPool().query(
+      "SELECT id FROM activiteitenlog WHERE type = 'klant_wachtwoord_uitgegeven' AND actorId = ?",
+      [medewerkerId]
+    );
+    expect((rows as unknown[]).length).toBe(0);
   });
 
   // Wie nog ergens ingelogd stond met het oude wachtwoord, hoort eruit te liggen.
