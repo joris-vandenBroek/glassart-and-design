@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { PasswordInput } from '@/components/PasswordInput';
@@ -10,15 +10,23 @@ import { completeerTestKlantEmail, isTestOmgeving } from '@/lib/emailDomein';
 
 export function CustomerLoginForm() {
   const t = useTranslations('loginPage');
+  const locale = useLocale();
   const router = useRouter();
   const { login } = useCustomerAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
+  // Elke klik mint een nieuw resettoken en verstuurt een echte e-mail. Wie
+  // ongeduldig vijf keer klikt zou anders vijf links van 24 uur in zijn mailbox
+  // krijgen, allemaal geldig.
+  const [resetBezig, setResetBezig] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    // Anders blijft "we hebben je een mail gestuurd" onder een verse inlogfout staan.
+    setResetMessage(null);
     try {
       const status = await login(completeerTestKlantEmail(email), password);
       if (status === 'Goedgekeurd') {
@@ -32,6 +40,33 @@ export function CustomerLoginForm() {
       }
     } catch {
       setError(t('loginError'));
+    }
+  }
+
+  async function handleWachtwoordVergeten() {
+    if (resetBezig) return;
+    setError(null);
+    setResetMessage(null);
+    const volledigEmail = completeerTestKlantEmail(email);
+    if (!volledigEmail) {
+      setResetMessage(t('forgotPasswordMissingEmail'));
+      return;
+    }
+    setResetBezig(true);
+    try {
+      // De response wordt bewust niet uitgelezen: de route antwoordt altijd 200,
+      // juist zodat hier geen verschil te zien is tussen een bekend en een
+      // onbekend adres. Alleen een mislukt verzoek is het melden waard.
+      await fetch('/api/auth/reset-password/request', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: volledigEmail, userType: 'klant', locale }),
+      });
+      setResetMessage(t('forgotPasswordSent'));
+    } catch {
+      setResetMessage(t('forgotPasswordError'));
+    } finally {
+      setResetBezig(false);
     }
   }
 
@@ -87,6 +122,22 @@ export function CustomerLoginForm() {
       >
         {t('submit')}
       </button>
+
+      <button
+        type="button"
+        onClick={handleWachtwoordVergeten}
+        disabled={resetBezig}
+        data-testid="login-forgot-password"
+        className="text-left text-xs text-white/60 underline hover:text-white disabled:opacity-40"
+      >
+        {t('forgotPassword')}
+      </button>
+
+      {resetMessage && (
+        <p data-testid="login-reset-message" className="text-xs text-white/70">
+          {resetMessage}
+        </p>
+      )}
     </form>
   );
 }

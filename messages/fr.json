@@ -193,7 +193,11 @@
     "pendingMessage": "Votre demande est en cours d'examen.",
     "rejectedMessage": "Malheureusement, votre demande a été refusée.",
     "accountIncompleteMessage": "Un problème est survenu avec votre demande précédente. Veuillez nous contacter.",
-    "verplichtVeldLegende": "* champ obligatoire"
+    "verplichtVeldLegende": "* champ obligatoire",
+    "forgotPassword": "Mot de passe oublié ?",
+    "forgotPasswordMissingEmail": "Veuillez d'abord saisir votre adresse e-mail.",
+    "forgotPasswordSent": "Si cette adresse e-mail nous est connue, vous recevrez un e-mail pour réinitialiser votre mot de passe.",
+    "forgotPasswordError": "Une erreur est survenue. Veuillez réessayer plus tard."
   },
   "resetPasswordPage": {
     "title": "Réinitialiser le mot de passe",

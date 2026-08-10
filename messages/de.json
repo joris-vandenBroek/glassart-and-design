@@ -193,7 +193,11 @@
     "pendingMessage": "Ihre Anfrage wird noch geprüft.",
     "rejectedMessage": "Ihre Anfrage wurde leider abgelehnt.",
     "accountIncompleteMessage": "Bei Ihrer vorherigen Anfrage ist etwas schiefgelaufen. Bitte kontaktieren Sie uns.",
-    "verplichtVeldLegende": "* Pflichtfeld"
+    "verplichtVeldLegende": "* Pflichtfeld",
+    "forgotPassword": "Passwort vergessen?",
+    "forgotPasswordMissingEmail": "Bitte geben Sie zuerst Ihre E-Mail-Adresse ein.",
+    "forgotPasswordSent": "Wenn diese E-Mail-Adresse bei uns bekannt ist, erhalten Sie eine E-Mail zum Zurücksetzen Ihres Passworts.",
+    "forgotPasswordError": "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut."
   },
   "resetPasswordPage": {
     "title": "Passwort zurücksetzen",

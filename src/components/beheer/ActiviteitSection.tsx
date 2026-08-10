@@ -42,6 +42,7 @@ const TYPE_LABEL_KEYS: Record<ActiviteitType, string> = {
   klant_afgewezen: 'activiteitTypeKlantAfgewezen',
   klant_gewijzigd: 'activiteitTypeKlantGewijzigd',
   klant_prijsgroep_gewijzigd: 'activiteitTypeKlantPrijsgroepGewijzigd',
+  klant_wachtwoord_uitgegeven: 'activiteitTypeKlantWachtwoordUitgegeven',
   bestelling_goedgekeurd: 'activiteitTypeBestellingGoedgekeurd',
   bestelling_afgewezen: 'activiteitTypeBestellingAfgewezen',
   bestelling_prijs_vastgesteld: 'activiteitTypeBestellingPrijsVastgesteld',

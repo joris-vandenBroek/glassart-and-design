@@ -47,6 +47,7 @@ export const ACTIVITEIT_TYPES = [
   'bestelinstellingen_gewijzigd',
   'btwtarieven_gewijzigd',
   'klant_minimale_afname_gewijzigd',
+  'klant_wachtwoord_uitgegeven',
   'stijl_toegevoegd',
   'stijl_gewijzigd',
   'stijl_verwijderd',
@@ -72,7 +73,8 @@ export const ONBEKENDE_ACTOR: ActiviteitActor = { id: null, email: 'Onbekend', n
  * Schrijft een gebeurtenis naar het activiteitenlog.
  *
  * Wie de actie deed staat bewust níet in deze aanroep: de server leidt de actor
- * af uit de sessiecookie (zie `actorUitSessie` in de route). Dat moest wel,
+ * af uit de sessiecookie (zie `actorUitSessie` in
+ * `src/lib/server/activiteitActor.ts`). Dat moest wel,
  * want deze route staat open voor anonieme bezoekers, en zolang de actor uit de
  * body kwam kon iedereen een gebeurtenis op naam van een medewerker
  * wegschrijven. `ActiviteitActor` blijft bestaan als vorm van wat de server

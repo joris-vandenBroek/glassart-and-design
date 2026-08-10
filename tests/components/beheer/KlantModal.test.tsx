@@ -639,4 +639,64 @@ describe('KlantModal', () => {
     expect(waarschuwing).toHaveTextContent('Geen land ingesteld voor deze klant');
     expect(waarschuwing).not.toHaveTextContent('Geen btw-tarief ingesteld voor .');
   });
+
+  /**
+   * Opslaan, Goedkeuren en Afwijzen roepen alledrie onUpdated aan, en KlantenSection
+   * zet daarop `selectedKlant` op null -- de modal gaat dicht en het zojuist
+   * uitgegeven wachtwoord is voorgoed weg. Dat gebeurde midden in het telefoontje
+   * waarin de beheerder het aan het voorlezen was, want Opslaan is precies de knop
+   * die je uit gewoonte indrukt.
+   */
+  describe('terwijl er een uitgegeven wachtwoord in beeld staat', () => {
+    async function toonWachtwoord(klant: Klant = { ...KLANT, prijsgroepId: 'pg-1' }) {
+      const result = renderModal(klant);
+      fireEvent.click(screen.getByTestId('klant-wachtwoord-uitgeven'));
+      fireEvent.click(screen.getByTestId('klant-wachtwoord-bevestigen'));
+      await screen.findByTestId('klant-wachtwoord-waarde');
+      return result;
+    }
+
+    beforeEach(() => {
+      fetchMock.mockImplementation(async (url: string) =>
+        String(url).endsWith('/wachtwoord')
+          ? { ok: true, json: async () => ({ wachtwoord: 'k7fp-r2mq-x4tz' }) }
+          : { ok: true, json: async () => ({ ok: true }) }
+      );
+    });
+
+    it('blokkeert Opslaan, Goedkeuren en Afwijzen', async () => {
+      await toonWachtwoord();
+
+      expect(screen.getByTestId('klant-modal-opslaan')).toBeDisabled();
+      expect(screen.getByTestId('klant-modal-goedkeuren')).toBeDisabled();
+      expect(screen.getByTestId('klant-modal-afwijzen')).toBeDisabled();
+    });
+
+    // Met een écht openstaande wijziging erbij: zonder de blokkade zou Opslaan hier
+    // een PATCH sturen, onUpdated aanroepen en daarmee het venster sluiten.
+    it('sluit de modal niet als er tóch op Opslaan geklikt wordt', async () => {
+      const { onUpdated } = await toonWachtwoord({
+        ...KLANT,
+        status: 'Goedgekeurd',
+        prijsgroepId: null,
+      });
+      fireEvent.change(screen.getByTestId('klant-modal-prijsgroep'), { target: { value: 'pg-1' } });
+
+      fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(patchCall()).toBeUndefined();
+      expect(onUpdated).not.toHaveBeenCalled();
+      expect(screen.getByTestId('klant-wachtwoord-waarde')).toHaveTextContent('k7fp-r2mq-x4tz');
+    });
+
+    it('laat de knoppen gewoon werken zolang er geen wachtwoord staat', () => {
+      const { onUpdated } = renderModal({ ...KLANT, prijsgroepId: 'pg-1' });
+
+      expect(screen.getByTestId('klant-modal-opslaan')).not.toBeDisabled();
+      expect(screen.getByTestId('klant-modal-goedkeuren')).not.toBeDisabled();
+      expect(screen.getByTestId('klant-modal-afwijzen')).not.toBeDisabled();
+      expect(onUpdated).not.toHaveBeenCalled();
+    });
+  });
 });

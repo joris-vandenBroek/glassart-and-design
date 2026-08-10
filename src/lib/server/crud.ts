@@ -75,10 +75,16 @@ export async function getRow<T>(
   return row ? deserializeRow<T>(row, jsonColumns) : null;
 }
 
+/**
+ * `connection` is optioneel, net als bij `updateRow` hieronder: een aanroeper die
+ * al in een transactie zit kan de insert daarin meenemen, zodat de rij samen met
+ * de rest van de handeling commit of samen met de rest verdwijnt.
+ */
 export async function insertRow<T extends { id?: string }>(
   table: string,
   data: Omit<T, 'id'>,
-  jsonColumns: string[] = []
+  jsonColumns: string[] = [],
+  connection?: Pick<Pool, 'query'>
 ): Promise<T> {
   const id = randomUUID();
   const full = { id, ...data } as Record<string, unknown>;
@@ -87,7 +93,7 @@ export async function insertRow<T extends { id?: string }>(
   controleerKolommen(table, columns);
   const placeholders = columns.map(() => '?').join(', ');
   const values = columns.map((column) => serialized[column]);
-  await getPool().query(
+  await (connection ?? getPool()).query(
     `INSERT INTO ${quoteIdent(table)} (${columns.map(quoteIdent).join(', ')}) VALUES (${placeholders})`,
     values
   );

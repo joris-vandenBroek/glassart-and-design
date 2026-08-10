@@ -74,7 +74,7 @@ Alle routes onder `src/app/api/`.
 
 Schrijven vereist altijd een medewerker-sessie. Lezen is publiek, behalve `prijsgroepen` (alleen medewerkers).
 
-**Eigen routes** met extra logica: `klanten` (incl. `/me`), `bestelheaders` (incl. `bestellines` en `statushistorie`), `kunstenaars`, `kunstenaarAfspraken`, `drukkers` (incl. `zendingen` en `zendingen/nummer`), `drukkerzendingen`, `activiteitenlog`, `instellingen`, `kunstwerken` (incl. `/prijzen`), `prijsmatrix`, `health/schema` en de `auth/*`-routes.
+**Eigen routes** met extra logica: `klanten` (incl. `/me` en `/[id]/wachtwoord`), `bestelheaders` (incl. `bestellines` en `statushistorie`), `kunstenaars`, `kunstenaarAfspraken`, `drukkers` (incl. `zendingen` en `zendingen/nummer`), `drukkerzendingen`, `activiteitenlog`, `instellingen`, `kunstwerken` (incl. `/prijzen`), `prijsmatrix`, `health/schema` en de `auth/*`-routes.
 
 `kunstwerken` had oorspronkelijk een generieke CRUD-route, maar kreeg een eigen `POST`/`PATCH`/`DELETE` (`src/app/api/kunstwerken/[id]/route.ts` en `route.ts`) vanwege drie regels die de generieke route niet kan afdwingen: `code` is verplicht en moet uniek zijn (`ER_DUP_ENTRY` → `409 code-bestaat-al`), een `PATCH` die de `code` van een reeds besteld kunstwerk wijzigt geeft `409 code-in-bestelling`, en een `DELETE` van een besteld kunstwerk geeft `409 in-use-bestelling`. "Besteld" wordt bepaald door `codeKomtVoorInBestelling` (`src/lib/server/kunstwerkCode.ts`), die kijkt of de code al in `bestellines` voorkomt. Lezen (`GET`) bleef ongewijzigd publiek.
 
@@ -150,7 +150,7 @@ Een klant met openstaande bestellingen kan zijn account **niet** zelf verwijdere
 - **Stamgegevens (groep):** Materiaalsoorten, Materialen, Maten, Segmenten, Stijlen, Onderwerpen, Prijsgroepen
 - **Onder:** Kunstwerken, Kunstenaars, Prijsmatrix, Drukkers, Activiteit, Glassart & Design, Instellingen
 
-Alle beheerhandelingen die ertoe doen worden gelogd in `activiteitenlog` via `src/lib/logActiviteit.ts`.
+Alle beheerhandelingen die ertoe doen worden gelogd in `activiteitenlog` via `src/lib/logActiviteit.ts` — fire-and-forget vanuit de browser, dus een mislukte logregel valt geruisloos weg. Eén uitzondering: het uitgeven van een klantwachtwoord wordt server-side gelogd, in `POST /api/klanten/[id]/wachtwoord` zelf en binnen dezelfde transactie als de wachtwoordwijziging, zodat die regel niet stil kan verdwijnen.
 
 ## Testen
 
