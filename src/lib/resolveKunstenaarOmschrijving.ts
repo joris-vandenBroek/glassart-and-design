@@ -8,3 +8,7 @@ export function resolveKunstenaarOmschrijving(kunstenaar: Kunstenaar, locale: st
   };
   return byLocale[locale] || kunstenaar.omschrijvingNl;
 }
+
+export function appendKunstenaarWebsiteZin(omschrijving: string, zin: string | null): string {
+  return zin ? `${omschrijving}\n\n${zin}` : omschrijving;
+}

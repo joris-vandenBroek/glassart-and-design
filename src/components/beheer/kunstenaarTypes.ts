@@ -2,6 +2,7 @@ export interface Kunstenaar {
   id: string;
   naam: string;
   foto: string | null;
+  website: string | null;
   omschrijvingNl: string;
   omschrijvingFr: string;
   omschrijvingDe: string;

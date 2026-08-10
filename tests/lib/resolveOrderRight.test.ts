@@ -7,6 +7,7 @@ function kunstenaar(overrides: Partial<Kunstenaar> = {}): Kunstenaar {
     id: 'ka-1',
     naam: 'Sabrina Glasser',
     foto: null,
+    website: null,
     omschrijvingNl: '',
     omschrijvingFr: '',
     omschrijvingDe: '',

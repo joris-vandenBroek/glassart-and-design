@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { ProductsGrid } from '@/components/ProductsGrid';
 import { CartProvider } from '@/lib/useCart';
@@ -302,6 +302,27 @@ describe('ProductsGrid', () => {
     expect(screen.getByTestId('kunstenaar-banner')).toHaveTextContent('Sabrina Glasser');
     expect(screen.getByTestId('kunstenaar-banner')).toHaveTextContent('Werkt met gesmolten glas.');
     expect(screen.getAllByTestId('product-card')).toHaveLength(1);
+  });
+
+  it('adds a translated website sentence with a clickable link to the artist banner when website is filled in', async () => {
+    mockCollections({
+      kunstenaars: [{ ...KUNSTENAARS[0], website: 'https://www.jacksart.nl/' }],
+    });
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+    fireEvent.focus(screen.getByTestId('kunstenaar-filter'));
+    fireEvent.click(screen.getByTestId('kunstenaar-filter-option-ka-1'));
+    const banner = screen.getByTestId('kunstenaar-banner');
+    expect(banner).toHaveTextContent('Meer weten over Sabrina Glasser? Bekijk https://www.jacksart.nl/');
+    expect(within(banner).getByRole('link')).toHaveAttribute('href', 'https://www.jacksart.nl/');
+  });
+
+  it('does not add a website sentence to the artist banner when website is empty', async () => {
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+    fireEvent.focus(screen.getByTestId('kunstenaar-filter'));
+    fireEvent.click(screen.getByTestId('kunstenaar-filter-option-ka-1'));
+    expect(within(screen.getByTestId('kunstenaar-banner')).queryByRole('link')).not.toBeInTheDocument();
   });
 
   it('filters by formaat, combines with segment via AND, and shows counts per formaat option', async () => {
