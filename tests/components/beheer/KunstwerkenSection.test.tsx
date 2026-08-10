@@ -39,12 +39,12 @@ vi.mock('@/lib/logActiviteit', () => ({
   logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),}));
 
 const SEGMENTEN: Segment[] = [
-  { id: 'seg-1', omschrijving: 'Hotel' },
-  { id: 'seg-2', omschrijving: 'Restaurant' },
+  { id: 'seg-1', omschrijvingNl: 'Hotel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'seg-2', omschrijvingNl: 'Restaurant', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const MATERIALEN: Materiaal[] = [
-  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Veiligheidsglas' },
-  { id: 'mat-2', materiaalsoortId: 'soort-2', materiaaldikte: 3, omschrijving: 'Acryl' },
+  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijvingNl: 'Veiligheidsglas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'mat-2', materiaalsoortId: 'soort-2', materiaaldikte: 3, omschrijvingNl: 'Acryl', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const MATEN: Maat[] = [
   { id: 'maat-1', breedte: 40, hoogte: 60 },
@@ -52,12 +52,12 @@ const MATEN: Maat[] = [
   { id: 'maat-3', breedte: 50, hoogte: 50 },
 ];
 const STIJLEN: Stijl[] = [
-  { id: 'stijl-1', omschrijving: 'Abstract' },
-  { id: 'stijl-2', omschrijving: 'Minimalistisch' },
+  { id: 'stijl-1', omschrijvingNl: 'Abstract', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'stijl-2', omschrijvingNl: 'Minimalistisch', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const ONDERWERPEN: Onderwerp[] = [
-  { id: 'onderwerp-1', omschrijving: 'Bloemen' },
-  { id: 'onderwerp-2', omschrijving: 'Landschappen' },
+  { id: 'onderwerp-1', omschrijvingNl: 'Bloemen', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'onderwerp-2', omschrijvingNl: 'Landschappen', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const KUNSTENAARS: Kunstenaar[] = [
   {
@@ -912,7 +912,14 @@ describe('KunstwerkenSection', () => {
 
     fireEvent.change(screen.getByTestId('kunstwerk-modal-nieuwe-stijl-naam'), { target: { value: 'Jugendstil' } });
     fireEvent.click(screen.getByTestId('kunstwerk-modal-nieuwe-stijl-toevoegen'));
-    await waitFor(() => expect(onAddStijl).toHaveBeenCalledWith({ omschrijving: 'Jugendstil' }));
+    await waitFor(() =>
+      expect(onAddStijl).toHaveBeenCalledWith({
+        omschrijvingNl: 'Jugendstil',
+        omschrijvingFr: '',
+        omschrijvingDe: '',
+        omschrijvingEn: '',
+      })
+    );
 
     // Simulate BeheerShell re-rendering this component with the freshly-refetched stijlen list,
     // the way it really would once onAddStijl's API call resolves and useApiCollection refetches.
@@ -926,7 +933,7 @@ describe('KunstwerkenSection', () => {
               materialen={MATERIALEN}
               materiaalsoorten={null}
               maten={MATEN}
-              stijlen={[...STIJLEN, { id: 'stijl-3', omschrijving: 'Jugendstil' }]}
+              stijlen={[...STIJLEN, { id: 'stijl-3', omschrijvingNl: 'Jugendstil', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }]}
               onderwerpen={ONDERWERPEN}
               kunstenaars={KUNSTENAARS}
               loadError={null}
@@ -954,7 +961,14 @@ describe('KunstwerkenSection', () => {
 
     fireEvent.change(screen.getByTestId('kunstwerk-modal-nieuwe-segment-naam'), { target: { value: 'Kantoor' } });
     fireEvent.click(screen.getByTestId('kunstwerk-modal-nieuwe-segment-toevoegen'));
-    await waitFor(() => expect(onAddSegment).toHaveBeenCalledWith({ omschrijving: 'Kantoor' }));
+    await waitFor(() =>
+      expect(onAddSegment).toHaveBeenCalledWith({
+        omschrijvingNl: 'Kantoor',
+        omschrijvingFr: '',
+        omschrijvingDe: '',
+        omschrijvingEn: '',
+      })
+    );
 
     // Simulate BeheerShell re-rendering this component with the freshly-refetched segmenten list,
     // the way it really would once onAddSegment's API call resolves and useApiCollection refetches.
@@ -964,7 +978,7 @@ describe('KunstwerkenSection', () => {
           <CartProvider>
             <KunstwerkenSection
               kunstwerken={KUNSTWERKEN}
-              segmenten={[...SEGMENTEN, { id: 'seg-3', omschrijving: 'Kantoor' }]}
+              segmenten={[...SEGMENTEN, { id: 'seg-3', omschrijvingNl: 'Kantoor', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }]}
               materialen={MATERIALEN}
               materiaalsoorten={null}
               maten={MATEN}
