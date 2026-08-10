@@ -26,6 +26,10 @@ interface KunstwerkenSectionProps {
   onderwerpen: Onderwerp[] | null;
   kunstenaars: Kunstenaar[] | null;
   loadError: string | null;
+  // De codes die in een bestelregel voorkomen. Leeg zolang de bestellingen nog laden --
+  // dat venster is sub-seconde en de 409 uit /api/kunstwerken/[id] is de harde grens,
+  // dus dit veld is een UX-hulp, geen beveiliging.
+  bestelCodes: Set<string>;
   onAdd: (data: Omit<Kunstwerk, 'id'>) => Promise<boolean>;
   onUpdate: (id: string, data: Omit<Kunstwerk, 'id'>) => Promise<boolean>;
   onRemove: (id: string) => Promise<boolean>;
@@ -70,6 +74,7 @@ export function KunstwerkenSection({
   onderwerpen,
   kunstenaars,
   loadError,
+  bestelCodes,
   onAdd,
   onUpdate,
   onRemove,
@@ -470,6 +475,7 @@ export function KunstwerkenSection({
     await handleFotoFile(file);
   }
 
+  const codeOpSlot = modalState?.mode === 'edit' && bestelCodes.has(modalState.kunstwerk.code);
   const algemeenHeeftFout = !foto || !code.trim() || formaat === null;
   const kenmerkenHeeftFout =
     segmentIds.length === 0 || (isMaatloos && (!prijsPerM2 || Number(prijsPerM2) <= 0));
@@ -597,7 +603,7 @@ export function KunstwerkenSection({
             >
               {t('kunstwerkenOpslaan')}
             </button>
-            {modalState?.mode === 'edit' && (
+            {modalState?.mode === 'edit' && !codeOpSlot && (
               <button
                 type="button"
                 onClick={handleRemove}
@@ -679,12 +685,18 @@ export function KunstwerkenSection({
               type="text"
               value={code}
               onChange={(event) => setCode(event.target.value)}
+              disabled={codeOpSlot}
               data-testid="kunstwerk-modal-code"
-              className={`rounded-sm border bg-black/40 px-3 py-2 text-sm text-white ${
+              className={`rounded-sm border bg-black/40 px-3 py-2 text-sm text-white disabled:opacity-60 ${
                 code.trim() ? 'border-transparent' : 'border-red-500/70'
               }`}
             />
-            {!code.trim() && (
+            {codeOpSlot && (
+              <span data-testid="kunstwerk-modal-code-vast" className="normal-case tracking-normal text-white/60">
+                {t('kunstwerkenCodeVast')}
+              </span>
+            )}
+            {!code.trim() && !codeOpSlot && (
               <span data-testid="kunstwerk-modal-code-hint" className="normal-case tracking-normal text-red-400">
                 {t('kunstwerkenCodeVerplicht')}
               </span>

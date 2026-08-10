@@ -109,6 +109,7 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Kunstwerke
             onderwerpen={ONDERWERPEN}
             kunstenaars={KUNSTENAARS}
             loadError={null}
+            bestelCodes={new Set<string>()}
             onAdd={onAdd}
             onUpdate={onUpdate}
             onRemove={onRemove}
@@ -294,6 +295,28 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-verwijderen'));
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith('kw-1'));
+  });
+
+  it('zet het codeveld op slot als het kunstwerk in een bestelling voorkomt', () => {
+    renderSection({ bestelCodes: new Set([KUNSTWERKEN[0].code]) });
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+    expect(screen.getByTestId('kunstwerk-modal-code')).toBeDisabled();
+    expect(screen.getByTestId('kunstwerk-modal-code-vast')).toHaveTextContent(
+      'De code ligt vast omdat dit kunstwerk al in een bestelling voorkomt.'
+    );
+  });
+
+  it('laat het codeveld bewerkbaar als het kunstwerk niet in een bestelling voorkomt', () => {
+    renderSection({ bestelCodes: new Set(['een-andere-code']) });
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+    expect(screen.getByTestId('kunstwerk-modal-code')).not.toBeDisabled();
+    expect(screen.queryByTestId('kunstwerk-modal-code-vast')).toBeNull();
+  });
+
+  it('verbergt de verwijderknop als het kunstwerk in een bestelling voorkomt', () => {
+    renderSection({ bestelCodes: new Set([KUNSTWERKEN[0].code]) });
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+    expect(screen.queryByTestId('kunstwerk-modal-verwijderen')).toBeNull();
   });
 
   it('shows an action error and keeps the modal open when onUpdate fails', async () => {
@@ -830,6 +853,7 @@ describe('KunstwerkenSection', () => {
               onderwerpen={ONDERWERPEN}
               kunstenaars={KUNSTENAARS}
               loadError={null}
+              bestelCodes={new Set<string>()}
               onAdd={vi.fn().mockResolvedValue(true)}
               onUpdate={vi.fn().mockResolvedValue(true)}
               onRemove={vi.fn().mockResolvedValue(true)}
@@ -870,6 +894,7 @@ describe('KunstwerkenSection', () => {
               onderwerpen={ONDERWERPEN}
               kunstenaars={KUNSTENAARS}
               loadError={null}
+              bestelCodes={new Set<string>()}
               onAdd={vi.fn().mockResolvedValue(true)}
               onUpdate={vi.fn().mockResolvedValue(true)}
               onRemove={vi.fn().mockResolvedValue(true)}

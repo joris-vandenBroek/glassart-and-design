@@ -619,6 +619,7 @@
     "kunstwerkenFotoVerplicht": "Voeg een foto toe.",
     "kunstwerkenLabelCode": "Code",
     "kunstwerkenCodeVerplicht": "Vul een code in.",
+    "kunstwerkenCodeVast": "De code ligt vast omdat dit kunstwerk al in een bestelling voorkomt.",
     "kunstwerkenLabelKunstenaar": "Kunstenaar",
     "kunstwerkenKunstenaarGeen": "Geen kunstenaar gekoppeld",
     "kunstwerkenLabelFormaat": "Formaat",

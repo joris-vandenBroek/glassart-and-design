@@ -230,6 +230,13 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
     }));
   }, [rawBestellingen, klanten]);
 
+  // Elke bestelling met al haar regels is hier al ingeladen, dus de codes die in een
+  // bestelling voorkomen zijn gratis -- daar is geen apart endpoint voor nodig.
+  const bestelCodes = useMemo(
+    () => new Set((rawBestellingen ?? []).flatMap((bestelling) => bestelling.lines.map((line) => line.code))),
+    [rawBestellingen]
+  );
+
   // Nothing here is seeded: every collection and instellingen-record is real content that
   // an admin enters, so an empty environment must stay empty instead of being refilled
   // with placeholder rows behind the admin's back.
@@ -385,6 +392,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             onderwerpen={onderwerpen.items}
             kunstenaars={kunstenaars.items}
             loadError={kunstwerken.error === 'load' ? t('kunstwerkenLoadError') : null}
+            bestelCodes={bestelCodes}
             onAdd={kunstwerken.add}
             onUpdate={kunstwerken.update}
             onRemove={kunstwerken.remove}
