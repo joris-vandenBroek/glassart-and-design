@@ -39,20 +39,20 @@ const KUNSTWERK_PRIJZEN = [
   { materiaalId: 'mat-2', maatId: 'maat-2', prijs: 225 },
 ];
 const MATERIALEN: Materiaal[] = [
-  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Extra diepte en stevigheid voor een indrukwekkend effect.' },
-  { id: 'mat-2', materiaalsoortId: 'soort-2', materiaaldikte: 3, omschrijving: 'Lichtgewicht en flexibel voor grote oppervlaktes.' },
+  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijvingNl: 'Extra diepte en stevigheid voor een indrukwekkend effect.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'mat-2', materiaalsoortId: 'soort-2', materiaaldikte: 3, omschrijvingNl: 'Lichtgewicht en flexibel voor grote oppervlaktes.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const MATEN: Maat[] = [
   { id: 'maat-1', breedte: 40, hoogte: 60 },
   { id: 'maat-2', breedte: 60, hoogte: 90 },
 ];
 const MATERIAALSOORTEN: Materiaalsoort[] = [
-  { id: 'soort-1', omschrijving: 'Veiligheidsglas' },
-  { id: 'soort-2', omschrijving: 'Acryl' },
+  { id: 'soort-1', omschrijvingNl: 'Veiligheidsglas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'soort-2', omschrijvingNl: 'Acryl', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
-const SEGMENTEN: Segment[] = [{ id: 'seg-1', omschrijving: 'Hotel' }];
-const STIJLEN: Stijl[] = [{ id: 'stijl-1', omschrijving: 'Abstract' }];
-const ONDERWERPEN: Onderwerp[] = [{ id: 'onderwerp-1', omschrijving: 'Bloemen' }];
+const SEGMENTEN: Segment[] = [{ id: 'seg-1', omschrijvingNl: 'Hotel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }];
+const STIJLEN: Stijl[] = [{ id: 'stijl-1', omschrijvingNl: 'Abstract', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }];
+const ONDERWERPEN: Onderwerp[] = [{ id: 'onderwerp-1', omschrijvingNl: 'Bloemen', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }];
 const MATERIAALLOOS_KUNSTWERK: Kunstwerk = {
   id: 'kw-akoestisch',
   foto: 'https://example.com/akoestisch.jpg',
@@ -181,8 +181,8 @@ afterEach(() => {
 
 describe('ProductModal', () => {
   const MATERIAALSOORTEN_MET_EIGEN_MAAT: Materiaalsoort[] = [
-    { id: 'soort-1', omschrijving: 'Veiligheidsglas', staatEigenMaatToe: true, levertijdMaandenEigenMaat: 3 },
-    { id: 'soort-2', omschrijving: 'Acryl', staatEigenMaatToe: true, maxBreedte: 200, maxHoogte: 300 },
+    { id: 'soort-1', omschrijvingNl: 'Veiligheidsglas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', staatEigenMaatToe: true, levertijdMaandenEigenMaat: 3 },
+    { id: 'soort-2', omschrijvingNl: 'Acryl', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', staatEigenMaatToe: true, maxBreedte: 200, maxHoogte: 300 },
   ];
 
   it('renders nothing when kunstwerk is null', () => {
@@ -256,8 +256,8 @@ describe('ProductModal', () => {
 
   it('defaults to the 4mm Veiligheidsglas materiaal when available, instead of the first-listed materiaal', () => {
     const MATERIALEN_ACRYL_EERST: Materiaal[] = [
-      { id: 'mat-2', materiaalsoortId: 'soort-2', materiaaldikte: 3, omschrijving: 'Lichtgewicht en flexibel voor grote oppervlaktes.' },
-      { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Extra diepte en stevigheid voor een indrukwekkend effect.' },
+      { id: 'mat-2', materiaalsoortId: 'soort-2', materiaaldikte: 3, omschrijvingNl: 'Lichtgewicht en flexibel voor grote oppervlaktes.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+      { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijvingNl: 'Extra diepte en stevigheid voor een indrukwekkend effect.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
     ];
     render(
       <NextIntlClientProvider locale="nl" messages={messages}>
@@ -744,8 +744,8 @@ describe('ProductModal', () => {
 
   it('resets to a standard maat when switching to a materiaal whose soort does not allow eigen maat', () => {
     const MATERIAALSOORTEN_MIXED: Materiaalsoort[] = [
-      { id: 'soort-1', omschrijving: 'Veiligheidsglas', staatEigenMaatToe: true, levertijdMaandenEigenMaat: 3 },
-      { id: 'soort-2', omschrijving: 'Acryl' },
+      { id: 'soort-1', omschrijvingNl: 'Veiligheidsglas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', staatEigenMaatToe: true, levertijdMaandenEigenMaat: 3 },
+      { id: 'soort-2', omschrijvingNl: 'Acryl', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
     ];
     render(
       <NextIntlClientProvider locale="nl" messages={messages}>
