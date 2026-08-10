@@ -63,8 +63,10 @@ async function maakBestelregelMetCode(code: string, email: string): Promise<void
   const header = await insertRow<{ id: string }>('bestelheaders', {
     klantId: klant.id,
     // Een vast, herkenbaar testbestelnummer: de counters-rij `bestelnummer` mag nooit
-    // gebruikt of gereset worden door een test.
-    bestelnr: `TEST-${code}`,
+    // gebruikt of gereset worden door een test. Vaste, korte letterlijke waarde zodat
+    // hij altijd binnen bestelheaders.bestelnr (VARCHAR(20)) past, ongeacht de lengte
+    // van de meegegeven code.
+    bestelnr: 'TEST-KWCODE',
     status: 'Te beoordelen',
   } as never);
   createdHeaderIds.push(header.id);
@@ -198,6 +200,21 @@ describe('slot op een besteld kunstwerk', () => {
     expect(response.status).toBe(200);
     const [rows] = await getPool().query('SELECT omschrijvingNl FROM kunstwerken WHERE id = ?', [id]);
     expect((rows as Array<{ omschrijvingNl: string }>)[0].omschrijvingNl).toBe('Bijgewerkte tekst');
+  });
+
+  it('weigert een niet-string code bij een besteld kunstwerk in plaats van hem klakkeloos te coerceren', async () => {
+    const id = await maakKunstwerk('test-slot-numeriek');
+    await maakBestelregelMetCode('test-slot-numeriek', 'slot-numeriek@example.com');
+    const cookie = await medewerkerCookie();
+
+    const response = await patchKunstwerk(patchRequest({ code: 2424 }, cookie), {
+      params: { id },
+    });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'code-verplicht' });
+
+    const [rows] = await getPool().query('SELECT code FROM kunstwerken WHERE id = ?', [id]);
+    expect((rows as Array<{ code: string }>)[0].code).toBe('test-slot-numeriek');
   });
 
   it('weigert een wijziging die alleen de hoofdletters van de code aanpast bij een besteld kunstwerk', async () => {

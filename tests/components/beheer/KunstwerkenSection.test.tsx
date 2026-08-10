@@ -213,14 +213,14 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled();
 
     fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
-    expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled(); // naam, prijs, omschrijving and formaat still missing
+    expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled(); // code, prijs, omschrijving and formaat still missing
 
     // Pick the formaat before narrowing materiaal/maat: choosing a formaat re-checks every
     // materiaal and every compatible maat, so narrowing first would just get overwritten.
     fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
-    expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled(); // naam, prijs and omschrijving still missing
+    expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled(); // code, prijs and omschrijving still missing
 
     fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Test' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Test' } });

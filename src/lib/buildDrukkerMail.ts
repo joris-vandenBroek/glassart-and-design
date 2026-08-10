@@ -194,7 +194,7 @@ function resolveRegel(
   const materiaalsoort = materiaal ? materiaalsoorten.find((s) => s.id === materiaal.materiaalsoortId) : undefined;
   const maat = maten.find((m) => m.id === line.maatId);
 
-  const naam = line.code;
+  const naam = line.code || 'Onbekende code';
   const materiaalOmschrijving = materiaal
     ? `${materiaal.materiaaldikte}mm ${materiaalsoort?.omschrijving ?? materiaal.materiaalsoortId} — ${materiaal.omschrijving}`
     : 'Onbekend materiaal';

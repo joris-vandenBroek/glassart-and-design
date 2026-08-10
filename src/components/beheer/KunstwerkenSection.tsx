@@ -389,6 +389,7 @@ export function KunstwerkenSection({
     setOmschrijvingDe(LEGE_FORM.omschrijvingDe);
     setOmschrijvingEn(LEGE_FORM.omschrijvingEn);
     setActionError(null);
+    setPendingCodeWijziging(null);
   }
 
   function openAdd() {
@@ -417,6 +418,7 @@ export function KunstwerkenSection({
     setOmschrijvingDe(kunstwerk.omschrijvingDe);
     setOmschrijvingEn(kunstwerk.omschrijvingEn);
     setActionError(null);
+    setPendingCodeWijziging(null);
     const bestaandFormaat = kunstwerk.formaat ?? null;
     setFormaatState(bestaandFormaat);
     if (!bestaandFormaat && kunstwerk.foto) {
@@ -512,8 +514,10 @@ export function KunstwerkenSection({
     const schoneCode = code.trim();
 
     // Dezelfde hoofdletterongevoelige vergelijking als de UNIQUE-index op de kolom,
-    // zodat scherm en database niet van mening verschillen. Dit is de nette melding;
-    // de 409 uit /api/kunstwerken is de harde grens.
+    // voor ASCII-codes -- bij accenten vouwt utf8mb4_general_ci meer samen dan deze
+    // JS-vergelijking (bv. "Café" en "Cafe" zijn voor MySQL gelijk, hier niet). Dit is
+    // de nette melding; bij dat verschil valt de 409 uit /api/kunstwerken terug als
+    // harde grens, en toont het scherm de generieke kunstwerkenActionError.
     const dubbel = (kunstwerken ?? []).some(
       (bestaand) =>
         bestaand.id !== (modalState.mode === 'edit' ? modalState.kunstwerk.id : '') &&

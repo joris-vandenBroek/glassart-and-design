@@ -132,6 +132,17 @@ describe('generic lookup-resource routes', () => {
     expect(response.status).toBe(404);
   });
 
+  it('no longer serves kunstwerken through the generic resource route', async () => {
+    const getResponse = await listResource(jsonRequest('GET'), { params: { resource: 'kunstwerken' } });
+    expect(getResponse.status).toBe(404);
+    expect((await getResponse.json()).error).toBe('not-found');
+
+    const postResponse = await createResource(jsonRequest('POST', { code: 'x' }), {
+      params: { resource: 'kunstwerken' },
+    });
+    expect(postResponse.status).toBe(404);
+  });
+
   it('rejects reading a staff-only resource (prijsgroepen) without a medewerker session', async () => {
     const response = await listResource(
       new Request('http://localhost/api/prijsgroepen', { method: 'GET' }),

@@ -24,11 +24,11 @@ export const PATCH = withMedewerker(
     if (!bestaand) return NextResponse.json({ error: 'not-found' }, { status: 404 });
 
     const data = (await request.json()) as Record<string, unknown>;
-    if (typeof data.code === 'string') {
-      const nieuweCode = data.code.trim();
-      if (!nieuweCode) {
+    if ('code' in data) {
+      if (typeof data.code !== 'string' || !data.code.trim()) {
         return NextResponse.json({ error: 'code-verplicht' }, { status: 400 });
       }
+      const nieuweCode = data.code.trim();
       // Exacte vergelijking, niet hoofdletterongevoelig: ook een wijziging die alleen
       // de schrijfwijze aanpast is een codewijziging. Anders zouden de code in
       // kunstwerken en de code in bestellines in schrijfwijze uit elkaar lopen.
