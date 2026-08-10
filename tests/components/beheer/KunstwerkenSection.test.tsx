@@ -330,10 +330,23 @@ describe('KunstwerkenSection', () => {
     expect(screen.queryByTestId('kunstwerk-modal-code-vast')).toBeNull();
   });
 
-  it('verbergt de verwijderknop als het kunstwerk in een bestelling voorkomt', () => {
+  it('schakelt de verwijderknop uit als het kunstwerk in een bestelling voorkomt, met dezelfde reden als titel', () => {
     renderSection({ bestelCodes: new Set([KUNSTWERKEN[0].code]) });
     fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
-    expect(screen.queryByTestId('kunstwerk-modal-verwijderen')).toBeNull();
+    const verwijderKnop = screen.getByTestId('kunstwerk-modal-verwijderen');
+    expect(verwijderKnop).toBeDisabled();
+    expect(verwijderKnop).toHaveAttribute(
+      'title',
+      'De code ligt vast omdat dit kunstwerk al in een bestelling voorkomt.'
+    );
+  });
+
+  it('laat de verwijderknop bewerkbaar (niet uitgeschakeld, geen title) als het kunstwerk niet in een bestelling voorkomt', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+    const verwijderKnop = screen.getByTestId('kunstwerk-modal-verwijderen');
+    expect(verwijderKnop).not.toBeDisabled();
+    expect(verwijderKnop).not.toHaveAttribute('title');
   });
 
   it('shows an action error and keeps the modal open when onUpdate fails', async () => {

@@ -663,12 +663,14 @@ export function KunstwerkenSection({
               >
                 {t('kunstwerkenOpslaan')}
               </button>
-              {modalState?.mode === 'edit' && !codeOpSlot && (
+              {modalState?.mode === 'edit' && (
                 <button
                   type="button"
                   onClick={handleRemove}
+                  disabled={codeOpSlot}
+                  title={codeOpSlot ? t('kunstwerkenCodeVast') : undefined}
                   data-testid="kunstwerk-modal-verwijderen"
-                  className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                  className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
                 >
                   {t('kunstwerkenVerwijderen')}
                 </button>
