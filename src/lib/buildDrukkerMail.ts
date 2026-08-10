@@ -196,7 +196,7 @@ function resolveRegel(
 
   const naam = line.code || 'Onbekende code';
   const materiaalOmschrijving = materiaal
-    ? `${materiaal.materiaaldikte}mm ${materiaalsoort?.omschrijving ?? materiaal.materiaalsoortId} — ${materiaal.omschrijving}`
+    ? `${materiaal.materiaaldikte}mm ${materiaalsoort?.omschrijvingNl ?? materiaal.materiaalsoortId} — ${materiaal.omschrijvingNl}`
     : 'Onbekend materiaal';
   const maatOmschrijving = maat
     ? `${maat.breedte}×${maat.hoogte} cm${formaatSuffix(kunstwerk)}`
