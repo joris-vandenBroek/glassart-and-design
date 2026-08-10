@@ -17,9 +17,11 @@
 --     frontend leest nog `segment.omschrijving`, wat nu `undefined` is -- dat degradeert
 --     stil naar lege filterlabels/chips/productomschrijvingen op de publieke
 --     collectiepagina, zonder enige foutmelding.
---   - SCHRIJVEN faalt wel hard in dat venster, met `Onbekende kolom(men) voor tabel
---     <tabel>` (gegooid door `controleerKolommen` in src/lib/server/tableColumns.ts) --
---     geen MySQL ER_BAD_FIELD_ERROR.
+--   - SCHRIJVEN faalt wel hard in dat venster, maar dan rechtstreeks met een MySQL
+--     ER_BAD_FIELD_ERROR (Unknown column 'omschrijving'). `controleerKolommen` in
+--     src/lib/server/tableColumns.ts toetst het request af tegen de allowlist van de dan nog
+--     draaiende oude bundel, en die bevat `omschrijving` nog gewoon -- de guard laat de
+--     schrijfactie dus door, en de fout komt pas van MySQL zelf.
 -- Omdat lege labels op de publieke site makkelijk een tijdje onopgemerkt kunnen blijven:
 -- draai de productiemigratie vlak vóór het dispatchen van de productiedeploy, met iemand
 -- klaar om meteen daarna de RESTART-knop in DirectAdmin te klikken.
