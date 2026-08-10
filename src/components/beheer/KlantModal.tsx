@@ -8,6 +8,7 @@ import { Combobox } from '@/components/Combobox';
 import { HelpHint } from '@/components/HelpHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit } from '@/lib/logActiviteit';
+import { KlantWachtwoordSectie } from './KlantWachtwoordSectie';
 import { LAND_OPTIONS, landNaam } from '@/data/landen';
 import { resolveBtwPercentage } from '@/lib/resolveBtw';
 import { normaliseerBtwNummer, valideerBtwNummer } from '@/lib/btwNummer';
@@ -593,6 +594,8 @@ export function KlantModal({
               />
             </label>
           </div>
+
+          <KlantWachtwoordSectie key={klant.id} klantId={klant.id} />
 
           <RequiredLegend testId="klant-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
 
