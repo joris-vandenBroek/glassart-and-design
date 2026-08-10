@@ -64,6 +64,24 @@ describe('import-kunstwerken-cli argumentvalidatie', () => {
     expect(result.status).toBe(2);
     expect(result.stderr).toContain('moet segmenten, stijlen of onderwerpen zijn');
   });
+
+  it('weigert download-bestand zonder --url', () => {
+    const result = runCli(['download-bestand', '--naar', 'foo.jpg']);
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('--url is verplicht');
+  });
+
+  it('weigert download-bestand zonder --naar', () => {
+    const result = runCli(['download-bestand', '--url', 'https://example.com/foto.jpg']);
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('--naar is verplicht');
+  });
+
+  it('weigert maak-kunstenaar zonder --omgeving', () => {
+    const result = runCli(['maak-kunstenaar']);
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('--omgeving is verplicht');
+  });
 });
 
 describe('import-kunstwerken-cli netwerkloze subcommando\'s', () => {

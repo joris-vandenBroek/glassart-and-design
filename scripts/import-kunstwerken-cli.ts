@@ -12,7 +12,10 @@ import {
   uploadFoto,
   maakOfHergebruikLookupWaarde,
   maakKunstwerk,
+  downloadBestand,
+  maakKunstenaar,
   type NieuwKunstwerk,
+  type NieuweKunstenaar,
 } from './lib/importHttp';
 import { leesManifest } from './lib/importBatchManifest';
 import type { KunstwerkFormaat } from '../src/components/beheer/materiaalTypes';
@@ -27,6 +30,8 @@ const SUBCOMMANDS = [
   'maak-lookup-waarde',
   'maak-kunstwerk',
   'valideer-manifest',
+  'download-bestand',
+  'maak-kunstenaar',
 ] as const;
 
 function gebruik(): never {
@@ -131,6 +136,21 @@ async function main(): Promise<void> {
       const sessieCookie = verplichteOptie(opts, 'sessie-cookie');
       const kunstwerk = JSON.parse(verplichteOptie(opts, 'json')) as NieuwKunstwerk;
       const resultaat = await maakKunstwerk(baseUrlVoorOmgeving(omgeving), sessieCookie, kunstwerk);
+      console.log(JSON.stringify(resultaat));
+      return;
+    }
+    case 'download-bestand': {
+      const url = verplichteOptie(opts, 'url');
+      const naar = verplichteOptie(opts, 'naar');
+      await downloadBestand(url, naar);
+      console.log(`OK -- geschreven naar ${naar}`);
+      return;
+    }
+    case 'maak-kunstenaar': {
+      const omgeving = omgevingOptie(opts);
+      const sessieCookie = verplichteOptie(opts, 'sessie-cookie');
+      const kunstenaar = JSON.parse(verplichteOptie(opts, 'json')) as NieuweKunstenaar;
+      const resultaat = await maakKunstenaar(baseUrlVoorOmgeving(omgeving), sessieCookie, kunstenaar);
       console.log(JSON.stringify(resultaat));
       return;
     }

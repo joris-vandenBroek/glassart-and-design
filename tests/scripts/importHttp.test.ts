@@ -5,7 +5,12 @@ import {
   uploadFoto,
   maakOfHergebruikLookupWaarde,
   maakKunstwerk,
+  downloadBestand,
+  maakKunstenaar,
 } from '../../scripts/lib/importHttp';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 function jsonResponse(status: number, body: unknown, headers: Record<string, string> = {}) {
   return {
@@ -163,6 +168,59 @@ describe('maakKunstwerk', () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(500, { error: 'kapot' }));
     await expect(
       maakKunstwerk('https://staging.glassartanddesign.com', 'session_id=abc', kunstwerk, fetchMock)
+    ).rejects.toThrow('mislukt');
+  });
+});
+
+describe('downloadBestand', () => {
+  it('schrijft de opgehaalde inhoud naar het opgegeven pad', async () => {
+    const inhoud = new TextEncoder().encode('foto-inhoud').buffer;
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      arrayBuffer: async () => inhoud,
+    });
+    const pad = path.join(os.tmpdir(), `download-bestand-test-${Date.now()}.bin`);
+    try {
+      await downloadBestand('https://example.com/foto.jpg', pad, fetchMock);
+      expect(fs.readFileSync(pad, 'utf8')).toBe('foto-inhoud');
+    } finally {
+      fs.unlinkSync(pad);
+    }
+  });
+
+  it('gooit een fout en schrijft niets bij een mislukte download', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 404 });
+    const pad = path.join(os.tmpdir(), `download-bestand-test-mislukt-${Date.now()}.bin`);
+    await expect(downloadBestand('https://example.com/weg.jpg', pad, fetchMock)).rejects.toThrow('mislukt');
+    expect(fs.existsSync(pad)).toBe(false);
+  });
+});
+
+describe('maakKunstenaar', () => {
+  const kunstenaar = {
+    naam: 'Jack',
+    foto: 'https://cdn.example.com/jack.jpg',
+    omschrijvingNl: 'Nl',
+    omschrijvingEn: 'En',
+    omschrijvingDe: 'De',
+    omschrijvingFr: 'Fr',
+    exclusieveKlantIds: [],
+  };
+
+  it('geeft het aangemaakte record terug bij succes', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(201, { id: 'k1', naam: 'Jack' }));
+    const resultaat = await maakKunstenaar('https://staging.glassartanddesign.com', 'session_id=abc', kunstenaar, fetchMock);
+    expect(resultaat).toEqual({ id: 'k1', naam: 'Jack' });
+    const [endpoint, options] = fetchMock.mock.calls[0];
+    expect(endpoint).toBe('https://staging.glassartanddesign.com/api/kunstenaars');
+    expect(JSON.parse(options.body)).toEqual(kunstenaar);
+  });
+
+  it('gooit een fout bij een mislukte aanmaak', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(401, { error: 'unauthorized' }));
+    await expect(
+      maakKunstenaar('https://staging.glassartanddesign.com', 'session_id=abc', kunstenaar, fetchMock)
     ).rejects.toThrow('mislukt');
   });
 });

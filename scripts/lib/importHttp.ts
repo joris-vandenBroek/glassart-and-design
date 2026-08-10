@@ -165,3 +165,46 @@ export async function maakKunstwerk(
   const created = (await response.json()) as { id: string; code: string };
   return { status: 'aangemaakt', id: created.id, code: created.code };
 }
+
+export async function downloadBestand(
+  url: string,
+  naarPad: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<void> {
+  const response = await fetchImpl(url);
+  if (!response.ok) {
+    throw new Error(`Downloaden van ${url} mislukt (status ${response.status}).`);
+  }
+  const buffer = Buffer.from(await response.arrayBuffer());
+  await fs.writeFile(naarPad, buffer);
+}
+
+export interface NieuweKunstenaar {
+  naam: string;
+  foto: string | null;
+  omschrijvingNl: string;
+  omschrijvingEn: string;
+  omschrijvingDe: string;
+  omschrijvingFr: string;
+  exclusieveKlantIds: string[];
+}
+
+export async function maakKunstenaar(
+  baseUrl: string,
+  sessieCookie: string,
+  kunstenaar: NieuweKunstenaar,
+  fetchImpl: typeof fetch = fetch
+): Promise<Record<string, unknown>> {
+  const response = await fetchImpl(`${baseUrl}/api/kunstenaars`, {
+    method: 'POST',
+    headers: { cookie: sessieCookie, 'content-type': 'application/json' },
+    body: JSON.stringify(kunstenaar),
+  });
+  if (!response.ok) {
+    const data = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(
+      `Aanmaken van kunstenaar '${kunstenaar.naam}' op ${baseUrl} mislukt: ${data?.error ?? response.status}`
+    );
+  }
+  return (await response.json()) as Record<string, unknown>;
+}
