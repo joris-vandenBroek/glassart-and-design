@@ -5,6 +5,7 @@ import { Modal } from '@/components/Modal';
 import { ProductImage } from '@/components/ProductImage';
 import { HelpHint } from '@/components/HelpHint';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
+import { resolveOmschrijving } from '@/lib/resolveOmschrijving';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { resolveBtwPercentage } from '@/lib/resolveBtw';
 import {
@@ -16,8 +17,8 @@ import type { DisplayOrder } from '@/lib/useAllOrders';
 import type { Kunstwerk, Materiaal, Maat } from '@/components/beheer/materiaalTypes';
 import type { BtwTarieven } from '@/components/beheer/btwTarievenTypes';
 
-function materiaalLabel(materiaal: Materiaal): string {
-  return `${materiaal.materiaaldikte}mm — ${materiaal.omschrijving}`;
+function materiaalLabel(materiaal: Materiaal, locale: string): string {
+  return `${materiaal.materiaaldikte}mm — ${resolveOmschrijving(materiaal, locale)}`;
 }
 
 function maatLabel(maat: Maat): string {
@@ -158,7 +159,7 @@ export function AccountOrderModal({
                           </p>
                           <div className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-[0.68rem] text-white/60">
                             <span className="text-white/35">{t('modalLabelMateriaal')}</span>
-                            <span>{materiaal ? materiaalLabel(materiaal) : line.materiaalId}</span>
+                            <span>{materiaal ? materiaalLabel(materiaal, locale) : line.materiaalId}</span>
                             <span className="text-white/35">{t('modalLabelMaat')}</span>
                             <span>{maatWeergave}</span>
                           </div>
