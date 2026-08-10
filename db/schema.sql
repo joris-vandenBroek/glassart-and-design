@@ -26,7 +26,8 @@ CREATE TABLE klanten (
   minimaleAfname INT,
   klantnr VARCHAR(20),
   createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uniq_klanten_kunstenaarId (kunstenaarId)
+  UNIQUE KEY uniq_klanten_kunstenaarId (kunstenaarId),
+  UNIQUE KEY uniek_klantnr (klantnr)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE medewerkers (
@@ -202,7 +203,8 @@ CREATE TABLE bestelheaders (
   besteldatum TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   status VARCHAR(50) NOT NULL DEFAULT 'Te beoordelen',
   zendingnummer VARCHAR(20),
-  FOREIGN KEY (klantId) REFERENCES klanten(id)
+  FOREIGN KEY (klantId) REFERENCES klanten(id),
+  UNIQUE KEY uniek_bestelnr (bestelnr)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE bestellines (
