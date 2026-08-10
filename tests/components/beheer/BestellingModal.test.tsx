@@ -198,24 +198,94 @@ describe('BestellingModal', () => {
     );
   });
 
-  it('rejects the bestelling and calls onUpdated with status Afgewezen', async () => {
+  it('opens the afwijzen confirmation without patching immediately', () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen'));
+    expect(screen.getByTestId('bestelling-modal-afwijzen-bevestiging')).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      '/api/bestelheaders/header-1',
+      expect.objectContaining({ method: 'PATCH' })
+    );
+  });
+
+  it('disables the afwijzen confirm button until a reason is entered', () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen'));
+    expect(screen.getByTestId('bestelling-modal-afwijzen-bevestigen')).toBeDisabled();
+    fireEvent.change(screen.getByTestId('bestelling-modal-afwijzen-bevestiging-reden'), {
+      target: { value: 'Klant heeft geannuleerd' },
+    });
+    expect(screen.getByTestId('bestelling-modal-afwijzen-bevestigen')).not.toBeDisabled();
+  });
+
+  it('rejects the bestelling with the given reason and calls onUpdated with afwijsreden', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     const { onUpdated } = renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-afwijzen-bevestiging-reden'), {
+      target: { value: 'Klant heeft geannuleerd' },
+    });
+    fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen-bevestigen'));
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
         '/api/bestelheaders/header-1',
-        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'Afgewezen' }) })
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ status: 'Afgewezen', afwijsreden: 'Klant heeft geannuleerd' }),
+        })
       )
     );
-    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...BESTELLING, status: 'Afgewezen' }));
+    await waitFor(() =>
+      expect(onUpdated).toHaveBeenCalledWith({
+        ...BESTELLING,
+        status: 'Afgewezen',
+        afwijsreden: 'Klant heeft geannuleerd',
+      })
+    );
+  });
+
+  it('cancels the afwijzen confirmation without patching, and returns to the normal view', () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-afwijzen-bevestiging-reden'), {
+      target: { value: 'Wordt niet verstuurd' },
+    });
+    fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen-annuleren'));
+    expect(screen.queryByTestId('bestelling-modal-afwijzen-bevestiging')).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      '/api/bestelheaders/header-1',
+      expect.objectContaining({ method: 'PATCH' })
+    );
+  });
+
+  it('shows the stored afwijsreden when the bestelling is Afgewezen', () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal({ ...BESTELLING, status: 'Afgewezen', afwijsreden: 'Klant heeft geannuleerd' });
+    expect(screen.getByTestId('bestelling-modal-afwijsreden')).toHaveTextContent('Klant heeft geannuleerd');
+  });
+
+  it('does not show an afwijsreden block for a bestelling that is not Afgewezen', () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal(BESTELLING);
+    expect(screen.queryByTestId('bestelling-modal-afwijsreden')).not.toBeInTheDocument();
   });
 
   it('shows an error and does not call onUpdated when the update request fails', async () => {
-    fetchMock.mockRejectedValue(new Error('offline'));
+    fetchMock.mockImplementation(async (url: string) =>
+      String(url).endsWith('/statushistorie') || !String(url).includes('/bestelheaders/header-1')
+        ? { ok: true, json: async () => [] }
+        : Promise.reject(new Error('offline'))
+    );
     const { onUpdated } = renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-afwijzen-bevestiging-reden'), {
+      target: { value: 'Reden' },
+    });
+    fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen-bevestigen'));
 
     expect(await screen.findByTestId('bestelling-modal-error')).toBeInTheDocument();
     expect(onUpdated).not.toHaveBeenCalled();
@@ -233,22 +303,34 @@ describe('BestellingModal', () => {
     );
   });
 
-  it('logs bestelling_afgewezen with the logged-in medewerker on rejection', async () => {
+  it('logs bestelling_afgewezen with the reason included', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-afwijzen-bevestiging-reden'), {
+      target: { value: 'Klant heeft geannuleerd' },
+    });
+    fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen-bevestigen'));
     await waitFor(() =>
       expect(logActiviteitMock).toHaveBeenCalledWith(
         'bestelling_afgewezen',
-        'GD-00101'
+        'GD-00101: Klant heeft geannuleerd'
       )
     );
   });
 
   it('does not log when the update request fails', async () => {
-    fetchMock.mockRejectedValue(new Error('offline'));
+    fetchMock.mockImplementation(async (url: string) =>
+      String(url).endsWith('/statushistorie') || !String(url).includes('/bestelheaders/header-1')
+        ? { ok: true, json: async () => [] }
+        : Promise.reject(new Error('offline'))
+    );
     renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-afwijzen-bevestiging-reden'), {
+      target: { value: 'Reden' },
+    });
+    fireEvent.click(screen.getByTestId('bestelling-modal-afwijzen-bevestigen'));
     await screen.findByTestId('bestelling-modal-error');
     expect(logActiviteitMock).not.toHaveBeenCalled();
   });
