@@ -750,6 +750,7 @@
     "drukkersLoadError": "Kon de drukkers niet laden. Probeer de pagina te verversen.",
     "drukkersActionError": "Er is iets misgegaan. Probeer het opnieuw.",
     "drukkersEmpty": "Geen drukkers gevonden.",
+    "drukkersColDrukkernr": "Drukkernr.",
     "drukkersColNaam": "Naam",
     "drukkersColPlaats": "Plaats",
     "drukkersColEmail": "E-mailadres",

@@ -165,6 +165,11 @@ export function DrukkerModal({
       onClose={onClose}
       closeLabel={t('modalClose')}
       title={t('drukkersModalTitel')}
+      subtitle={
+        state?.mode === 'edit' ? (
+          <span data-testid="drukker-modal-drukkernr">{state.drukker.drukkernr}</span>
+        ) : undefined
+      }
       footerActions={
         <>
           <button

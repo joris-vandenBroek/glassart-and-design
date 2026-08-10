@@ -98,6 +98,11 @@ describe('DrukkersSection', () => {
     expect(screen.getByTestId('data-table-row-drukker-1')).toHaveTextContent('Utrecht');
   });
 
+  it('toont het drukkernr in de lijst', async () => {
+    renderSection();
+    expect(await screen.findByText('DR-00003')).toBeInTheDocument();
+  });
+
   it('shows a Standaard badge next to the standaard drukker and not next to others', () => {
     renderSection({
       drukkers: [

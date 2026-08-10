@@ -46,6 +46,7 @@ export function DrukkersSection({
   }
 
   const columns: Column<Drukker>[] = [
+    { key: 'drukkernr', label: t('drukkersColDrukkernr') },
     {
       key: 'naam',
       label: t('drukkersColNaam'),
