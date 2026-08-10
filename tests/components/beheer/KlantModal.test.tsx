@@ -434,19 +434,71 @@ describe('KlantModal', () => {
     );
   });
 
-  it('rejects the klant and calls onUpdated with the updated klant', async () => {
+  it('opens the afwijzen confirmation without patching immediately', () => {
+    renderModal(KLANT);
+    fireEvent.click(screen.getByTestId('klant-modal-afwijzen'));
+    expect(screen.getByTestId('klant-modal-afwijzen-bevestiging')).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('disables the afwijzen confirm button until a reason is entered', () => {
+    renderModal(KLANT);
+    fireEvent.click(screen.getByTestId('klant-modal-afwijzen'));
+    expect(screen.getByTestId('klant-modal-afwijzen-bevestigen')).toBeDisabled();
+    fireEvent.change(screen.getByTestId('klant-modal-afwijzen-bevestiging-reden'), {
+      target: { value: 'Onvolledige aanvraag' },
+    });
+    expect(screen.getByTestId('klant-modal-afwijzen-bevestigen')).not.toBeDisabled();
+  });
+
+  it('rejects the klant with the given reason and calls onUpdated with afwijsreden', async () => {
     const { onUpdated } = renderModal(KLANT);
     fireEvent.click(screen.getByTestId('klant-modal-afwijzen'));
+    fireEvent.change(screen.getByTestId('klant-modal-afwijzen-bevestiging-reden'), {
+      target: { value: 'Onvolledige aanvraag' },
+    });
+    fireEvent.click(screen.getByTestId('klant-modal-afwijzen-bevestigen'));
 
     await waitFor(() => expect(patchCall()).toBeDefined());
-    expect(patchBody()).toEqual({ status: 'Afgewezen' });
-    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, status: 'Afgewezen' }));
+    expect(patchBody()).toEqual({ status: 'Afgewezen', afwijsreden: 'Onvolledige aanvraag' });
+    await waitFor(() =>
+      expect(onUpdated).toHaveBeenCalledWith({
+        ...KLANT,
+        status: 'Afgewezen',
+        afwijsreden: 'Onvolledige aanvraag',
+      })
+    );
+  });
+
+  it('cancels the afwijzen confirmation without patching, and returns to the normal view', () => {
+    renderModal(KLANT);
+    fireEvent.click(screen.getByTestId('klant-modal-afwijzen'));
+    fireEvent.change(screen.getByTestId('klant-modal-afwijzen-bevestiging-reden'), {
+      target: { value: 'Wordt niet verstuurd' },
+    });
+    fireEvent.click(screen.getByTestId('klant-modal-afwijzen-annuleren'));
+    expect(screen.queryByTestId('klant-modal-afwijzen-bevestiging')).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('shows the stored afwijsreden when the klant is Afgewezen', () => {
+    renderModal({ ...KLANT, status: 'Afgewezen', afwijsreden: 'Onvolledige aanvraag' });
+    expect(screen.getByTestId('klant-modal-afwijsreden')).toHaveTextContent('Onvolledige aanvraag');
+  });
+
+  it('does not show an afwijsreden block for a klant that is not Afgewezen', () => {
+    renderModal(KLANT);
+    expect(screen.queryByTestId('klant-modal-afwijsreden')).not.toBeInTheDocument();
   });
 
   it('shows an error and does not call onUpdated when the save request fails', async () => {
     fetchMock.mockResolvedValue({ ok: false });
     const { onUpdated } = renderModal(KLANT);
     fireEvent.click(screen.getByTestId('klant-modal-afwijzen'));
+    fireEvent.change(screen.getByTestId('klant-modal-afwijzen-bevestiging-reden'), {
+      target: { value: 'Reden' },
+    });
+    fireEvent.click(screen.getByTestId('klant-modal-afwijzen-bevestigen'));
 
     expect(await screen.findByTestId('klant-modal-error')).toBeInTheDocument();
     expect(onUpdated).not.toHaveBeenCalled();
@@ -464,13 +516,17 @@ describe('KlantModal', () => {
     );
   });
 
-  it('logs klant_afgewezen with the logged-in medewerker on rejection', async () => {
+  it('logs klant_afgewezen with the reason included', async () => {
     renderModal(KLANT);
     fireEvent.click(screen.getByTestId('klant-modal-afwijzen'));
+    fireEvent.change(screen.getByTestId('klant-modal-afwijzen-bevestiging-reden'), {
+      target: { value: 'Onvolledige aanvraag' },
+    });
+    fireEvent.click(screen.getByTestId('klant-modal-afwijzen-bevestigen'));
     await waitFor(() =>
       expect(logActiviteitMock).toHaveBeenCalledWith(
         'klant_afgewezen',
-        'Testbedrijf BV'
+        'Testbedrijf BV: Onvolledige aanvraag'
       )
     );
   });
@@ -479,6 +535,10 @@ describe('KlantModal', () => {
     fetchMock.mockResolvedValue({ ok: false });
     renderModal(KLANT);
     fireEvent.click(screen.getByTestId('klant-modal-afwijzen'));
+    fireEvent.change(screen.getByTestId('klant-modal-afwijzen-bevestiging-reden'), {
+      target: { value: 'Reden' },
+    });
+    fireEvent.click(screen.getByTestId('klant-modal-afwijzen-bevestigen'));
     await screen.findByTestId('klant-modal-error');
     expect(logActiviteitMock).not.toHaveBeenCalled();
   });

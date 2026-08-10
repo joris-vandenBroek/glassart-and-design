@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Modal } from '@/components/Modal';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit } from '@/lib/logActiviteit';
+import { useAfwijzenBevestiging, AfwijzenBevestigingTekst, AfwijzenBevestigingActies } from './afwijzenBevestiging';
 import { useBestellingHistorie } from '@/lib/useBestellingHistorie';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { resolveBtwPercentage } from '@/lib/resolveBtw';
@@ -86,6 +87,7 @@ export function BestellingModal({
   const [lineDraft, setLineDraft] = useState<LineDraft | null>(null);
   const { user } = useAdminAuth();
   const { historie } = useBestellingHistorie(bestelling?.id ?? null);
+  const bevestigingAfwijzen = useAfwijzenBevestiging();
 
   useEffect(() => {
     if (bestelling) {
@@ -93,6 +95,7 @@ export function BestellingModal({
       setPrijsDrafts({});
       setEditingLineId(null);
       setLineDraft(null);
+      bevestigingAfwijzen.annuleer();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bestelling?.id]);
@@ -135,17 +138,18 @@ export function BestellingModal({
     }
   }
 
-  async function handleAfwijzen() {
+  async function handleAfwijzen(reden: string) {
     if (!bestelling) return;
     try {
       const response = await fetch(`/api/bestelheaders/${bestelling.id}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ status: 'Afgewezen' }),
+        body: JSON.stringify({ status: 'Afgewezen', afwijsreden: reden }),
       });
       if (!response.ok) throw new Error('update failed');
-      void logActiviteit('bestelling_afgewezen', bestelling.bestelnr);
-      onUpdated({ ...bestelling, status: 'Afgewezen' });
+      void logActiviteit('bestelling_afgewezen', `${bestelling.bestelnr}: ${reden}`);
+      onUpdated({ ...bestelling, status: 'Afgewezen', afwijsreden: reden });
+      bevestigingAfwijzen.annuleer();
     } catch {
       setError(t('bestellingenActionError'));
     }
@@ -292,6 +296,11 @@ export function BestellingModal({
               >
                 {bestelling.status}
               </span>
+              {bestelling.status === 'Afgewezen' && bestelling.afwijsreden && (
+                <p data-testid="bestelling-modal-afwijsreden" className="text-xs text-white/60">
+                  {t('afwijsredenLabel')}: {bestelling.afwijsreden}
+                </p>
+              )}
             </div>
             {totaalWeergave !== null && (
               <div className="grid shrink-0 grid-cols-[auto_auto] items-baseline gap-x-2 gap-y-0.5">
@@ -332,25 +341,34 @@ export function BestellingModal({
       }
       footerActions={
         bestelling && bestelling.status === 'Te beoordelen' ? (
-          <>
-            <button
-              type="button"
-              onClick={handleGoedkeuren}
-              disabled={heeftOngeprijsdeRegel}
-              data-testid="bestelling-modal-goedkeuren"
-              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
-            >
-              {t('bestellingenGoedkeuren')}
-            </button>
-            <button
-              type="button"
-              onClick={handleAfwijzen}
-              data-testid="bestelling-modal-afwijzen"
-              className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
-            >
-              {t('bestellingenAfwijzen')}
-            </button>
-          </>
+          bevestigingAfwijzen.open ? (
+            <AfwijzenBevestigingActies
+              reden={bevestigingAfwijzen.reden}
+              onBevestig={() => handleAfwijzen(bevestigingAfwijzen.reden)}
+              onAnnuleer={bevestigingAfwijzen.annuleer}
+              testIdPrefix="bestelling"
+            />
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={handleGoedkeuren}
+                disabled={heeftOngeprijsdeRegel}
+                data-testid="bestelling-modal-goedkeuren"
+                className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+              >
+                {t('bestellingenGoedkeuren')}
+              </button>
+              <button
+                type="button"
+                onClick={bevestigingAfwijzen.vraag}
+                data-testid="bestelling-modal-afwijzen"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+              >
+                {t('bestellingenAfwijzen')}
+              </button>
+            </>
+          )
         ) : bestelling && bestelling.status === 'Verstuurd naar drukker' ? (
           <button
             type="button"
@@ -393,254 +411,267 @@ export function BestellingModal({
       }
     >
       {bestelling && (
-        <div data-testid="bestelling-modal" className="flex flex-col gap-3 text-sm text-white/80">
-          <ul className="flex max-h-80 flex-col gap-3 overflow-y-auto text-xs">
-            {bestelling.lines.map((line) => {
-              const kunstwerk = (kunstwerken ?? []).find((k) => k.code === line.code) ?? null;
-              const materiaal = (materialen ?? []).find((m) => m.id === line.materiaalId);
-              const maat = (maten ?? []).find((m) => m.id === line.maatId);
-              const maatWeergave = maat
-                ? `${maat.breedte}×${maat.hoogte} cm`
-                : line.breedte != null && line.hoogte != null
-                  ? `${line.breedte}×${line.hoogte} cm`
-                  : line.maatId;
-              const isEditingLine = editingLineId === line.id;
-              const kunstwerkMaterialen = kunstwerk
-                ? (materialen ?? []).filter((m) => kunstwerk.materiaalIds.includes(m.id))
-                : [];
-              const kunstwerkMaten = kunstwerk
-                ? (maten ?? []).filter((m) => kunstwerk.maatIds.includes(m.id))
-                : [];
-
-              return (
-                <li
-                  key={line.id}
-                  data-testid={`bestelling-modal-line-${line.id}`}
-                  className="flex gap-3 rounded-md border border-white/10 bg-white/[0.02] p-3"
-                >
-                  {kunstwerk ? (
-                    <ProductImage src={kunstwerk.foto} alt="" className="h-[72px] w-[72px] shrink-0 rounded-md" />
-                  ) : (
-                    <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-md bg-white/5 text-lg text-white/25">
-                      ?
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="line-clamp-2 font-semibold text-white/90">
-                      {kunstwerk ? kunstwerk.omschrijvingNl : t('bestellingenRegelOnbekend')}
-                    </p>
-
-                    {!isEditingLine ? (
-                      <>
-                        {kunstwerk && (
-                          <div className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-white/60">
-                            <span className="text-white/35">{t('bestellingenModalLabelMateriaal')}</span>
-                            <span>
-                              {materiaal
-                                ? `${materiaal.materiaaldikte}mm ${
-                                    materiaalsoortNaamById.get(materiaal.materiaalsoortId) ??
-                                    materiaal.materiaalsoortId
-                                  } — ${materiaal.omschrijvingNl}`
-                                : line.materiaalId}
-                            </span>
-                            <span className="text-white/35">{t('bestellingenModalLabelMaat')}</span>
-                            <span>{maatWeergave}</span>
-                          </div>
-                        )}
-                        <div className="mt-2 flex items-baseline justify-between border-t border-white/10 pt-1.5">
-                          {line.prijs !== null ? (
-                            <>
-                              <span className="text-white/45">
-                                {line.quantity} × {formatCurrency(line.prijs)}
-                              </span>
-                              <span className="font-semibold text-white/90">
-                                {formatCurrency(line.prijs * line.quantity)}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-white/45">{t('bestellingenModalPrijsOpAanvraag')}</span>
-                          )}
-                        </div>
-                        {line.prijs === null && (
-                          <div className="mt-1 flex items-center gap-2">
-                            <input
-                              type="number"
-                              data-testid={`bestelling-modal-prijs-input-${line.id}`}
-                              value={prijsDrafts[line.id] ?? ''}
-                              onChange={(event) =>
-                                setPrijsDrafts((current) => ({ ...current, [line.id]: event.target.value }))
-                              }
-                              className="w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
-                            />
-                            <button
-                              type="button"
-                              data-testid={`bestelling-modal-prijs-vaststellen-${line.id}`}
-                              onClick={() => handlePrijsVaststellen(line)}
-                              disabled={!prijsDrafts[line.id] || Number(prijsDrafts[line.id]) <= 0}
-                              className="btn-beheer-secondary rounded-sm border border-white/20 px-2 py-1 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
-                            >
-                              {t('bestellingenModalPrijsVaststellen')}
-                            </button>
-                          </div>
-                        )}
-                        {kunstwerk && (
-                          <button
-                            type="button"
-                            onClick={() => startEditRegel(line)}
-                            data-testid={`bestelling-modal-regel-bewerken-${line.id}`}
-                            className="mt-1.5 text-[0.65rem] uppercase tracking-wide text-white/40 underline underline-offset-2 hover:text-white/70"
-                          >
-                            {t('bewerken')}
-                          </button>
-                        )}
-                      </>
-                    ) : (
-                      <div className="mt-1.5 flex flex-col gap-2">
-                        <select
-                          value={lineDraft?.materiaalId ?? ''}
-                          onChange={(event) =>
-                            setLineDraft((current) =>
-                              current ? { ...current, materiaalId: event.target.value } : current
-                            )
-                          }
-                          data-testid={`bestelling-modal-regel-materiaal-${line.id}`}
-                          className="rounded-sm bg-black/40 px-2 py-1.5 text-xs text-white"
-                        >
-                          {kunstwerkMaterialen.map((m) => (
-                            <option key={m.id} value={m.id}>
-                              {m.materiaaldikte}mm {materiaalsoortNaamById.get(m.materiaalsoortId) ?? m.materiaalsoortId}
-                            </option>
-                          ))}
-                        </select>
-
-                        {isCustomLine(line) ? (
-                          <div className="flex gap-2">
-                            <input
-                              type="number"
-                              value={lineDraft?.breedte ?? ''}
-                              onChange={(event) =>
-                                setLineDraft((current) =>
-                                  current ? { ...current, breedte: event.target.value } : current
-                                )
-                              }
-                              data-testid={`bestelling-modal-regel-breedte-${line.id}`}
-                              className="w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
-                            />
-                            <input
-                              type="number"
-                              value={lineDraft?.hoogte ?? ''}
-                              onChange={(event) =>
-                                setLineDraft((current) =>
-                                  current ? { ...current, hoogte: event.target.value } : current
-                                )
-                              }
-                              data-testid={`bestelling-modal-regel-hoogte-${line.id}`}
-                              className="w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
-                            />
-                          </div>
-                        ) : (
-                          <select
-                            value={lineDraft?.maatId ?? ''}
-                            onChange={(event) =>
-                              setLineDraft((current) =>
-                                current ? { ...current, maatId: event.target.value } : current
-                              )
-                            }
-                            data-testid={`bestelling-modal-regel-maat-${line.id}`}
-                            className="rounded-sm bg-black/40 px-2 py-1.5 text-xs text-white"
-                          >
-                            {kunstwerkMaten.map((m) => (
-                              <option key={m.id} value={m.id}>
-                                {m.breedte}×{m.hoogte} cm
-                              </option>
-                            ))}
-                          </select>
-                        )}
-
-                        <div className="flex gap-2">
-                          <input
-                            type="number"
-                            placeholder={t('bestellingenModalLabelPrijs')}
-                            value={lineDraft?.prijs ?? ''}
-                            onChange={(event) =>
-                              setLineDraft((current) =>
-                                current ? { ...current, prijs: event.target.value } : current
-                              )
-                            }
-                            data-testid={`bestelling-modal-regel-prijs-${line.id}`}
-                            className="w-24 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
-                          />
-                          <input
-                            type="number"
-                            min={1}
-                            placeholder={t('bestellingenModalLabelAantal')}
-                            value={lineDraft?.quantity ?? ''}
-                            onChange={(event) =>
-                              setLineDraft((current) =>
-                                current ? { ...current, quantity: event.target.value } : current
-                              )
-                            }
-                            data-testid={`bestelling-modal-regel-aantal-${line.id}`}
-                            className="w-16 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
-                          />
-                        </div>
-
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleOpslaanRegel(line)}
-                            data-testid={`bestelling-modal-regel-opslaan-${line.id}`}
-                            className="btn-beheer-primary rounded-sm bg-silver px-3 py-1.5 text-xs tracking-wide text-ink"
-                          >
-                            {t('bestellingenModalRegelOpslaan')}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={cancelEditRegel}
-                            data-testid={`bestelling-modal-regel-annuleren-${line.id}`}
-                            className="btn-beheer-secondary rounded-sm border border-white/20 px-3 py-1.5 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
-                          >
-                            {t('annuleren')}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-
-          <div className="flex flex-col gap-1 border-t border-white/10 pt-3 text-xs">
-            <span className="text-[0.65rem] uppercase tracking-wide text-white/40">{t('bestellingenHistorieTitel')}</span>
-            <ul data-testid="bestelling-modal-historie" className="flex flex-col gap-0.5">
-              {(historie ?? []).map((entry, index) => (
-                <li
-                  key={index}
-                  data-testid={`bestelling-modal-historie-item-${index}`}
-                  className="flex justify-between gap-3 text-white/60"
-                >
-                  <span>
-                    {HISTORIE_LABEL_KEY[entry.status] ? t(HISTORIE_LABEL_KEY[entry.status]) : entry.status}
-                  </span>
-                  <span>{entry.tijdstip.toLocaleString('nl-NL')}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
+        <>
           {error && (
             <p data-testid="bestelling-modal-error" className="text-xs text-red-400">
               {error}
             </p>
           )}
+          <div
+            data-testid="bestelling-modal"
+            hidden={bevestigingAfwijzen.open}
+            className={`${bevestigingAfwijzen.open ? 'hidden' : 'flex'} flex-col gap-3 text-sm text-white/80`}
+          >
+            <ul className="flex max-h-80 flex-col gap-3 overflow-y-auto text-xs">
+              {bestelling.lines.map((line) => {
+                const kunstwerk = (kunstwerken ?? []).find((k) => k.code === line.code) ?? null;
+                const materiaal = (materialen ?? []).find((m) => m.id === line.materiaalId);
+                const maat = (maten ?? []).find((m) => m.id === line.maatId);
+                const maatWeergave = maat
+                  ? `${maat.breedte}×${maat.hoogte} cm`
+                  : line.breedte != null && line.hoogte != null
+                    ? `${line.breedte}×${line.hoogte} cm`
+                    : line.maatId;
+                const isEditingLine = editingLineId === line.id;
+                const kunstwerkMaterialen = kunstwerk
+                  ? (materialen ?? []).filter((m) => kunstwerk.materiaalIds.includes(m.id))
+                  : [];
+                const kunstwerkMaten = kunstwerk
+                  ? (maten ?? []).filter((m) => kunstwerk.maatIds.includes(m.id))
+                  : [];
 
-          {heeftOngeprijsdeRegel && (
-            <p data-testid="bestelling-modal-goedkeuren-blocked" className="text-xs text-amber-400">
-              {t('bestellingenGoedkeurenBlocked')}
-            </p>
+                return (
+                  <li
+                    key={line.id}
+                    data-testid={`bestelling-modal-line-${line.id}`}
+                    className="flex gap-3 rounded-md border border-white/10 bg-white/[0.02] p-3"
+                  >
+                    {kunstwerk ? (
+                      <ProductImage src={kunstwerk.foto} alt="" className="h-[72px] w-[72px] shrink-0 rounded-md" />
+                    ) : (
+                      <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-md bg-white/5 text-lg text-white/25">
+                        ?
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="line-clamp-2 font-semibold text-white/90">
+                        {kunstwerk ? kunstwerk.omschrijvingNl : t('bestellingenRegelOnbekend')}
+                      </p>
+
+                      {!isEditingLine ? (
+                        <>
+                          {kunstwerk && (
+                            <div className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-white/60">
+                              <span className="text-white/35">{t('bestellingenModalLabelMateriaal')}</span>
+                              <span>
+                                {materiaal
+                                  ? `${materiaal.materiaaldikte}mm ${
+                                      materiaalsoortNaamById.get(materiaal.materiaalsoortId) ??
+                                      materiaal.materiaalsoortId
+                                    } — ${materiaal.omschrijvingNl}`
+                                  : line.materiaalId}
+                              </span>
+                              <span className="text-white/35">{t('bestellingenModalLabelMaat')}</span>
+                              <span>{maatWeergave}</span>
+                            </div>
+                          )}
+                          <div className="mt-2 flex items-baseline justify-between border-t border-white/10 pt-1.5">
+                            {line.prijs !== null ? (
+                              <>
+                                <span className="text-white/45">
+                                  {line.quantity} × {formatCurrency(line.prijs)}
+                                </span>
+                                <span className="font-semibold text-white/90">
+                                  {formatCurrency(line.prijs * line.quantity)}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-white/45">{t('bestellingenModalPrijsOpAanvraag')}</span>
+                            )}
+                          </div>
+                          {line.prijs === null && (
+                            <div className="mt-1 flex items-center gap-2">
+                              <input
+                                type="number"
+                                data-testid={`bestelling-modal-prijs-input-${line.id}`}
+                                value={prijsDrafts[line.id] ?? ''}
+                                onChange={(event) =>
+                                  setPrijsDrafts((current) => ({ ...current, [line.id]: event.target.value }))
+                                }
+                                className="w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
+                              />
+                              <button
+                                type="button"
+                                data-testid={`bestelling-modal-prijs-vaststellen-${line.id}`}
+                                onClick={() => handlePrijsVaststellen(line)}
+                                disabled={!prijsDrafts[line.id] || Number(prijsDrafts[line.id]) <= 0}
+                                className="btn-beheer-secondary rounded-sm border border-white/20 px-2 py-1 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
+                              >
+                                {t('bestellingenModalPrijsVaststellen')}
+                              </button>
+                            </div>
+                          )}
+                          {kunstwerk && (
+                            <button
+                              type="button"
+                              onClick={() => startEditRegel(line)}
+                              data-testid={`bestelling-modal-regel-bewerken-${line.id}`}
+                              className="mt-1.5 text-[0.65rem] uppercase tracking-wide text-white/40 underline underline-offset-2 hover:text-white/70"
+                            >
+                              {t('bewerken')}
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <div className="mt-1.5 flex flex-col gap-2">
+                          <select
+                            value={lineDraft?.materiaalId ?? ''}
+                            onChange={(event) =>
+                              setLineDraft((current) =>
+                                current ? { ...current, materiaalId: event.target.value } : current
+                              )
+                            }
+                            data-testid={`bestelling-modal-regel-materiaal-${line.id}`}
+                            className="rounded-sm bg-black/40 px-2 py-1.5 text-xs text-white"
+                          >
+                            {kunstwerkMaterialen.map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {m.materiaaldikte}mm {materiaalsoortNaamById.get(m.materiaalsoortId) ?? m.materiaalsoortId}
+                              </option>
+                            ))}
+                          </select>
+
+                          {isCustomLine(line) ? (
+                            <div className="flex gap-2">
+                              <input
+                                type="number"
+                                value={lineDraft?.breedte ?? ''}
+                                onChange={(event) =>
+                                  setLineDraft((current) =>
+                                    current ? { ...current, breedte: event.target.value } : current
+                                  )
+                                }
+                                data-testid={`bestelling-modal-regel-breedte-${line.id}`}
+                                className="w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
+                              />
+                              <input
+                                type="number"
+                                value={lineDraft?.hoogte ?? ''}
+                                onChange={(event) =>
+                                  setLineDraft((current) =>
+                                    current ? { ...current, hoogte: event.target.value } : current
+                                  )
+                                }
+                                data-testid={`bestelling-modal-regel-hoogte-${line.id}`}
+                                className="w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
+                              />
+                            </div>
+                          ) : (
+                            <select
+                              value={lineDraft?.maatId ?? ''}
+                              onChange={(event) =>
+                                setLineDraft((current) =>
+                                  current ? { ...current, maatId: event.target.value } : current
+                                )
+                              }
+                              data-testid={`bestelling-modal-regel-maat-${line.id}`}
+                              className="rounded-sm bg-black/40 px-2 py-1.5 text-xs text-white"
+                            >
+                              {kunstwerkMaten.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                  {m.breedte}×{m.hoogte} cm
+                                </option>
+                              ))}
+                            </select>
+                          )}
+
+                          <div className="flex gap-2">
+                            <input
+                              type="number"
+                              placeholder={t('bestellingenModalLabelPrijs')}
+                              value={lineDraft?.prijs ?? ''}
+                              onChange={(event) =>
+                                setLineDraft((current) =>
+                                  current ? { ...current, prijs: event.target.value } : current
+                                )
+                              }
+                              data-testid={`bestelling-modal-regel-prijs-${line.id}`}
+                              className="w-24 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
+                            />
+                            <input
+                              type="number"
+                              min={1}
+                              placeholder={t('bestellingenModalLabelAantal')}
+                              value={lineDraft?.quantity ?? ''}
+                              onChange={(event) =>
+                                setLineDraft((current) =>
+                                  current ? { ...current, quantity: event.target.value } : current
+                                )
+                              }
+                              data-testid={`bestelling-modal-regel-aantal-${line.id}`}
+                              className="w-16 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
+                            />
+                          </div>
+
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleOpslaanRegel(line)}
+                              data-testid={`bestelling-modal-regel-opslaan-${line.id}`}
+                              className="btn-beheer-primary rounded-sm bg-silver px-3 py-1.5 text-xs tracking-wide text-ink"
+                            >
+                              {t('bestellingenModalRegelOpslaan')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelEditRegel}
+                              data-testid={`bestelling-modal-regel-annuleren-${line.id}`}
+                              className="btn-beheer-secondary rounded-sm border border-white/20 px-3 py-1.5 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                            >
+                              {t('annuleren')}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+
+            <div className="flex flex-col gap-1 border-t border-white/10 pt-3 text-xs">
+              <span className="text-[0.65rem] uppercase tracking-wide text-white/40">{t('bestellingenHistorieTitel')}</span>
+              <ul data-testid="bestelling-modal-historie" className="flex flex-col gap-0.5">
+                {(historie ?? []).map((entry, index) => (
+                  <li
+                    key={index}
+                    data-testid={`bestelling-modal-historie-item-${index}`}
+                    className="flex justify-between gap-3 text-white/60"
+                  >
+                    <span>
+                      {HISTORIE_LABEL_KEY[entry.status] ? t(HISTORIE_LABEL_KEY[entry.status]) : entry.status}
+                    </span>
+                    <span>{entry.tijdstip.toLocaleString('nl-NL')}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {heeftOngeprijsdeRegel && (
+              <p data-testid="bestelling-modal-goedkeuren-blocked" className="text-xs text-amber-400">
+                {t('bestellingenGoedkeurenBlocked')}
+              </p>
+            )}
+          </div>
+          {bevestigingAfwijzen.open && (
+            <AfwijzenBevestigingTekst
+              item={bestelling.bestelnr}
+              reden={bevestigingAfwijzen.reden}
+              onWijzigReden={bevestigingAfwijzen.wijzigReden}
+              testId="bestelling-modal-afwijzen-bevestiging"
+            />
           )}
-        </div>
+        </>
       )}
     </Modal>
   );

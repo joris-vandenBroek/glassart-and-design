@@ -195,6 +195,32 @@ describe('customer auth routes', () => {
     expect(meBody2.user.prijsgroep).toBeNull();
   });
 
+  it('does not expose afwijsreden in /me, even when the klant is Afgewezen with a stored reason', async () => {
+    await register(
+      jsonRequest({ email: 'afwijsreden-me@example.com', password: 'geheim123', companyName: 'A' })
+    );
+    await getPool().query('UPDATE klanten SET status = ?, afwijsreden = ? WHERE email = ?', [
+      'Afgewezen',
+      'Onvoldoende gegevens.',
+      'afwijsreden-me@example.com',
+    ]);
+    const loginResponse = await login(
+      jsonRequest({ email: 'afwijsreden-me@example.com', password: 'geheim123' })
+    );
+    const cookie = loginResponse.headers.get('set-cookie')!;
+
+    const meResponse = await me(
+      new Request('http://localhost/api/auth/me?type=klant', { headers: { cookie } })
+    );
+    // Guards against a false pass: without this, a 500 (or a null/missing user) would
+    // also satisfy the assertions below without actually proving the field is stripped.
+    expect(meResponse.status).toBe(200);
+    const meBody = await meResponse.json();
+    expect(meBody.user).not.toBeNull();
+    expect(meBody.user.afwijsreden).toBeUndefined();
+    expect('afwijsreden' in meBody.user).toBe(false);
+  });
+
   it('refuses to register an EU klant outside NL without a btwNummer', async () => {
     const response = await register(
       jsonRequest({

@@ -182,6 +182,17 @@ describe('klanten self-service route', () => {
     expect((rows as Array<{ btwNummer: string | null }>)[0].btwNummer).toBeNull();
   });
 
+  it('does not expose afwijsreden in the response, even when the klant is Afgewezen with a stored reason', async () => {
+    const { cookie } = await createKlantWithCookie({ status: 'Afgewezen', afwijsreden: 'Onvoldoende gegevens.' });
+    const response = await getMe(req('GET', undefined, cookie));
+    // Guards against a false pass: without this, a 500 (empty error body) would also
+    // satisfy the assertions below without actually proving the field is stripped.
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.afwijsreden).toBeUndefined();
+    expect('afwijsreden' in body).toBe(false);
+  });
+
   it('geeft het klantnummer terug maar laat de klant het niet zelf zetten', async () => {
     // KL-09999 valt bewust buiten de echte reeks, zodat deze fixture nooit kan
     // botsen met een nummer dat de teller uitdeelt.

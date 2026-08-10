@@ -215,17 +215,15 @@ export const GET = withApiErrorHandling('GET /api/bestelheaders', async (request
 
   // No klantId -- this is the beheer bulk view of every order, staff only.
   // A klantId is present -- allow staff, or the klant themselves viewing their own orders.
+  const isMedewerker = await requireMedewerker(request);
   if (!klantId) {
-    if (!(await requireMedewerker(request))) {
+    if (!isMedewerker) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
-  } else {
-    const isMedewerker = await requireMedewerker(request);
-    if (!isMedewerker) {
-      const ownKlantId = await requireKlant(request);
-      if (ownKlantId !== klantId) {
-        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-      }
+  } else if (!isMedewerker) {
+    const ownKlantId = await requireKlant(request);
+    if (ownKlantId !== klantId) {
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
   }
 
@@ -258,6 +256,9 @@ export const GET = withApiErrorHandling('GET /api/bestelheaders', async (request
   }
 
   return NextResponse.json(
-    headerRijen.map((header) => ({ ...header, lines: regelsPerHeader.get(header.id) ?? [] }))
+    headerRijen.map((header) => {
+      const { afwijsreden: _afwijsreden, ...safeHeader } = header;
+      return { ...(isMedewerker ? header : safeHeader), lines: regelsPerHeader.get(header.id) ?? [] };
+    })
   );
 });

@@ -42,6 +42,7 @@ export const TABLE_COLUMNS: Record<string, readonly string[]> = {
     'minimaleAfname',
     'klantnr',
     'createdAt',
+    'afwijsreden',
   ],
   medewerkers: ['id', 'email', 'wachtwoordHash', 'naam', 'createdAt'],
   segmenten: ['id', 'omschrijvingNl', 'omschrijvingFr', 'omschrijvingDe', 'omschrijvingEn'],
@@ -116,7 +117,7 @@ export const TABLE_COLUMNS: Record<string, readonly string[]> = {
   ],
   instellingen: ['id', 'data'],
   counters: ['id', 'value'],
-  bestelheaders: ['id', 'klantId', 'bestelnr', 'besteldatum', 'status', 'zendingnummer'],
+  bestelheaders: ['id', 'klantId', 'bestelnr', 'besteldatum', 'status', 'zendingnummer', 'afwijsreden'],
   bestellines: [
     'id',
     'bestelheaderId',
