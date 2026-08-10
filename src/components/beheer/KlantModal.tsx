@@ -605,6 +605,10 @@ export function KlantModal({
           <KlantWachtwoordSectie
             key={klant.id}
             klantId={klant.id}
+            // Bewust het opgeslagen adres en niet `fields.email`: de route mailt
+            // naar de klantrij, dus een nog niet bewaarde wijziging in het
+            // formulier zou hier een adres tonen waar niets heen is gegaan.
+            klantEmail={klant.email}
             onWachtwoordZichtbaar={setWachtwoordZichtbaar}
           />
 

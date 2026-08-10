@@ -6,6 +6,7 @@ import { hashPassword, verifyPassword } from '@/lib/server/password';
 import { createSession, validateSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { POST as geefWachtwoordUit } from '@/app/api/klanten/[id]/wachtwoord/route';
 import { POST as login } from '@/app/api/auth/login/route';
+import { sendWachtwoordUitgegevenMail } from '@/lib/server/sendWachtwoordUitgegevenMail';
 
 /**
  * Schakelaar om de logregel -- de laatste van de vier mutaties -- te laten
@@ -13,6 +14,15 @@ import { POST as login } from '@/app/api/auth/login/route';
  * een klant achterlaat met een nieuwe hash waarvan niemand het wachtwoord kent.
  */
 const logregelFaalt = vi.hoisted(() => ({ actief: false }));
+
+// De suite mag nooit echt mail versturen, net zoals reset-password.test.ts de
+// resetmail afvangt. `verstuurd` schakelt de uitkomst zodat ook het pad met een
+// haperende mailrelay te testen is.
+const mailLukt = vi.hoisted(() => ({ waarde: true }));
+
+vi.mock('@/lib/server/sendWachtwoordUitgegevenMail', () => ({
+  sendWachtwoordUitgegevenMail: vi.fn(async () => mailLukt.waarde),
+}));
 
 vi.mock('@/lib/server/activiteitActor', async (importOriginal) => {
   const origineel = await importOriginal<typeof import('@/lib/server/activiteitActor')>();
@@ -33,6 +43,8 @@ const createdMedewerkerIds: string[] = [];
 
 afterEach(async () => {
   logregelFaalt.actief = false;
+  mailLukt.waarde = true;
+  vi.mocked(sendWachtwoordUitgegevenMail).mockClear();
   if (createdMedewerkerIds.length > 0) {
     await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId IN (?)", [createdMedewerkerIds]);
     await getPool().query('DELETE FROM activiteitenlog WHERE actorId IN (?)', [createdMedewerkerIds]);
@@ -205,5 +217,47 @@ describe('POST /api/klanten/[id]/wachtwoord', () => {
     expect(regels[0].actorNaam).toBe('Testmedewerker');
     expect(regels[0].omschrijving).toContain('Testbedrijf BV');
     expect(regels[0].omschrijving).not.toContain(wachtwoord);
+  });
+
+  // De melding bereikt de mailbox van de rechtmatige eigenaar, ook wanneer de
+  // beller die niet kan lezen -- dat is precies het geval dat ertoe doet.
+  describe('melding aan de klant', () => {
+    it('mailt naar het adres uit de klantrij, niet naar iets uit de request', async () => {
+      const klant = await maakKlant('oudwachtwoord');
+      const { cookie } = await medewerkerCookie();
+
+      const response = await geefWachtwoordUit(req(cookie), { params: { id: klant.id } });
+
+      expect(await response.json()).toMatchObject({ mail: 'verstuurd' });
+      expect(vi.mocked(sendWachtwoordUitgegevenMail)).toHaveBeenCalledWith(klant.email);
+    });
+
+    // De beheerder heeft de klant aan de lijn en heeft het wachtwoord nodig; een
+    // haperende mailrelay mag dat niet alsnog omverhalen.
+    it('geeft het wachtwoord gewoon uit wanneer de mail mislukt', async () => {
+      mailLukt.waarde = false;
+      const klant = await maakKlant('oudwachtwoord');
+      const { cookie } = await medewerkerCookie();
+
+      const response = await geefWachtwoordUit(req(cookie), { params: { id: klant.id } });
+      expect(response.status).toBe(200);
+      const { wachtwoord, mail } = (await response.json()) as { wachtwoord: string; mail: string };
+
+      expect(mail).toBe('mislukt');
+      expect(await inlogStatus(klant.email, wachtwoord)).toBe(200);
+    });
+
+    // Het wachtwoord is telefonisch doorgegeven; het hoort niet alsnog in de
+    // mailbox te belanden die de klant naar eigen zeggen niet kan bereiken.
+    it('stuurt het wachtwoord niet mee in de mail', async () => {
+      const klant = await maakKlant('oudwachtwoord');
+      const { cookie } = await medewerkerCookie();
+
+      const response = await geefWachtwoordUit(req(cookie), { params: { id: klant.id } });
+      const { wachtwoord } = (await response.json()) as { wachtwoord: string };
+
+      const argumenten = JSON.stringify(vi.mocked(sendWachtwoordUitgegevenMail).mock.calls);
+      expect(argumenten).not.toContain(wachtwoord);
+    });
   });
 });

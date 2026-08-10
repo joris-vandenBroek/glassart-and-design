@@ -152,6 +152,8 @@ Een klant met openstaande bestellingen kan zijn account **niet** zelf verwijdere
 
 Alle beheerhandelingen die ertoe doen worden gelogd in `activiteitenlog` via `src/lib/logActiviteit.ts` — fire-and-forget vanuit de browser, dus een mislukte logregel valt geruisloos weg. Eén uitzondering: het uitgeven van een klantwachtwoord wordt server-side gelogd, in `POST /api/klanten/[id]/wachtwoord` zelf en binnen dezelfde transactie als de wachtwoordwijziging, zodat die regel niet stil kan verdwijnen.
 
+Diezelfde route mailt de klant ná de commit dat er telefonisch een wachtwoord is ingesteld (`src/lib/server/sendWachtwoordUitgegevenMail.ts`, zonder het wachtwoord erin). Dat is de enige controle op wie er belt: de melding bereikt de mailbox van de rechtmatige eigenaar ook wanneer de beller die niet kan lezen. Een mislukte verzending laat het uitgeven bewust doorgaan — het wachtwoord staat dan al vast en de beheerder heeft de klant aan de lijn — en komt terug als `mail: 'mislukt'` in de respons, zodat het beheerscherm het kan melden.
+
 ## Testen
 
 128 testbestanden onder `tests/`. Belangrijk om te weten voordat je er iets aan verandert:

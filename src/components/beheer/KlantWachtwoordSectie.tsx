@@ -22,14 +22,17 @@ type Fase = 'rust' | 'bevestigen' | 'getoond';
  */
 export function KlantWachtwoordSectie({
   klantId,
+  klantEmail,
   onWachtwoordZichtbaar,
 }: {
   klantId: string;
+  klantEmail: string;
   onWachtwoordZichtbaar?: (zichtbaar: boolean) => void;
 }) {
   const t = useTranslations('beheer');
   const [fase, setFase] = useState<Fase>('rust');
   const [wachtwoord, setWachtwoord] = useState<string | null>(null);
+  const [mail, setMail] = useState<'verstuurd' | 'mislukt' | null>(null);
   const [fout, setFout] = useState<string | null>(null);
   // De endpoint is niet idempotent (nieuw wachtwoord, hash overschreven, reset-tokens
   // en sessies vervallen) en onomkeerbaar, dus een tweede klik terwijl het eerste
@@ -53,8 +56,9 @@ export function KlantWachtwoordSectie({
     try {
       const response = await fetch(`/api/klanten/${klantId}/wachtwoord`, { method: 'POST' });
       if (!response.ok) throw new Error('uitgeven mislukt');
-      const body = (await response.json()) as { wachtwoord: string };
+      const body = (await response.json()) as { wachtwoord: string; mail: 'verstuurd' | 'mislukt' };
       setWachtwoord(body.wachtwoord);
+      setMail(body.mail);
       setFase('getoond');
     } catch {
       setFout(t('klantenWachtwoordFout'));
@@ -136,6 +140,16 @@ export function KlantWachtwoordSectie({
             </button>
           </div>
           <p className="text-xs text-white/60">{t('klantenWachtwoordUitleg')}</p>
+          {mail && (
+            <p
+              data-testid="klant-wachtwoord-mail"
+              className={mail === 'verstuurd' ? 'text-xs text-white/60' : 'text-xs text-amber-300'}
+            >
+              {mail === 'verstuurd'
+                ? t('klantenWachtwoordMailVerstuurd', { email: klantEmail })
+                : t('klantenWachtwoordMailMislukt')}
+            </p>
+          )}
         </div>
       )}
 

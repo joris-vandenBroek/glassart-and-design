@@ -449,6 +449,8 @@
     "klantenWachtwoordUitleg": "Geef dit door aan de klant. Zodra dit venster dichtgaat — met de sluitknop, met Esc of met een klik ernaast — is het weg en niet meer op te vragen. De knoppen onderaan zijn zolang geblokkeerd, want ook die sluiten het venster.",
     "klantenWachtwoordKopieren": "Kopiëren",
     "klantenWachtwoordFout": "Het uitgeven van een nieuw wachtwoord is mislukt.",
+    "klantenWachtwoordMailVerstuurd": "De klant heeft hierover ook een bericht gekregen op {email}.",
+    "klantenWachtwoordMailMislukt": "Het bericht hierover kon niet naar de klant verstuurd worden. Controleer het e-mailadres nu je hem aan de lijn hebt.",
     "klantenOpslaan": "Opslaan",
     "klantenModalTitel": "Klantgegevens",
     "klantenHelp": "Hier bekijk en bewerk je de gegevens van een klant. Geef de klant een prijsgroep — dat moet, anders blijft de knop \"Goedkeuren\" uitgegrijsd. Ook moet er een btw-tarief zijn ingesteld voor het land van de klant, anders blijft de knop eveneens uitgegrijsd. Wil je deze klant koppelen aan een kunstenaar? Kies die hieronder. Prijsafspraken en een eventuele opslag voor die kunstenaar stel je niet hier in, maar bij de kunstenaar zelf (scherm \"Kunstenaars\"). De knoppen onderaan: Opslaan bewaart je wijzigingen, Goedkeuren maakt van een aanvraag een actieve klant, Afwijzen wijst de aanvraag af.",

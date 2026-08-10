@@ -10,7 +10,11 @@ vi.stubGlobal('fetch', fetchMock);
 function renderSectie(onWachtwoordZichtbaar?: (zichtbaar: boolean) => void) {
   return render(
     <NextIntlClientProvider locale="nl" messages={messages}>
-      <KlantWachtwoordSectie klantId="uid-1" onWachtwoordZichtbaar={onWachtwoordZichtbaar} />
+      <KlantWachtwoordSectie
+        klantId="uid-1"
+        klantEmail="jan@example.com"
+        onWachtwoordZichtbaar={onWachtwoordZichtbaar}
+      />
     </NextIntlClientProvider>
   );
 }
@@ -150,5 +154,32 @@ describe('KlantWachtwoordSectie', () => {
 
     await waitFor(() => expect(screen.queryByTestId('klant-wachtwoord-waarde')).toBeNull());
     expect(screen.getByTestId('klant-wachtwoord-uitgeven')).toBeInTheDocument();
+  });
+
+  // Altijd melden, ook bij succes: de beheerder heeft de klant aan de lijn en kan
+  // het adres dan meteen bevestigen of laten corrigeren.
+  describe('melding aan de klant', () => {
+    async function geefUit(mail: string) {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ wachtwoord: 'k7fp-r2mq-x4tz', mail }),
+      });
+      renderSectie();
+      fireEvent.click(screen.getByTestId('klant-wachtwoord-uitgeven'));
+      fireEvent.click(screen.getByTestId('klant-wachtwoord-bevestigen'));
+      return screen.findByTestId('klant-wachtwoord-mail');
+    }
+
+    it('noemt het adres waar het bericht heen ging', async () => {
+      expect(await geefUit('verstuurd')).toHaveTextContent(
+        'De klant heeft hierover ook een bericht gekregen op jan@example.com.'
+      );
+    });
+
+    it('meldt het wanneer het bericht niet verstuurd kon worden', async () => {
+      expect(await geefUit('mislukt')).toHaveTextContent(
+        'Het bericht hierover kon niet naar de klant verstuurd worden. Controleer het e-mailadres nu je hem aan de lijn hebt.'
+      );
+    });
   });
 });

@@ -6,6 +6,7 @@ import { destroySessionsForUser } from '@/lib/server/session';
 import { withApiErrorHandling } from '@/lib/server/apiRoute';
 import { genereerWachtwoord } from '@/lib/server/genereerWachtwoord';
 import { actorUitSessie, schrijfActiviteit } from '@/lib/server/activiteitActor';
+import { sendWachtwoordUitgegevenMail } from '@/lib/server/sendWachtwoordUitgegevenMail';
 
 /**
  * Geeft een nieuw wachtwoord uit voor een klant die de beheerder aan de telefoon
@@ -75,7 +76,14 @@ export const POST = withApiErrorHandling(
       connection.release();
     }
 
-    // Pas ná de commit: het wachtwoord gaat alleen de deur uit als het ook echt vaststaat.
-    return NextResponse.json({ wachtwoord });
+    // Pas ná de commit, en om twee redenen in deze volgorde. Een waarschuwing
+    // sturen over een wachtwoord dat uiteindelijk niet is opgeslagen, stuurt de
+    // klant op zoek naar een inbraak die niet heeft plaatsgevonden. En andersom
+    // mag een haperende mailrelay het uitgeven niet alsnog omverhalen: het
+    // wachtwoord staat hier al vast en de beheerder heeft de klant aan de lijn.
+    // `verstuurMail` gooit daarom niet maar geeft `false` terug.
+    const mail = (await sendWachtwoordUitgegevenMail(klant.email ?? '')) ? 'verstuurd' : 'mislukt';
+
+    return NextResponse.json({ wachtwoord, mail });
   }
 );
