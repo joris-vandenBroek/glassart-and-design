@@ -76,8 +76,42 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
+        # `npm ci` always wipes node_modules and reinstalls from scratch regardless of
+        # what's on disk, so caching the folder only helps if we skip `npm ci` outright
+        # on a cache hit (see the `if:` below) -- exact lockfile match only, no
+        # restore-keys fallback, since a partial/stale node_modules is exactly what
+        # `npm ci` exists to prevent. Same cache entry as staging's equivalent step is
+        # fine here (unlike the build cache below) -- node_modules content only depends
+        # on package-lock.json, not on MIJNHOST_BUILD.
+
       - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: npm ci
+
+      - name: Cache Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-nextjs-production-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**/*.ts', 'src/**/*.tsx', 'src/**/*.js', 'src/**/*.jsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-production-${{ hashFiles('package-lock.json') }}-
+        # .next/cache holds Next.js' own incremental compiler cache -- restoring it lets
+        # `npm run build` below skip recompiling files that haven't changed since the
+        # last run instead of doing a fully cold build every time. Deliberately separate
+        # from the deploy payload's .next/cache, which "Assemble deploy payload" further
+        # down still strips before upload -- that's about not shipping build-cache files
+        # to the server, unrelated to speeding up the build here.
+        # Key carries a "production" tag so this never shares an entry with staging's
+        # build cache: pageAvailability.ts reads MIJNHOST_BUILD at build time
+        # (src/config/pageAvailability.ts), so the two workflows compile genuinely
+        # different output from the same source tree, and cross-restoring one into the
+        # other's build risks serving a stale/wrong compiled chunk for the gated routes.
 
       - name: Controleer databasemigraties
         run: |
