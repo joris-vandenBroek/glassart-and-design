@@ -85,7 +85,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
         if (!response.ok) throw new Error('load failed');
         const headers = (await response.json()) as Array<{
           id: string;
-          klantId: string;
+          klantnr: string;
           bestelnr: string;
           zendingnummer?: string | null;
           besteldatum: string;
@@ -96,7 +96,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
           setRawBestellingen(
             headers.map((header) => ({
               id: header.id,
-              klantId: header.klantId,
+              klantnr: header.klantnr,
               bestelnr: header.bestelnr ?? header.id,
               zendingnummer: header.zendingnummer ?? null,
               besteldatum: new Date(header.besteldatum).toLocaleDateString('nl-NL'),
@@ -226,7 +226,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
     if (rawBestellingen === null) return null;
     return rawBestellingen.map((row) => ({
       ...row,
-      companyName: (klanten ?? []).find((klant) => klant.id === row.klantId)?.companyName ?? row.klantId,
+      companyName: (klanten ?? []).find((klant) => klant.klantnr === row.klantnr)?.companyName ?? row.klantnr,
     }));
   }, [rawBestellingen, klanten]);
 

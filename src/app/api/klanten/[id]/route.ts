@@ -87,9 +87,15 @@ export const DELETE = withApiErrorHandling(
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
     if (klantId) {
-      const [rows] = await getPool().query('SELECT 1 FROM bestelheaders WHERE klantId = ? LIMIT 1', [klantId]);
-      if ((rows as unknown[]).length > 0) {
-        return NextResponse.json({ error: 'heeft-bestellingen' }, { status: 409 });
+      // bestelheaders verwijst sinds taak 2 naar klantnr, niet meer naar de klant-UUID --
+      // dus eerst de klantnr van deze klant opzoeken, net als GET /api/bestelheaders doet.
+      const [klantRows] = await getPool().query('SELECT klantnr FROM klanten WHERE id = ?', [klantId]);
+      const klantnr = (klantRows as Array<{ klantnr: string | null }>)[0]?.klantnr;
+      if (klantnr) {
+        const [rows] = await getPool().query('SELECT 1 FROM bestelheaders WHERE klantnr = ? LIMIT 1', [klantnr]);
+        if ((rows as unknown[]).length > 0) {
+          return NextResponse.json({ error: 'heeft-bestellingen' }, { status: 409 });
+        }
       }
     }
     await deleteRow('klanten', params.id);

@@ -53,15 +53,19 @@ async function maakKunstwerk(code: string): Promise<string> {
   return kunstwerk.id;
 }
 
+let klantTeller = 0;
+
 async function maakBestelregelMetCode(code: string, email: string): Promise<void> {
-  const klant = await insertRow<{ id: string }>('klanten', {
+  const klantnr = `AT-K-KWCODE-${++klantTeller}`;
+  await insertRow<{ id: string }>('klanten', {
     email,
     wachtwoordHash: await hashPassword('x'),
     status: 'Goedgekeurd',
+    klantnr,
   } as never);
   createdKlantEmails.push(email);
   const header = await insertRow<{ id: string }>('bestelheaders', {
-    klantId: klant.id,
+    klantnr,
     // Een vast, herkenbaar testbestelnummer: de counters-rij `bestelnummer` mag nooit
     // gebruikt of gereset worden door een test. Vaste, korte letterlijke waarde zodat
     // hij altijd binnen bestelheaders.bestelnr (VARCHAR(20)) past, ongeacht de lengte

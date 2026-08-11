@@ -112,7 +112,7 @@ export function BestellingModal({
     bestelling && !heeftOngeprijsdeRegel
       ? bestelling.lines.reduce((sum, line) => sum + (line.prijs ?? 0) * line.quantity, 0)
       : null;
-  const klant = bestelling ? (klanten ?? []).find((k) => k.id === bestelling.klantId) : undefined;
+  const klant = bestelling ? (klanten ?? []).find((k) => k.klantnr === bestelling.klantnr) : undefined;
   const land = klant ? klant.invoiceLand || klant.land || null : null;
   const btwPercentage = btwTarieven ? resolveBtwPercentage(btwTarieven.tarieven, land) : null;
   const btwBedrag =

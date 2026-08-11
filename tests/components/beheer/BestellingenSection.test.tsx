@@ -70,6 +70,7 @@ const MATERIAALSOORTEN: Materiaalsoort[] = [{ id: 'soort-1', omschrijving: 'Veil
 const KLANTEN: Klant[] = [
   {
     id: 'uid-1',
+    klantnr: 'KN-1',
     companyName: 'Testbedrijf BV',
     kvk: '12345678',
     contactPerson: 'Jan Jansen',
@@ -98,7 +99,7 @@ const DRUKKERS: Drukker[] = [
 const BESTELLINGEN: Bestelling[] = [
   {
     id: 'header-1',
-    klantId: 'uid-1',
+    klantnr: 'KN-1',
     companyName: 'Testbedrijf BV',
     bestelnr: 'GD-00301',
     besteldatum: '1-7-2026',
@@ -109,7 +110,7 @@ const BESTELLINGEN: Bestelling[] = [
   },
   {
     id: 'header-2',
-    klantId: 'uid-2',
+    klantnr: 'KN-2',
     companyName: 'Ander Bedrijf',
     bestelnr: 'GD-00302',
     besteldatum: '2-7-2026',

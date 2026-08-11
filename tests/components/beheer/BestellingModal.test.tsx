@@ -43,6 +43,7 @@ const MATERIAALSOORTEN: Materiaalsoort[] = [{ id: 'soort-1', omschrijving: 'Veil
 const KLANTEN: Klant[] = [
   {
     id: 'uid-1',
+    klantnr: 'KN-1',
     companyName: 'Testbedrijf BV',
     kvk: '12345678',
     contactPerson: 'Jan Jansen',
@@ -69,7 +70,7 @@ const BTWTARIEVEN: BtwTarieven = { tarieven: [{ land: 'NL', percentage: 21 }] };
 
 const BESTELLING: Bestelling = {
   id: 'header-1',
-  klantId: 'uid-1',
+  klantnr: 'KN-1',
   companyName: 'Testbedrijf BV',
   bestelnr: 'GD-00101',
   besteldatum: '1-7-2026',
@@ -246,7 +247,7 @@ describe('BestellingModal', () => {
 
 const BESTELLING_MET_EIGEN_MAAT: Bestelling = {
   id: 'header-2',
-  klantId: 'uid-2',
+  klantnr: 'KN-2',
   companyName: 'Ander Bedrijf',
   bestelnr: 'GD-00102',
   besteldatum: '3-7-2026',
@@ -309,7 +310,7 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
 
     const BESTELLING_MET_TWEE_ONGEPRIJSDE_REGELS: Bestelling = {
       id: 'header-3',
-      klantId: 'uid-3',
+      klantnr: 'KN-3',
       companyName: 'Weer Een Bedrijf',
       bestelnr: 'GD-00103',
       besteldatum: '5-7-2026',
@@ -545,7 +546,7 @@ describe('BestellingModal — btw', () => {
 
 const BESTELLING_VERSTUURD: Bestelling = {
   id: 'header-4',
-  klantId: 'uid-1',
+  klantnr: 'KN-1',
   companyName: 'Testbedrijf BV',
   bestelnr: 'GD-00104',
   besteldatum: '4-7-2026',

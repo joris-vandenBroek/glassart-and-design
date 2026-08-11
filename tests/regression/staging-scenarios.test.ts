@@ -99,17 +99,21 @@ afterEach(async () => {
   await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'autotest-staff'");
 });
 
+let klantTeller = 0;
+
 async function maakKlant(emailPrefix: string, extra: Record<string, unknown> = {}) {
   const email = `autotest-${emailPrefix}-${randomUUID()}@example.com`;
+  const klantnr = `AT-K-REG-${++klantTeller}`;
   const created = await insertRow<{ id: string }>('klanten', {
     email,
     wachtwoordHash: await hashPassword('AutotestWachtwoord1!'),
     companyName: `AUTOTEST ${emailPrefix}`,
     status: 'Goedgekeurd',
+    klantnr,
     ...extra,
   } as never);
   const cookie = `${SESSION_COOKIE_NAME}=${await createSession('klant', created.id)}`;
-  return { id: created.id, email, cookie };
+  return { id: created.id, email, klantnr, cookie };
 }
 
 async function opruimenKlanten(emails: string[]) {
@@ -119,9 +123,10 @@ async function opruimenKlanten(emails: string[]) {
     "DELETE FROM sessions WHERE userType = 'klant' AND userId IN (SELECT id FROM klanten WHERE email IN (?))",
     [emails]
   );
-  await pool.query('DELETE FROM bestelheaders WHERE klantId IN (SELECT id FROM klanten WHERE email IN (?))', [
-    emails,
-  ]);
+  await pool.query(
+    'DELETE FROM bestelheaders WHERE klantnr IN (SELECT klantnr FROM klanten WHERE email IN (?))',
+    [emails]
+  );
   await pool.query('DELETE FROM klanten WHERE email IN (?)', [emails]);
 }
 
@@ -431,8 +436,8 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
       // Combineer beide bestellingen (van 2 verschillende klanten) in één mail.
       const mail = buildDrukkerMail({
         bestellingen: [
-          { id: headerX.id, klantId: klantX.id, companyName: klantX.email, bestelnr: headerX.bestelnr, besteldatum: '', status: 'Te versturen naar drukker', lineCount: 1, totalQuantity: 1, lines: [{ id: 'l1', code: 'AUTOTEST Kunstwerk Drukker', maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 80, quantity: 1 }] },
-          { id: headerY.id, klantId: klantY.id, companyName: klantY.email, bestelnr: headerY.bestelnr, besteldatum: '', status: 'Te versturen naar drukker', lineCount: 1, totalQuantity: 1, lines: [{ id: 'l2', code: 'AUTOTEST Kunstwerk Drukker', maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 80, quantity: 1 }] },
+          { id: headerX.id, klantnr: klantX.klantnr, companyName: klantX.email, bestelnr: headerX.bestelnr, besteldatum: '', status: 'Te versturen naar drukker', lineCount: 1, totalQuantity: 1, lines: [{ id: 'l1', code: 'AUTOTEST Kunstwerk Drukker', maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 80, quantity: 1 }] },
+          { id: headerY.id, klantnr: klantY.klantnr, companyName: klantY.email, bestelnr: headerY.bestelnr, besteldatum: '', status: 'Te versturen naar drukker', lineCount: 1, totalQuantity: 1, lines: [{ id: 'l2', code: 'AUTOTEST Kunstwerk Drukker', maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 80, quantity: 1 }] },
         ],
         klanten: [],
         kunstwerken: [{ id: kunstwerkId, foto: '', code: 'AUTOTEST Kunstwerk Drukker', kunstenaarId: null, segmentIds: [], materiaalIds: [fixture.materiaalId], maatIds: [fixture.maatId], omschrijvingNl: '', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }],
@@ -1234,7 +1239,7 @@ describe('Bestelling afronden -- van plaatsing tot "Afgerond" met bestelstatusHi
       );
       expect((historieRows as Array<{ status: string }>).map((r) => r.status)).toContain('Te factureren');
     } finally {
-      // opruimenKlanten verwijdert ook de bestelheader (via klantId IN (...)) -- geen
+      // opruimenKlanten verwijdert ook de bestelheader (via klantnr IN (...)) -- geen
       // apart headerId-cleanup nodig, zelfde patroon als de andere scenario's in dit bestand.
       await opruimenKlanten(klantEmails);
       if (drukkerIds.length > 0) await getPool().query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]); // cascades drukkerZendingen

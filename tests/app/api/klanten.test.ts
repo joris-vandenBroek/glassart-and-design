@@ -148,12 +148,13 @@ describe('klanten admin routes', () => {
       email: 'k@example.com',
       wachtwoordHash: await hashPassword('x'),
       status: 'Goedgekeurd',
+      klantnr: 'AT-K-KLN-1',
     } as never);
     createdKlantIds.push(klant.id);
     const headerId = randomUUID();
-    await getPool().query('INSERT INTO bestelheaders (id, klantId, bestelnr, status) VALUES (?, ?, ?, ?)', [
+    await getPool().query('INSERT INTO bestelheaders (id, klantnr, bestelnr, status) VALUES (?, ?, ?, ?)', [
       headerId,
-      klant.id,
+      'AT-K-KLN-1',
       'AUTOTEST-BLOCK-1',
       'Betaald en afgerond',
     ]);
@@ -193,11 +194,12 @@ describe('klanten admin routes', () => {
       email: 'm@example.com',
       wachtwoordHash: await hashPassword('x'),
       status: 'Goedgekeurd',
+      klantnr: 'AT-K-KLN-2',
     } as never);
     const headerId = randomUUID();
-    await getPool().query('INSERT INTO bestelheaders (id, klantId, bestelnr, status) VALUES (?, ?, ?, ?)', [
+    await getPool().query('INSERT INTO bestelheaders (id, klantnr, bestelnr, status) VALUES (?, ?, ?, ?)', [
       headerId,
-      klant.id,
+      'AT-K-KLN-2',
       'AUTOTEST-BLOCK-2',
       'Betaald en afgerond',
     ]);
@@ -205,10 +207,10 @@ describe('klanten admin routes', () => {
     try {
       // Confirmed pre-existing, unrelated bug (tracked separately, not fixed by this plan):
       // deleting a klant with any bestelheaders row currently throws ER_ROW_IS_REFERENCED_2
-      // regardless of who deletes them, because bestelheaders.klantId has no ON DELETE
-      // CASCADE. This test documents that the staff branch is reached (not blocked by this
-      // plan's new klant-side check) -- it still fails at the DB level for a different,
-      // pre-existing reason, which is why this test expects a 500, not 200.
+      // regardless of who deletes them, because bestelheaders.klantnr (FK to klanten.klantnr)
+      // has no ON DELETE CASCADE. This test documents that the staff branch is reached (not
+      // blocked by this plan's new klant-side check) -- it still fails at the DB level for a
+      // different, pre-existing reason, which is why this test expects a 500, not 200.
       const response = await deleteKlant(req('DELETE', undefined, await medewerkerCookie()), {
         params: { id: klant.id },
       });

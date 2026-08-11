@@ -1,4 +1,5 @@
 import { describe, expect, it, afterEach } from 'vitest';
+import { randomUUID } from 'crypto';
 import { getPool } from '@/lib/server/db';
 import { insertRow } from '@/lib/server/crud';
 import { hashPassword } from '@/lib/server/password';
@@ -28,7 +29,7 @@ afterEach(async () => {
       'DELETE FROM sessions WHERE userType = \'klant\' AND userId IN (SELECT id FROM klanten WHERE email IN (?))',
       [createdKlantEmails]
     );
-    await pool.query('DELETE FROM bestelheaders WHERE klantId IN (SELECT id FROM klanten WHERE email IN (?))', [
+    await pool.query('DELETE FROM bestelheaders WHERE klantnr IN (SELECT klantnr FROM klanten WHERE email IN (?))', [
       createdKlantEmails,
     ]);
     await pool.query('DELETE FROM klanten WHERE email IN (?)', [createdKlantEmails]);
@@ -66,15 +67,19 @@ async function nextExpectedBestelnr(): Promise<string> {
   return `BE-${String(current).padStart(BESTELNR_PADDING, '0')}`;
 }
 
-async function klant(email: string): Promise<{ id: string; cookie: string }> {
+let klantTeller = 0;
+
+async function klant(email: string): Promise<{ id: string; klantnr: string; cookie: string }> {
+  const klantnr = `AT-K-BH-${++klantTeller}`;
   const created = await insertRow<{ id: string }>('klanten', {
     email,
     wachtwoordHash: await hashPassword('x'),
     status: 'Goedgekeurd',
+    klantnr,
   } as never);
   createdKlantEmails.push(email);
   const sessionId = await createSession('klant', created.id);
-  return { id: created.id, cookie: `${SESSION_COOKIE_NAME}=${sessionId}` };
+  return { id: created.id, klantnr, cookie: `${SESSION_COOKIE_NAME}=${sessionId}` };
 }
 
 async function maakPrijsgroep(aanpassing: { kortingspercentage?: number; opslagpercentage?: number }): Promise<string> {
@@ -87,16 +92,21 @@ async function maakPrijsgroep(aanpassing: { kortingspercentage?: number; opslagp
   return prijsgroep.id;
 }
 
-async function klantMetPrijsgroep(email: string, prijsgroepId: string): Promise<{ id: string; cookie: string }> {
+async function klantMetPrijsgroep(
+  email: string,
+  prijsgroepId: string
+): Promise<{ id: string; klantnr: string; cookie: string }> {
+  const klantnr = `AT-K-BH-${++klantTeller}`;
   const created = await insertRow<{ id: string }>('klanten', {
     email,
     wachtwoordHash: await hashPassword('x'),
     status: 'Goedgekeurd',
     prijsgroepId,
+    klantnr,
   } as never);
   createdKlantEmails.push(email);
   const sessionId = await createSession('klant', created.id);
-  return { id: created.id, cookie: `${SESSION_COOKIE_NAME}=${sessionId}` };
+  return { id: created.id, klantnr, cookie: `${SESSION_COOKIE_NAME}=${sessionId}` };
 }
 
 async function medewerkerCookie(): Promise<string> {
@@ -159,7 +169,7 @@ function postRequest(body: unknown, cookie?: string) {
 
 describe('bestelheaders routes', () => {
   it('creates a header with lines and an incrementing bestelnr, using the session klant, pricing from the matrix', async () => {
-    const { id: klantId, cookie } = await klant('k@example.com');
+    const { klantnr, cookie } = await klant('k@example.com');
     const maatId = await maakMaat(41, 61);
     const materiaalId = await maakMateriaal();
     const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 150);
@@ -172,8 +182,8 @@ describe('bestelheaders routes', () => {
     const body = await response.json();
     expect(body.bestelnr).toBe(expectedBestelnr);
 
-    const [headerRows] = await getPool().query('SELECT klantId FROM bestelheaders WHERE id = ?', [body.id]);
-    expect((headerRows as Array<{ klantId: string }>)[0].klantId).toBe(klantId);
+    const [headerRows] = await getPool().query('SELECT klantnr FROM bestelheaders WHERE id = ?', [body.id]);
+    expect((headerRows as Array<{ klantnr: string }>)[0].klantnr).toBe(klantnr);
 
     const [lineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE bestelheaderId = ?', [body.id]);
     // The client submitted 999999 -- the server ignores it and stores its own computed price.
@@ -333,14 +343,30 @@ describe('bestelheaders routes', () => {
   });
 
   it('ignores a klantId in the request body -- the order is always placed for the session klant', async () => {
-    const { id: klantId, cookie } = await klant('spoof@example.com');
+    const { klantnr, cookie } = await klant('spoof@example.com');
     const other = await klant('spoof-target@example.com');
 
     const response = await createHeader(postRequest({ klantId: other.id, lines: [] }, cookie));
     expect(response.status).toBe(201);
     const body = await response.json();
-    const [rows] = await getPool().query('SELECT klantId FROM bestelheaders WHERE id = ?', [body.id]);
-    expect((rows as Array<{ klantId: string }>)[0].klantId).toBe(klantId);
+    const [rows] = await getPool().query('SELECT klantnr FROM bestelheaders WHERE id = ?', [body.id]);
+    expect((rows as Array<{ klantnr: string }>)[0].klantnr).toBe(klantnr);
+  });
+
+  it('weigert een bestelling van een klant die nog niet is goedgekeurd', async () => {
+    const email = `autotest-niet-goedgekeurd-${randomUUID()}@example.com`;
+    const created = await insertRow<{ id: string }>('klanten', {
+      email,
+      wachtwoordHash: await hashPassword('x'),
+      status: 'Beoordelen',
+    } as never);
+    createdKlantEmails.push(email);
+    const sessionId = await createSession('klant', created.id);
+    const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
+
+    const response = await createHeader(postRequest({ lines: [] }, cookie));
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: 'klant-niet-goedgekeurd' });
   });
 
   it('lists all headers for a medewerker, and only own headers for a customer', async () => {

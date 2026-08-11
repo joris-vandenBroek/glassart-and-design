@@ -41,7 +41,7 @@ afterEach(async () => {
   }
   if (createdBestellijnGuardHeaderIds.length > 0) {
     // Cascades to bestellines (ON DELETE CASCADE), and must run before deleting the klant
-    // since bestelheaders.klantId has a plain (non-cascading) FK to klanten.
+    // since bestelheaders.klantnr has a plain (non-cascading) FK to klanten.
     await getPool().query('DELETE FROM bestelheaders WHERE id IN (?)', [createdBestellijnGuardHeaderIds]);
     createdBestellijnGuardHeaderIds.length = 0;
   }
@@ -84,15 +84,19 @@ async function medewerkerCookie(): Promise<string> {
   return `${SESSION_COOKIE_NAME}=${sessionId}`;
 }
 
+let bestellijnGuardKlantTeller = 0;
+
 async function maakBestellijnVoorMaat(maatId: string): Promise<{ headerId: string; klantEmail: string }> {
   const klantEmail = `bestellijn-guard-${maatId}@example.com`;
-  const klant = await insertRow<{ id: string }>('klanten', {
+  const klantnr = `AT-K-LR-${++bestellijnGuardKlantTeller}`;
+  await insertRow<{ id: string }>('klanten', {
     email: klantEmail,
     wachtwoordHash: await hashPassword('x'),
     status: 'Goedgekeurd',
+    klantnr,
   } as never);
   const header = await insertRow<{ id: string }>('bestelheaders', {
-    klantId: klant.id,
+    klantnr,
     bestelnr: 'GD-TEST',
     status: 'Te beoordelen',
   } as never);

@@ -12,7 +12,7 @@ beforeEach(() => {
 function bestelling(id: string, status: Bestelling['status']): Bestelling {
   return {
     id,
-    klantId: `klant-${id}`,
+    klantnr: `klant-${id}`,
     companyName: `Bedrijf ${id}`,
     bestelnr: `GD-${id}`,
     besteldatum: '1-8-2026',

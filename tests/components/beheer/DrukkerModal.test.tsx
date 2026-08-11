@@ -221,7 +221,7 @@ describe('DrukkerModal zendingen', () => {
 describe('DrukkerModal — zending afronden', () => {
   const BESTELLING_1: Bestelling = {
     id: 'header-1',
-    klantId: 'uid-1',
+    klantnr: 'KN-1',
     companyName: 'Testbedrijf BV',
     bestelnr: 'GD-00201',
     besteldatum: '1-7-2026',

@@ -57,25 +57,25 @@ export function VersturenNaarDrukkerDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  const ontbrekendeKlantIds = useMemo(
+  const ontbrekendeKlantnrs = useMemo(
     () =>
-      Array.from(new Set(bestellingen.map((b) => b.klantId))).filter(
-        (klantId) => !klanten.some((k) => k.id === klantId)
+      Array.from(new Set(bestellingen.map((b) => b.klantnr))).filter(
+        (klantnr) => !klanten.some((k) => k.klantnr === klantnr)
       ),
     [bestellingen, klanten]
   );
-  const heeftOntbrekendeKlantgegevens = ontbrekendeKlantIds.length > 0;
+  const heeftOntbrekendeKlantgegevens = ontbrekendeKlantnrs.length > 0;
   const aantalBestellingenMetOntbrekendeKlant = useMemo(
-    () => bestellingen.filter((b) => ontbrekendeKlantIds.includes(b.klantId)).length,
-    [bestellingen, ontbrekendeKlantIds]
+    () => bestellingen.filter((b) => ontbrekendeKlantnrs.includes(b.klantnr)).length,
+    [bestellingen, ontbrekendeKlantnrs]
   );
 
   // Klanten die wél bestaan maar velden missen die de drukker nodig heeft.
   // Zonder deze controle ging een onbruikbaar bezorgadres gewoon de deur uit.
   const onvolledigeKlanten = useMemo(
     () =>
-      Array.from(new Set(bestellingen.map((b) => b.klantId)))
-        .map((klantId) => klanten.find((k) => k.id === klantId))
+      Array.from(new Set(bestellingen.map((b) => b.klantnr)))
+        .map((klantnr) => klanten.find((k) => k.klantnr === klantnr))
         .filter((klant): klant is Klant => klant !== undefined)
         .map((klant) => ({ klant, velden: ontbrekendeKlantVelden(klant) }))
         .filter((entry) => entry.velden.length > 0),
@@ -191,7 +191,7 @@ export function VersturenNaarDrukkerDialog({
           onderwerp: subjectMetZendingnummer,
           body: mail.text,
           bestellingIds: bestellingen.map((b) => b.id),
-          aantalKlanten: new Set(bestellingen.map((b) => b.klantId)).size,
+          aantalKlanten: new Set(bestellingen.map((b) => b.klantnr)).size,
           aantalRegels: bestellingen.reduce((sum, b) => sum + b.lineCount, 0),
           verzondDoor: user?.email ?? 'Onbekend',
           zendingnummer,

@@ -270,11 +270,11 @@ export function buildDrukkerMail({
   bedrijfsgegevens,
 }: DrukkerMailInput): DrukkerMail {
   const datum = new Date().toLocaleDateString('nl-NL');
-  const klantIds = Array.from(new Set(bestellingen.map((b) => b.klantId)));
+  const klantnrs = Array.from(new Set(bestellingen.map((b) => b.klantnr)));
 
-  const secties = klantIds.map((klantId) => {
-    const klant = klanten.find((k) => k.id === klantId);
-    const klantBestellingen = bestellingen.filter((b) => b.klantId === klantId);
+  const secties = klantnrs.map((klantnr) => {
+    const klant = klanten.find((k) => k.klantnr === klantnr);
+    const klantBestellingen = bestellingen.filter((b) => b.klantnr === klantnr);
     // `??` vangt alleen null/undefined, niet een lege string uit de database --
     // vandaar tekst() plus een expliciete terugval op de naam die bij de
     // bestelling zelf is vastgelegd.

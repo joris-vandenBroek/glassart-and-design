@@ -198,12 +198,12 @@ INSERT INTO counters (id, value) VALUES ('klantnummer', 0);
 
 CREATE TABLE bestelheaders (
   id CHAR(36) PRIMARY KEY,
-  klantId CHAR(36) NOT NULL,
+  klantnr VARCHAR(20) NOT NULL,
   bestelnr VARCHAR(20) NOT NULL,
   besteldatum TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   status VARCHAR(50) NOT NULL DEFAULT 'Te beoordelen',
   zendingnummer VARCHAR(20),
-  FOREIGN KEY (klantId) REFERENCES klanten(id),
+  FOREIGN KEY (klantnr) REFERENCES klanten(klantnr),
   UNIQUE KEY uniek_bestelnr (bestelnr)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

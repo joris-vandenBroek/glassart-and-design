@@ -63,12 +63,22 @@ export const POST = withApiErrorHandling('POST /api/bestelheaders', async (reque
   if (!klantId) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
+
+  const pool = getPool();
+  // Alleen 'Goedgekeurd'-klanten hebben een klantnr. useCustomerAuth's isCustomer-vlag
+  // verbergt de bestelknop al voor iedereen daaronder, maar dat is uitsluitend een
+  // UI-hint -- zonder deze controle kon een klant die nog in 'Beoordelen' zit via een
+  // directe aanroep toch een bestelheaders-rij laten ontstaan, wat de NOT NULL foreign
+  // key naar klanten(klantnr) breekt.
+  const [klantRows] = await pool.query('SELECT klantnr, status FROM klanten WHERE id = ?', [klantId]);
+  const klantRow = (klantRows as Array<{ klantnr: string | null; status: string }>)[0];
+  if (!klantRow || klantRow.status !== 'Goedgekeurd' || !klantRow.klantnr) {
+    return NextResponse.json({ error: 'klant-niet-goedgekeurd' }, { status: 403 });
+  }
+  const klantnr = klantRow.klantnr;
+
   const { lines } = (await request.json()) as { lines?: LineInput[] };
 
-  // Zonder deze controle liep een body zonder (of met een niet-array) `lines`
-  // stuk op de for-of eronder, en kwam er een 500 terug op wat gewoon een
-  // ongeldige request is. Een lége lijst blijft bewust toegestaan: dat is geen
-  // ongeldige request, en de beheerkant maakt er gebruik van.
   if (!Array.isArray(lines)) {
     return NextResponse.json({ error: 'invalid-body' }, { status: 400 });
   }
@@ -80,7 +90,6 @@ export const POST = withApiErrorHandling('POST /api/bestelheaders', async (reque
     }
   }
 
-  const pool = getPool();
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -171,8 +180,8 @@ export const POST = withApiErrorHandling('POST /api/bestelheaders', async (reque
 
     const headerId = randomUUID();
     await connection.query(
-      'INSERT INTO bestelheaders (id, klantId, bestelnr, status) VALUES (?, ?, ?, ?)',
-      [headerId, klantId, bestelnr, 'Te beoordelen']
+      'INSERT INTO bestelheaders (id, klantnr, bestelnr, status) VALUES (?, ?, ?, ?)',
+      [headerId, klantnr, bestelnr, 'Te beoordelen']
     );
     await connection.query('INSERT INTO bestelstatusHistorie (id, bestelheaderId, status) VALUES (?, ?, ?)', [
       randomUUID(),
@@ -231,11 +240,22 @@ export const GET = withApiErrorHandling('GET /api/bestelheaders', async (request
 
   const pool = getPool();
 
-  const [headers] = klantId
-    ? await pool.query('SELECT * FROM bestelheaders WHERE klantId = ?', [klantId])
-    : await pool.query('SELECT * FROM bestelheaders');
+  let headerRijen: Array<Record<string, unknown>>;
+  if (klantId) {
+    // klantId blijft de query-parameter: dat drukt de sessie-identiteit van de klant
+    // uit (een UUID), niet de databasekolom. bestelheaders zelf staat nu op klantnr,
+    // dus die wordt hier één keer opgezocht in plaats van elke keer te joinen.
+    const [klantRows] = await pool.query('SELECT klantnr FROM klanten WHERE id = ?', [klantId]);
+    const klantnr = (klantRows as Array<{ klantnr: string | null }>)[0]?.klantnr;
+    const [headers] = klantnr
+      ? await pool.query('SELECT * FROM bestelheaders WHERE klantnr = ?', [klantnr])
+      : [[]];
+    headerRijen = headers as Array<Record<string, unknown>>;
+  } else {
+    const [headers] = await pool.query('SELECT * FROM bestelheaders');
+    headerRijen = headers as Array<Record<string, unknown>>;
+  }
 
-  const headerRijen = headers as Array<Record<string, unknown>>;
   if (headerRijen.length === 0) {
     return NextResponse.json([]);
   }

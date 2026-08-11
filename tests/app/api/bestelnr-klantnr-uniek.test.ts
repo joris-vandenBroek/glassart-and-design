@@ -22,17 +22,22 @@ afterEach(async () => {
 describe('unieke bestelnr en klantnr', () => {
   it('weigert een tweede bestelheaders-rij met hetzelfde bestelnr', async () => {
     const email = `autotest-bestelnr-uniek-${randomUUID()}@example.com`;
-    const klant = await insertRow<{ id: string }>('klanten', {
+    // bestelheaders.klantnr NOT NULL heeft sinds taak 2 een echte klantnr nodig -- de
+    // 'Beoordelen'-status hierboven is voor deze test irrelevant (die test alleen de
+    // unieke bestelnr, niet de goedkeuringspoort), maar de foreign key naar
+    // klanten(klantnr) eist alsnog een bestaande waarde.
+    await insertRow<{ id: string }>('klanten', {
       email,
       wachtwoordHash: await hashPassword('x'),
       status: 'Beoordelen',
+      klantnr: 'AT-K-BNU-1',
     } as never);
     createdKlantEmails.push(email);
 
     const eersteId = randomUUID();
-    await getPool().query('INSERT INTO bestelheaders (id, klantId, bestelnr, status) VALUES (?, ?, ?, ?)', [
+    await getPool().query('INSERT INTO bestelheaders (id, klantnr, bestelnr, status) VALUES (?, ?, ?, ?)', [
       eersteId,
-      klant.id,
+      'AT-K-BNU-1',
       'AUTOTEST-UNIEK-1',
       'Te beoordelen',
     ]);
@@ -40,9 +45,9 @@ describe('unieke bestelnr en klantnr', () => {
 
     const tweedeId = randomUUID();
     await expect(
-      getPool().query('INSERT INTO bestelheaders (id, klantId, bestelnr, status) VALUES (?, ?, ?, ?)', [
+      getPool().query('INSERT INTO bestelheaders (id, klantnr, bestelnr, status) VALUES (?, ?, ?, ?)', [
         tweedeId,
-        klant.id,
+        'AT-K-BNU-1',
         'AUTOTEST-UNIEK-1',
         'Te beoordelen',
       ])

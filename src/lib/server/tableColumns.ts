@@ -103,7 +103,7 @@ export const TABLE_COLUMNS: Record<string, readonly string[]> = {
   ],
   instellingen: ['id', 'data'],
   counters: ['id', 'value'],
-  bestelheaders: ['id', 'klantId', 'bestelnr', 'besteldatum', 'status', 'zendingnummer'],
+  bestelheaders: ['id', 'klantnr', 'bestelnr', 'besteldatum', 'status', 'zendingnummer'],
   bestellines: [
     'id',
     'bestelheaderId',

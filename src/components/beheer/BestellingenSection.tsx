@@ -28,7 +28,7 @@ export interface BestellingLine {
 
 export interface Bestelling {
   id: string;
-  klantId: string;
+  klantnr: string;
   companyName: string;
   bestelnr: string;
   zendingnummer?: string | null;
@@ -344,7 +344,7 @@ export function BestellingenSection({
             {t('bestellingenGeselecteerd', {
               count: selectieVoorFilter.size,
               klanten: new Set(
-                bestellingen.filter((b) => selectieVoorFilter.has(b.id)).map((b) => b.klantId)
+                bestellingen.filter((b) => selectieVoorFilter.has(b.id)).map((b) => b.klantnr)
               ).size,
             })}
           </span>

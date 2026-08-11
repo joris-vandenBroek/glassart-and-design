@@ -21,6 +21,7 @@ const BEDRIJFSGEGEVENS_SEED: Bedrijfsgegevens = {
 function klant(overrides: Partial<Klant> = {}): Klant {
   return {
     id: 'uid-1',
+    klantnr: 'KN-1',
     companyName: 'Testbedrijf BV',
     kvk: '12345678',
     contactPerson: 'Jan Jansen',
@@ -93,7 +94,7 @@ const MATERIAALSOORTEN: Materiaalsoort[] = [{ id: 'soort-1', omschrijving: 'Glas
 function bestelling(overrides: Partial<Bestelling> = {}): Bestelling {
   return {
     id: 'header-1',
-    klantId: 'uid-1',
+    klantnr: 'KN-1',
     companyName: 'Testbedrijf BV',
     bestelnr: 'GD-00401',
     besteldatum: '1-7-2026',
@@ -127,7 +128,10 @@ function callBuildDrukkerMail(overrides: {
 describe('buildDrukkerMail', () => {
   it('includes the bedrijfsnaam, standaardadres, and regel details for a single klant', () => {
     const mail = callBuildDrukkerMail({ bestellingen: [bestelling()], klanten: [klant()] });
-    expect(mail.text).toContain('== Testbedrijf BV ==');
+    // De klant wordt nu gevonden via klantnr, hetzelfde veld als de weergegeven
+    // klantnummer-suffix -- een gevonden klant heeft dus altijd een zichtbaar nummer,
+    // anders dan vroeger (matching via UUID, klantnr los daarvan optioneel).
+    expect(mail.text).toContain('== Testbedrijf BV (KN-1) ==');
     expect(mail.text).toContain('Afleveradres: Teststraat 1, 1234 AB Teststad');
     expect(mail.text).toContain('Hotel paneel — 6mm Glas — Helder, maat 40×60 cm, aantal 2');
   });
@@ -162,18 +166,18 @@ describe('buildDrukkerMail', () => {
       ],
       klanten: [klant()],
     });
-    expect(mail.text.match(/== Testbedrijf BV ==/g)).toHaveLength(1);
+    expect(mail.text.match(/== Testbedrijf BV \(KN-1\) ==/g)).toHaveLength(1);
     expect(mail.text).toContain('aantal 2');
     expect(mail.text).toContain('aantal 1');
   });
 
   it('creates a section per klant when bestellingen come from different klanten', () => {
     const mail = callBuildDrukkerMail({
-      bestellingen: [bestelling({ id: 'header-1' }), bestelling({ id: 'header-2', klantId: 'uid-2', companyName: 'Ander Bedrijf' })],
-      klanten: [klant(), klant({ id: 'uid-2', companyName: 'Ander Bedrijf' })],
+      bestellingen: [bestelling({ id: 'header-1' }), bestelling({ id: 'header-2', klantnr: 'KN-2', companyName: 'Ander Bedrijf' })],
+      klanten: [klant(), klant({ id: 'uid-2', klantnr: 'KN-2', companyName: 'Ander Bedrijf' })],
     });
-    expect(mail.text).toContain('== Testbedrijf BV ==');
-    expect(mail.text).toContain('== Ander Bedrijf ==');
+    expect(mail.text).toContain('== Testbedrijf BV (KN-1) ==');
+    expect(mail.text).toContain('== Ander Bedrijf (KN-2) ==');
   });
 
   it('describes a custom-size line using its breedte/hoogte instead of a maat lookup', () => {
@@ -267,7 +271,7 @@ describe('buildDrukkerMail', () => {
 
   it('falls back to the bestelling companyName and "Onbekend afleveradres" when the klant is not found', () => {
     const mail = callBuildDrukkerMail({
-      bestellingen: [bestelling({ klantId: 'uid-missing', companyName: 'Verdwenen BV' })],
+      bestellingen: [bestelling({ klantnr: 'KN-MISSING', companyName: 'Verdwenen BV' })],
       klanten: [],
     });
     expect(mail.text).toContain('== Verdwenen BV ==');
@@ -329,15 +333,25 @@ describe('buildDrukkerMail', () => {
 
   it('zet het klantnummer achter de bedrijfsnaam in tekst en HTML', () => {
     const mail = callBuildDrukkerMail({
-      bestellingen: [bestelling()],
+      // De klant wordt gevonden via klantnr, dus de bestelling moet hetzelfde
+      // klantnr dragen als de klant hieronder om te matchen.
+      bestellingen: [bestelling({ klantnr: 'KL-00003' })],
       klanten: [klant({ klantnr: 'KL-00003' })],
     });
     expect(mail.text).toContain('== Testbedrijf BV (KL-00003) ==');
     expect(mail.html).toContain('Testbedrijf BV (KL-00003)');
   });
 
-  it('laat de kop ongewijzigd wanneer de klant geen klantnummer heeft', () => {
-    const mail = callBuildDrukkerMail({ bestellingen: [bestelling()], klanten: [klant()] });
+  it('laat de kop ongewijzigd wanneer de klant niet gevonden wordt', () => {
+    // Sinds taak 2 wordt de klant gevonden via hetzelfde klantnr-veld dat ook de
+    // suffix levert -- een gevonden klant heeft dus altijd een zichtbaar nummer.
+    // "Geen klantnummer" is daarmee gelijk geworden aan "klant niet gevonden"
+    // (zie ook de aparte test daarvoor hieronder): hier met een klant wiens
+    // klantnr niet overeenkomt met de bestelling, zodat de match faalt.
+    const mail = callBuildDrukkerMail({
+      bestellingen: [bestelling()],
+      klanten: [klant({ klantnr: 'een-ander-klantnr' })],
+    });
     expect(mail.text).toContain('== Testbedrijf BV ==');
     // Bewust op de kop zelf, niet op '(' in het algemeen: het factuurvoetje bevat
     // al "E-mailadres (voor facturen)".
@@ -368,8 +382,8 @@ describe('buildDrukkerMail', () => {
 
   it('includes the factuurvoetje only once, even with multiple klant sections', () => {
     const mail = callBuildDrukkerMail({
-      bestellingen: [bestelling({ id: 'header-1' }), bestelling({ id: 'header-2', klantId: 'uid-2', companyName: 'Ander Bedrijf' })],
-      klanten: [klant(), klant({ id: 'uid-2', companyName: 'Ander Bedrijf' })],
+      bestellingen: [bestelling({ id: 'header-1' }), bestelling({ id: 'header-2', klantnr: 'KN-2', companyName: 'Ander Bedrijf' })],
+      klanten: [klant(), klant({ id: 'uid-2', klantnr: 'KN-2', companyName: 'Ander Bedrijf' })],
     });
     expect(mail.text.match(/Glassart & Design/g)).toHaveLength(1);
     expect(mail.html.match(/Glassart &amp; Design/g)).toHaveLength(1);

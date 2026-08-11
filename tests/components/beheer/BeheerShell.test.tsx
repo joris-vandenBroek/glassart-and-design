@@ -15,6 +15,7 @@ vi.mock('@/lib/logActiviteit', () => ({
   logActiviteit: vi.fn(),}));
 
 const KLANT_DATA = {
+  klantnr: 'KN-1',
   companyName: 'Testbedrijf BV',
   kvk: '12345678',
   contactPerson: 'Jan Jansen',
@@ -262,7 +263,7 @@ describe('BeheerShell', () => {
       bestelheaders: [
         {
           id: 'header-1',
-          klantId: 'uid-1',
+          klantnr: 'KN-1',
           bestelnr: 'GD-00001',
           besteldatum: '2026-07-01T00:00:00',
           status: 'Te beoordelen',
@@ -270,7 +271,7 @@ describe('BeheerShell', () => {
         },
         {
           id: 'header-2',
-          klantId: 'uid-1',
+          klantnr: 'KN-1',
           bestelnr: 'GD-00002',
           besteldatum: '2026-07-02T00:00:00',
           status: 'Afgewezen',
@@ -293,7 +294,7 @@ describe('BeheerShell', () => {
       bestelheaders: [
         {
           id: 'header-1',
-          klantId: 'uid-1',
+          klantnr: 'KN-1',
           bestelnr: 'GD-00001',
           zendingnummer: 'ZD-00007',
           besteldatum: '2026-07-01T00:00:00',

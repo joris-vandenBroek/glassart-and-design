@@ -35,6 +35,7 @@ vi.mock('@/lib/logActiviteit', () => ({
 
 const KLANT: Klant = {
   id: 'uid-1',
+  klantnr: 'KN-1',
   companyName: 'Testbedrijf BV',
   kvk: '12345678',
   contactPerson: 'Jan Jansen',
@@ -73,7 +74,7 @@ const MATERIAALSOORTEN: Materiaalsoort[] = [{ id: 'soort-1', omschrijving: 'Glas
 
 const BESTELLING: Bestelling = {
   id: 'header-1',
-  klantId: 'uid-1',
+  klantnr: 'KN-1',
   companyName: 'Testbedrijf BV',
   bestelnr: 'GD-00201',
   besteldatum: '1-7-2026',
@@ -85,7 +86,7 @@ const BESTELLING: Bestelling = {
 
 const BESTELLING_2: Bestelling = {
   id: 'header-2',
-  klantId: 'uid-1',
+  klantnr: 'KN-1',
   companyName: 'Testbedrijf BV',
   bestelnr: 'GD-00202',
   besteldatum: '2-7-2026',
@@ -461,9 +462,15 @@ describe('VersturenNaarDrukkerDialog', () => {
     it('names only the incomplete klant when the selection mixes complete and incomplete ones', async () => {
       // Bestellingen van meerdere klanten combineren is een ondersteund
       // scenario, dus de opsomming mag de complete klant niet noemen.
-      const onvolledig = { ...KLANT, id: 'uid-2', companyName: 'Ander Bedrijf', city: null } as unknown as Klant;
+      const onvolledig = {
+        ...KLANT,
+        id: 'uid-2',
+        klantnr: 'KN-2',
+        companyName: 'Ander Bedrijf',
+        city: null,
+      } as unknown as Klant;
       renderDialog({
-        bestellingen: [BESTELLING, { ...BESTELLING, id: 'header-9', klantId: 'uid-2' }],
+        bestellingen: [BESTELLING, { ...BESTELLING, id: 'header-9', klantnr: 'KN-2' }],
         klanten: [KLANT, onvolledig],
       });
 

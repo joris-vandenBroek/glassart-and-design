@@ -9,7 +9,7 @@ import messages from '../../../messages/nl.json';
 function bestelling(id: string, bestelnr: string): Bestelling {
   return {
     id,
-    klantId: `klant-${id}`,
+    klantnr: `klant-${id}`,
     companyName: `Bedrijf ${id}`,
     bestelnr,
     besteldatum: '1-8-2026',
