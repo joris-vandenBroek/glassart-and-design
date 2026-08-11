@@ -102,4 +102,22 @@ describe('vervangRelaties + haalRelatiesOp(VoorEen)', () => {
       await getPool().query('DELETE FROM segmenten WHERE id = ?', [segmentA]);
     }
   });
+
+  it('wist een relatie als een expliciete lege array wordt meegegeven', async () => {
+    const kunstwerkId = await maakKunstwerk(`AUTOTEST-${randomUUID()}`);
+    const segmentA = await maakSegment();
+    try {
+      await vervangRelaties(getPool(), kunstwerkId, { segmentIds: [segmentA] });
+      await vervangRelaties(getPool(), kunstwerkId, { segmentIds: [] });
+      const relaties = await haalRelatiesOpVoorEen(getPool(), kunstwerkId);
+      expect(relaties.segmentIds).toEqual([]);
+    } finally {
+      await getPool().query('DELETE FROM segmenten WHERE id = ?', [segmentA]);
+    }
+  });
+
+  it('haalRelatiesOp geeft een lege Map terug voor een lege kunstwerkIds-array', async () => {
+    const alle = await haalRelatiesOp(getPool(), []);
+    expect(alle.size).toBe(0);
+  });
 });

@@ -1,6 +1,5 @@
 import type { Pool, PoolConnection } from 'mysql2/promise';
 import { pasPrijsgroepToe, type PrijsgroepAanpassing } from '@/lib/prijsgroep';
-import { parseJsonKolom } from '@/lib/server/crud';
 import { haalRelatiesOp } from './kunstwerkRelaties';
 
 export { pasPrijsgroepToe };
