@@ -56,5 +56,6 @@ describe('DocumentatieGate', () => {
     expect(document.getElementById('kunstenaars-exclusiviteit')).not.toBeNull();
     expect(document.getElementById('prijsmatrix')).not.toBeNull();
     expect(document.getElementById('stamgegevens-prijsgroepen')).not.toBeNull();
+    expect(document.getElementById('drukkers-standaard')).not.toBeNull();
   });
 });
