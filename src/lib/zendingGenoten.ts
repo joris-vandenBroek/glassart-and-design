@@ -83,20 +83,20 @@ export function openstaandeZendingGenoten(
   afTeRonden: Bestelling[],
   alleBestellingen: Bestelling[]
 ): ZendingGenoten[] {
-  const afTeRondenIds = new Set(afTeRonden.map((b) => b.id));
-  const bestellingById = new Map(alleBestellingen.map((b) => [b.id, b]));
+  const afTeRondenBestelnrs = new Set(afTeRonden.map((b) => b.bestelnr));
+  const bestellingByBestelnr = new Map(alleBestellingen.map((b) => [b.bestelnr, b]));
   const alGezien = new Set<string>();
   const resultaat: ZendingGenoten[] = [];
 
   for (const zending of zendingen) {
     const bestellingen = zending.bestellingIds
-      .filter((id) => !afTeRondenIds.has(id) && !alGezien.has(id))
-      .map((id) => bestellingById.get(id))
+      .filter((bestelnr) => !afTeRondenBestelnrs.has(bestelnr) && !alGezien.has(bestelnr))
+      .map((bestelnr) => bestellingByBestelnr.get(bestelnr))
       .filter((b): b is Bestelling => b !== undefined && b.status === 'Verstuurd naar drukker');
     if (bestellingen.length === 0) {
       continue;
     }
-    bestellingen.forEach((b) => alGezien.add(b.id));
+    bestellingen.forEach((b) => alGezien.add(b.bestelnr));
     resultaat.push({ zending, bestellingen });
   }
 

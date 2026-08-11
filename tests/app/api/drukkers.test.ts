@@ -131,8 +131,8 @@ describe('drukkers routes', () => {
     } as never);
     createdDrukkerIds.push(drukker.id);
     await getPool().query(
-      'INSERT INTO drukkerZendingen (id, drukkernr, onderwerp, body, bestellingIds, aantalKlanten, aantalRegels) VALUES (UUID(), ?, ?, ?, ?, 1, 1)',
-      [drukker.drukkernr, 'Test zending', 'Body', JSON.stringify(['header-1'])]
+      'INSERT INTO drukkerZendingen (id, zendingnummer, drukkernr, onderwerp, body, aantalKlanten, aantalRegels) VALUES (UUID(), ?, ?, ?, ?, 1, 1)',
+      [`AT-ZD-DRK-${drukker.drukkernr}`, drukker.drukkernr, 'Test zending', 'Body']
     );
 
     const blocked = await deleteDrukker(req('DELETE', undefined, cookie), { params: { id: drukker.id } });

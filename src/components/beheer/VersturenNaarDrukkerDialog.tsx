@@ -190,7 +190,7 @@ export function VersturenNaarDrukkerDialog({
         body: JSON.stringify({
           onderwerp: subjectMetZendingnummer,
           body: mail.text,
-          bestellingIds: bestellingen.map((b) => b.id),
+          bestellingIds: bestellingen.map((b) => b.bestelnr),
           aantalKlanten: new Set(bestellingen.map((b) => b.klantnr)).size,
           aantalRegels: bestellingen.reduce((sum, b) => sum + b.lineCount, 0),
           verzondDoor: user?.email ?? 'Onbekend',

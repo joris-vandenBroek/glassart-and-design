@@ -382,6 +382,7 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
     let fixture: Awaited<ReturnType<typeof maakMaatMateriaal>> | null = null;
     const drukkerIds: string[] = [];
     const headerIds: string[] = [];
+    const bestelnrs: string[] = [];
 
     try {
       const staff = await medewerkerCookie();
@@ -413,6 +414,7 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
       const headerX = await headerXResponse.json();
       const headerY = await headerYResponse.json();
       headerIds.push(headerX.id, headerY.id);
+      bestelnrs.push(headerX.bestelnr, headerY.bestelnr);
       stap(`Elke klant plaatst 1 bestelling: ${headerX.bestelnr} (${klantX.email}), ${headerY.bestelnr} (${klantY.email})`);
 
       // Staff keurt beide goed ("Te versturen naar drukker").
@@ -464,10 +466,11 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
           {
             onderwerp: mail.subject,
             body: mail.text,
-            bestellingIds: headerIds,
+            bestellingIds: bestelnrs,
             aantalKlanten: 2,
             aantalRegels: 2,
             verzondDoor: 'autotest',
+            zendingnummer: 'AT-ZD-REG-1',
           },
           staff
         ),
@@ -488,7 +491,7 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
         await listZendingen(req('GET', undefined, staff), { params: { id: drukkerAlternatief.id } })
       ).json();
       expect(alternatiefZendingen).toHaveLength(1);
-      expect(alternatiefZendingen[0].bestellingIds.sort()).toEqual([...headerIds].sort());
+      expect(alternatiefZendingen[0].bestellingIds.sort()).toEqual([...bestelnrs].sort());
       stap(`Controle: "${drukkerAlternatief.naam}" heeft ${alternatiefZendingen.length} zending met beide bestellingen`);
 
       const standaardZendingen = await (
@@ -502,18 +505,27 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
         expect((rows as Array<{ status: string }>)[0].status).toBe('Verstuurd naar drukker');
       }
     } finally {
-      await opruimenKlanten(klantEmails);
       const pool = getPool();
-      if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
-      if (fixture) await fixture.opruimen();
       if (drukkerIds.length > 0) {
-        // drukkerZendingen cascadeert niet meer mee met een verwijderde drukker; eerst die weg.
+        // drukkerZendingBestellingen.bestelnr verwijst met een foreign key naar
+        // bestelheaders(bestelnr) -- dat moet dus weg vóór opruimenKlanten() de
+        // bestelheaders zelf verwijdert, anders loopt die delete vast op de FK.
+        await pool.query(
+          `DELETE dzb FROM drukkerZendingBestellingen dzb
+           JOIN drukkerZendingen z ON z.zendingnummer = dzb.zendingnummer
+           JOIN drukkers d ON d.drukkernr = z.drukkernr
+           WHERE d.id IN (?)`,
+          [drukkerIds]
+        );
         await pool.query(
           'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
           [drukkerIds]
         );
         await pool.query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]);
       }
+      await opruimenKlanten(klantEmails);
+      if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
+      if (fixture) await fixture.opruimen();
     }
   });
 });
@@ -716,7 +728,7 @@ describe('Bestelling-levenscyclus -- plaatsen tot verstuurd naar drukker', () =>
       const zending = await postZending(
         req(
           'POST',
-          { onderwerp: 'AUTOTEST', body: 'AUTOTEST', bestellingIds: [header.id], aantalKlanten: 1, aantalRegels: 1, verzondDoor: 'autotest' },
+          { onderwerp: 'AUTOTEST', body: 'AUTOTEST', bestellingIds: [header.bestelnr], aantalKlanten: 1, aantalRegels: 1, verzondDoor: 'autotest', zendingnummer: 'AT-ZD-REG-2' },
           staff
         ),
         { params: { id: drukker.id } }
@@ -735,18 +747,27 @@ describe('Bestelling-levenscyclus -- plaatsen tot verstuurd naar drukker', () =>
       expect(Number((eindprijs as Array<{ prijs: string }>)[0].prijs)).toBe(245);
       stap(`Eindstatus "${(eindstatus as Array<{ status: string }>)[0].status}", regelprijs blijft EUR ${Number((eindprijs as Array<{ prijs: string }>)[0].prijs)}`);
     } finally {
-      await opruimenKlanten(klantEmails);
       const pool = getPool();
-      if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
-      if (fixture) await fixture.opruimen();
       if (drukkerIds.length > 0) {
-        // drukkerZendingen cascadeert niet meer mee met een verwijderde drukker; eerst die weg.
+        // drukkerZendingBestellingen.bestelnr verwijst met een foreign key naar
+        // bestelheaders(bestelnr) -- dat moet dus weg vóór opruimenKlanten() de
+        // bestelheaders zelf verwijdert, anders loopt die delete vast op de FK.
+        await pool.query(
+          `DELETE dzb FROM drukkerZendingBestellingen dzb
+           JOIN drukkerZendingen z ON z.zendingnummer = dzb.zendingnummer
+           JOIN drukkers d ON d.drukkernr = z.drukkernr
+           WHERE d.id IN (?)`,
+          [drukkerIds]
+        );
         await pool.query(
           'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
           [drukkerIds]
         );
         await pool.query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]);
       }
+      await opruimenKlanten(klantEmails);
+      if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
+      if (fixture) await fixture.opruimen();
       stap('Opgeruimd: klant, kunstwerk, maat/materiaal, drukker.');
     }
   });
@@ -1230,10 +1251,11 @@ describe('Bestelling afronden -- van plaatsing tot "Afgerond" met bestelstatusHi
           {
             onderwerp: 'AUTOTEST',
             body: 'AUTOTEST',
-            bestellingIds: [header.id],
+            bestellingIds: [header.bestelnr],
             aantalKlanten: 1,
             aantalRegels: 0,
             verzondDoor: 'autotest',
+            zendingnummer: 'AT-ZD-REG-3',
           },
           staff
         ),
@@ -1266,16 +1288,26 @@ describe('Bestelling afronden -- van plaatsing tot "Afgerond" met bestelstatusHi
       expect((historieRows as Array<{ status: string }>).map((r) => r.status)).toContain('Te factureren');
     } finally {
       // opruimenKlanten verwijdert ook de bestelheader (via klantnr IN (...)) -- geen
-      // apart headerId-cleanup nodig, zelfde patroon als de andere scenario's in dit bestand.
-      await opruimenKlanten(klantEmails);
+      // apart headerId-cleanup nodig, zelfde patroon als de andere scenario's in dit
+      // bestand. Maar drukkerZendingBestellingen.bestelnr verwijst met een foreign key
+      // naar bestelheaders(bestelnr), dus die koppelrijen (en de zending/drukker erboven)
+      // moeten nu wél vóór opruimenKlanten() weg -- na het verwijderen van de bestelheader
+      // kan dat niet meer, de foreign key staat dat niet toe.
       if (drukkerIds.length > 0) {
-        // drukkerZendingen cascadeert niet meer mee met een verwijderde drukker; eerst die weg.
+        await getPool().query(
+          `DELETE dzb FROM drukkerZendingBestellingen dzb
+           JOIN drukkerZendingen z ON z.zendingnummer = dzb.zendingnummer
+           JOIN drukkers d ON d.drukkernr = z.drukkernr
+           WHERE d.id IN (?)`,
+          [drukkerIds]
+        );
         await getPool().query(
           'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
           [drukkerIds]
         );
         await getPool().query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]);
       }
+      await opruimenKlanten(klantEmails);
     }
   });
 });

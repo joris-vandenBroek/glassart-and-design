@@ -36,34 +36,34 @@ describe('openstaandeZendingGenoten', () => {
   it('leaves out the bestellingen that are being afgerond right now', () => {
     const b1 = bestelling('1', 'Verstuurd naar drukker');
     const b2 = bestelling('2', 'Verstuurd naar drukker');
-    const result = openstaandeZendingGenoten([zending('z1', ['1', '2'])], [b1, b2], [b1, b2]);
+    const result = openstaandeZendingGenoten([zending('z1', ['GD-1', 'GD-2'])], [b1, b2], [b1, b2]);
     expect(result).toEqual([]);
   });
 
   it('reports a genoot that is still "Verstuurd naar drukker"', () => {
     const b1 = bestelling('1', 'Verstuurd naar drukker');
     const b2 = bestelling('2', 'Verstuurd naar drukker');
-    const result = openstaandeZendingGenoten([zending('z1', ['1', '2'])], [b1], [b1, b2]);
+    const result = openstaandeZendingGenoten([zending('z1', ['GD-1', 'GD-2'])], [b1], [b1, b2]);
     expect(result).toHaveLength(1);
     expect(result[0].zending.id).toBe('z1');
-    expect(result[0].bestellingen.map((b) => b.id)).toEqual(['2']);
+    expect(result[0].bestellingen.map((b) => b.bestelnr)).toEqual(['GD-2']);
   });
 
   it('ignores genoten that are already afgerond', () => {
     const b1 = bestelling('1', 'Verstuurd naar drukker');
     const b2 = bestelling('2', 'Betaald en afgerond');
-    expect(openstaandeZendingGenoten([zending('z1', ['1', '2'])], [b1], [b1, b2])).toEqual([]);
+    expect(openstaandeZendingGenoten([zending('z1', ['GD-1', 'GD-2'])], [b1], [b1, b2])).toEqual([]);
   });
 
   it('ignores genoten that are already Te factureren', () => {
     const b1 = bestelling('1', 'Verstuurd naar drukker');
     const b2 = bestelling('2', 'Te factureren');
-    expect(openstaandeZendingGenoten([zending('z1', ['1', '2'])], [b1], [b1, b2])).toEqual([]);
+    expect(openstaandeZendingGenoten([zending('z1', ['GD-1', 'GD-2'])], [b1], [b1, b2])).toEqual([]);
   });
 
   it('ignores ids that no longer exist in the bestellingen list', () => {
     const b1 = bestelling('1', 'Verstuurd naar drukker');
-    expect(openstaandeZendingGenoten([zending('z1', ['1', 'weg'])], [b1], [b1])).toEqual([]);
+    expect(openstaandeZendingGenoten([zending('z1', ['GD-1', 'GD-weg'])], [b1], [b1])).toEqual([]);
   });
 
   it('groups genoten per zending and never lists the same bestelling twice', () => {
@@ -71,13 +71,13 @@ describe('openstaandeZendingGenoten', () => {
     const b2 = bestelling('2', 'Verstuurd naar drukker');
     const b3 = bestelling('3', 'Verstuurd naar drukker');
     const result = openstaandeZendingGenoten(
-      [zending('z1', ['1', '2']), zending('z2', ['1', '2', '3'])],
+      [zending('z1', ['GD-1', 'GD-2']), zending('z2', ['GD-1', 'GD-2', 'GD-3'])],
       [b1],
       [b1, b2, b3]
     );
     expect(result.map((entry) => entry.zending.id)).toEqual(['z1', 'z2']);
-    expect(result[0].bestellingen.map((b) => b.id)).toEqual(['2']);
-    expect(result[1].bestellingen.map((b) => b.id)).toEqual(['3']);
+    expect(result[0].bestellingen.map((b) => b.bestelnr)).toEqual(['GD-2']);
+    expect(result[1].bestellingen.map((b) => b.bestelnr)).toEqual(['GD-3']);
   });
 });
 

@@ -266,7 +266,7 @@ describe('DrukkerModal — zending afronden', () => {
   }
 
   it('shows "0 / 2 afgerond" and the afronden button when none of the zending\'s bestellingen are done', async () => {
-    mockZending(['header-1', 'header-2']);
+    mockZending(['GD-00201', 'GD-00202']);
     renderModal({ mode: 'edit', drukker: DRUKKER }, { bestellingen: [BESTELLING_1, BESTELLING_2] });
     const zendingRow = await screen.findByTestId('drukker-zending-zending-1');
     expect(zendingRow).toHaveTextContent('0 / 2 afgerond');
@@ -274,7 +274,7 @@ describe('DrukkerModal — zending afronden', () => {
   });
 
   it('hides the afronden button once every bestelling in the zending is Te factureren', async () => {
-    mockZending(['header-1', 'header-2']);
+    mockZending(['GD-00201', 'GD-00202']);
     renderModal(
       { mode: 'edit', drukker: DRUKKER },
       {
@@ -290,7 +290,7 @@ describe('DrukkerModal — zending afronden', () => {
   });
 
   it('still counts a bestelling as afgerond once it has moved on to Betaald en afgerond', async () => {
-    mockZending(['header-1', 'header-2']);
+    mockZending(['GD-00201', 'GD-00202']);
     renderModal(
       { mode: 'edit', drukker: DRUKKER },
       {
@@ -306,7 +306,7 @@ describe('DrukkerModal — zending afronden', () => {
   });
 
   it('marks every Verstuurd-naar-drukker bestelling in the zending as Te factureren, sequentially, and logs each one', async () => {
-    mockZending(['header-1', 'header-2']);
+    mockZending(['GD-00201', 'GD-00202']);
     const { onBestellingUpdated } = renderModal(
       { mode: 'edit', drukker: DRUKKER },
       { bestellingen: [BESTELLING_1, BESTELLING_2] }
@@ -339,7 +339,7 @@ describe('DrukkerModal — zending afronden', () => {
   });
 
   it('stops on the first failing PATCH and reports how many succeeded', async () => {
-    mockZending(['header-1', 'header-2']);
+    mockZending(['GD-00201', 'GD-00202']);
     renderModal({ mode: 'edit', drukker: DRUKKER }, { bestellingen: [BESTELLING_1, BESTELLING_2] });
     await screen.findByTestId('drukker-zending-zending-1');
     let call = 0;
@@ -353,7 +353,7 @@ describe('DrukkerModal — zending afronden', () => {
   });
 
   it('renders no afgerond badge and no afronden button while bestellingen is still loading (null)', async () => {
-    mockZending(['header-1', 'header-2']);
+    mockZending(['GD-00201', 'GD-00202']);
     renderModal({ mode: 'edit', drukker: DRUKKER }, { bestellingen: null });
     const zendingRow = await screen.findByTestId('drukker-zending-zending-1');
     expect(within(zendingRow).queryByTestId('drukker-zending-afgerond-badge-zending-1')).not.toBeInTheDocument();

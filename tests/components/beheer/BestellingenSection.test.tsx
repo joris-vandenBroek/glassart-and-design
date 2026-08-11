@@ -512,7 +512,7 @@ describe('BestellingenSection', () => {
           drukkernr: 'DR-00003',
           drukkerNaam: 'Drukkerij Janssen',
           verzondenOp: '2026-08-03T10:00:00Z',
-          bestellingIds: ['header-2', 'header-9'],
+          bestellingIds: ['GD-00302', 'GD-00309'],
         },
       ]);
       const { onBestellingUpdated } = renderSection({ bestellingen: [VERSTUURD, genoot] });
@@ -537,7 +537,7 @@ describe('BestellingenSection', () => {
           drukkernr: 'DR-00003',
           drukkerNaam: 'Drukkerij Janssen',
           verzondenOp: '2026-08-03T10:00:00Z',
-          bestellingIds: ['header-2', 'header-9'],
+          bestellingIds: ['GD-00302', 'GD-00309'],
         },
       ]);
       const { onBestellingUpdated } = renderSection({ bestellingen: [VERSTUURD, genoot] });
@@ -649,7 +649,7 @@ describe('BestellingenSection', () => {
           drukkernr: 'DR-00003',
           drukkerNaam: 'Drukkerij Janssen',
           verzondenOp: '2026-08-03T10:00:00Z',
-          bestellingIds: ['header-2', 'header-9'],
+          bestellingIds: ['GD-00302', 'GD-00309'],
         },
       ]);
       renderSection({ bestellingen: [VERSTUURD, genoot] });
@@ -719,7 +719,7 @@ describe('BestellingenSection', () => {
                   drukkernr: 'DR-00003',
                   drukkerNaam: 'Drukkerij Janssen',
                   verzondenOp: '2026-08-03T10:00:00Z',
-                  bestellingIds: ['header-2', 'header-9'],
+                  bestellingIds: ['GD-00302', 'GD-00309'],
                 },
               ],
             });
@@ -839,7 +839,7 @@ describe('BestellingenSection', () => {
                     drukkernr: 'DR-00003',
                     drukkerNaam: 'Drukkerij Janssen',
                     verzondenOp: '2026-08-03T10:00:00Z',
-                    bestellingIds: ['header-2', 'header-9'],
+                    bestellingIds: ['GD-00302', 'GD-00309'],
                   },
                 ],
               });
@@ -903,7 +903,7 @@ describe('BestellingenSection', () => {
                     drukkernr: 'DR-00003',
                     drukkerNaam: 'Drukkerij Janssen',
                     verzondenOp: '2026-08-03T10:00:00Z',
-                    bestellingIds: ['header-2', 'header-9'],
+                    bestellingIds: ['GD-00302', 'GD-00309'],
                   },
                 ],
               });
@@ -917,7 +917,7 @@ describe('BestellingenSection', () => {
                     drukkernr: 'DR-00003',
                     drukkerNaam: 'Drukkerij Janssen',
                     verzondenOp: '2026-08-03T10:00:00Z',
-                    bestellingIds: ['header-5', 'header-10'],
+                    bestellingIds: ['GD-00305', 'GD-00310'],
                   },
                 ],
               });
@@ -966,7 +966,7 @@ describe('BestellingenSection', () => {
                   drukkernr: 'DR-00003',
                   drukkerNaam: 'Drukkerij Janssen',
                   verzondenOp: '2026-08-03T10:00:00Z',
-                  bestellingIds: ['header-2', 'header-9'],
+                  bestellingIds: ['GD-00302', 'GD-00309'],
                 },
               ],
             });

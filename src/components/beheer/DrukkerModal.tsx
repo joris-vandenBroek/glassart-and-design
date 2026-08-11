@@ -71,7 +71,7 @@ export function DrukkerModal({
   function afgerondCounts(zending: DrukkerZending): { afgerond: number; totaal: number } | null {
     if (bestellingen === null) return null;
     const orders = zending.bestellingIds
-      .map((id) => bestellingen.find((b) => b.id === id))
+      .map((bestelnr) => bestellingen.find((b) => b.bestelnr === bestelnr))
       .filter((b): b is Bestelling => b != null);
     return {
       afgerond: orders.filter((b) => b.status === 'Te factureren' || b.status === 'Betaald en afgerond').length,
@@ -89,7 +89,7 @@ export function DrukkerModal({
       return;
     }
     const orders = zending.bestellingIds
-      .map((id) => bestellingen.find((b) => b.id === id))
+      .map((bestelnr) => bestellingen.find((b) => b.bestelnr === bestelnr))
       .filter((b): b is Bestelling => b != null);
     const teAfronden = orders.filter((b) => b.status === 'Verstuurd naar drukker');
     if (teAfronden.length === 0) {

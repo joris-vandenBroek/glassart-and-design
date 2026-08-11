@@ -1,42 +1,60 @@
 import { NextResponse } from 'next/server';
 import { getPool } from '@/lib/server/db';
-import { parseJsonKolom } from '@/lib/server/crud';
 import { withMedewerker } from '@/lib/server/apiRoute';
 
-// Begrenst de OR-keten in de query; een grotere selectie dan dit komt in de
-// beheeromgeving niet voor en zou alleen een onbedoeld enorme query opleveren.
+// Begrenst de IN(?)-lijst; een grotere selectie dan dit komt in de beheeromgeving
+// niet voor en zou alleen een onbedoeld enorme query opleveren.
 const MAX_IDS = 200;
 
 export const GET = withMedewerker('GET /api/drukkerzendingen', async (request: Request) => {
   const raw = new URL(request.url).searchParams.get('bestellingIds') ?? '';
-  const ids = raw
+  const bestelnrs = raw
     .split(',')
     .map((id) => id.trim())
     .filter(Boolean);
 
-  if (ids.length === 0) {
+  if (bestelnrs.length === 0) {
     return NextResponse.json([]);
   }
-  if (ids.length > MAX_IDS) {
+  if (bestelnrs.length > MAX_IDS) {
     return NextResponse.json({ error: 'too-many-ids' }, { status: 400 });
   }
 
-  // JSON_CONTAINS per id, ge-OR'd. Bewust geen JSON_OVERLAPS: dat vereist
-  // MySQL 8.0.17+, terwijl JSON_CONTAINS vanaf 5.7 beschikbaar is.
-  const where = ids.map(() => 'JSON_CONTAINS(z.bestellingIds, JSON_QUOTE(?))').join(' OR ');
-  const [rows] = await getPool().query(
-    `SELECT z.id, z.drukkernr, z.verzondenOp, z.bestellingIds, d.naam AS drukkerNaam
+  const pool = getPool();
+  const [zendingnummerRows] = await pool.query(
+    'SELECT DISTINCT zendingnummer FROM drukkerZendingBestellingen WHERE bestelnr IN (?)',
+    [bestelnrs]
+  );
+  const zendingnummers = (zendingnummerRows as Array<{ zendingnummer: string }>).map((r) => r.zendingnummer);
+  if (zendingnummers.length === 0) {
+    return NextResponse.json([]);
+  }
+
+  const [rows] = await pool.query(
+    `SELECT z.id, z.zendingnummer, z.drukkernr, z.verzondenOp, d.naam AS drukkerNaam
      FROM drukkerZendingen z
      JOIN drukkers d ON d.drukkernr = z.drukkernr
-     WHERE ${where}
+     WHERE z.zendingnummer IN (?)
      ORDER BY z.verzondenOp DESC`,
-    ids
+    [zendingnummers]
   );
+  const zendingen = rows as Array<Record<string, unknown> & { zendingnummer: string }>;
+
+  const [koppelRows] = await pool.query(
+    'SELECT zendingnummer, bestelnr FROM drukkerZendingBestellingen WHERE zendingnummer IN (?)',
+    [zendingnummers]
+  );
+  const bestelnrsPerZending = new Map<string, string[]>();
+  for (const row of koppelRows as Array<{ zendingnummer: string; bestelnr: string }>) {
+    const bestaand = bestelnrsPerZending.get(row.zendingnummer);
+    if (bestaand) {
+      bestaand.push(row.bestelnr);
+    } else {
+      bestelnrsPerZending.set(row.zendingnummer, [row.bestelnr]);
+    }
+  }
 
   return NextResponse.json(
-    (rows as Array<Record<string, unknown>>).map((row) => ({
-      ...row,
-      bestellingIds: parseJsonKolom<string[]>(row.bestellingIds, []),
-    }))
+    zendingen.map((z) => ({ ...z, bestellingIds: bestelnrsPerZending.get(z.zendingnummer) ?? [] }))
   );
 });

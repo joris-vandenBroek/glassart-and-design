@@ -269,7 +269,7 @@ describe('VersturenNaarDrukkerDialog', () => {
     );
     await waitFor(() => expect(zendingCall()).toBeDefined());
     expect(JSON.parse((zendingCall()![1] as { body: string }).body)).toMatchObject({
-      bestellingIds: ['header-1'],
+      bestellingIds: ['GD-00201'],
       aantalKlanten: 1,
       aantalRegels: 1,
       verzondDoor: 'paul@glassartanddesign.com',

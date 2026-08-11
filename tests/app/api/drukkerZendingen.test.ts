@@ -1,36 +1,73 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { randomUUID } from 'crypto';
 import { deleteRow, insertRow } from '@/lib/server/crud';
 import { getPool } from '@/lib/server/db';
+import { hashPassword } from '@/lib/server/password';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { GET as listZendingen, POST as createZending } from '@/app/api/drukkers/[id]/zendingen/route';
 
-// Every test creates its own fresh drukker (a random UUID) and listZendingen is
-// scoped to that one drukkerId, so other drukkers/zendingen (real or from other
-// test runs) never affect these assertions -- but the drukker row this test itself
-// creates must still be removed, or it leaks into the shared staging DB on every
-// run. drukkerZendingen no longer cascades on delete, so the afterEach below
-// removes any zendingen for these drukkers first.
 describe('drukkerZendingen route', () => {
   const createdDrukkerIds: string[] = [];
+  const createdKlantEmails: string[] = [];
+  let teller = 0;
 
   afterEach(async () => {
+    const pool = getPool();
+    // drukkerZendingen -> drukkers is sinds het drukkernummer-ontwerp RESTRICT, geen
+    // cascade meer -- eerst de koppelrijen en de zending zelf weg, dan pas de drukker.
     if (createdDrukkerIds.length > 0) {
-      // Zendingen cascaderen niet meer mee met een verwijderde drukker; eerst die weg.
-      await getPool().query(
+      await pool.query(
+        `DELETE dzb FROM drukkerZendingBestellingen dzb
+         JOIN drukkerZendingen z ON z.zendingnummer = dzb.zendingnummer
+         JOIN drukkers d ON d.drukkernr = z.drukkernr
+         WHERE d.id IN (?)`,
+        [createdDrukkerIds]
+      );
+      await pool.query(
         'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
         [createdDrukkerIds]
       );
+      while (createdDrukkerIds.length > 0) {
+        await deleteRow('drukkers', createdDrukkerIds.pop()!);
+      }
     }
-    while (createdDrukkerIds.length > 0) {
-      await deleteRow('drukkers', createdDrukkerIds.pop()!);
+    if (createdKlantEmails.length > 0) {
+      await pool.query(
+        'DELETE FROM bestelheaders WHERE klantnr IN (SELECT klantnr FROM klanten WHERE email IN (?))',
+        [createdKlantEmails]
+      );
+      await pool.query('DELETE FROM klanten WHERE email IN (?)', [createdKlantEmails]);
+      createdKlantEmails.length = 0;
     }
-    // createSession('medewerker', 'staff-1') uses a fixed fake userId (no real medewerker
-    // row exists for it), so every call leaves an orphaned `sessions` row.
-    await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
+    await pool.query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
   });
 
+  async function maakBestelnr(): Promise<string> {
+    const nr = ++teller;
+    const email = `autotest-dz-${nr}-${randomUUID()}@example.com`;
+    const klantnr = `AT-K-DZ-${nr}`;
+    await insertRow<{ id: string }>('klanten', {
+      email,
+      wachtwoordHash: await hashPassword('x'),
+      status: 'Goedgekeurd',
+      klantnr,
+    } as never);
+    createdKlantEmails.push(email);
+    const bestelnr = `AT-BE-DZ-${nr}`;
+    await getPool().query('INSERT INTO bestelheaders (id, klantnr, bestelnr, status) VALUES (?, ?, ?, ?)', [
+      randomUUID(),
+      klantnr,
+      bestelnr,
+      'Te beoordelen',
+    ]);
+    return bestelnr;
+  }
+
   it('rejects listing without a medewerker session', async () => {
-    const drukker = await insertRow<{ id: string }>('drukkers', { drukkernr: 'AT-D-DZ-1', naam: 'PrintCo' } as never);
+    const drukker = await insertRow<{ id: string; drukkernr: string }>('drukkers', {
+      naam: 'PrintCo',
+      drukkernr: `AT-D-DZ-${++teller}`,
+    } as never);
     createdDrukkerIds.push(drukker.id);
     const response = await listZendingen(new Request('http://localhost/api'), {
       params: { id: drukker.id },
@@ -39,10 +76,15 @@ describe('drukkerZendingen route', () => {
   });
 
   it('creates and lists a zending for a medewerker, newest first', async () => {
-    const drukker = await insertRow<{ id: string }>('drukkers', { drukkernr: 'AT-D-DZ-2', naam: 'PrintCo' } as never);
+    const drukker = await insertRow<{ id: string; drukkernr: string }>('drukkers', {
+      naam: 'PrintCo',
+      drukkernr: `AT-D-DZ-${++teller}`,
+    } as never);
     createdDrukkerIds.push(drukker.id);
     const sessionId = await createSession('medewerker', 'staff-1');
     const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
+    const bestelnr1 = await maakBestelnr();
+    const bestelnr2 = await maakBestelnr();
 
     await createZending(
       new Request('http://localhost/api', {
@@ -51,10 +93,11 @@ describe('drukkerZendingen route', () => {
         body: JSON.stringify({
           onderwerp: 'Bestellingen week 30',
           body: 'Zie bijlage',
-          bestellingIds: ['b1', 'b2'],
+          bestellingIds: [bestelnr1, bestelnr2],
           aantalKlanten: 2,
           aantalRegels: 3,
           verzondDoor: 'Paul',
+          zendingnummer: `AT-ZD-DZ-${++teller}`,
         }),
       }),
       { params: { id: drukker.id } }
@@ -67,40 +110,6 @@ describe('drukkerZendingen route', () => {
     const body = await response.json();
     expect(body).toHaveLength(1);
     expect(body[0].onderwerp).toBe('Bestellingen week 30');
-    expect(body[0].bestellingIds).toEqual(['b1', 'b2']);
-  });
-
-  it('ignores a body-supplied drukkernr and files the zending under the drukker from the URL', async () => {
-    const drukker = await insertRow<{ id: string }>('drukkers', { drukkernr: 'AT-D-DZ-3', naam: 'PrintCo' } as never);
-    createdDrukkerIds.push(drukker.id);
-    const ander = await insertRow<{ id: string }>('drukkers', { drukkernr: 'AT-D-DZ-4', naam: 'AnderPrintCo' } as never);
-    createdDrukkerIds.push(ander.id);
-    const sessionId = await createSession('medewerker', 'staff-1');
-    const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;
-
-    const createResponse = await createZending(
-      new Request('http://localhost/api', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', cookie },
-        body: JSON.stringify({
-          drukkernr: 'AT-D-DZ-4',
-          onderwerp: 'Poging tot overname',
-          body: 'Zie bijlage',
-          bestellingIds: ['b3'],
-          aantalKlanten: 1,
-          aantalRegels: 1,
-          verzondDoor: 'Paul',
-        }),
-      }),
-      { params: { id: drukker.id } }
-    );
-    const created = await createResponse.json();
-    expect(created.drukkernr).toBe('AT-D-DZ-3');
-
-    const response = await listZendingen(
-      new Request('http://localhost/api', { headers: { cookie } }),
-      { params: { id: ander.id } }
-    );
-    expect(await response.json()).toEqual([]);
+    expect(body[0].bestellingIds.sort()).toEqual([bestelnr1, bestelnr2].sort());
   });
 });

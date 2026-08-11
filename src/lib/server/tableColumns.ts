@@ -91,12 +91,12 @@ export const TABLE_COLUMNS: Record<string, readonly string[]> = {
     'verzondenOp',
     'onderwerp',
     'body',
-    'bestellingIds',
     'aantalKlanten',
     'aantalRegels',
     'verzondDoor',
     'zendingnummer',
   ],
+  drukkerZendingBestellingen: ['zendingnummer', 'bestelnr'],
   kunstwerken: [
     'id',
     'foto',

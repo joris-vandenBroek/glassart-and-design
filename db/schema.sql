@@ -164,16 +164,24 @@ CREATE TABLE drukkers (
 
 CREATE TABLE drukkerZendingen (
   id CHAR(36) PRIMARY KEY,
+  zendingnummer VARCHAR(20) NOT NULL,
   drukkernr VARCHAR(20) NOT NULL,
   verzondenOp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   onderwerp VARCHAR(255),
   body TEXT,
-  bestellingIds JSON,
   aantalKlanten INT NOT NULL DEFAULT 0,
   aantalRegels INT NOT NULL DEFAULT 0,
   verzondDoor VARCHAR(255),
-  zendingnummer VARCHAR(20),
-  FOREIGN KEY (drukkernr) REFERENCES drukkers(drukkernr)
+  FOREIGN KEY (drukkernr) REFERENCES drukkers(drukkernr),
+  UNIQUE KEY uniek_zendingnummer (zendingnummer)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE drukkerZendingBestellingen (
+  zendingnummer VARCHAR(20) NOT NULL,
+  bestelnr VARCHAR(20) NOT NULL,
+  PRIMARY KEY (zendingnummer, bestelnr),
+  FOREIGN KEY (zendingnummer) REFERENCES drukkerZendingen(zendingnummer) ON DELETE CASCADE,
+  FOREIGN KEY (bestelnr) REFERENCES bestelheaders(bestelnr)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE kunstwerken (
