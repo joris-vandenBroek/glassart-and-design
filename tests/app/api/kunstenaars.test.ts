@@ -93,11 +93,10 @@ describe('kunstenaars + kunstenaarAfspraken routes', () => {
       ['exclusieveKlantIds']
     );
     createdKunstenaarIds.push(kunstenaar.id);
-    const kunstwerk = await insertRow<{ id: string }>(
-      'kunstwerken',
-      { code: 'test-kunstenaars-referenced', kunstenaarnr: 'AT-K-KUN-3', materiaalIds: [], maatIds: [] } as never,
-      ['materiaalIds', 'maatIds']
-    );
+    const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+      code: 'test-kunstenaars-referenced',
+      kunstenaarnr: 'AT-K-KUN-3',
+    } as never);
     createdKunstwerkIds.push(kunstwerk.id);
 
     const blocked = await deleteKunstenaar(req('DELETE', undefined, cookie), { params: { id: kunstenaar.id } });

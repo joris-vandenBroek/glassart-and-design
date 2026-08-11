@@ -1,6 +1,6 @@
 import type { Pool, PoolConnection } from 'mysql2/promise';
 import { pasPrijsgroepToe, type PrijsgroepAanpassing } from '@/lib/prijsgroep';
-import { parseJsonKolom } from '@/lib/server/crud';
+import { haalRelatiesOp } from './kunstwerkRelaties';
 
 export { pasPrijsgroepToe };
 export type { PrijsgroepAanpassing };
@@ -84,7 +84,9 @@ export async function berekenPrijzenVoorAlleKunstwerken(
   db: Queryable,
   klantId: string | null = null
 ): Promise<Record<string, PrijsCombinatie[]>> {
-  const [kunstwerkRows] = await db.query('SELECT id, kunstenaarnr, materiaalIds, maatIds FROM kunstwerken');
+  const [kunstwerkRows] = await db.query('SELECT id, kunstenaarnr FROM kunstwerken');
+  const kunstwerkIds = (kunstwerkRows as Array<{ id: string }>).map((row) => row.id);
+  const relatiesPerKunstwerk = await haalRelatiesOp(db, kunstwerkIds);
   const [matrixRows] = await db.query('SELECT maatId, materiaalId, prijs FROM prijsmatrix WHERE prijs IS NOT NULL');
   const matrixByKey = new Map<string, number>();
   for (const row of matrixRows as Array<{ maatId: string; materiaalId: string; prijs: string }>) {
@@ -102,14 +104,10 @@ export async function berekenPrijzenVoorAlleKunstwerken(
   const prijsgroep = await prijsgroepVoorKlant(db, klantId);
 
   const result: Record<string, PrijsCombinatie[]> = {};
-  for (const row of kunstwerkRows as Array<{
-    id: string;
-    kunstenaarnr: string | null;
-    materiaalIds: string | string[] | null;
-    maatIds: string | string[] | null;
-  }>) {
-    const materiaalIds = parseJsonKolom<string[]>(row.materiaalIds, []);
-    const maatIds = parseJsonKolom<string[]>(row.maatIds, []);
+  for (const row of kunstwerkRows as Array<{ id: string; kunstenaarnr: string | null }>) {
+    // relatiesPerKunstwerk is opgebouwd uit exact kunstwerkIds (zie hierboven), dus row.id
+    // staat er altijd in -- de niet-undefined-assertion is hier terecht, geen aanname.
+    const { materiaalIds, maatIds } = relatiesPerKunstwerk.get(row.id)!;
     const opslag = row.kunstenaarnr ? opslagByKunstenaarnr.get(row.kunstenaarnr) ?? 0 : 0;
     const combinaties: PrijsCombinatie[] = [];
     for (const materiaalId of materiaalIds) {

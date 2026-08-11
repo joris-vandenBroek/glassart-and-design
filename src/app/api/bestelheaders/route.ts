@@ -6,6 +6,7 @@ import { berekenBestellijnPrijs } from '@/lib/server/prijsmodule';
 import { volgendNummer } from '@/lib/server/counters';
 import { parseJsonKolom } from '@/lib/server/crud';
 import { withApiErrorHandling } from '@/lib/server/apiRoute';
+import { haalRelatiesOpVoorEen } from '@/lib/server/kunstwerkRelaties';
 import type { PoolConnection } from 'mysql2/promise';
 
 interface LineInput {
@@ -110,15 +111,13 @@ export const POST = withApiErrorHandling('POST /api/bestelheaders', async (reque
       // De code komt hier uit de database, niet uit de request -- dat is bewust: een
       // client kan zo geen code van een ander werk meesturen.
       const [kunstwerkRows] = await connection.query(
-        'SELECT code, kunstenaarnr, maatIds, materiaalIds, prijsPerM2 FROM kunstwerken WHERE id = ?',
+        'SELECT code, kunstenaarnr, prijsPerM2 FROM kunstwerken WHERE id = ?',
         [line.kunstwerkId]
       );
       const kunstwerkRow = (
         kunstwerkRows as Array<{
           code: string;
           kunstenaarnr: string | null;
-          maatIds: string | string[] | null;
-          materiaalIds: string | string[] | null;
           prijsPerM2: string | null;
         }>
       )[0];
@@ -126,8 +125,7 @@ export const POST = withApiErrorHandling('POST /api/bestelheaders', async (reque
         await connection.rollback();
         return NextResponse.json({ error: 'kunstwerk-not-found' }, { status: 400 });
       }
-      const maatIds = parseJsonKolom<string[]>(kunstwerkRow.maatIds, []);
-      const materiaalIds = parseJsonKolom<string[]>(kunstwerkRow.materiaalIds, []);
+      const { maatIds, materiaalIds } = await haalRelatiesOpVoorEen(connection, line.kunstwerkId);
 
       if (materiaalIds.length > 0 && !materiaalIds.includes(line.materiaalId)) {
         await connection.rollback();

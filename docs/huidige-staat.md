@@ -38,7 +38,7 @@ Firebase is volledig verwijderd — geen Firestore, geen Firebase Auth, geen Fir
 
 ## Datamodel
 
-24 tabellen in `db/schema.sql`. De samenhang op hoofdlijnen:
+30 tabellen in `db/schema.sql`. De samenhang op hoofdlijnen:
 
 ```
 klanten ──prijsgroepId──> prijsgroepen
@@ -50,7 +50,7 @@ klanten ──prijsgroepId──> prijsgroepen
               └──< bestelstatusHistorie
 
 kunstwerken ──kunstenaarId──> kunstenaars ──> kunstenaarAfspraken (prijsopslag)
-kunstwerken ──JSON-kolommen──> segmenten / stijlen / onderwerpen / materialen / maten
+kunstwerken ──koppeltabellen──> segmenten / stijlen / onderwerpen / materialen / maten
 
 prijsmatrix (maatId × materiaalId) ──> prijs
 drukkers ──< drukkerZendingen
@@ -58,7 +58,7 @@ drukkers ──< drukkerZendingen
 
 Aandachtspunten die afwijken van wat je zou verwachten:
 
-- De N-op-N-relaties van een kunstwerk zijn **JSON-kolommen** (`segmentIds`, `materiaalIds`, `maatIds`, `stijlIds`, `onderwerpIds`), geen koppeltabellen.
+- De N-op-N-relaties van een kunstwerk zijn vijf echte **koppeltabellen** (`kunstwerkSegmenten`, `kunstwerkMaterialen`, `kunstwerkMaten`, `kunstwerkStijlen`, `kunstwerkOnderwerpen`), elk met een samengestelde primary key `(kunstwerkId, <ding>Id)`, een `volgorde`-kolom die de weergave-/selectievolgorde bewaart, en `ON DELETE CASCADE` op beide foreign keys.
 - `kunstwerken.code` is de unieke, hoofdletterongevoelige identificatie van een kunstwerk (`UNIQUE KEY uniek_code`) — er is geen `naam`-kolom meer. Een bestelregel (`bestellines.code`) legt die code vast op het moment van bestellen; dat is een gekopieerde waarde, geen foreign key. Zodra een code ergens in `bestellines` voorkomt, ligt hij vast: het kunstwerk kan dan niet meer verwijderd worden en de code zelf kan niet meer wijzigen (zie API hieronder).
 - `instellingen` is één tabel met een `data JSON`-kolom en drie rijen: `bedrijfsgegevens`, `bestelinstellingen` en `btwtarieven`.
 - `counters` bevat drie losse nummerreeksen: `bestelnummer`, `zendingnummer`, `klantnummer`.

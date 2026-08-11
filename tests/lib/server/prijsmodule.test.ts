@@ -2,6 +2,7 @@ import { describe, expect, it, afterEach } from 'vitest';
 import { getPool } from '@/lib/server/db';
 import { insertRow } from '@/lib/server/crud';
 import { hashPassword } from '@/lib/server/password';
+import { vervangRelaties } from '@/lib/server/kunstwerkRelaties';
 import {
   combineerPrijs,
   prijsopslagVoorKunstenaar,
@@ -204,11 +205,11 @@ describe('berekenPrijzenVoorAlleKunstwerken', () => {
       [maatId, materiaalId, 200]
     );
     const kunstenaarnr = await maakKunstenaarMetOpslag(30);
-    const kunstwerk = await insertRow<{ id: string }>(
-      'kunstwerken',
-      { code: 'test-prijsmodule-basis', kunstenaarnr, materiaalIds: [materiaalId], maatIds: [maatId] } as never,
-      ['materiaalIds', 'maatIds']
-    );
+    const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+      code: 'test-prijsmodule-basis',
+      kunstenaarnr,
+    } as never);
+    await vervangRelaties(getPool(), kunstwerk.id, { materiaalIds: [materiaalId], maatIds: [maatId] });
     createdKunstwerkIds.push(kunstwerk.id);
 
     const result = await berekenPrijzenVoorAlleKunstwerken(getPool());
@@ -216,11 +217,9 @@ describe('berekenPrijzenVoorAlleKunstwerken', () => {
   });
 
   it('gives an empty array for a maatloos kunstwerk (no maatIds)', async () => {
-    const kunstwerk = await insertRow<{ id: string }>(
-      'kunstwerken',
-      { code: 'test-prijsmodule-maatloos', maatIds: [], materiaalIds: [] } as never,
-      ['materiaalIds', 'maatIds']
-    );
+    const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+      code: 'test-prijsmodule-maatloos',
+    } as never);
     createdKunstwerkIds.push(kunstwerk.id);
     const result = await berekenPrijzenVoorAlleKunstwerken(getPool());
     expect(result[kunstwerk.id]).toEqual([]);
@@ -234,11 +233,11 @@ describe('berekenPrijzenVoorAlleKunstwerken', () => {
       [maatId, materiaalId, 200]
     );
     const kunstenaarnr = await maakKunstenaarMetOpslag(30);
-    const kunstwerk = await insertRow<{ id: string }>(
-      'kunstwerken',
-      { code: 'test-prijsmodule-korting', kunstenaarnr, materiaalIds: [materiaalId], maatIds: [maatId] } as never,
-      ['materiaalIds', 'maatIds']
-    );
+    const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+      code: 'test-prijsmodule-korting',
+      kunstenaarnr,
+    } as never);
+    await vervangRelaties(getPool(), kunstwerk.id, { materiaalIds: [materiaalId], maatIds: [maatId] });
     createdKunstwerkIds.push(kunstwerk.id);
     const prijsgroepId = await maakPrijsgroep({ kortingspercentage: 10 });
     const klantId = await maakKlantMetPrijsgroep('bulk-korting@example.com', prijsgroepId);

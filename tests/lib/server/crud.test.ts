@@ -5,9 +5,9 @@ import { controleerKolommen } from '@/lib/server/tableColumns';
 
 // Every test tracks the exact ids it creates and removes only those afterward --
 // never a table-wide DELETE -- so this suite is safe to run against a segmenten/
-// kunstwerken table that already holds real data (migrated or entered via the app).
+// kunstenaars table that already holds real data (migrated or entered via the app).
 const createdSegmentIds: string[] = [];
-const createdKunstwerkIds: string[] = [];
+const createdKunstenaarIds: string[] = [];
 const createdKlantIds: string[] = [];
 
 afterEach(async () => {
@@ -15,9 +15,9 @@ afterEach(async () => {
     await getPool().query('DELETE FROM segmenten WHERE id IN (?)', [createdSegmentIds]);
     createdSegmentIds.length = 0;
   }
-  if (createdKunstwerkIds.length > 0) {
-    await getPool().query('DELETE FROM kunstwerken WHERE id IN (?)', [createdKunstwerkIds]);
-    createdKunstwerkIds.length = 0;
+  if (createdKunstenaarIds.length > 0) {
+    await getPool().query('DELETE FROM kunstenaars WHERE id IN (?)', [createdKunstenaarIds]);
+    createdKunstenaarIds.length = 0;
   }
   if (createdKlantIds.length > 0) {
     await getPool().query('DELETE FROM klanten WHERE id IN (?)', [createdKlantIds]);
@@ -75,42 +75,40 @@ describe('generic CRUD helpers (against segmenten table)', () => {
   });
 
   it('serializes and deserializes JSON columns', async () => {
-    const created = await insertRow<{ id: string; code: string; segmentIds: string[] }>(
-      'kunstwerken',
-      { code: 'test-crud-json', segmentIds: ['a', 'b'] } as never,
-      ['segmentIds', 'materiaalIds', 'maatIds']
+    const created = await insertRow<{ id: string; kunstenaarnr: string; exclusieveKlantIds: string[] }>(
+      'kunstenaars',
+      { kunstenaarnr: 'AT-K-CRUD-1', naam: 'Test Crud Json', exclusieveKlantIds: ['a', 'b'] } as never,
+      ['exclusieveKlantIds']
     );
-    createdKunstwerkIds.push(created.id);
-    expect(created.segmentIds).toEqual(['a', 'b']);
-    const found = await getRow<{ id: string; segmentIds: string[] }>(
-      'kunstwerken',
+    createdKunstenaarIds.push(created.id);
+    expect(created.exclusieveKlantIds).toEqual(['a', 'b']);
+    const found = await getRow<{ id: string; exclusieveKlantIds: string[] }>(
+      'kunstenaars',
       created.id,
-      ['segmentIds', 'materiaalIds', 'maatIds']
+      ['exclusieveKlantIds']
     );
-    expect(found?.segmentIds).toEqual(['a', 'b']);
+    expect(found?.exclusieveKlantIds).toEqual(['a', 'b']);
   });
 
   it('defaults a NULL JSON column to an empty array instead of returning null', async () => {
-    const created = await insertRow<{ id: string; code: string }>(
-      'kunstwerken',
-      { code: 'test-crud-zonder-materialen' } as never,
-      ['segmentIds', 'materiaalIds', 'maatIds']
+    const created = await insertRow<{ id: string; kunstenaarnr: string }>(
+      'kunstenaars',
+      { kunstenaarnr: 'AT-K-CRUD-2', naam: 'Test Crud Zonder Klanten' } as never,
+      ['exclusieveKlantIds']
     );
-    createdKunstwerkIds.push(created.id);
+    createdKunstenaarIds.push(created.id);
 
-    const found = await getRow<{ id: string; materiaalIds: string[] }>(
-      'kunstwerken',
+    const found = await getRow<{ id: string; exclusieveKlantIds: string[] }>(
+      'kunstenaars',
       created.id,
-      ['segmentIds', 'materiaalIds', 'maatIds']
+      ['exclusieveKlantIds']
     );
-    expect(found?.materiaalIds).toEqual([]);
+    expect(found?.exclusieveKlantIds).toEqual([]);
 
-    const rows = await listRows<{ id: string; materiaalIds: string[] }>('kunstwerken', [
-      'segmentIds',
-      'materiaalIds',
-      'maatIds',
+    const rows = await listRows<{ id: string; exclusieveKlantIds: string[] }>('kunstenaars', [
+      'exclusieveKlantIds',
     ]);
-    expect(rows.find((row) => row.id === created.id)?.materiaalIds).toEqual([]);
+    expect(rows.find((row) => row.id === created.id)?.exclusieveKlantIds).toEqual([]);
   });
 });
 

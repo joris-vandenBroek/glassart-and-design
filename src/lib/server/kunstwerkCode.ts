@@ -1,14 +1,6 @@
 import type { Pool } from 'mysql2/promise';
 import { getPool } from './db';
 
-export const KUNSTWERKEN_JSON_COLUMNS = [
-  'segmentIds',
-  'materiaalIds',
-  'maatIds',
-  'stijlIds',
-  'onderwerpIds',
-];
-
 /**
  * Vergelijkt hoofdletterongevoelig, want dat is precies wat de UNIQUE-index op
  * `kunstwerken.code` doet -- de tabel staat op utf8mb4_general_ci. Zou dit binair
