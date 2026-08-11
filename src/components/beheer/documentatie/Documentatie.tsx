@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect } from 'react';
 import { Link } from '@/i18n/navigation';
 import { DocumentatieSidebar } from './DocumentatieSidebar';
 import { KlantWebsiteChapter } from './chapters/KlantWebsiteChapter';
@@ -12,6 +15,18 @@ import { GlassartDesignChapter } from './chapters/GlassartDesignChapter';
 import { InstellingenChapter } from './chapters/InstellingenChapter';
 
 export function Documentatie() {
+  // The chapter ids this scrolls to don't exist in the DOM until this
+  // component mounts (it's gated behind an async client-side auth check),
+  // so the browser's own scroll-to-#anchor-on-load already happened (and
+  // found nothing) before this renders — do it ourselves once mounted.
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash) {
+      return;
+    }
+    document.getElementById(hash.slice(1))?.scrollIntoView();
+  }, []);
+
   return (
     <main data-testid="documentatie-page" className="min-h-screen bg-white text-ink">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 pb-4 pt-8 sm:px-8">
