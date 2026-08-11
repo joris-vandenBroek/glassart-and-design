@@ -1,6 +1,7 @@
 import { Link } from '@/i18n/navigation';
 import { DocumentatieSidebar } from './DocumentatieSidebar';
 import { KlantWebsiteChapter } from './chapters/KlantWebsiteChapter';
+import { KlantRegistratieChapter } from './chapters/KlantRegistratieChapter';
 
 export function Documentatie() {
   return (
@@ -15,6 +16,7 @@ export function Documentatie() {
         <DocumentatieSidebar />
         <div className="flex flex-col gap-10">
           <KlantWebsiteChapter />
+          <KlantRegistratieChapter />
         </div>
       </div>
     </main>

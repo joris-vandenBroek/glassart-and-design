@@ -50,5 +50,6 @@ describe('DocumentatieGate', () => {
     expect(screen.getByTestId('documentatie-page')).toBeInTheDocument();
     expect(screen.getByTestId('documentatie-sidebar')).toBeInTheDocument();
     expect(document.getElementById('klant-website')).not.toBeNull();
+    expect(document.getElementById('klant-registratie-goedkeuren')).not.toBeNull();
   });
 });
