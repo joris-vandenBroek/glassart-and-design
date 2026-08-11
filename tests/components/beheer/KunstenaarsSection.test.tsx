@@ -738,27 +738,33 @@ describe('KunstenaarsSection', () => {
     expect(screen.getByTestId('kunstenaar-modal-verplicht-legende')).toHaveTextContent('* verplicht veld');
   });
 
-  it('shows a help popover with an explanation of the screen', () => {
+  it('links the modal title help icon to the kunstenaars chapter', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('kunstenaars-add'));
 
-    fireEvent.click(screen.getByTestId('kunstenaar-modal-help'));
-    expect(screen.getByTestId('kunstenaar-modal-help-popover')).toHaveTextContent('prijsafspraken');
+    expect(screen.getByTestId('kunstenaar-modal-help')).toHaveAttribute(
+      'href',
+      '/nl/beheer/documentatie#kunstenaars-exclusiviteit'
+    );
   });
 
-  it('shows a help popover next to the Opslag field', () => {
+  it('links the Opslag field help icon to the prijsopslag sub-chapter', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('kunstenaars-add'));
 
-    fireEvent.click(screen.getByTestId('kunstenaar-modal-help-opslag'));
-    expect(screen.getByTestId('kunstenaar-modal-help-opslag-popover')).toHaveTextContent('prijsmatrix');
+    expect(screen.getByTestId('kunstenaar-modal-help-opslag')).toHaveAttribute(
+      'href',
+      '/nl/beheer/documentatie#kunstenaars-opslag'
+    );
   });
 
-  it('shows a help popover next to the exclusiviteit fields', () => {
+  it('links the exclusiviteit field help icon to the exclusiviteit sub-chapter', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('kunstenaars-add'));
 
-    fireEvent.click(screen.getByTestId('kunstenaar-modal-help-exclusiviteit'));
-    expect(screen.getByTestId('kunstenaar-modal-help-exclusiviteit-popover')).toHaveTextContent('twee klanten');
+    expect(screen.getByTestId('kunstenaar-modal-help-exclusiviteit')).toHaveAttribute(
+      'href',
+      '/nl/beheer/documentatie#kunstenaars-exclusiviteit'
+    );
   });
 });
