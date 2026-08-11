@@ -64,10 +64,10 @@ een drukker-e-mailadres, met optionele HTML. Er bestaat geen wijzigingsmail.
 
 2. **Wat bewerkbaar is hangt af van de status, in twee lagen:**
    - **Regelstructuur** (regel toevoegen, regel verwijderen, aantal/materiaal/maat/afmeting
-     wijzigen) — toegestaan bij `Te beoordelen`, `Te versturen naar drukker`,
-     `Verstuurd naar drukker`. Geblokkeerd zodra de status `Te factureren` of
-     `Betaald en afgerond` is: wat er fysiek verzonden is naar de drukker mag niet meer
-     stilletjes gaan afwijken van wat het systeem toont.
+     wijzigen) — toegestaan bij `Te beoordelen` en `Te versturen naar drukker`. Geblokkeerd
+     zodra de status `Verstuurd naar drukker`, `Te factureren` of `Betaald en afgerond` is:
+     wat er fysiek verzonden is naar de drukker mag niet meer stilletjes gaan afwijken van wat
+     het systeem toont.
    - **Prijs (per regel) en korting** — toegestaan in elke status behalve `Afgewezen`, dus ook
      nog bij `Betaald en afgerond`. Dat is ongewijzigd gedrag: `handlePrijsVaststellen` kent
      vandaag al geen statuscontrole.
@@ -178,9 +178,9 @@ Server-gedrag, in één `connection.beginTransaction()` / `commit()` / `rollback
 1. Bestelheader ophalen op `params.id`; 404 als hij niet bestaat.
 2. **`Afgewezen`** → altijd 400 (`bestelling-op-slot`), ongeacht wat er in de body zit.
 3. Zit de body iets in `additions`/`deletions`, of een `updates`-item met een ander veld dan
-   `prijs`, terwijl de status `Te factureren` of `Betaald en afgerond` is → 400
-   (`regelstructuur-op-slot`). Een `updates`-item dat uitsluitend `prijs` bevat, en/of een
-   gewijzigde `korting`, blijft in die twee statussen wél toegestaan.
+   `prijs`, terwijl de status `Verstuurd naar drukker`, `Te factureren` of `Betaald en afgerond`
+   is → 400 (`regelstructuur-op-slot`). Een `updates`-item dat uitsluitend `prijs` bevat, en/of
+   een gewijzigde `korting`, blijft in die drie statussen wél toegestaan.
 4. Elke `updates.id`/`deletions`-entry moet bij deze `bestelnr` horen (zelfde
    JOIN-ownership-check als het oude line-endpoint) — anders 400.
 5. Na toepassen van `deletions` en `additions` moet er minstens 1 regel overblijven — anders
@@ -244,7 +244,7 @@ interface Concept {
   inline-editor. De regel toont een "gewijzigd, nog niet opgeslagen"-indicator.
 - **Regel verwijderen**: nieuwe knop per regel → zet het id in `concept.deletions`; de regel
   toont doorgestreept met een "ongedaan maken". Verborgen wanneer regelstructuur op slot zit
-  (sectie C, punt 3) of status `Afgewezen` is.
+  (sectie C, punt 3, dus vanaf `Verstuurd naar drukker`) of status `Afgewezen` is.
 - **Regel toevoegen**: nieuwe knop opent een kleine inline-vorm — kunstwerk kiezen (uit de al
   geladen `kunstwerken`-prop), dan materiaal/maat gefilterd op dat kunstwerk (of eigen
   breedte/hoogte), dan aantal — en voegt een item toe aan `concept.additions`. Zelfde
@@ -290,8 +290,10 @@ Nieuw, conventie van de bestaande `bestelling-modal-*`-ids volgend:
   op 0), ontbrekende prijs (op-aanvraag) geeft `heeftOngeprijsdeRegel`, btw `null` als er geen
   percentage bekend is.
 - `PATCH .../wijzigen`: 401 zonder medewerker-sessie; 400 bij `Afgewezen` ongeacht body; 400 bij
-  regelstructuur-wijziging terwijl status `Te factureren`/`Betaald en afgerond` is, maar 200 als
-  diezelfde body alléén `prijs` en/of `korting` bevat; 400 als een `updates`/`deletions`-id niet
+  regelstructuur-wijziging terwijl status `Verstuurd naar drukker`/`Te factureren`/
+  `Betaald en afgerond` is, maar 200 als diezelfde body alléén `prijs` en/of `korting` bevat;
+  200 bij een regelstructuur-wijziging terwijl status `Te beoordelen`/`Te versturen naar
+  drukker` is; 400 als een `updates`/`deletions`-id niet
   bij deze bestelling hoort; 400 als de bestelling na de wijziging 0 regels zou hebben; prijs
   van een `addition` komt uit `berekenBestellijnPrijs`, niet uit de request, ook als de client
   een afwijkende `prijs` meestuurt; alles-of-niets bij een fout halverwege (rollback zichtbaar
@@ -304,9 +306,9 @@ Nieuw, conventie van de bestaande `bestelling-modal-*`-ids volgend:
   tot op "Wijzigingen opslaan" geklikt wordt; die knop verschijnt alleen als er een concept-
   wijziging is; na een geslaagde opslag verschijnt de mail-vraag precies één keer; Ja/Nee op de
   mail-vraag roept `POST /api/mail` wel/niet aan; regel-toevoegen/verwijderen-knoppen zijn
-  onzichtbaar bij `Te factureren`/`Betaald en afgerond`/`Afgewezen`; het kortingsveld en de
-  prijs-editor blijven zichtbaar bij `Te factureren`/`Betaald en afgerond` maar niet bij
-  `Afgewezen`.
+  onzichtbaar bij `Verstuurd naar drukker`/`Te factureren`/`Betaald en afgerond`/`Afgewezen`;
+  het kortingsveld en de prijs-editor blijven zichtbaar bij `Verstuurd naar drukker`/
+  `Te factureren`/`Betaald en afgerond` maar niet bij `Afgewezen`.
 
 ## Wat dit ontwerp bewust niet doet
 
