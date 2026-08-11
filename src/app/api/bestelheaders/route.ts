@@ -6,7 +6,7 @@ import { berekenBestellijnPrijs } from '@/lib/server/prijsmodule';
 import { volgendNummer } from '@/lib/server/counters';
 import { parseJsonKolom } from '@/lib/server/crud';
 import { withApiErrorHandling } from '@/lib/server/apiRoute';
-import type { PoolConnection } from 'mysql2/promise';
+import { checkOrderRight } from '@/lib/server/orderRight';
 
 interface LineInput {
   kunstwerkId: string;
@@ -28,32 +28,6 @@ function validateLine(line: LineInput): string | null {
     }
   }
   return null;
-}
-
-// Mirrors src/lib/resolveOrderRight.ts, which is now a client-side UI hint only —
-// this is the real enforcement, since there is no rules-based enforcement layer anymore.
-async function checkOrderRight(
-  connection: PoolConnection,
-  kunstwerkId: string,
-  klantId: string
-): Promise<boolean> {
-  const [kunstwerkRows] = await connection.query(
-    'SELECT kunstenaarnr FROM kunstwerken WHERE id = ?',
-    [kunstwerkId]
-  );
-  const kunstenaarnr = (kunstwerkRows as Array<{ kunstenaarnr: string | null }>)[0]?.kunstenaarnr;
-  if (!kunstenaarnr) return true;
-
-  const [kunstenaarRows] = await connection.query(
-    'SELECT exclusieveKlantIds FROM kunstenaars WHERE kunstenaarnr = ?',
-    [kunstenaarnr]
-  );
-  const kunstenaar = (kunstenaarRows as Array<{ exclusieveKlantIds: string | string[] | null }>)[0];
-  if (!kunstenaar) return false;
-
-  const exclusieveKlantIds = parseJsonKolom<string[]>(kunstenaar.exclusieveKlantIds, []);
-  if (exclusieveKlantIds.length === 0) return true;
-  return exclusieveKlantIds.includes(klantId);
 }
 
 export const POST = withApiErrorHandling('POST /api/bestelheaders', async (request: Request) => {

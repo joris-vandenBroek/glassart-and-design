@@ -7,6 +7,7 @@ import { PATCH as wijzigenBestelling } from '@/app/api/bestelheaders/[id]/wijzig
 
 const createdKlantIds: string[] = [];
 const createdKunstwerkIds: string[] = [];
+const createdKunstenaarIds: string[] = [];
 const createdMaatIds: string[] = [];
 const createdMateriaalIds: string[] = [];
 const createdMateriaalsoortIds: string[] = [];
@@ -26,6 +27,10 @@ afterEach(async () => {
     await getPool().query('DELETE FROM kunstwerkMaten WHERE kunstwerkId IN (?)', [createdKunstwerkIds]);
     await getPool().query('DELETE FROM kunstwerken WHERE id IN (?)', [createdKunstwerkIds]);
     createdKunstwerkIds.length = 0;
+  }
+  if (createdKunstenaarIds.length > 0) {
+    await getPool().query('DELETE FROM kunstenaars WHERE id IN (?)', [createdKunstenaarIds]);
+    createdKunstenaarIds.length = 0;
   }
   if (createdMateriaalIds.length > 0) {
     await getPool().query('DELETE FROM materialen WHERE id IN (?)', [createdMateriaalIds]);
@@ -80,8 +85,8 @@ async function maakMateriaal() {
 // kunstwerken zelf draagt sinds de koppeltabel-migratie (2026-08-11, uitgevoerd door een
 // andere, nog niet gemergde worktree) geen materiaalIds/maatIds JSON-kolommen meer -- die
 // koppeling loopt nu via kunstwerkMaterialen/kunstwerkMaten.
-async function maakKunstwerk(code: string, materiaalId: string, maatId: string) {
-  const kunstwerk = await insertRow<{ id: string }>('kunstwerken', { code } as never);
+async function maakKunstwerk(code: string, materiaalId: string, maatId: string, kunstenaarnr: string | null = null) {
+  const kunstwerk = await insertRow<{ id: string }>('kunstwerken', { code, kunstenaarnr } as never);
   createdKunstwerkIds.push(kunstwerk.id);
   await getPool().query('INSERT INTO kunstwerkMaterialen (kunstwerkId, materiaalId, volgorde) VALUES (?, ?, 0)', [
     kunstwerk.id,
@@ -92,6 +97,16 @@ async function maakKunstwerk(code: string, materiaalId: string, maatId: string) 
     maatId,
   ]);
   return kunstwerk;
+}
+
+async function maakKunstenaar(kunstenaarnr: string, exclusieveKlantIds: string[]) {
+  const kunstenaar = await insertRow<{ id: string }>(
+    'kunstenaars',
+    { kunstenaarnr, naam: 'AUTOTEST Exclusieve Artiest', exclusieveKlantIds } as never,
+    ['exclusieveKlantIds']
+  );
+  createdKunstenaarIds.push(kunstenaar.id);
+  return kunstenaar;
 }
 
 async function maakKlant(email: string) {
@@ -228,23 +243,25 @@ describe('PATCH /api/bestelheaders/[id]/wijzigen', () => {
     ]);
     const cookie = await medewerkerCookie();
 
-    const response = await wijzigenBestelling(
-      req(
-        // prijs is not part of AdditionInput; this proves the server ignores it. (req()'s body
-        // param is `unknown`, so this extra field doesn't actually trip a type error -- no
-        // `@ts-expect-error` needed/applicable here.)
-        { additions: [{ kunstwerkId: kunstwerk.id, materiaalId, maatId, quantity: 2, prijs: 999999 }] },
-        cookie
-      ),
-      { params: { id: header.id } }
-    );
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    const nieuweRegel = body.lines.find((l: { code: string }) => l.code === 'AUTOTEST-kw-toevoegen');
-    expect(nieuweRegel.prijs).toBe(88);
-    expect(nieuweRegel.quantity).toBe(2);
-
-    await getPool().query('DELETE FROM prijsmatrix WHERE maatId = ? AND materiaalId = ?', [maatId, materiaalId]);
+    try {
+      const response = await wijzigenBestelling(
+        req(
+          // prijs is not part of AdditionInput; this proves the server ignores it. (req()'s body
+          // param is `unknown`, so this extra field doesn't actually trip a type error -- no
+          // `@ts-expect-error` needed/applicable here.)
+          { additions: [{ kunstwerkId: kunstwerk.id, materiaalId, maatId, quantity: 2, prijs: 999999 }] },
+          cookie
+        ),
+        { params: { id: header.id } }
+      );
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      const nieuweRegel = body.lines.find((l: { code: string }) => l.code === 'AUTOTEST-kw-toevoegen');
+      expect(nieuweRegel.prijs).toBe(88);
+      expect(nieuweRegel.quantity).toBe(2);
+    } finally {
+      await getPool().query('DELETE FROM prijsmatrix WHERE maatId = ? AND materiaalId = ?', [maatId, materiaalId]);
+    }
   });
 
   it('verwijdert een regel binnen de toegestane status', async () => {
@@ -315,5 +332,57 @@ describe('PATCH /api/bestelheaders/[id]/wijzigen', () => {
 
     const [rows] = await getPool().query('SELECT korting FROM bestelheaders WHERE id = ?', [header.id]);
     expect((rows as Array<{ korting: number | null }>)[0].korting).toBeNull();
+  });
+
+  it('weigert een update met een niet-geheel aantal', async () => {
+    const klant = await maakKlant('wijzigen-nonintqty@example.com');
+    const { header, lineIds } = await maakBestelling(klant.klantnr, 'Te beoordelen', [
+      { code: 'x', maatId: null, materiaalId: null, prijs: 10, quantity: 1 },
+    ]);
+    const cookie = await medewerkerCookie();
+
+    const response = await wijzigenBestelling(req({ updates: [{ id: lineIds[0], quantity: 2.5 }] }, cookie), {
+      params: { id: header.id },
+    });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'invalid-quantity' });
+  });
+
+  it('weigert een update met een niet-positieve prijs', async () => {
+    const klant = await maakKlant('wijzigen-nonposprijs@example.com');
+    const { header, lineIds } = await maakBestelling(klant.klantnr, 'Te beoordelen', [
+      { code: 'x', maatId: null, materiaalId: null, prijs: 10, quantity: 1 },
+    ]);
+    const cookie = await medewerkerCookie();
+
+    const response = await wijzigenBestelling(req({ updates: [{ id: lineIds[0], prijs: -5 }] }, cookie), {
+      params: { id: header.id },
+    });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'invalid-prijs' });
+  });
+
+  it('weigert het toevoegen van een kunstwerk dat exclusief is voor een andere klant', async () => {
+    // klanten.klantnr is VARCHAR(20): "AUTOTEST-" (9 tekens) + de eerste 11 tekens van het
+    // e-mailadres. Deze twee e-mails moeten dus al binnen die eerste 11 tekens verschillen
+    // (zie ook de soortgelijke waarschuwing bij de "hoort niet bij bestelling"-test hierboven),
+    // anders botsen ze op de unieke index in plaats van de exclusiviteitscheck te testen.
+    const klantA = await maakKlant('wijzigen-C@example.com');
+    const klantB = await maakKlant('wijzigen-D@example.com');
+    const materiaalId = await maakMateriaal();
+    const maatId = await maakMaat(45, 65);
+    await maakKunstenaar('AUTOTEST-KA-1', [klantB.id]);
+    const kunstwerk = await maakKunstwerk('AUTOTEST-kw-exclusief', materiaalId, maatId, 'AUTOTEST-KA-1');
+    const { header } = await maakBestelling(klantA.klantnr, 'Te beoordelen', [
+      { code: 'x', maatId: null, materiaalId: null, prijs: 10, quantity: 1 },
+    ]);
+    const cookie = await medewerkerCookie();
+
+    const response = await wijzigenBestelling(
+      req({ additions: [{ kunstwerkId: kunstwerk.id, materiaalId, maatId, quantity: 1 }] }, cookie),
+      { params: { id: header.id } }
+    );
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: 'order-not-allowed' });
   });
 });

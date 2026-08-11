@@ -3,6 +3,7 @@ import { getPool } from '@/lib/server/db';
 import { withMedewerker } from '@/lib/server/apiRoute';
 import { insertRow, updateRow, deleteRow } from '@/lib/server/crud';
 import { berekenBestellijnPrijs } from '@/lib/server/prijsmodule';
+import { checkOrderRight } from '@/lib/server/orderRight';
 
 const REGELSTRUCTUUR_OP_SLOT_STATUSSEN = ['Verstuurd naar drukker', 'Te factureren', 'Betaald en afgerond'];
 const UPDATE_VELDEN = ['quantity', 'prijs', 'materiaalId', 'maatId', 'breedte', 'hoogte'] as const;
@@ -99,6 +100,27 @@ export const PATCH = withMedewerker<{ params: { id: string } }>(
       }
 
       for (const update of updates) {
+        if (update.quantity !== undefined && (!Number.isInteger(update.quantity) || update.quantity <= 0)) {
+          await connection.rollback();
+          return NextResponse.json({ error: 'invalid-quantity' }, { status: 400 });
+        }
+        if (update.prijs !== undefined) {
+          const geldigePrijs =
+            update.prijs === null ||
+            (typeof update.prijs === 'number' && Number.isFinite(update.prijs) && update.prijs > 0);
+          if (!geldigePrijs) {
+            await connection.rollback();
+            return NextResponse.json({ error: 'invalid-prijs' }, { status: 400 });
+          }
+        }
+        for (const veld of ['breedte', 'hoogte'] as const) {
+          const waarde = update[veld];
+          if (waarde !== undefined && (!Number.isInteger(waarde) || waarde <= 0)) {
+            await connection.rollback();
+            return NextResponse.json({ error: 'invalid-afmeting' }, { status: 400 });
+          }
+        }
+
         const patch: Record<string, unknown> = {};
         for (const veld of UPDATE_VELDEN) {
           if (update[veld] !== undefined) patch[veld] = update[veld];
@@ -128,6 +150,10 @@ export const PATCH = withMedewerker<{ params: { id: string } }>(
         if (!kunstwerk) {
           await connection.rollback();
           return NextResponse.json({ error: 'kunstwerk-not-found' }, { status: 400 });
+        }
+        if (!(await checkOrderRight(connection, addition.kunstwerkId, klantId ?? ''))) {
+          await connection.rollback();
+          return NextResponse.json({ error: 'order-not-allowed' }, { status: 403 });
         }
         if (!Number.isInteger(addition.quantity) || addition.quantity <= 0) {
           await connection.rollback();
