@@ -4,6 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Project location:** this repository lives at `C:\projecten\Glassart and design` (moved here 2026-08-08 from the old `C:\Temp\Glassart and design`, which is now empty/unused — don't work there).
 
+## Gebruikershandleiding (beheer)
+
+Beheer heeft een gebruikershandleiding voor medewerkers op `src/app/[locale]/beheer/documentatie/page.tsx` (Nederlandstalig, hardcoded proza, geen `next-intl`-sleutels), met een anker per hoofdstuk/onderdeel. Sectiekoppen en detailschermen in beheer linken er met een "?"-icoon naartoe (opent in een nieuw tabblad, springt naar het relevante anker).
+
+**Bij elke wijziging aan beheer-functionaliteit: vraag jezelf af of deze handleiding erdoor achterhaald raakt, en werk hem zo nodig meteen bij** — bijvoorbeeld een nieuw veld, een gewijzigd proces (registratie, bestelproces, prijsopbouw, kunstwerk/kunstenaar aanmaken, drukker-zendingen), een nieuwe of hernoemde sectie, of een gewijzigde regel (zoals exclusiviteit of minimale afname). Dit geldt niet voor zuiver interne refactors zonder zichtbaar of functioneel effect voor de beheerder.
+
 ## Commands
 
 ```bash
