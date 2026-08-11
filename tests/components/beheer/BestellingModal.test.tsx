@@ -33,6 +33,19 @@ const KUNSTWERKEN: Kunstwerk[] = [
     omschrijvingDe: '',
     omschrijvingEn: '',
   },
+  {
+    id: 'kw-2',
+    foto: 'https://example.com/kw-2.jpg',
+    code: 'Akoestisch paneel',
+    kunstenaarnr: null,
+    segmentIds: [],
+    materiaalIds: ['mat-1'],
+    maatIds: [],
+    omschrijvingNl: 'Akoestisch paneel',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+  },
 ];
 const MATERIALEN: Materiaal[] = [
   {
@@ -967,26 +980,59 @@ describe('BestellingModal — regel verwijderen en toevoegen', () => {
     expect(screen.queryByTestId('bestelling-modal-wijzigingen-opslaan')).not.toBeInTheDocument();
   });
 
-  it('keeps "Regel toevoegen" opslaan disabled until kunstwerk/materiaal/maat and a whole positive aantal are all set', () => {
+  it('shows a specific reason instead of silently doing nothing when a required field is missing', () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-toevoegen'));
-    expect(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen')).toBeDisabled();
+
+    // Geen kunstwerk gekozen: knop blijft altijd klikbaar (nooit stilzwijgend uitgeschakeld),
+    // maar een klik moet een concrete reden tonen in plaats van niets te doen.
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen'));
+    expect(screen.getByTestId('bestelling-modal-nieuwe-regel-fout')).toHaveTextContent('Kies eerst een kunstwerk.');
+    expect(screen.queryByTestId(/^bestelling-modal-nieuwe-regel-kaart-/)).not.toBeInTheDocument();
 
     fireEvent.focus(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk'));
     fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk-option-kw-1'));
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen'));
+    expect(screen.getByTestId('bestelling-modal-nieuwe-regel-fout')).toHaveTextContent('Kies een materiaal.');
+
     fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-materiaal'), { target: { value: 'mat-1' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen'));
+    expect(screen.getByTestId('bestelling-modal-nieuwe-regel-fout')).toHaveTextContent('Kies een maat.');
+
     fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-maat'), { target: { value: 'maat-1' } });
-    // aantal staat nog op de standaardwaarde '1' (geldig) -- de knop is dus al bruikbaar
-    // vóórdat er iets aan aantal wordt gewijzigd; dat is het gedrag dat de volgende twee
-    // wijzigingen (2.5, dan 2) verifiëren.
-    expect(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen')).not.toBeDisabled();
-
     fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-aantal'), { target: { value: '2.5' } });
-    expect(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen')).toBeDisabled();
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen'));
+    expect(screen.getByTestId('bestelling-modal-nieuwe-regel-fout')).toHaveTextContent(
+      'Aantal moet een heel getal groter dan 0 zijn.'
+    );
+    expect(screen.queryByTestId(/^bestelling-modal-nieuwe-regel-kaart-/)).not.toBeInTheDocument();
 
+    // Alles compleet en geldig: de regel wordt nu wél toegevoegd, en de foutmelding verdwijnt.
     fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-aantal'), { target: { value: '2' } });
-    expect(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen')).not.toBeDisabled();
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen'));
+    expect(screen.queryByTestId('bestelling-modal-nieuwe-regel-fout')).not.toBeInTheDocument();
+    expect(screen.getByTestId(/^bestelling-modal-nieuwe-regel-kaart-/)).toBeInTheDocument();
+  });
+
+  it('requires valid breedte/hoogte for an eigen-maat kunstwerk before adding, with a specific reason', () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-toevoegen'));
+    fireEvent.focus(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk'));
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk-option-kw-2'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-materiaal'), { target: { value: 'mat-1' } });
+
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen'));
+    expect(screen.getByTestId('bestelling-modal-nieuwe-regel-fout')).toHaveTextContent(
+      'Vul een geldige breedte en hoogte in (cm).'
+    );
+
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-breedte'), { target: { value: '90' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-hoogte'), { target: { value: '140' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen'));
+    expect(screen.queryByTestId('bestelling-modal-nieuwe-regel-fout')).not.toBeInTheDocument();
+    expect(screen.getByTestId(/^bestelling-modal-nieuwe-regel-kaart-/)).toBeInTheDocument();
   });
 
   it('shows a live prijsvoorbeeld once kunstwerk/materiaal/maat are complete, calling the prijsvoorbeeld endpoint', async () => {
