@@ -522,11 +522,11 @@ describe('BestellingModal — bestelling-totaal', () => {
     expect(screen.getByTestId('bestelling-modal-goedkeuren')).toBeDisabled();
   });
 
-  it('shows a korting row and subtracts it from the total when korting is set', () => {
+  it('shows the korting input pre-filled and subtracts it from the total when korting is set', () => {
     renderModal({ ...BESTELLING, korting: 50 });
     // line-1: 150 × 3 = 450, line-2: 0 × 2 = 0, korting 50 → 400
     expect(screen.getByTestId('bestelling-modal-total')).toHaveTextContent('€ 400,00');
-    expect(screen.getByTestId('bestelling-modal-korting')).toHaveTextContent('€ 50,00');
+    expect(screen.getByTestId('bestelling-modal-korting-input')).toHaveValue(50);
   });
 
   it('shows no korting row when korting is null', () => {
@@ -884,7 +884,8 @@ describe('BestellingModal — regel verwijderen en toevoegen', () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     const { onBestellingGewijzigd } = renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-toevoegen'));
-    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk'), { target: { value: 'kw-1' } });
+    fireEvent.focus(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk'));
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk-option-kw-1'));
     fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-materiaal'), { target: { value: 'mat-1' } });
     fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-maat'), { target: { value: 'maat-1' } });
     fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-aantal'), { target: { value: '2' } });
@@ -920,6 +921,42 @@ describe('BestellingModal — regel verwijderen en toevoegen', () => {
         korting: null,
       })
     );
+  });
+
+  it('shows a newly drafted line as a full card with photo/code/materiaal/maat, matching a saved line', () => {
+    renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-toevoegen'));
+    fireEvent.focus(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk'));
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk-option-kw-1'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-materiaal'), { target: { value: 'mat-1' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-maat'), { target: { value: 'maat-1' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-aantal'), { target: { value: '2' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen'));
+
+    const kaarten = screen.getAllByTestId(/^bestelling-modal-nieuwe-regel-kaart-/);
+    expect(kaarten).toHaveLength(1);
+    const kaart = kaarten[0];
+    expect(kaart.querySelector('img')).toHaveAttribute('src', 'https://example.com/kw-1.jpg');
+    expect(kaart).toHaveTextContent('Hotel paneel');
+    expect(kaart).toHaveTextContent('40×60 cm');
+    expect(kaart).toHaveTextContent('2 × prijs bekend na opslaan');
+  });
+
+  it('removes a drafted addition without saving when its Verwijderen link is clicked', () => {
+    renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-toevoegen'));
+    fireEvent.focus(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk'));
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk-option-kw-1'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-materiaal'), { target: { value: 'mat-1' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-maat'), { target: { value: 'maat-1' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen'));
+    expect(screen.getByTestId('bestelling-modal-wijzigingen-opslaan')).toBeInTheDocument();
+
+    const kaart = screen.getByTestId(/^bestelling-modal-nieuwe-regel-kaart-/);
+    fireEvent.click(within(kaart).getByText('Verwijderen'));
+
+    expect(screen.queryByTestId(/^bestelling-modal-nieuwe-regel-kaart-/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-wijzigingen-opslaan')).not.toBeInTheDocument();
   });
 });
 

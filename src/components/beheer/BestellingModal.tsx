@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { Modal } from '@/components/Modal';
 import { useAdminAuth } from '@/lib/useAdminAuth';
@@ -11,6 +11,7 @@ import { formatCurrency } from '@/lib/formatCurrency';
 import { resolveBtwPercentage } from '@/lib/resolveBtw';
 import { berekenBestellingTotalen } from '@/lib/bestellingTotalen';
 import { ProductImage } from '@/components/ProductImage';
+import { Combobox } from '@/components/Combobox';
 import type { Bestelling, BestellingLine } from './BestellingenSection';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from './materiaalTypes';
 import type { Klant } from './KlantenSection';
@@ -73,6 +74,21 @@ interface BestellingModalProps {
 
 function isCustomLine(line: BestellingLine): boolean {
   return !line.maatId;
+}
+
+// Verbergt de native up/down-spinner van een number-input (WebKit + Firefox) -- zonder
+// label las die spinner soms als een sliderbediening, en de pijltjes voegden verder
+// niets toe aan deze kleine, veelal 1-3-cijferige velden.
+const GEEN_SPINNER =
+  '[appearance:textfield] [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none';
+
+function Veld({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-[0.65rem] text-white/35">{label}</span>
+      {children}
+    </label>
+  );
 }
 
 const HISTORIE_LABEL_KEY: Record<string, string> = {
@@ -438,30 +454,33 @@ export function BestellingModal({
                 >
                   {totaalWeergave}
                 </span>
-                {totalen && totalen.korting > 0 && (
-                  <div data-testid="bestelling-modal-korting" className="contents">
-                    <span className="text-[0.65rem] uppercase tracking-wide text-white/40">
-                      {t('bestellingenModalKortingLabel')}
-                    </span>
-                    <span className="text-right text-sm text-white/80 tabular-nums">
-                      -{formatCurrency(totalen.korting)}
-                    </span>
-                  </div>
-                )}
-                {bestelling.status !== 'Afgewezen' && (
+                {bestelling.status === 'Afgewezen' ? (
+                  totalen && totalen.korting > 0 && (
+                    <div data-testid="bestelling-modal-korting" className="contents">
+                      <span className="text-[0.65rem] uppercase tracking-wide text-white/40">
+                        {t('bestellingenModalKortingLabel')}
+                      </span>
+                      <span className="text-right text-sm text-white/80 tabular-nums">
+                        -{formatCurrency(totalen.korting)}
+                      </span>
+                    </div>
+                  )
+                ) : (
                   <div className="contents">
                     <span className="text-[0.65rem] uppercase tracking-wide text-white/40">
                       {t('bestellingenModalKortingLabel')}
                     </span>
-                    <input
-                      type="number"
-                      min="0"
-                      data-testid="bestelling-modal-korting-input"
-                      value={conceptKorting}
-                      onChange={(event) => setConceptKorting(event.target.value)}
-                      placeholder={t('bestellingenModalKortingLabel')}
-                      className="w-20 justify-self-end rounded-sm bg-black/40 px-2 py-1 text-right text-xs text-white"
-                    />
+                    <div className="flex items-center justify-self-end gap-1 rounded-sm bg-black/40 px-2 py-1">
+                      <span className="text-xs text-white/40">€</span>
+                      <input
+                        type="number"
+                        min="0"
+                        data-testid="bestelling-modal-korting-input"
+                        value={conceptKorting}
+                        onChange={(event) => setConceptKorting(event.target.value)}
+                        className={`w-14 bg-transparent text-right text-xs text-white outline-none ${GEEN_SPINNER}`}
+                      />
+                    </div>
                   </div>
                 )}
                 {btwBedrag !== null && (
@@ -668,39 +687,42 @@ export function BestellingModal({
                               </button>
                             </div>
                           )}
-                          {kunstwerk && (
-                            <button
-                              type="button"
-                              onClick={() => startEditRegel(weergaveLine)}
-                              data-testid={`bestelling-modal-regel-bewerken-${line.id}`}
-                              className="mt-1.5 text-[0.65rem] uppercase tracking-wide text-white/40 underline underline-offset-2 hover:text-white/70"
-                            >
-                              {t('bewerken')}
-                            </button>
-                          )}
-                          {regelstructuurBewerkbaar &&
-                            (conceptDeletions.has(line.id) ? (
+                          <div className="mt-1.5 flex gap-3">
+                            {kunstwerk && (
                               <button
                                 type="button"
-                                onClick={() => maakVerwijderingOngedaan(line.id)}
-                                data-testid={`bestelling-modal-regel-verwijderen-ongedaan-${line.id}`}
-                                className="mt-1.5 text-[0.65rem] uppercase tracking-wide text-white/40 underline underline-offset-2 hover:text-white/70"
+                                onClick={() => startEditRegel(weergaveLine)}
+                                data-testid={`bestelling-modal-regel-bewerken-${line.id}`}
+                                className="text-[0.65rem] uppercase tracking-wide text-white/40 underline underline-offset-2 hover:text-white/70"
                               >
-                                {t('bestellingenRegelVerwijderenOngedaanMaken')}
+                                {t('bewerken')}
                               </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => markeerVoorVerwijdering(line.id)}
-                                data-testid={`bestelling-modal-regel-verwijderen-${line.id}`}
-                                className="mt-1.5 text-[0.65rem] uppercase tracking-wide text-white/40 underline underline-offset-2 hover:text-white/70"
-                              >
-                                {t('bestellingenRegelVerwijderen')}
-                              </button>
-                            ))}
+                            )}
+                            {regelstructuurBewerkbaar &&
+                              (conceptDeletions.has(line.id) ? (
+                                <button
+                                  type="button"
+                                  onClick={() => maakVerwijderingOngedaan(line.id)}
+                                  data-testid={`bestelling-modal-regel-verwijderen-ongedaan-${line.id}`}
+                                  className="text-[0.65rem] uppercase tracking-wide text-white/40 underline underline-offset-2 hover:text-white/70"
+                                >
+                                  {t('bestellingenRegelVerwijderenOngedaanMaken')}
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => markeerVoorVerwijdering(line.id)}
+                                  data-testid={`bestelling-modal-regel-verwijderen-${line.id}`}
+                                  className="text-[0.65rem] uppercase tracking-wide text-white/40 underline underline-offset-2 hover:text-white/70"
+                                >
+                                  {t('bestellingenRegelVerwijderen')}
+                                </button>
+                              ))}
+                          </div>
                         </>
                       ) : (
                         <div className="mt-1.5 flex flex-col gap-2">
+                          <Veld label={t('bestellingenModalLabelMateriaal')}>
                           <select
                             value={lineDraft?.materiaalId ?? ''}
                             onChange={(event) =>
@@ -717,9 +739,11 @@ export function BestellingModal({
                               </option>
                             ))}
                           </select>
+                          </Veld>
 
                           {isCustomLine(line) ? (
                             <div className="flex gap-2">
+                              <Veld label={t('matenLabelBreedte')}>
                               <input
                                 type="number"
                                 value={lineDraft?.breedte ?? ''}
@@ -729,8 +753,10 @@ export function BestellingModal({
                                   )
                                 }
                                 data-testid={`bestelling-modal-regel-breedte-${line.id}`}
-                                className="w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
+                                className={`w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white ${GEEN_SPINNER}`}
                               />
+                              </Veld>
+                              <Veld label={t('matenLabelHoogte')}>
                               <input
                                 type="number"
                                 value={lineDraft?.hoogte ?? ''}
@@ -740,10 +766,12 @@ export function BestellingModal({
                                   )
                                 }
                                 data-testid={`bestelling-modal-regel-hoogte-${line.id}`}
-                                className="w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
+                                className={`w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white ${GEEN_SPINNER}`}
                               />
+                              </Veld>
                             </div>
                           ) : (
+                            <Veld label={t('bestellingenModalLabelMaat')}>
                             <select
                               value={lineDraft?.maatId ?? ''}
                               onChange={(event) =>
@@ -760,25 +788,14 @@ export function BestellingModal({
                                 </option>
                               ))}
                             </select>
+                            </Veld>
                           )}
 
                           <div className="flex gap-2">
-                            <input
-                              type="number"
-                              placeholder={t('bestellingenModalLabelPrijs')}
-                              value={lineDraft?.prijs ?? ''}
-                              onChange={(event) =>
-                                setLineDraft((current) =>
-                                  current ? { ...current, prijs: event.target.value } : current
-                                )
-                              }
-                              data-testid={`bestelling-modal-regel-prijs-${line.id}`}
-                              className="w-24 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
-                            />
+                            <Veld label={t('bestellingenModalLabelAantal')}>
                             <input
                               type="number"
                               min={1}
-                              placeholder={t('bestellingenModalLabelAantal')}
                               value={lineDraft?.quantity ?? ''}
                               onChange={(event) =>
                                 setLineDraft((current) =>
@@ -786,8 +803,22 @@ export function BestellingModal({
                                 )
                               }
                               data-testid={`bestelling-modal-regel-aantal-${line.id}`}
-                              className="w-16 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
+                              className={`w-16 rounded-sm bg-black/40 px-2 py-1 text-xs text-white ${GEEN_SPINNER}`}
                             />
+                            </Veld>
+                            <Veld label={t('bestellingenModalLabelPrijs')}>
+                            <input
+                              type="number"
+                              value={lineDraft?.prijs ?? ''}
+                              onChange={(event) =>
+                                setLineDraft((current) =>
+                                  current ? { ...current, prijs: event.target.value } : current
+                                )
+                              }
+                              data-testid={`bestelling-modal-regel-prijs-${line.id}`}
+                              className={`w-24 rounded-sm bg-black/40 px-2 py-1 text-xs text-white ${GEEN_SPINNER}`}
+                            />
+                            </Veld>
                           </div>
 
                           <div className="flex gap-2">
@@ -820,35 +851,82 @@ export function BestellingModal({
               <div className="flex flex-col gap-2">
                 {conceptAdditions.map((addition) => {
                   const kunstwerk = (kunstwerken ?? []).find((k) => k.id === addition.kunstwerkId);
+                  const materiaal = (materialen ?? []).find((m) => m.id === addition.materiaalId);
+                  const maat = (maten ?? []).find((m) => m.id === addition.maatId);
+                  const maatWeergave = maat
+                    ? `${maat.breedte}×${maat.hoogte} cm`
+                    : addition.breedte != null && addition.hoogte != null
+                      ? `${addition.breedte}×${addition.hoogte} cm`
+                      : '';
                   return (
-                    <p key={addition.tempId} className="text-xs text-white/60">
-                      {kunstwerk?.omschrijvingNl ?? addition.kunstwerkId} × {addition.quantity} —{' '}
-                      {t('bestellingenRegelPrijsNaOpslaan')}
-                    </p>
+                    <div
+                      key={addition.tempId}
+                      data-testid={`bestelling-modal-nieuwe-regel-kaart-${addition.tempId}`}
+                      className="flex gap-3 rounded-md border border-white/10 bg-white/[0.02] p-3"
+                    >
+                      {kunstwerk ? (
+                        <ProductImage src={kunstwerk.foto} alt="" className="h-[72px] w-[72px] shrink-0 rounded-md" />
+                      ) : (
+                        <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-md bg-white/5 text-lg text-white/25">
+                          ?
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="line-clamp-2 font-semibold text-white/90">
+                          {kunstwerk ? kunstwerk.omschrijvingNl : t('bestellingenRegelOnbekend')}
+                        </p>
+                        <div className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-white/60">
+                          <span className="text-white/35">{t('bestellingenModalLabelCode')}</span>
+                          <span>{kunstwerk?.code ?? addition.kunstwerkId}</span>
+                          <span className="text-white/35">{t('bestellingenModalLabelMateriaal')}</span>
+                          <span>
+                            {materiaal
+                              ? `${materiaal.materiaaldikte}mm ${
+                                  materiaalsoortNaamById.get(materiaal.materiaalsoortId) ?? materiaal.materiaalsoortId
+                                } — ${materiaal.omschrijvingNl}`
+                              : addition.materiaalId}
+                          </span>
+                          <span className="text-white/35">{t('bestellingenModalLabelMaat')}</span>
+                          <span>{maatWeergave}</span>
+                        </div>
+                        <div className="mt-2 flex items-baseline justify-between border-t border-white/10 pt-1.5">
+                          <span className="text-white/45">
+                            {addition.quantity} × {t('bestellingenRegelPrijsNaOpslaan')}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setConceptAdditions((current) => current.filter((a) => a.tempId !== addition.tempId))
+                          }
+                          data-testid={`bestelling-modal-nieuwe-regel-verwijderen-${addition.tempId}`}
+                          className="mt-1.5 text-[0.65rem] uppercase tracking-wide text-white/40 underline underline-offset-2 hover:text-white/70"
+                        >
+                          {t('bestellingenRegelVerwijderen')}
+                        </button>
+                      </div>
+                    </div>
                   );
                 })}
                 {toonNieuweRegel ? (
                   <div className="flex flex-col gap-2 rounded-md border border-white/10 bg-white/[0.02] p-3">
-                    <select
-                      value={nieuweRegelDraft.kunstwerkId}
-                      onChange={(event) =>
-                        setNieuweRegelDraft((current) => ({
-                          ...current,
-                          kunstwerkId: event.target.value,
-                          materiaalId: '',
-                          maatId: '',
-                        }))
-                      }
-                      data-testid="bestelling-modal-nieuwe-regel-kunstwerk"
-                      className="rounded-sm bg-black/40 px-2 py-1.5 text-xs text-white"
-                    >
-                      <option value="">—</option>
-                      {(kunstwerken ?? []).map((k) => (
-                        <option key={k.id} value={k.id}>
-                          {k.omschrijvingNl}
-                        </option>
-                      ))}
-                    </select>
+                    <Veld label={t('bestellingenModalLabelCode')}>
+                      <Combobox
+                        options={(kunstwerken ?? []).map((k) => ({ value: k.id, label: k.code }))}
+                        value={nieuweRegelDraft.kunstwerkId || null}
+                        onChange={(value) =>
+                          setNieuweRegelDraft((current) => ({
+                            ...current,
+                            kunstwerkId: value ?? '',
+                            materiaalId: '',
+                            maatId: '',
+                          }))
+                        }
+                        placeholder={t('bestellingenRegelKunstwerkPlaceholder')}
+                        noResultsLabel={t('bestellingenRegelKunstwerkGeenResultaten')}
+                        testId="bestelling-modal-nieuwe-regel-kunstwerk"
+                      />
+                    </Veld>
                     {(() => {
                       const gekozenKunstwerk = (kunstwerken ?? []).find((k) => k.id === nieuweRegelDraft.kunstwerkId);
                       if (!gekozenKunstwerk) return null;
@@ -858,74 +936,82 @@ export function BestellingModal({
                       const beschikbareMaten = (maten ?? []).filter((m) => gekozenKunstwerk.maatIds.includes(m.id));
                       return (
                         <>
-                          <select
-                            value={nieuweRegelDraft.materiaalId}
-                            onChange={(event) =>
-                              setNieuweRegelDraft((current) => ({ ...current, materiaalId: event.target.value }))
-                            }
-                            data-testid="bestelling-modal-nieuwe-regel-materiaal"
-                            className="rounded-sm bg-black/40 px-2 py-1.5 text-xs text-white"
-                          >
-                            <option value="">—</option>
-                            {beschikbareMaterialen.map((m) => (
-                              <option key={m.id} value={m.id}>
-                                {m.materiaaldikte}mm {materiaalsoortNaamById.get(m.materiaalsoortId) ?? m.materiaalsoortId}
-                              </option>
-                            ))}
-                          </select>
-                          {gekozenKunstwerk.maatIds.length === 0 ? (
-                            <div className="flex gap-2">
-                              <input
-                                type="number"
-                                placeholder={t('bestellingenModalLabelMaat')}
-                                value={nieuweRegelDraft.breedte}
-                                onChange={(event) =>
-                                  setNieuweRegelDraft((current) => ({ ...current, breedte: event.target.value }))
-                                }
-                                data-testid="bestelling-modal-nieuwe-regel-breedte"
-                                className="w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
-                              />
-                              <input
-                                type="number"
-                                value={nieuweRegelDraft.hoogte}
-                                onChange={(event) =>
-                                  setNieuweRegelDraft((current) => ({ ...current, hoogte: event.target.value }))
-                                }
-                                data-testid="bestelling-modal-nieuwe-regel-hoogte"
-                                className="w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
-                              />
-                            </div>
-                          ) : (
+                          <Veld label={t('bestellingenModalLabelMateriaal')}>
                             <select
-                              value={nieuweRegelDraft.maatId}
+                              value={nieuweRegelDraft.materiaalId}
                               onChange={(event) =>
-                                setNieuweRegelDraft((current) => ({ ...current, maatId: event.target.value }))
+                                setNieuweRegelDraft((current) => ({ ...current, materiaalId: event.target.value }))
                               }
-                              data-testid="bestelling-modal-nieuwe-regel-maat"
+                              data-testid="bestelling-modal-nieuwe-regel-materiaal"
                               className="rounded-sm bg-black/40 px-2 py-1.5 text-xs text-white"
                             >
                               <option value="">—</option>
-                              {beschikbareMaten.map((m) => (
+                              {beschikbareMaterialen.map((m) => (
                                 <option key={m.id} value={m.id}>
-                                  {m.breedte}×{m.hoogte} cm
+                                  {m.materiaaldikte}mm {materiaalsoortNaamById.get(m.materiaalsoortId) ?? m.materiaalsoortId}
                                 </option>
                               ))}
                             </select>
+                          </Veld>
+                          {gekozenKunstwerk.maatIds.length === 0 ? (
+                            <div className="flex gap-2">
+                              <Veld label={t('matenLabelBreedte')}>
+                                <input
+                                  type="number"
+                                  value={nieuweRegelDraft.breedte}
+                                  onChange={(event) =>
+                                    setNieuweRegelDraft((current) => ({ ...current, breedte: event.target.value }))
+                                  }
+                                  data-testid="bestelling-modal-nieuwe-regel-breedte"
+                                  className={`w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white ${GEEN_SPINNER}`}
+                                />
+                              </Veld>
+                              <Veld label={t('matenLabelHoogte')}>
+                                <input
+                                  type="number"
+                                  value={nieuweRegelDraft.hoogte}
+                                  onChange={(event) =>
+                                    setNieuweRegelDraft((current) => ({ ...current, hoogte: event.target.value }))
+                                  }
+                                  data-testid="bestelling-modal-nieuwe-regel-hoogte"
+                                  className={`w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white ${GEEN_SPINNER}`}
+                                />
+                              </Veld>
+                            </div>
+                          ) : (
+                            <Veld label={t('bestellingenModalLabelMaat')}>
+                              <select
+                                value={nieuweRegelDraft.maatId}
+                                onChange={(event) =>
+                                  setNieuweRegelDraft((current) => ({ ...current, maatId: event.target.value }))
+                                }
+                                data-testid="bestelling-modal-nieuwe-regel-maat"
+                                className="rounded-sm bg-black/40 px-2 py-1.5 text-xs text-white"
+                              >
+                                <option value="">—</option>
+                                {beschikbareMaten.map((m) => (
+                                  <option key={m.id} value={m.id}>
+                                    {m.breedte}×{m.hoogte} cm
+                                  </option>
+                                ))}
+                              </select>
+                            </Veld>
                           )}
                         </>
                       );
                     })()}
-                    <input
-                      type="number"
-                      min={1}
-                      placeholder={t('bestellingenModalLabelAantal')}
-                      value={nieuweRegelDraft.quantity}
-                      onChange={(event) =>
-                        setNieuweRegelDraft((current) => ({ ...current, quantity: event.target.value }))
-                      }
-                      data-testid="bestelling-modal-nieuwe-regel-aantal"
-                      className="w-16 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
-                    />
+                    <Veld label={t('bestellingenModalLabelAantal')}>
+                      <input
+                        type="number"
+                        min={1}
+                        value={nieuweRegelDraft.quantity}
+                        onChange={(event) =>
+                          setNieuweRegelDraft((current) => ({ ...current, quantity: event.target.value }))
+                        }
+                        data-testid="bestelling-modal-nieuwe-regel-aantal"
+                        className={`w-16 rounded-sm bg-black/40 px-2 py-1 text-xs text-white ${GEEN_SPINNER}`}
+                      />
+                    </Veld>
                     <div className="flex gap-2">
                       <button
                         type="button"
