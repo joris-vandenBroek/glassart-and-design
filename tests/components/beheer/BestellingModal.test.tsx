@@ -137,6 +137,14 @@ describe('BestellingModal', () => {
     expect(screen.getByTestId('modal-header')).toHaveTextContent('GD-00101');
   });
 
+  it('links the modal title help icon to the bestelproces-bewerken chapter', () => {
+    renderModal(BESTELLING);
+    expect(screen.getByTestId('bestelling-modal-help')).toHaveAttribute(
+      'href',
+      '/nl/beheer/documentatie#bestelproces-bewerken'
+    );
+  });
+
   it('shows the zendingnummer in the subtitle when present', () => {
     renderModal({ ...BESTELLING, zendingnummer: 'ZD-00007' });
     expect(screen.getByTestId('modal-header')).toHaveTextContent('ZD-00007');
