@@ -64,7 +64,7 @@ async function maakBestelregelMetCode(code: string, email: string): Promise<void
     klantnr,
   } as never);
   createdKlantEmails.push(email);
-  const header = await insertRow<{ id: string }>('bestelheaders', {
+  const header = await insertRow<{ id: string; bestelnr: string }>('bestelheaders', {
     klantnr,
     // Een vast, herkenbaar testbestelnummer: de counters-rij `bestelnummer` mag nooit
     // gebruikt of gereset worden door een test. Vaste, korte letterlijke waarde zodat
@@ -75,7 +75,7 @@ async function maakBestelregelMetCode(code: string, email: string): Promise<void
   } as never);
   createdHeaderIds.push(header.id);
   await insertRow('bestellines', {
-    bestelheaderId: header.id,
+    bestelnr: header.bestelnr,
     code,
     maatId: null,
     materiaalId: null,

@@ -120,7 +120,7 @@ export const TABLE_COLUMNS: Record<string, readonly string[]> = {
   bestelheaders: ['id', 'klantnr', 'bestelnr', 'besteldatum', 'status', 'zendingnummer', 'afwijsreden'],
   bestellines: [
     'id',
-    'bestelheaderId',
+    'bestelnr',
     'code',
     'maatId',
     'materiaalId',
@@ -129,7 +129,7 @@ export const TABLE_COLUMNS: Record<string, readonly string[]> = {
     'breedte',
     'hoogte',
   ],
-  bestelstatusHistorie: ['id', 'bestelheaderId', 'status', 'tijdstip'],
+  bestelstatusHistorie: ['id', 'bestelnr', 'status', 'tijdstip'],
   activiteitenlog: ['id', 'type', 'actorId', 'actorEmail', 'actorNaam', 'omschrijving', 'timestamp'],
 };
 

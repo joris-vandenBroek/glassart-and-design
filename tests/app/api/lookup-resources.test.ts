@@ -95,13 +95,13 @@ async function maakBestellijnVoorMaat(maatId: string): Promise<{ headerId: strin
     status: 'Goedgekeurd',
     klantnr,
   } as never);
-  const header = await insertRow<{ id: string }>('bestelheaders', {
+  const header = await insertRow<{ id: string; bestelnr: string }>('bestelheaders', {
     klantnr,
     bestelnr: 'GD-TEST',
     status: 'Te beoordelen',
   } as never);
   await insertRow<{ id: string }>('bestellines', {
-    bestelheaderId: header.id,
+    bestelnr: header.bestelnr,
     code: 'test-lookup-resources-maat-guard',
     maatId,
     quantity: 1,

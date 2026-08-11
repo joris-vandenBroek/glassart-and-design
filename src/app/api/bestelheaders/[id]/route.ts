@@ -9,11 +9,11 @@ export const PATCH = withMedewerker<{ params: { id: string } }>(
   async (request, { params }) => {
     const data = await request.json();
     if ('status' in data) {
-      const current = await getRow<{ status: string }>('bestelheaders', params.id);
+      const current = await getRow<{ status: string; bestelnr: string }>('bestelheaders', params.id);
       if (current && current.status !== data.status) {
         await getPool().query(
-          'INSERT INTO bestelstatusHistorie (id, bestelheaderId, status) VALUES (?, ?, ?)',
-          [randomUUID(), params.id, data.status]
+          'INSERT INTO bestelstatusHistorie (id, bestelnr, status) VALUES (?, ?, ?)',
+          [randomUUID(), current.bestelnr, data.status]
         );
       }
     }

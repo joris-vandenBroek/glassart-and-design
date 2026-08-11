@@ -187,18 +187,18 @@ export const POST = withApiErrorHandling('POST /api/bestelheaders', async (reque
       'INSERT INTO bestelheaders (id, klantnr, bestelnr, status) VALUES (?, ?, ?, ?)',
       [headerId, klantnr, bestelnr, 'Te beoordelen']
     );
-    await connection.query('INSERT INTO bestelstatusHistorie (id, bestelheaderId, status) VALUES (?, ?, ?)', [
+    await connection.query('INSERT INTO bestelstatusHistorie (id, bestelnr, status) VALUES (?, ?, ?)', [
       randomUUID(),
-      headerId,
+      bestelnr,
       'Te beoordelen',
     ]);
 
     for (const line of resolvedLines) {
       await connection.query(
-        'INSERT INTO bestellines (id, bestelheaderId, code, maatId, materiaalId, prijs, quantity, breedte, hoogte) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO bestellines (id, bestelnr, code, maatId, materiaalId, prijs, quantity, breedte, hoogte) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [
           randomUUID(),
-          headerId,
+          bestelnr,
           line.code,
           line.maatId,
           line.materiaalId,
@@ -265,24 +265,24 @@ export const GET = withApiErrorHandling('GET /api/bestelheaders', async (request
   // Eén query voor alle regels in plaats van één per bestelling: de beheerkant
   // haalt hier élke bestelling op, en dat waren evenveel losse queries als er
   // bestellingen zijn.
-  const headerIds = headerRijen.map((header) => header.id);
-  const [lines] = await pool.query('SELECT * FROM bestellines WHERE bestelheaderId IN (?)', [
-    headerIds,
+  const bestelnrs = headerRijen.map((header) => header.bestelnr);
+  const [lines] = await pool.query('SELECT * FROM bestellines WHERE bestelnr IN (?)', [
+    bestelnrs,
   ]);
   const regelsPerHeader = new Map<unknown, Array<Record<string, unknown>>>();
   for (const regel of lines as Array<Record<string, unknown>>) {
-    const bestaand = regelsPerHeader.get(regel.bestelheaderId);
+    const bestaand = regelsPerHeader.get(regel.bestelnr);
     if (bestaand) {
       bestaand.push(regel);
     } else {
-      regelsPerHeader.set(regel.bestelheaderId, [regel]);
+      regelsPerHeader.set(regel.bestelnr, [regel]);
     }
   }
 
   return NextResponse.json(
     headerRijen.map((header) => {
       const { afwijsreden: _afwijsreden, ...safeHeader } = header;
-      return { ...(isMedewerker ? header : safeHeader), lines: regelsPerHeader.get(header.id) ?? [] };
+      return { ...(isMedewerker ? header : safeHeader), lines: regelsPerHeader.get(header.bestelnr) ?? [] };
     })
   );
 });

@@ -320,8 +320,8 @@ describe('Deel C2 -- kunstenaarsopslag + prijsgroep (prijsopbouw van een bestell
         expect(response.status).toBe(201);
         const body = await response.json();
         const [rows] = await getPool().query(
-          'SELECT maatId, prijs FROM bestellines WHERE bestelheaderId = ? ORDER BY maatId',
-          [body.id]
+          'SELECT maatId, prijs FROM bestellines WHERE bestelnr = ? ORDER BY maatId',
+          [body.bestelnr]
         );
         const prijzen = new Map(
           (rows as Array<{ maatId: string; prijs: string }>).map((r) => [r.maatId, Number(r.prijs)])
@@ -682,8 +682,8 @@ describe('Bestelling-levenscyclus -- plaatsen tot verstuurd naar drukker', () =>
 
       const [headerNaPlaatsing] = await getPool().query('SELECT status FROM bestelheaders WHERE id = ?', [header.id]);
       expect((headerNaPlaatsing as Array<{ status: string }>)[0].status).toBe('Te beoordelen');
-      const [lineRows] = await getPool().query('SELECT id, prijs FROM bestellines WHERE bestelheaderId = ?', [
-        header.id,
+      const [lineRows] = await getPool().query('SELECT id, prijs FROM bestellines WHERE bestelnr = ?', [
+        header.bestelnr,
       ]);
       const line = (lineRows as Array<{ id: string; prijs: string | null }>)[0];
       expect(line.prijs).toBeNull();
@@ -790,7 +790,7 @@ describe('Materiaalloos kunstwerk (prijs per m2) + prijsgroep', () => {
       );
       expect(response.status).toBe(201);
       const body = await response.json();
-      const [lineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE bestelheaderId = ?', [body.id]);
+      const [lineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE bestelnr = ?', [body.bestelnr]);
       // basisprijs = (120/100) * (60/100) * 100 = 72, x 0,75 (25% korting) = 54.
       const eindprijs = Number((lineRows as Array<{ prijs: string }>)[0].prijs);
       expect(eindprijs).toBe(54);
@@ -1260,8 +1260,8 @@ describe('Bestelling afronden -- van plaatsing tot "Afgerond" met bestelstatusHi
       expect((headerRows as Array<{ status: string }>)[0].status).toBe('Te factureren');
 
       const [historieRows] = await getPool().query(
-        'SELECT status FROM bestelstatusHistorie WHERE bestelheaderId = ? ORDER BY tijdstip ASC',
-        [header.id]
+        'SELECT status FROM bestelstatusHistorie WHERE bestelnr = ? ORDER BY tijdstip ASC',
+        [header.bestelnr]
       );
       expect((historieRows as Array<{ status: string }>).map((r) => r.status)).toContain('Te factureren');
     } finally {

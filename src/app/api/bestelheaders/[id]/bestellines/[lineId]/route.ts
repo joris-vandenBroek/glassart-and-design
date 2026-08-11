@@ -16,10 +16,16 @@ export const PATCH = withApiErrorHandling(
   if (columns.length === 0) {
     return NextResponse.json({ ok: true });
   }
-  const assignments = columns.map((column) => `\`${column}\` = ?`).join(', ');
+  const assignments = columns.map((column) => `bl.\`${column}\` = ?`).join(', ');
   const values = columns.map((column) => data[column]);
+  // params.id blijft de bestelheader-UUID (het pad verandert niet); bestellines zelf
+  // staat nu op bestelnr, dus de garantie "deze regel hoort bij déze header" komt via
+  // een join in plaats van een rechtstreekse WHERE op bestelheaderId.
   await getPool().query(
-    `UPDATE bestellines SET ${assignments} WHERE id = ? AND bestelheaderId = ?`,
+    `UPDATE bestellines bl
+     JOIN bestelheaders bh ON bh.bestelnr = bl.bestelnr
+     SET ${assignments}
+     WHERE bl.id = ? AND bh.id = ?`,
     [...values, params.lineId, params.id]
   );
   return NextResponse.json({ ok: true });

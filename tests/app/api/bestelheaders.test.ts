@@ -185,9 +185,31 @@ describe('bestelheaders routes', () => {
     const [headerRows] = await getPool().query('SELECT klantnr FROM bestelheaders WHERE id = ?', [body.id]);
     expect((headerRows as Array<{ klantnr: string }>)[0].klantnr).toBe(klantnr);
 
-    const [lineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE bestelheaderId = ?', [body.id]);
+    const [lineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE bestelnr = ?', [body.bestelnr]);
     // The client submitted 999999 -- the server ignores it and stores its own computed price.
     expect(Number((lineRows as Array<{ prijs: string }>)[0].prijs)).toBe(150);
+  });
+
+  it('legt bestellines en bestelstatusHistorie vast op bestelnr, niet op de header-UUID', async () => {
+    const { cookie } = await klant('bestelnr-fk@example.com');
+    const maatId = await maakMaat(41, 61);
+    const materiaalId = await maakMateriaal();
+    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 150);
+
+    const response = await createHeader(
+      postRequest({ lines: [{ kunstwerkId, maatId, materiaalId, prijs: 1, quantity: 1 }] }, cookie)
+    );
+    const body = await response.json();
+
+    const [lineRows] = await getPool().query('SELECT bestelnr FROM bestellines WHERE bestelnr = ?', [
+      body.bestelnr,
+    ]);
+    expect((lineRows as unknown[]).length).toBe(1);
+
+    const [historieRows] = await getPool().query('SELECT bestelnr FROM bestelstatusHistorie WHERE bestelnr = ?', [
+      body.bestelnr,
+    ]);
+    expect((historieRows as unknown[]).length).toBe(1);
   });
 
   it('adds a kunstenaar prijsopslag on top of the matrixprijs', async () => {
@@ -206,7 +228,7 @@ describe('bestelheaders routes', () => {
       postRequest({ lines: [{ kunstwerkId, maatId, materiaalId, prijs: 1, quantity: 1 }] }, cookie)
     );
     const body = await response.json();
-    const [lineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE bestelheaderId = ?', [body.id]);
+    const [lineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE bestelnr = ?', [body.bestelnr]);
     expect(Number((lineRows as Array<{ prijs: string }>)[0].prijs)).toBe(140);
   });
 
@@ -221,7 +243,7 @@ describe('bestelheaders routes', () => {
       postRequest({ lines: [{ kunstwerkId, maatId, materiaalId, prijs: 1, quantity: 1 }] }, cookie)
     );
     const body = await response.json();
-    const [lineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE bestelheaderId = ?', [body.id]);
+    const [lineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE bestelnr = ?', [body.bestelnr]);
     expect(Number((lineRows as Array<{ prijs: string }>)[0].prijs)).toBe(80);
   });
 
@@ -242,7 +264,7 @@ describe('bestelheaders routes', () => {
       postRequest({ lines: [{ kunstwerkId, maatId, materiaalId, prijs: 1, quantity: 1 }] }, cookie)
     );
     const body = await response.json();
-    const [lineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE bestelheaderId = ?', [body.id]);
+    const [lineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE bestelnr = ?', [body.bestelnr]);
     // matrix 100 + kunstenaar opslag 40 = 140, plus 10% prijsgroep opslag = 154
     expect(Number((lineRows as Array<{ prijs: string }>)[0].prijs)).toBe(154);
   });
@@ -300,7 +322,7 @@ describe('bestelheaders routes', () => {
     );
     expect(response.status).toBe(201);
     const body = await response.json();
-    const [lineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE bestelheaderId = ?', [body.id]);
+    const [lineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE bestelnr = ?', [body.bestelnr]);
     expect(Number((lineRows as Array<{ prijs: string }>)[0].prijs)).toBe(72);
   });
 
@@ -335,7 +357,7 @@ describe('bestelheaders routes', () => {
     );
     expect(response.status).toBe(201);
     const body = await response.json();
-    const [lineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE bestelheaderId = ?', [body.id]);
+    const [lineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE bestelnr = ?', [body.bestelnr]);
     expect((lineRows as Array<{ prijs: string | null }>)[0].prijs).toBeNull();
   });
 
@@ -429,7 +451,7 @@ describe('bestelheaders routes', () => {
       )
     );
     const header = await created.json();
-    const [lineRows] = await getPool().query('SELECT id FROM bestellines WHERE bestelheaderId = ?', [header.id]);
+    const [lineRows] = await getPool().query('SELECT id FROM bestellines WHERE bestelnr = ?', [header.bestelnr]);
     const lineId = (lineRows as Array<{ id: string }>)[0].id;
     const staffCookie = await medewerkerCookie();
 
@@ -462,8 +484,8 @@ describe('bestelheaders routes', () => {
     const header = await created.json();
 
     const [rows] = await getPool().query(
-      'SELECT status FROM bestelstatusHistorie WHERE bestelheaderId = ? ORDER BY tijdstip ASC',
-      [header.id]
+      'SELECT status FROM bestelstatusHistorie WHERE bestelnr = ? ORDER BY tijdstip ASC',
+      [header.bestelnr]
     );
     expect((rows as Array<{ status: string }>).map((r) => r.status)).toEqual(['Te beoordelen']);
   });
@@ -486,8 +508,8 @@ describe('bestelheaders routes', () => {
     }
 
     const [rows] = await getPool().query(
-      'SELECT status FROM bestelstatusHistorie WHERE bestelheaderId = ? ORDER BY tijdstip ASC',
-      [header.id]
+      'SELECT status FROM bestelstatusHistorie WHERE bestelnr = ? ORDER BY tijdstip ASC',
+      [header.bestelnr]
     );
     expect((rows as Array<{ status: string }>).map((r) => r.status)).toEqual([
       'Te beoordelen',
@@ -517,8 +539,8 @@ describe('bestelheaders routes', () => {
     await patchStatus('Te versturen naar drukker'); // same status again -- must not add a row
 
     const [rows] = await getPool().query(
-      'SELECT status FROM bestelstatusHistorie WHERE bestelheaderId = ? ORDER BY tijdstip ASC',
-      [header.id]
+      'SELECT status FROM bestelstatusHistorie WHERE bestelnr = ? ORDER BY tijdstip ASC',
+      [header.bestelnr]
     );
     expect((rows as Array<{ status: string }>).map((r) => r.status)).toEqual([
       'Te beoordelen',
@@ -549,8 +571,8 @@ describe('bestelheaders routes', () => {
     await patchStatus('Betaald en afgerond'); // Afgerond again
 
     const [rows] = await getPool().query(
-      'SELECT status FROM bestelstatusHistorie WHERE bestelheaderId = ? ORDER BY tijdstip ASC',
-      [header.id]
+      'SELECT status FROM bestelstatusHistorie WHERE bestelnr = ? ORDER BY tijdstip ASC',
+      [header.bestelnr]
     );
     expect((rows as Array<{ status: string }>).map((r) => r.status)).toEqual([
       'Te beoordelen',
@@ -617,7 +639,7 @@ describe('bestelheaders routes', () => {
       )
     );
     const header = await created.json();
-    const [lineRows] = await getPool().query('SELECT id FROM bestellines WHERE bestelheaderId = ?', [header.id]);
+    const [lineRows] = await getPool().query('SELECT id FROM bestellines WHERE bestelnr = ?', [header.bestelnr]);
     const lineId = (lineRows as Array<{ id: string }>)[0].id;
 
     const headerResponse = await patchHeader(
@@ -848,9 +870,9 @@ describe('bestelheaders routes', () => {
       postRequest({ lines: [{ kunstwerkId, maatId, materiaalId, prijs: 100, quantity: 1 }] }, cookie)
     );
     expect(response.status).toBe(201);
-    const { id: headerId } = await response.json();
+    const { id: headerId, bestelnr } = await response.json();
 
-    const [lineRows] = await getPool().query('SELECT code FROM bestellines WHERE bestelheaderId = ?', [headerId]);
+    const [lineRows] = await getPool().query('SELECT code FROM bestellines WHERE bestelnr = ?', [bestelnr]);
     expect((lineRows as Array<{ code: string }>)[0].code).toBe(verwachteCode);
   });
 

@@ -234,7 +234,7 @@ CREATE TABLE bestelheaders (
 
 CREATE TABLE bestellines (
   id CHAR(36) PRIMARY KEY,
-  bestelheaderId CHAR(36) NOT NULL,
+  bestelnr VARCHAR(20) NOT NULL,
   code VARCHAR(255) NOT NULL,
   maatId CHAR(36),
   materiaalId CHAR(36),
@@ -242,16 +242,16 @@ CREATE TABLE bestellines (
   quantity INT NOT NULL DEFAULT 1,
   breedte INT,
   hoogte INT,
-  FOREIGN KEY (bestelheaderId) REFERENCES bestelheaders(id) ON DELETE CASCADE,
+  FOREIGN KEY (bestelnr) REFERENCES bestelheaders(bestelnr) ON DELETE CASCADE,
   INDEX idx_bestellines_code (code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE bestelstatusHistorie (
   id CHAR(36) PRIMARY KEY,
-  bestelheaderId CHAR(36) NOT NULL,
+  bestelnr VARCHAR(20) NOT NULL,
   status VARCHAR(50) NOT NULL,
   tijdstip TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-  FOREIGN KEY (bestelheaderId) REFERENCES bestelheaders(id) ON DELETE CASCADE
+  FOREIGN KEY (bestelnr) REFERENCES bestelheaders(bestelnr) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE activiteitenlog (
