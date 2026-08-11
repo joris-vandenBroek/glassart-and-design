@@ -80,6 +80,15 @@ describe('DrukkerModal drukkernr', () => {
     renderModal({ mode: 'add' });
     expect(screen.queryByTestId('drukker-modal-drukkernr')).toBeNull();
   });
+
+  it('links the modal title help icon to the drukkers-standaard chapter', () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal({ mode: 'add' });
+    expect(screen.getByTestId('drukker-modal-help')).toHaveAttribute(
+      'href',
+      '/nl/beheer/documentatie#drukkers-standaard'
+    );
+  });
 });
 
 describe('DrukkerModal standaard', () => {
