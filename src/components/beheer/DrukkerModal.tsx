@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Modal } from '@/components/Modal';
+import { HelpLink } from '@/components/HelpLink';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit } from '@/lib/logActiviteit';
@@ -164,7 +165,12 @@ export function DrukkerModal({
       isOpen={state !== null}
       onClose={onClose}
       closeLabel={t('modalClose')}
-      title={t('drukkersModalTitel')}
+      title={
+        <span className="flex w-full items-center justify-between gap-2 pr-2">
+          {t('drukkersModalTitel')}
+          <HelpLink anchor="drukkers-standaard" label="Open het hoofdstuk over drukkers" testId="drukker-modal-help" />
+        </span>
+      }
       subtitle={
         state?.mode === 'edit' ? (
           <span data-testid="drukker-modal-drukkernr">{state.drukker.drukkernr}</span>

@@ -590,12 +590,13 @@ describe('KlantModal', () => {
     await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, kunstenaarnr: null }));
   });
 
-  it('shows a help popover with an explanation of the screen', () => {
+  it('links to the goedkeuren chapter of the gebruikershandleiding', () => {
     renderModal(KLANT);
-    expect(screen.queryByTestId('klant-modal-help-popover')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByTestId('klant-modal-help'));
-    expect(screen.getByTestId('klant-modal-help-popover')).toHaveTextContent('prijsgroep');
+    expect(screen.getByTestId('klant-modal-help')).toHaveAttribute(
+      'href',
+      '/nl/beheer/documentatie#klant-registratie-goedkeuren'
+    );
+    expect(screen.getByTestId('klant-modal-help')).toHaveAttribute('target', '_blank');
   });
 
   it('shows the resolved land name read-only, and a Combobox in edit mode', () => {

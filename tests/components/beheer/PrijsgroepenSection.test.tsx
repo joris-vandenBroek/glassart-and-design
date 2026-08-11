@@ -188,11 +188,13 @@ describe('PrijsgroepenSection', () => {
     expect(screen.getByTestId('prijsgroep-modal-verplicht-legende')).toHaveTextContent('* verplicht veld');
   });
 
-  it('shows a help popover explaining that the percentage is applied automatically', () => {
+  it('links to the prijsgroepen chapter of the gebruikershandleiding', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('prijsgroepen-add'));
 
-    fireEvent.click(screen.getByTestId('prijsgroep-modal-help'));
-    expect(screen.getByTestId('prijsgroep-modal-help-popover')).toHaveTextContent('automatisch toegepast');
+    expect(screen.getByTestId('prijsgroep-modal-help')).toHaveAttribute(
+      'href',
+      '/nl/beheer/documentatie#stamgegevens-prijsgroepen'
+    );
   });
 });

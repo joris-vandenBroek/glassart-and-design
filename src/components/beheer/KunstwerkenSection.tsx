@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
-import { HelpHint } from '@/components/HelpHint';
+import { HelpLink } from '@/components/HelpLink';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { ModalTabs } from '@/components/ModalTabs';
 import { ProductModal } from '@/components/ProductModal';
@@ -664,9 +664,9 @@ export function KunstwerkenSection({
         onClose={closeModal}
         closeLabel={t('modalClose')}
         title={
-          <span className="inline-flex items-center gap-2">
+          <span className="flex w-full items-center justify-between gap-2 pr-2">
             {t('kunstwerkenModalTitel')}
-            <HelpHint text={t('kunstwerkenHelp')} testId="kunstwerk-modal-help" />
+            <HelpLink anchor="kunstwerken-code" label="Open het hoofdstuk over kunstwerken" testId="kunstwerk-modal-help" />
           </span>
         }
         wide

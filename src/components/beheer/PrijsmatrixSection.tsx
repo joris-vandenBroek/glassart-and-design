@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { HelpHint } from '@/components/HelpHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit } from '@/lib/logActiviteit';
 import type { Maat, Materiaal, Materiaalsoort } from './materiaalTypes';
@@ -157,10 +156,7 @@ export function PrijsmatrixSection({
 
   return (
     <div data-testid="prijsmatrix-section">
-      <p className="mb-3 flex items-center gap-2 text-xs uppercase tracking-wide text-white/60">
-        {t('prijsmatrixTitle')}
-        <HelpHint text={t('prijsmatrixHelp')} testId="prijsmatrix-help" />
-      </p>
+      <p className="mb-3 text-xs uppercase tracking-wide text-white/60">{t('prijsmatrixTitle')}</p>
       <table className="border-collapse text-sm text-white/80">
         <thead>
           <tr>

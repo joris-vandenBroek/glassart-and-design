@@ -5,6 +5,7 @@ import { AppVersionLabel } from '@/components/AppVersionLabel';
 import { pageAvailability } from '@/config/pageAvailability';
 import { UnderConstruction } from '@/components/UnderConstruction';
 import { Link } from '@/i18n/navigation';
+import { HelpLink } from '@/components/HelpLink';
 
 export function generateStaticParams() {
   return [{ locale: 'nl' }];
@@ -29,14 +30,12 @@ export default async function BeheerPage({
       <GlassPanel className="relative mx-auto mb-6 !max-w-none !py-5 text-center">
         <h1 className="text-2xl font-light text-white sm:text-3xl">{t('title')}</h1>
         <AppVersionLabel />
-        <Link
-          href="/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-white/60 hover:text-white sm:right-6"
-        >
-          {t('naarWebsiteLink')}
-        </Link>
+        <div className="absolute right-4 top-1/2 flex -translate-y-1/2 items-center gap-4 sm:right-6">
+          <HelpLink label="Open de gebruikershandleiding" testId="beheer-help" />
+          <Link href="/" target="_blank" rel="noopener noreferrer" className="text-sm text-white/60 hover:text-white">
+            {t('naarWebsiteLink')}
+          </Link>
+        </div>
       </GlassPanel>
 
       <AdminDashboard />

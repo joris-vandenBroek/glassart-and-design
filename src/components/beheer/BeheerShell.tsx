@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { GlassPanel } from '@/components/GlassPanel';
+import { HelpLink } from '@/components/HelpLink';
 import { BeheerNav, type BeheerSection } from './BeheerNav';
 import { KlantenSection, type Klant } from './KlantenSection';
 import { BestellingenSection, type Bestelling, type BestellingLine } from './BestellingenSection';
@@ -41,6 +42,25 @@ interface PrijsmatrixRegel {
   materiaalId: string;
   prijs: number | null;
 }
+
+const SECTION_ANCHORS: Record<BeheerSection, string> = {
+  klanten: 'klant-registratie',
+  bestellingen: 'bestelproces',
+  materiaalsoorten: 'stamgegevens-materiaalsoorten',
+  materialen: 'stamgegevens-materialen',
+  maten: 'stamgegevens-maten',
+  segmenten: 'stamgegevens-segmenten',
+  stijlen: 'stamgegevens-stijlen',
+  onderwerpen: 'stamgegevens-onderwerpen',
+  kunstwerken: 'kunstwerken',
+  kunstenaars: 'kunstenaars',
+  prijsgroepen: 'stamgegevens-prijsgroepen',
+  prijsmatrix: 'prijsmatrix',
+  drukkers: 'drukkers',
+  activiteit: 'stamgegevens-activiteit',
+  glassartDesign: 'glassart-design',
+  instellingen: 'instellingen',
+};
 
 export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   const t = useTranslations('beheer');
@@ -290,6 +310,12 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
         />
       </GlassPanel>
       <GlassPanel className="w-full !max-w-none">
+        <HelpLink
+          anchor={SECTION_ANCHORS[activeSection]}
+          label="Open het hoofdstuk over dit onderdeel in de gebruikershandleiding"
+          testId="beheer-section-help"
+          className="absolute right-4 top-4 sm:right-6 sm:top-6"
+        />
         {activeSection === 'klanten' ? (
           <KlantenSection
             klanten={klanten}

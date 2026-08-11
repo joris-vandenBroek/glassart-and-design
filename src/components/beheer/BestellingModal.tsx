@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { Modal } from '@/components/Modal';
+import { HelpLink } from '@/components/HelpLink';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit } from '@/lib/logActiviteit';
 import { useAfwijzenBevestiging, AfwijzenBevestigingTekst, AfwijzenBevestigingActies } from './afwijzenBevestiging';
@@ -497,7 +498,16 @@ export function BestellingModal({
       isOpen={bestelling !== null}
       onClose={onClose}
       closeLabel={t('modalClose')}
-      title={t('bestellingenModalTitel')}
+      title={
+        <span className="flex w-full items-center justify-between gap-2 pr-2">
+          {t('bestellingenModalTitel')}
+          <HelpLink
+            anchor="bestelproces-bewerken"
+            label="Open het hoofdstuk over een bestelling bewerken"
+            testId="bestelling-modal-help"
+          />
+        </span>
+      }
       subtitle={
         bestelling ? (
           <div className="flex items-start justify-between gap-3">
