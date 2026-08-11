@@ -67,7 +67,7 @@ const TOC: TocItem[] = [
 
 export function DocumentatieSidebar() {
   return (
-    <nav aria-label="Inhoudsopgave" data-testid="documentatie-sidebar" className="sticky top-8 self-start">
+    <nav aria-label="Inhoudsopgave" data-testid="documentatie-sidebar" className="self-start lg:sticky lg:top-8">
       <ul className="flex flex-col gap-3 font-body text-sm">
         {TOC.map((item) => (
           <li key={item.href}>

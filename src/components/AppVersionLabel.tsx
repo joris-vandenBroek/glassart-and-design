@@ -8,10 +8,7 @@ export function AppVersionLabel() {
   }
 
   return (
-    <span
-      data-testid="app-version-label"
-      className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-white/40 sm:left-6"
-    >
+    <span data-testid="app-version-label" className="text-xs text-white/40">
       {version}
     </span>
   );
