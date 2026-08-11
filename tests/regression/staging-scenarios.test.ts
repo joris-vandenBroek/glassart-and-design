@@ -28,6 +28,7 @@ import { describe, expect, it, vi, afterEach } from 'vitest';
 import { randomUUID } from 'crypto';
 import { getPool } from '@/lib/server/db';
 import { insertRow } from '@/lib/server/crud';
+import { veiligOpruimen } from '../helpers/veiligOpruimen';
 import { hashPassword } from '@/lib/server/password';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 
@@ -115,14 +116,16 @@ async function maakKlant(emailPrefix: string, extra: Record<string, unknown> = {
 async function opruimenKlanten(emails: string[]) {
   if (emails.length === 0) return;
   const pool = getPool();
-  await pool.query(
-    "DELETE FROM sessions WHERE userType = 'klant' AND userId IN (SELECT id FROM klanten WHERE email IN (?))",
-    [emails]
+  await veiligOpruimen('sessions van testklanten', () =>
+    pool.query(
+      "DELETE FROM sessions WHERE userType = 'klant' AND userId IN (SELECT id FROM klanten WHERE email IN (?))",
+      [emails]
+    )
   );
-  await pool.query('DELETE FROM bestelheaders WHERE klantId IN (SELECT id FROM klanten WHERE email IN (?))', [
-    emails,
-  ]);
-  await pool.query('DELETE FROM klanten WHERE email IN (?)', [emails]);
+  await veiligOpruimen('bestelheaders van testklanten', () =>
+    pool.query('DELETE FROM bestelheaders WHERE klantId IN (SELECT id FROM klanten WHERE email IN (?))', [emails])
+  );
+  await veiligOpruimen('testklanten', () => pool.query('DELETE FROM klanten WHERE email IN (?)', [emails]));
 }
 
 async function maakMaatMateriaal(label: string) {
@@ -140,9 +143,15 @@ async function maakMaatMateriaal(label: string) {
     materiaalId: materiaal.id,
     async opruimen() {
       const pool = getPool();
-      await pool.query('DELETE FROM maten WHERE id = ?', [maat.id]); // cascades prijsmatrix
-      await pool.query('DELETE FROM materialen WHERE id = ?', [materiaal.id]); // cascades prijsmatrix
-      await pool.query('DELETE FROM materiaalsoorten WHERE id = ?', [soort.id]);
+      // cascades prijsmatrix
+      await veiligOpruimen(`maat ${label}`, () => pool.query('DELETE FROM maten WHERE id = ?', [maat.id]));
+      // cascades prijsmatrix
+      await veiligOpruimen(`materiaal ${label}`, () =>
+        pool.query('DELETE FROM materialen WHERE id = ?', [materiaal.id])
+      );
+      await veiligOpruimen(`materiaalsoort ${label}`, () =>
+        pool.query('DELETE FROM materiaalsoorten WHERE id = ?', [soort.id])
+      );
     },
   };
 }
@@ -241,8 +250,14 @@ describe('Deel C1 -- klant-kunstenaar exclusiviteit (echte workflow)', () => {
     } finally {
       await opruimenKlanten(klantEmails);
       const pool = getPool();
-      if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
-      if (kunstenaarId) await pool.query('DELETE FROM kunstenaars WHERE id = ?', [kunstenaarId]);
+      if (kunstwerkId) {
+        const id = kunstwerkId;
+        await veiligOpruimen('kunstwerk', () => pool.query('DELETE FROM kunstwerken WHERE id = ?', [id]));
+      }
+      if (kunstenaarId) {
+        const id = kunstenaarId;
+        await veiligOpruimen('kunstenaar', () => pool.query('DELETE FROM kunstenaars WHERE id = ?', [id]));
+      }
       if (fixture) await fixture.opruimen();
       stap('Opgeruimd: klanten, kunstwerk, kunstenaar, maat/materiaal.');
     }
@@ -361,10 +376,21 @@ describe('Deel C2 -- kunstenaarsopslag + prijsgroep (prijsopbouw van een bestell
     } finally {
       await opruimenKlanten(klantEmails);
       const pool = getPool();
-      if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
-      if (kunstenaarId) await pool.query('DELETE FROM kunstenaars WHERE id = ?', [kunstenaarId]); // cascades kunstenaarAfspraken
+      if (kunstwerkId) {
+        const id = kunstwerkId;
+        await veiligOpruimen('kunstwerk', () => pool.query('DELETE FROM kunstwerken WHERE id = ?', [id]));
+      }
+      if (kunstenaarId) {
+        const id = kunstenaarId;
+        // cascades kunstenaarAfspraken
+        await veiligOpruimen('kunstenaar', () => pool.query('DELETE FROM kunstenaars WHERE id = ?', [id]));
+      }
       for (const fixture of fixtures) await fixture.opruimen();
-      if (prijsgroepIds.length > 0) await pool.query('DELETE FROM prijsgroepen WHERE id IN (?)', [prijsgroepIds]);
+      if (prijsgroepIds.length > 0) {
+        await veiligOpruimen('prijsgroepen', () =>
+          pool.query('DELETE FROM prijsgroepen WHERE id IN (?)', [prijsgroepIds])
+        );
+      }
       stap('Opgeruimd: klant, kunstwerk, kunstenaar, 2x maat/materiaal, 2x prijsgroep.');
     }
   });
@@ -499,15 +525,20 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
     } finally {
       await opruimenKlanten(klantEmails);
       const pool = getPool();
-      if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
+      if (kunstwerkId) {
+        const id = kunstwerkId;
+        await veiligOpruimen('kunstwerk', () => pool.query('DELETE FROM kunstwerken WHERE id = ?', [id]));
+      }
       if (fixture) await fixture.opruimen();
       if (drukkerIds.length > 0) {
         // drukkerZendingen cascadeert niet meer mee met een verwijderde drukker; eerst die weg.
-        await pool.query(
-          'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
-          [drukkerIds]
+        await veiligOpruimen('drukkerZendingen', () =>
+          pool.query(
+            'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
+            [drukkerIds]
+          )
         );
-        await pool.query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]);
+        await veiligOpruimen('drukkers', () => pool.query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]));
       }
     }
   });
@@ -566,7 +597,11 @@ describe('Klant-levenscyclus -- registreren tot inloggen na goedkeuring', () => 
       stap(`Inloggen met fout wachtwoord blijft ${foutWachtwoord.status} na goedkeuring`);
     } finally {
       await opruimenKlanten([email]);
-      if (prijsgroepIds.length > 0) await getPool().query('DELETE FROM prijsgroepen WHERE id IN (?)', [prijsgroepIds]);
+      if (prijsgroepIds.length > 0) {
+        await veiligOpruimen('prijsgroepen', () =>
+          getPool().query('DELETE FROM prijsgroepen WHERE id IN (?)', [prijsgroepIds])
+        );
+      }
       stap('Opgeruimd: klant, prijsgroep.');
     }
   });
@@ -621,7 +656,11 @@ describe('Klant-levenscyclus -- registreren tot inloggen na goedkeuring', () => 
       expect(row.land).toBe(landZonderTarief);
     } finally {
       await opruimenKlanten([email]);
-      if (prijsgroepIds.length > 0) await getPool().query('DELETE FROM prijsgroepen WHERE id IN (?)', [prijsgroepIds]);
+      if (prijsgroepIds.length > 0) {
+        await veiligOpruimen('prijsgroepen', () =>
+          getPool().query('DELETE FROM prijsgroepen WHERE id IN (?)', [prijsgroepIds])
+        );
+      }
       stap('Opgeruimd: klant, prijsgroep.');
     }
   });
@@ -732,15 +771,20 @@ describe('Bestelling-levenscyclus -- plaatsen tot verstuurd naar drukker', () =>
     } finally {
       await opruimenKlanten(klantEmails);
       const pool = getPool();
-      if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
+      if (kunstwerkId) {
+        const id = kunstwerkId;
+        await veiligOpruimen('kunstwerk', () => pool.query('DELETE FROM kunstwerken WHERE id = ?', [id]));
+      }
       if (fixture) await fixture.opruimen();
       if (drukkerIds.length > 0) {
         // drukkerZendingen cascadeert niet meer mee met een verwijderde drukker; eerst die weg.
-        await pool.query(
-          'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
-          [drukkerIds]
+        await veiligOpruimen('drukkerZendingen', () =>
+          pool.query(
+            'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
+            [drukkerIds]
+          )
         );
-        await pool.query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]);
+        await veiligOpruimen('drukkers', () => pool.query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]));
       }
       stap('Opgeruimd: klant, kunstwerk, maat/materiaal, drukker.');
     }
@@ -793,8 +837,15 @@ describe('Materiaalloos kunstwerk (prijs per m2) + prijsgroep', () => {
     } finally {
       await opruimenKlanten(klantEmails);
       const pool = getPool();
-      if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
-      if (prijsgroepIds.length > 0) await getPool().query('DELETE FROM prijsgroepen WHERE id IN (?)', [prijsgroepIds]);
+      if (kunstwerkId) {
+        const id = kunstwerkId;
+        await veiligOpruimen('kunstwerk', () => pool.query('DELETE FROM kunstwerken WHERE id = ?', [id]));
+      }
+      if (prijsgroepIds.length > 0) {
+        await veiligOpruimen('prijsgroepen', () =>
+          pool.query('DELETE FROM prijsgroepen WHERE id IN (?)', [prijsgroepIds])
+        );
+      }
       stap('Opgeruimd: klant, kunstwerk, prijsgroep.');
     }
   });
@@ -842,10 +893,15 @@ describe('Account verwijderen (klant, zelfbediening)', () => {
       // sessions has no FK to klanten, so the row from the successful login survives the
       // klant delete above -- clean it up by the id captured before the delete, not via a
       // klanten-lookup (which would find nothing once the klant row is already gone).
-      if (klantId) await pool.query("DELETE FROM sessions WHERE userType = 'klant' AND userId = ?", [klantId]);
+      if (klantId) {
+        const id = klantId;
+        await veiligOpruimen('sessie', () =>
+          pool.query("DELETE FROM sessions WHERE userType = 'klant' AND userId = ?", [id])
+        );
+      }
       // The klant is already gone if the test succeeded; this only catches the case where
       // an assertion failed before the DELETE step ran.
-      await pool.query('DELETE FROM klanten WHERE email = ?', [email]);
+      await veiligOpruimen('klant', () => pool.query('DELETE FROM klanten WHERE email = ?', [email]));
       stap('Opgeruimd: sessie, klant (indien nog aanwezig).');
     }
   });
@@ -931,10 +987,22 @@ describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
       stap('Bevestigd: de koppeling staat ook correct op het kunstwerk zelf.');
     } finally {
       const pool = getPool();
-      if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
-      if (segmentId) await pool.query('DELETE FROM segmenten WHERE id = ?', [segmentId]);
-      if (stijlId) await pool.query('DELETE FROM stijlen WHERE id = ?', [stijlId]);
-      if (onderwerpId) await pool.query('DELETE FROM onderwerpen WHERE id = ?', [onderwerpId]);
+      if (kunstwerkId) {
+        const id = kunstwerkId;
+        await veiligOpruimen('kunstwerk', () => pool.query('DELETE FROM kunstwerken WHERE id = ?', [id]));
+      }
+      if (segmentId) {
+        const id = segmentId;
+        await veiligOpruimen('segment', () => pool.query('DELETE FROM segmenten WHERE id = ?', [id]));
+      }
+      if (stijlId) {
+        const id = stijlId;
+        await veiligOpruimen('stijl', () => pool.query('DELETE FROM stijlen WHERE id = ?', [id]));
+      }
+      if (onderwerpId) {
+        const id = onderwerpId;
+        await veiligOpruimen('onderwerp', () => pool.query('DELETE FROM onderwerpen WHERE id = ?', [id]));
+      }
       stap('Opgeruimd: kunstwerk, segment, stijl, onderwerp.');
     }
   });
@@ -995,8 +1063,14 @@ describe('Klant van een kunstenaar kan diens werk gewoon bestellen zonder exclus
     } finally {
       await opruimenKlanten(klantEmails);
       const pool = getPool();
-      if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
-      if (kunstenaarId) await pool.query('DELETE FROM kunstenaars WHERE id = ?', [kunstenaarId]);
+      if (kunstwerkId) {
+        const id = kunstwerkId;
+        await veiligOpruimen('kunstwerk', () => pool.query('DELETE FROM kunstwerken WHERE id = ?', [id]));
+      }
+      if (kunstenaarId) {
+        const id = kunstenaarId;
+        await veiligOpruimen('kunstenaar', () => pool.query('DELETE FROM kunstenaars WHERE id = ?', [id]));
+      }
       if (fixture) await fixture.opruimen();
       stap('Opgeruimd: klanten, kunstwerk, kunstenaar, maat/materiaal.');
     }
@@ -1061,8 +1135,14 @@ describe('Klant met alleenrecht voor één kunstenaar', () => {
     } finally {
       await opruimenKlanten(klantEmails);
       const pool = getPool();
-      if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
-      if (kunstenaarId) await pool.query('DELETE FROM kunstenaars WHERE id = ?', [kunstenaarId]);
+      if (kunstwerkId) {
+        const id = kunstwerkId;
+        await veiligOpruimen('kunstwerk', () => pool.query('DELETE FROM kunstwerken WHERE id = ?', [id]));
+      }
+      if (kunstenaarId) {
+        const id = kunstenaarId;
+        await veiligOpruimen('kunstenaar', () => pool.query('DELETE FROM kunstenaars WHERE id = ?', [id]));
+      }
       if (fixture) await fixture.opruimen();
       stap('Opgeruimd: klanten, kunstwerk, kunstenaar, maat/materiaal.');
     }
@@ -1122,9 +1202,10 @@ describe('Wachtwoord resetten (klant) -- aanvragen tot inloggen met het nieuwe w
       await getPool().query('DELETE FROM passwordResetTokens WHERE token = ?', [verlopenToken]);
     } finally {
       const pool = getPool();
-      await pool.query(
-        "DELETE FROM passwordResetTokens WHERE userId IN (SELECT id FROM klanten WHERE email = ?)",
-        [email]
+      await veiligOpruimen('reset-tokens', () =>
+        pool.query("DELETE FROM passwordResetTokens WHERE userId IN (SELECT id FROM klanten WHERE email = ?)", [
+          email,
+        ])
       );
       await opruimenKlanten([email]);
       stap('Opgeruimd: reset-tokens, klant.');
@@ -1171,9 +1252,14 @@ describe('Wachtwoord resetten (medewerker) -- zelfde flow via de staff-inlogrout
     } finally {
       const pool = getPool();
       if (medewerkerId) {
-        await pool.query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = ?", [medewerkerId]);
-        await pool.query('DELETE FROM passwordResetTokens WHERE userId = ?', [medewerkerId]);
-        await pool.query('DELETE FROM medewerkers WHERE id = ?', [medewerkerId]);
+        const id = medewerkerId;
+        await veiligOpruimen('medewerker-sessie', () =>
+          pool.query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = ?", [id])
+        );
+        await veiligOpruimen('reset-token', () =>
+          pool.query('DELETE FROM passwordResetTokens WHERE userId = ?', [id])
+        );
+        await veiligOpruimen('medewerker', () => pool.query('DELETE FROM medewerkers WHERE id = ?', [id]));
       }
       stap('Opgeruimd: medewerker-sessie, reset-token, medewerker.');
     }
@@ -1265,11 +1351,13 @@ describe('Bestelling afronden -- van plaatsing tot "Afgerond" met bestelstatusHi
       await opruimenKlanten(klantEmails);
       if (drukkerIds.length > 0) {
         // drukkerZendingen cascadeert niet meer mee met een verwijderde drukker; eerst die weg.
-        await getPool().query(
-          'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
-          [drukkerIds]
+        await veiligOpruimen('drukkerZendingen', () =>
+          getPool().query(
+            'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
+            [drukkerIds]
+          )
         );
-        await getPool().query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]);
+        await veiligOpruimen('drukkers', () => getPool().query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]));
       }
     }
   });

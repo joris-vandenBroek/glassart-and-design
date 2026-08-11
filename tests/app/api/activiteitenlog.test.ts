@@ -2,6 +2,7 @@ import { describe, expect, it, afterEach } from 'vitest';
 import { getPool } from '@/lib/server/db';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { POST, GET } from '@/app/api/activiteitenlog/route';
+import { veiligOpruimen } from '../../helpers/veiligOpruimen';
 
 async function medewerkerCookie(): Promise<string> {
   const sessionId = await createSession('medewerker', 'staff-1');
@@ -11,7 +12,9 @@ async function medewerkerCookie(): Promise<string> {
 // medewerkerCookie() uses a fixed fake userId (no real medewerker row exists for it), so
 // every call leaves an orphaned `sessions` row nothing else in this file would clean up.
 afterEach(async () => {
-  await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
+  await veiligOpruimen('sessions (medewerker staff-1)', () =>
+    getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'")
+  );
 });
 
 // This route's GET has no per-test filter (it lists the whole table, newest 500),

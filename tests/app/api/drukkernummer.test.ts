@@ -4,18 +4,25 @@ import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { POST as createDrukker } from '@/app/api/drukkers/route';
 import { PATCH as patchDrukker } from '@/app/api/drukkers/[id]/route';
 import { POST as createZending } from '@/app/api/drukkers/[id]/zendingen/route';
+import { veiligOpruimen } from '../../helpers/veiligOpruimen';
 
 const createdDrukkerIds: string[] = [];
 
 afterEach(async () => {
-  await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
+  await veiligOpruimen('sessions (medewerker staff-1)', () =>
+    getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'")
+  );
   if (createdDrukkerIds.length > 0) {
     // Zendingen verwijzen naar de drukker en cascaderen niet meer; eerst die weg.
-    await getPool().query(
-      'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
-      [createdDrukkerIds]
+    await veiligOpruimen('drukkerZendingen', () =>
+      getPool().query(
+        'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
+        [createdDrukkerIds]
+      )
     );
-    await getPool().query('DELETE FROM drukkers WHERE id IN (?)', [createdDrukkerIds]);
+    await veiligOpruimen('drukkers', () =>
+      getPool().query('DELETE FROM drukkers WHERE id IN (?)', [createdDrukkerIds])
+    );
     createdDrukkerIds.length = 0;
   }
 });

@@ -7,6 +7,7 @@ import { POST as createHeader, GET as listHeaders } from '@/app/api/bestelheader
 import { PATCH as patchHeader } from '@/app/api/bestelheaders/[id]/route';
 import { PATCH as patchLine } from '@/app/api/bestelheaders/[id]/bestellines/[lineId]/route';
 import { GET as getStatusHistorie } from '@/app/api/bestelheaders/[id]/statushistorie/route';
+import { veiligOpruimen } from '../../helpers/veiligOpruimen';
 
 const BESTELNR_PADDING = 5;
 
@@ -20,42 +21,62 @@ const createdPrijsgroepIds: string[] = [];
 
 afterEach(async () => {
   const pool = getPool();
+  // Elke stap staat los in veiligOpruimen: als er eentje faalt (bv. schema drift op de
+  // gedeelde staging-DB door een nog niet gemergde worktree) mogen de latere stappen
+  // hieronder gewoon doorlopen -- anders blijft fixture-data van tabellen die niets met de
+  // fout te maken hebben alsnog achter. Zie feedback_aftereach_cleanup_must_not_abort_on_first_failure.
   // medewerkerCookie() uses a fixed fake userId (no real medewerker row exists for it), so
   // every call leaves an orphaned `sessions` row the klant-scoped cleanup below never catches.
-  await pool.query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
+  await veiligOpruimen('sessions (medewerker staff-1)', () =>
+    pool.query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'")
+  );
   if (createdKlantEmails.length > 0) {
-    await pool.query(
-      'DELETE FROM sessions WHERE userType = \'klant\' AND userId IN (SELECT id FROM klanten WHERE email IN (?))',
-      [createdKlantEmails]
+    await veiligOpruimen('sessions (klant)', () =>
+      pool.query(
+        'DELETE FROM sessions WHERE userType = \'klant\' AND userId IN (SELECT id FROM klanten WHERE email IN (?))',
+        [createdKlantEmails]
+      )
     );
-    await pool.query('DELETE FROM bestelheaders WHERE klantId IN (SELECT id FROM klanten WHERE email IN (?))', [
-      createdKlantEmails,
-    ]);
-    await pool.query('DELETE FROM klanten WHERE email IN (?)', [createdKlantEmails]);
+    await veiligOpruimen('bestelheaders (klant)', () =>
+      pool.query('DELETE FROM bestelheaders WHERE klantId IN (SELECT id FROM klanten WHERE email IN (?))', [
+        createdKlantEmails,
+      ])
+    );
+    await veiligOpruimen('klanten', () => pool.query('DELETE FROM klanten WHERE email IN (?)', [createdKlantEmails]));
     createdKlantEmails.length = 0;
   }
   if (createdKunstwerkIds.length > 0) {
-    await pool.query('DELETE FROM kunstwerken WHERE id IN (?)', [createdKunstwerkIds]);
+    await veiligOpruimen('kunstwerken', () =>
+      pool.query('DELETE FROM kunstwerken WHERE id IN (?)', [createdKunstwerkIds])
+    );
     createdKunstwerkIds.length = 0;
   }
   if (createdKunstenaarIds.length > 0) {
-    await pool.query('DELETE FROM kunstenaars WHERE id IN (?)', [createdKunstenaarIds]);
+    await veiligOpruimen('kunstenaars', () =>
+      pool.query('DELETE FROM kunstenaars WHERE id IN (?)', [createdKunstenaarIds])
+    );
     createdKunstenaarIds.length = 0;
   }
   if (createdMaatIds.length > 0) {
-    await pool.query('DELETE FROM maten WHERE id IN (?)', [createdMaatIds]);
+    await veiligOpruimen('maten', () => pool.query('DELETE FROM maten WHERE id IN (?)', [createdMaatIds]));
     createdMaatIds.length = 0;
   }
   if (createdMateriaalIds.length > 0) {
-    await pool.query('DELETE FROM materialen WHERE id IN (?)', [createdMateriaalIds]);
+    await veiligOpruimen('materialen', () =>
+      pool.query('DELETE FROM materialen WHERE id IN (?)', [createdMateriaalIds])
+    );
     createdMateriaalIds.length = 0;
   }
   if (createdMateriaalsoortIds.length > 0) {
-    await pool.query('DELETE FROM materiaalsoorten WHERE id IN (?)', [createdMateriaalsoortIds]);
+    await veiligOpruimen('materiaalsoorten', () =>
+      pool.query('DELETE FROM materiaalsoorten WHERE id IN (?)', [createdMateriaalsoortIds])
+    );
     createdMateriaalsoortIds.length = 0;
   }
   if (createdPrijsgroepIds.length > 0) {
-    await pool.query('DELETE FROM prijsgroepen WHERE id IN (?)', [createdPrijsgroepIds]);
+    await veiligOpruimen('prijsgroepen', () =>
+      pool.query('DELETE FROM prijsgroepen WHERE id IN (?)', [createdPrijsgroepIds])
+    );
     createdPrijsgroepIds.length = 0;
   }
 });
