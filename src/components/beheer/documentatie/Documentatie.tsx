@@ -9,6 +9,7 @@ import { PrijsmatrixChapter } from './chapters/PrijsmatrixChapter';
 import { StamgegevensChapter } from './chapters/StamgegevensChapter';
 import { DrukkersChapter } from './chapters/DrukkersChapter';
 import { GlassartDesignChapter } from './chapters/GlassartDesignChapter';
+import { InstellingenChapter } from './chapters/InstellingenChapter';
 
 export function Documentatie() {
   return (
@@ -31,6 +32,7 @@ export function Documentatie() {
           <StamgegevensChapter />
           <DrukkersChapter />
           <GlassartDesignChapter />
+          <InstellingenChapter />
         </div>
       </div>
     </main>

@@ -58,5 +58,6 @@ describe('DocumentatieGate', () => {
     expect(document.getElementById('stamgegevens-prijsgroepen')).not.toBeNull();
     expect(document.getElementById('drukkers-standaard')).not.toBeNull();
     expect(document.getElementById('glassart-design')).not.toBeNull();
+    expect(document.getElementById('instellingen')).not.toBeNull();
   });
 });
