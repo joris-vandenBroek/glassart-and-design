@@ -117,7 +117,7 @@ export const TABLE_COLUMNS: Record<string, readonly string[]> = {
   ],
   instellingen: ['id', 'data'],
   counters: ['id', 'value'],
-  bestelheaders: ['id', 'klantnr', 'bestelnr', 'besteldatum', 'status', 'zendingnummer', 'afwijsreden'],
+  bestelheaders: ['id', 'klantnr', 'bestelnr', 'besteldatum', 'status', 'korting', 'zendingnummer', 'afwijsreden'],
   bestellines: [
     'id',
     'bestelnr',
