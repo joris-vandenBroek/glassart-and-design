@@ -534,20 +534,10 @@ describe('KunstwerkenSection', () => {
     expect(onUpdate).not.toHaveBeenCalledWith('kw-akoestisch', expect.anything());
   });
 
-  it('keeps the materialen/maten panel collapsed by default and expands it when clicked', () => {
-    renderSection();
-    fireEvent.click(screen.getByTestId('kunstwerken-add'));
-    const toggle = screen.getByTestId('kunstwerk-modal-materialen-maten-toggle');
-    expect(toggle.closest('details')).not.toHaveAttribute('open');
-    fireEvent.click(toggle);
-    expect(toggle.closest('details')).toHaveAttribute('open');
-  });
-
   it('shows a "Prijs per m²" field instead of the price matrix once every materiaal is unchecked, and saves it', async () => {
     uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
     const { onAdd } = renderSection();
     fireEvent.click(screen.getByTestId('kunstwerken-add'));
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-materialen-maten-toggle'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-1'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
     expect(screen.queryByTestId('kunstwerk-modal-prijzen')).not.toBeInTheDocument();
@@ -593,7 +583,6 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('kunstwerken-add'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-vierkant'));
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-materialen-maten-toggle'));
     // 'vierkant' auto-selects only the square maat (maat-3); unchecking it leaves 0 maten
     // while mat-1/mat-2 stay checked, so this is "materiaal wel, maat niet" — not materiaalloos.
     fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-3'));
@@ -628,7 +617,6 @@ describe('KunstwerkenSection', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('kunstwerken-add'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-vierkant'));
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-materialen-maten-toggle'));
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).toBeChecked());
 
     // 'vierkant' auto-selects only the square maat (maat-3); unchecking it leaves 0 maten
@@ -1049,13 +1037,13 @@ describe('KunstwerkenSection', () => {
     });
   });
 
-  it('shows the toevoegen title when adding and the bewerken title when editing', () => {
+  it('shows the same "Kunstwerkgegevens" title when adding and when editing', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('kunstwerken-add'));
-    expect(screen.getByTestId('modal-header')).toHaveTextContent('Kunstwerk toevoegen');
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Kunstwerkgegevens');
     fireEvent.click(screen.getByTestId('modal-close'));
     fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
-    expect(screen.getByTestId('modal-header')).toHaveTextContent('Kunstwerk bewerken');
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Kunstwerkgegevens');
   });
 
   it('starts on the Algemeen tab and switches tab content when a tab is clicked', () => {
@@ -1085,6 +1073,29 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('modal-close'));
     fireEvent.click(screen.getByTestId('kunstwerken-add'));
     expect(screen.getByTestId('kunstwerk-modal-tab-algemeen')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('has separate Materialen and Maten tabs, switchable independently of Kenmerken', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    expect(screen.getByTestId('kunstwerk-modal-tab-materialen')).toBeInTheDocument();
+    expect(screen.getByTestId('kunstwerk-modal-tab-maten')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-tab-materialen'));
+    expect(screen.getByTestId('kunstwerk-modal-tab-materialen')).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-tab-maten'));
+    expect(screen.getByTestId('kunstwerk-modal-tab-maten')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('kunstwerk-modal-tab-materialen')).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('shows an error dot on the Maten tab when materiaalloos and prijs-per-m² is missing, but never on Materialen', async () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
+    expect(screen.getByTestId('kunstwerk-modal-tab-maten-error-dot')).toBeInTheDocument();
+    expect(screen.queryByTestId('kunstwerk-modal-tab-materialen-error-dot')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-per-m2'), { target: { value: '120' } });
+    expect(screen.queryByTestId('kunstwerk-modal-tab-maten-error-dot')).not.toBeInTheDocument();
   });
 
   it('shows a help popover explaining formaat and prijs-per-m²', () => {

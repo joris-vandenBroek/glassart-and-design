@@ -118,7 +118,7 @@ export function MatenSection({ maten, kunstwerken, loadError, onAdd, onUpdate, o
         isOpen={modalState !== null}
         onClose={closeModal}
         closeLabel={t('modalClose')}
-        title={modalState?.mode === 'edit' ? t('matenModalTitelBewerken') : t('matenModalTitelToevoegen')}
+        title={t('matenModalTitel')}
         footerActions={
           <>
             <button

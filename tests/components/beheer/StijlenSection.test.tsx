@@ -221,13 +221,13 @@ describe('StijlenSection', () => {
     expect(logActiviteitMock).not.toHaveBeenCalled();
   });
 
-  it('shows the toevoegen title when adding and the bewerken title when editing', () => {
+  it('shows the same "Stijlgegevens" title when adding and when editing', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('stijlen-add'));
-    expect(screen.getByTestId('modal-header')).toHaveTextContent('Stijl toevoegen');
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Stijlgegevens');
     fireEvent.click(screen.getByTestId('modal-close'));
     fireEvent.click(screen.getByTestId('data-table-row-stijl-2'));
-    expect(screen.getByTestId('modal-header')).toHaveTextContent('Stijl bewerken');
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Stijlgegevens');
   });
 
   it('shows the required-field legend', () => {

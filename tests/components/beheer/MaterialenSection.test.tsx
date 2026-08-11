@@ -238,13 +238,13 @@ describe('MaterialenSection', () => {
     expect(logActiviteitMock).not.toHaveBeenCalled();
   });
 
-  it('shows the toevoegen title when adding and the bewerken title when editing', () => {
+  it('shows the same "Materiaalgegevens" title when adding and when editing', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('materialen-add'));
-    expect(screen.getByTestId('modal-header')).toHaveTextContent('Materiaal toevoegen');
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Materiaalgegevens');
     fireEvent.click(screen.getByTestId('modal-close'));
     fireEvent.click(screen.getByTestId('data-table-row-mat-2'));
-    expect(screen.getByTestId('modal-header')).toHaveTextContent('Materiaal bewerken');
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Materiaalgegevens');
   });
 
   it('shows the required-field legend', () => {

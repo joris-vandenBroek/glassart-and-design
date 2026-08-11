@@ -221,13 +221,13 @@ describe('OnderwerpenSection', () => {
     expect(logActiviteitMock).not.toHaveBeenCalled();
   });
 
-  it('shows the toevoegen title when adding and the bewerken title when editing', () => {
+  it('shows the same "Onderwerpgegevens" title when adding and when editing', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('onderwerpen-add'));
-    expect(screen.getByTestId('modal-header')).toHaveTextContent('Onderwerp toevoegen');
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Onderwerpgegevens');
     fireEvent.click(screen.getByTestId('modal-close'));
     fireEvent.click(screen.getByTestId('data-table-row-ond-2'));
-    expect(screen.getByTestId('modal-header')).toHaveTextContent('Onderwerp bewerken');
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Onderwerpgegevens');
   });
 
   it('shows the required-field legend', () => {

@@ -178,11 +178,7 @@ export function LookupSection<T extends LookupItem>({
         isOpen={modalState !== null}
         onClose={closeModal}
         closeLabel={t('modalClose')}
-        title={
-          modalState?.mode === 'edit'
-            ? t(`${meervoud}ModalTitelBewerken`)
-            : t(`${meervoud}ModalTitelToevoegen`)
-        }
+        title={t(`${meervoud}ModalTitel`)}
         footerActions={
           modalState?.mode === 'edit' && pendingVerwijderCount !== null ? (
             <>

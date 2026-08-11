@@ -173,13 +173,13 @@ describe('PrijsgroepenSection', () => {
     );
   });
 
-  it('shows the toevoegen title when adding and the bewerken title when editing', () => {
+  it('shows the same "Prijsgroepgegevens" title when adding and when editing', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('prijsgroepen-add'));
-    expect(screen.getByTestId('modal-header')).toHaveTextContent('Prijsgroep toevoegen');
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Prijsgroepgegevens');
     fireEvent.click(screen.getByTestId('modal-close'));
     fireEvent.click(screen.getByTestId('data-table-row-pg-2'));
-    expect(screen.getByTestId('modal-header')).toHaveTextContent('Prijsgroep bewerken');
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Prijsgroepgegevens');
   });
 
   it('shows the required-field legend', () => {

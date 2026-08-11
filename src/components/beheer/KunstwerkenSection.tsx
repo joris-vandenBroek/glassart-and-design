@@ -44,7 +44,7 @@ interface KunstwerkenSectionProps {
 }
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; kunstwerk: Kunstwerk } | null;
-type TabId = 'algemeen' | 'kenmerken' | 'omschrijvingen';
+type TabId = 'algemeen' | 'kenmerken' | 'materialen' | 'maten' | 'omschrijvingen';
 type KunstwerkRow = Kunstwerk & { segmentNamen: string; kunstenaarNaam: string };
 
 function toggle(list: string[], id: string): string[] {
@@ -503,8 +503,8 @@ export function KunstwerkenSection({
 
   const codeOpSlot = modalState?.mode === 'edit' && bestelCodes.has(modalState.kunstwerk.code);
   const algemeenHeeftFout = !foto || !code.trim() || formaat === null;
-  const kenmerkenHeeftFout =
-    segmentIds.length === 0 || (isMaatloos && (!prijsPerM2 || Number(prijsPerM2) <= 0));
+  const kenmerkenHeeftFout = segmentIds.length === 0;
+  const matenHeeftFout = isMaatloos && (!prijsPerM2 || Number(prijsPerM2) <= 0);
   const omschrijvingenHeeftFout = !omschrijvingNl;
   const opslaanDisabled =
     !foto ||
@@ -665,7 +665,7 @@ export function KunstwerkenSection({
         closeLabel={t('modalClose')}
         title={
           <span className="inline-flex items-center gap-2">
-            {modalState?.mode === 'edit' ? t('kunstwerkenModalTitelBewerken') : t('kunstwerkenModalTitelToevoegen')}
+            {t('kunstwerkenModalTitel')}
             <HelpHint text={t('kunstwerkenHelp')} testId="kunstwerk-modal-help" />
           </span>
         }
@@ -740,6 +740,8 @@ export function KunstwerkenSection({
               tabs={[
                 { id: 'algemeen', label: t('kunstwerkenTabAlgemeen'), hasError: algemeenHeeftFout },
                 { id: 'kenmerken', label: t('kunstwerkenTabKenmerken'), hasError: kenmerkenHeeftFout },
+                { id: 'materialen', label: t('kunstwerkenTabMaterialen') },
+                { id: 'maten', label: t('kunstwerkenTabMaten'), hasError: matenHeeftFout },
                 { id: 'omschrijvingen', label: t('kunstwerkenTabOmschrijvingen'), hasError: omschrijvingenHeeftFout },
               ]}
               activeTabId={activeTab}
@@ -952,82 +954,6 @@ export function KunstwerkenSection({
             )}
           </fieldset>
 
-          <details className="flex flex-col gap-3 rounded-sm border border-white/10 px-3 py-2">
-            <summary
-              data-testid="kunstwerk-modal-materialen-maten-toggle"
-              className="cursor-pointer text-xs uppercase tracking-wide text-white/60"
-            >
-              {t('kunstwerkenLabelMaterialenMaten')}
-            </summary>
-            <fieldset className="flex flex-col gap-1">
-              <legend className="text-xs uppercase tracking-wide text-white/60">
-                {t('kunstwerkenLabelMaterialen')}
-              </legend>
-              {(materialen ?? []).map((materiaal) => (
-                <label key={materiaal.id} className="flex items-center gap-2 text-sm text-white/80">
-                  <input
-                    type="checkbox"
-                    checked={materiaalIds.includes(materiaal.id)}
-                    onChange={() => setMateriaalIds((current) => toggle(current, materiaal.id))}
-                    data-testid={`kunstwerk-modal-materiaal-${materiaal.id}`}
-                  />
-                  {materiaalLabel(materiaal)}
-                </label>
-              ))}
-            </fieldset>
-
-            <fieldset className="flex flex-col gap-1">
-              <legend className="text-xs uppercase tracking-wide text-white/60">{t('kunstwerkenLabelMaten')}</legend>
-              {(maten ?? []).map((maat) => {
-                const incompatibel =
-                  formaat !== null &&
-                  formaat !== 'alle' &&
-                  (formaat === 'vierkant' ? !isVierkanteMaat(maat) : isVierkanteMaat(maat));
-                return (
-                  <label
-                    key={maat.id}
-                    className={`flex items-center gap-2 text-sm text-white/80 ${incompatibel ? 'opacity-40' : ''}`}
-                  >
-                    <input
-                      type="checkbox"
-                      disabled={incompatibel}
-                      checked={maatIds.includes(maat.id)}
-                      onChange={() => setMaatIds((current) => toggle(current, maat.id))}
-                      data-testid={`kunstwerk-modal-maat-${maat.id}`}
-                    />
-                    {`${maat.breedte}×${maat.hoogte} cm`}
-                  </label>
-                );
-              })}
-            </fieldset>
-          </details>
-
-          {isMaatloos && (
-            <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-              <span>
-                {t('kunstwerkenLabelPrijsPerM2')}
-                <RequiredMark />
-              </span>
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-white/50">€</span>
-                <input
-                  type="number"
-                  value={prijsPerM2}
-                  onChange={(event) => setPrijsPerM2(event.target.value)}
-                  data-testid="kunstwerk-modal-prijs-per-m2"
-                  className={`w-24 rounded-sm border bg-black/40 px-2 py-1 text-sm text-white ${
-                    !prijsPerM2 || Number(prijsPerM2) <= 0 ? 'border-red-500/70' : 'border-transparent'
-                  }`}
-                />
-              </div>
-              {(!prijsPerM2 || Number(prijsPerM2) <= 0) && (
-                <span data-testid="kunstwerk-modal-prijs-per-m2-hint" className="normal-case tracking-normal text-red-400">
-                  {t('kunstwerkenPrijsPerM2Verplicht')}
-                </span>
-              )}
-            </label>
-          )}
-
           <fieldset className="flex flex-col gap-1">
             <legend className="text-xs uppercase tracking-wide text-white/60">
               {t('kunstwerkenLabelStijlen')}
@@ -1119,6 +1045,78 @@ export function KunstwerkenSection({
             />
             {t('kunstwerkenLabelAiGegenereerd')}
           </label>
+              </div>
+
+              <div className={activeTab === 'materialen' ? 'flex flex-col gap-3' : 'hidden'}>
+          <fieldset className="flex flex-col gap-1">
+            <legend className="text-xs uppercase tracking-wide text-white/60">
+              {t('kunstwerkenLabelMaterialen')}
+            </legend>
+            {(materialen ?? []).map((materiaal) => (
+              <label key={materiaal.id} className="flex items-center gap-2 text-sm text-white/80">
+                <input
+                  type="checkbox"
+                  checked={materiaalIds.includes(materiaal.id)}
+                  onChange={() => setMateriaalIds((current) => toggle(current, materiaal.id))}
+                  data-testid={`kunstwerk-modal-materiaal-${materiaal.id}`}
+                />
+                {materiaalLabel(materiaal)}
+              </label>
+            ))}
+          </fieldset>
+              </div>
+
+              <div className={activeTab === 'maten' ? 'flex flex-col gap-3' : 'hidden'}>
+          <fieldset className="flex flex-col gap-1">
+            <legend className="text-xs uppercase tracking-wide text-white/60">{t('kunstwerkenLabelMaten')}</legend>
+            {(maten ?? []).map((maat) => {
+              const incompatibel =
+                formaat !== null &&
+                formaat !== 'alle' &&
+                (formaat === 'vierkant' ? !isVierkanteMaat(maat) : isVierkanteMaat(maat));
+              return (
+                <label
+                  key={maat.id}
+                  className={`flex items-center gap-2 text-sm text-white/80 ${incompatibel ? 'opacity-40' : ''}`}
+                >
+                  <input
+                    type="checkbox"
+                    disabled={incompatibel}
+                    checked={maatIds.includes(maat.id)}
+                    onChange={() => setMaatIds((current) => toggle(current, maat.id))}
+                    data-testid={`kunstwerk-modal-maat-${maat.id}`}
+                  />
+                  {`${maat.breedte}×${maat.hoogte} cm`}
+                </label>
+              );
+            })}
+          </fieldset>
+
+          {isMaatloos && (
+            <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+              <span>
+                {t('kunstwerkenLabelPrijsPerM2')}
+                <RequiredMark />
+              </span>
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-white/50">€</span>
+                <input
+                  type="number"
+                  value={prijsPerM2}
+                  onChange={(event) => setPrijsPerM2(event.target.value)}
+                  data-testid="kunstwerk-modal-prijs-per-m2"
+                  className={`w-24 rounded-sm border bg-black/40 px-2 py-1 text-sm text-white ${
+                    !prijsPerM2 || Number(prijsPerM2) <= 0 ? 'border-red-500/70' : 'border-transparent'
+                  }`}
+                />
+              </div>
+              {(!prijsPerM2 || Number(prijsPerM2) <= 0) && (
+                <span data-testid="kunstwerk-modal-prijs-per-m2-hint" className="normal-case tracking-normal text-red-400">
+                  {t('kunstwerkenPrijsPerM2Verplicht')}
+                </span>
+              )}
+            </label>
+          )}
               </div>
 
               <div className={activeTab === 'omschrijvingen' ? 'flex flex-col gap-3' : 'hidden'}>

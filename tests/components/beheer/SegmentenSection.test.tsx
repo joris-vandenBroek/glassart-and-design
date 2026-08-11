@@ -234,13 +234,13 @@ describe('SegmentenSection', () => {
     expect(logActiviteitMock).not.toHaveBeenCalled();
   });
 
-  it('shows the toevoegen title when adding and the bewerken title when editing', () => {
+  it('shows the same "Segmentgegevens" title when adding and when editing', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('segmenten-add'));
-    expect(screen.getByTestId('modal-header')).toHaveTextContent('Segment toevoegen');
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Segmentgegevens');
     fireEvent.click(screen.getByTestId('modal-close'));
     fireEvent.click(screen.getByTestId('data-table-row-seg-2'));
-    expect(screen.getByTestId('modal-header')).toHaveTextContent('Segment bewerken');
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Segmentgegevens');
   });
 
   it('shows the required-field legend', () => {
