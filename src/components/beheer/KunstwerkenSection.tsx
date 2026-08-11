@@ -759,20 +759,30 @@ export function KunstwerkenSection({
               onDragLeave={handleFotoDragLeave}
               onDrop={handleFotoDrop}
               data-testid="kunstwerk-modal-foto-dropzone"
-              className={`flex flex-col items-center gap-2 rounded-sm border border-dashed px-3 py-4 text-center transition-colors ${
+              className={`flex items-center gap-3 rounded-sm border border-dashed px-3 py-4 text-center transition-colors ${
                 isDraggingFoto ? 'border-silver bg-white/10' : foto ? 'border-white/20' : 'border-red-500/70'
               }`}
             >
-              <span className="text-xs normal-case tracking-normal text-white/60">
-                {t('kunstwerkenFotoDropHint')}
+              {foto && (
+                <img
+                  src={foto}
+                  alt=""
+                  data-testid="kunstwerk-modal-foto-preview"
+                  className="h-16 w-16 shrink-0 rounded object-cover"
+                />
+              )}
+              <span className="flex flex-1 flex-col items-center gap-2">
+                <span className="text-xs normal-case tracking-normal text-white/60">
+                  {t('kunstwerkenFotoDropHint')}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFotoChange}
+                  data-testid="kunstwerk-modal-foto-input"
+                  className="text-sm text-white"
+                />
               </span>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFotoChange}
-                data-testid="kunstwerk-modal-foto-input"
-                className="text-sm text-white"
-              />
             </span>
           </label>
           {!foto && (
@@ -888,15 +898,6 @@ export function KunstwerkenSection({
               </span>
             )}
           </fieldset>
-
-          {foto && (
-            <img
-              src={foto}
-              alt=""
-              data-testid="kunstwerk-modal-foto-preview"
-              className="h-24 w-24 rounded object-cover"
-            />
-          )}
               </div>
 
               <div className={activeTab === 'kenmerken' ? 'flex flex-col gap-3' : 'hidden'}>
