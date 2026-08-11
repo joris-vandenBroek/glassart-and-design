@@ -3,19 +3,25 @@ import { getRow, updateRow, deleteRow } from '@/lib/server/crud';
 import { getPool } from '@/lib/server/db';
 import { withApiErrorHandling, withMedewerker } from '@/lib/server/apiRoute';
 import {
-  KUNSTWERKEN_JSON_COLUMNS,
   codeIsInGebruik,
   codeKomtVoorInBestelling,
   codeKomtVoorInBestellingForUpdate,
   isDuplicateCodeError,
 } from '@/lib/server/kunstwerkCode';
+import {
+  DuplicateRelatieError,
+  haalRelatiesOpVoorEen,
+  scheidRelaties,
+  vervangRelaties,
+} from '@/lib/server/kunstwerkRelaties';
 
 export const GET = withApiErrorHandling(
   'GET /api/kunstwerken/[id]',
   async (_request: Request, { params }: { params: { id: string } }) => {
-    const row = await getRow('kunstwerken', params.id, KUNSTWERKEN_JSON_COLUMNS);
+    const row = await getRow<{ id: string }>('kunstwerken', params.id);
     if (!row) return NextResponse.json({ error: 'not-found' }, { status: 404 });
-    return NextResponse.json(row);
+    const relaties = await haalRelatiesOpVoorEen(getPool(), params.id);
+    return NextResponse.json({ ...row, ...relaties });
   }
 );
 
@@ -54,13 +60,26 @@ export const PATCH = withMedewerker(
       data.code = nieuweCode;
     }
 
+    const { relaties, rest } = scheidRelaties(data);
+    const connection = await getPool().getConnection();
     try {
-      await updateRow('kunstwerken', params.id, data, KUNSTWERKEN_JSON_COLUMNS);
+      await connection.beginTransaction();
+      if (Object.keys(rest).length > 0) {
+        await updateRow('kunstwerken', params.id, rest, [], connection);
+      }
+      await vervangRelaties(connection, params.id, relaties);
+      await connection.commit();
     } catch (error) {
+      await connection.rollback();
       if (isDuplicateCodeError(error)) {
         return NextResponse.json({ error: 'code-bestaat-al' }, { status: 409 });
       }
+      if (error instanceof DuplicateRelatieError) {
+        return NextResponse.json({ error: 'dubbele-relatie', kolom: error.kolom }, { status: 400 });
+      }
       throw error;
+    } finally {
+      connection.release();
     }
     return NextResponse.json({ ok: true });
   }
