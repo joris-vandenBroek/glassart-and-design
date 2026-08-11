@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
@@ -83,6 +82,7 @@ const BESTELLING: Bestelling = {
   klantnr: 'KN-1',
   companyName: 'Testbedrijf BV',
   bestelnr: 'GD-00101',
+  korting: null,
   besteldatum: '1-7-2026',
   status: 'Te beoordelen',
   lineCount: 2,
@@ -100,8 +100,7 @@ function renderModal(
   const onClose = vi.fn();
   const onUpdated = vi.fn();
   const onAfronden = vi.fn();
-  const onLinePrijsVastgesteld = vi.fn();
-  const onLineUpdated = vi.fn();
+  const onBestellingGewijzigd = vi.fn();
   render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <BestellingModal
@@ -115,13 +114,12 @@ function renderModal(
         onClose={onClose}
         onUpdated={onUpdated}
         onAfronden={onAfronden}
-        onLinePrijsVastgesteld={onLinePrijsVastgesteld}
-        onLineUpdated={onLineUpdated}
+        onBestellingGewijzigd={onBestellingGewijzigd}
         {...overrides}
       />
     </NextIntlClientProvider>
   );
-  return { onClose, onUpdated, onAfronden, onLinePrijsVastgesteld, onLineUpdated };
+  return { onClose, onUpdated, onAfronden, onBestellingGewijzigd };
 }
 
 beforeEach(() => {
@@ -342,6 +340,7 @@ const BESTELLING_MET_EIGEN_MAAT: Bestelling = {
   klantnr: 'KN-2',
   companyName: 'Ander Bedrijf',
   bestelnr: 'GD-00102',
+  korting: null,
   besteldatum: '3-7-2026',
   status: 'Te beoordelen',
   lineCount: 1,
@@ -365,7 +364,7 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
 
   it('sets a price on an unpriced line via "Prijs vaststellen", updates the order, logs the event, and re-enables Goedkeuren', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
-    const { onLinePrijsVastgesteld } = renderModal(BESTELLING_MET_EIGEN_MAAT);
+    const { onBestellingGewijzigd } = renderModal(BESTELLING_MET_EIGEN_MAAT);
     fireEvent.change(screen.getByTestId('bestelling-modal-prijs-input-line-3'), { target: { value: '275' } });
     fireEvent.click(screen.getByTestId('bestelling-modal-prijs-vaststellen-line-3'));
 
@@ -375,7 +374,12 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
         expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ prijs: 275 }) })
       )
     );
-    await waitFor(() => expect(onLinePrijsVastgesteld).toHaveBeenCalledWith('header-2', 'line-3', 275));
+    await waitFor(() =>
+      expect(onBestellingGewijzigd).toHaveBeenCalledWith({
+        ...BESTELLING_MET_EIGEN_MAAT,
+        lines: [{ ...BESTELLING_MET_EIGEN_MAAT.lines[0], prijs: 275 }],
+      })
+    );
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'bestelling_prijs_vastgesteld',
       'GD-00102'
@@ -397,72 +401,6 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
     expect(screen.queryByTestId('bestelling-modal-goedkeuren-blocked')).not.toBeInTheDocument();
   });
 
-  it('keeps the draft price of a still-unpriced line after submitting another line\'s price in the same order', async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
-
-    const BESTELLING_MET_TWEE_ONGEPRIJSDE_REGELS: Bestelling = {
-      id: 'header-3',
-      klantnr: 'KN-3',
-      companyName: 'Weer Een Bedrijf',
-      bestelnr: 'GD-00103',
-      besteldatum: '5-7-2026',
-      status: 'Te beoordelen',
-      lineCount: 2,
-      totalQuantity: 2,
-      lines: [
-        { id: 'line-4', code: 'Hotel paneel', maatId: '', materiaalId: 'mat-1', breedte: 50, hoogte: 80, prijs: null, quantity: 1 },
-        { id: 'line-5', code: 'Hotel paneel', maatId: '', materiaalId: 'mat-1', breedte: 60, hoogte: 90, prijs: null, quantity: 1 },
-      ],
-    };
-
-    // Mimics BestellingenSection: onLinePrijsVastgesteld merges the priced line into a
-    // brand-new `{ ...current, lines: [...] }` object, giving `bestelling` a new reference
-    // on every submit while the order id stays the same.
-    function Wrapper() {
-      const [bestelling, setBestelling] = useState(BESTELLING_MET_TWEE_ONGEPRIJSDE_REGELS);
-      return (
-        <NextIntlClientProvider locale="nl" messages={messages}>
-          <BestellingModal
-            bestelling={bestelling}
-            kunstwerken={KUNSTWERKEN}
-            materialen={MATERIALEN}
-            maten={MATEN}
-            materiaalsoorten={MATERIAALSOORTEN}
-            klanten={KLANTEN}
-            btwTarieven={BTWTARIEVEN}
-            onClose={vi.fn()}
-            onUpdated={vi.fn()}
-            onAfronden={vi.fn()}
-            onLinePrijsVastgesteld={(_bestellingId, lineId, prijs) => {
-              setBestelling((current) => ({
-                ...current,
-                lines: current.lines.map((line) => (line.id === lineId ? { ...line, prijs } : line)),
-              }));
-            }}
-            onLineUpdated={vi.fn()}
-          />
-        </NextIntlClientProvider>
-      );
-    }
-
-    render(<Wrapper />);
-
-    fireEvent.change(screen.getByTestId('bestelling-modal-prijs-input-line-4'), { target: { value: '100' } });
-    fireEvent.change(screen.getByTestId('bestelling-modal-prijs-input-line-5'), { target: { value: '200' } });
-
-    fireEvent.click(screen.getByTestId('bestelling-modal-prijs-vaststellen-line-4'));
-
-    await waitFor(() =>
-      expect(fetchMock).toHaveBeenCalledWith(
-        '/api/bestelheaders/header-3/bestellines/line-4',
-        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ prijs: 100 }) })
-      )
-    );
-
-    await waitFor(() =>
-      expect(screen.getByTestId('bestelling-modal-prijs-input-line-5')).toHaveValue(200)
-    );
-  });
 });
 
 describe('BestellingModal — regel bewerken', () => {
@@ -475,7 +413,7 @@ describe('BestellingModal — regel bewerken', () => {
 
   it('edits a standard-maat line and saves materiaal/maat/prijs/aantal', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
-    const { onLineUpdated } = renderModal(BESTELLING);
+    const { onBestellingGewijzigd } = renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-1'));
     fireEvent.change(screen.getByTestId('bestelling-modal-regel-prijs-line-1'), { target: { value: '180' } });
     fireEvent.change(screen.getByTestId('bestelling-modal-regel-aantal-line-1'), { target: { value: '5' } });
@@ -491,11 +429,12 @@ describe('BestellingModal — regel bewerken', () => {
       )
     );
     await waitFor(() =>
-      expect(onLineUpdated).toHaveBeenCalledWith('header-1', 'line-1', {
-        materiaalId: 'mat-1',
-        prijs: 180,
-        quantity: 5,
-        maatId: 'maat-1',
+      expect(onBestellingGewijzigd).toHaveBeenCalledWith({
+        ...BESTELLING,
+        lines: [
+          { ...BESTELLING.lines[0], materiaalId: 'mat-1', prijs: 180, quantity: 5, maatId: 'maat-1' },
+          BESTELLING.lines[1],
+        ],
       })
     );
     expect(logActiviteitMock).toHaveBeenCalledWith(
@@ -522,7 +461,7 @@ describe('BestellingModal — regel bewerken', () => {
 
   it('shows breedte/hoogte inputs instead of a maat select for a custom-size line', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
-    const { onLineUpdated } = renderModal(BESTELLING_MET_EIGEN_MAAT);
+    const { onBestellingGewijzigd } = renderModal(BESTELLING_MET_EIGEN_MAAT);
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-3'));
     expect(screen.queryByTestId('bestelling-modal-regel-maat-line-3')).not.toBeInTheDocument();
     fireEvent.change(screen.getByTestId('bestelling-modal-regel-breedte-line-3'), { target: { value: '95' } });
@@ -540,13 +479,19 @@ describe('BestellingModal — regel bewerken', () => {
       )
     );
     await waitFor(() =>
-      expect(onLineUpdated).toHaveBeenCalledWith('header-2', 'line-3', {
-        materiaalId: 'mat-1',
-        prijs: 300,
-        quantity: 1,
-        maatId: '',
-        breedte: 95,
-        hoogte: 145,
+      expect(onBestellingGewijzigd).toHaveBeenCalledWith({
+        ...BESTELLING_MET_EIGEN_MAAT,
+        lines: [
+          {
+            ...BESTELLING_MET_EIGEN_MAAT.lines[0],
+            materiaalId: 'mat-1',
+            prijs: 300,
+            quantity: 1,
+            maatId: '',
+            breedte: 95,
+            hoogte: 145,
+          },
+        ],
       })
     );
   });
@@ -563,6 +508,18 @@ describe('BestellingModal — bestelling-totaal', () => {
     renderModal(BESTELLING_MET_EIGEN_MAAT);
     expect(screen.getByTestId('bestelling-modal-total')).toHaveTextContent('Wordt nog vastgesteld');
     expect(screen.getByTestId('bestelling-modal-goedkeuren')).toBeDisabled();
+  });
+
+  it('shows a korting row and subtracts it from the total when korting is set', () => {
+    renderModal({ ...BESTELLING, korting: 50 });
+    // line-1: 150 × 3 = 450, line-2: 0 × 2 = 0, korting 50 → 400
+    expect(screen.getByTestId('bestelling-modal-total')).toHaveTextContent('€ 400,00');
+    expect(screen.getByTestId('bestelling-modal-korting')).toHaveTextContent('€ 50,00');
+  });
+
+  it('shows no korting row when korting is null', () => {
+    renderModal(BESTELLING);
+    expect(screen.queryByTestId('bestelling-modal-korting')).not.toBeInTheDocument();
   });
 });
 
@@ -590,8 +547,7 @@ describe('BestellingModal — btw', () => {
           onClose={vi.fn()}
           onUpdated={vi.fn()}
           onAfronden={vi.fn()}
-          onLinePrijsVastgesteld={vi.fn()}
-          onLineUpdated={vi.fn()}
+          onBestellingGewijzigd={vi.fn()}
         />
       </NextIntlClientProvider>
     );
@@ -625,8 +581,7 @@ describe('BestellingModal — btw', () => {
           onClose={vi.fn()}
           onUpdated={vi.fn()}
           onAfronden={vi.fn()}
-          onLinePrijsVastgesteld={vi.fn()}
-          onLineUpdated={vi.fn()}
+          onBestellingGewijzigd={vi.fn()}
         />
       </NextIntlClientProvider>
     );
@@ -641,6 +596,7 @@ const BESTELLING_VERSTUURD: Bestelling = {
   klantnr: 'KN-1',
   companyName: 'Testbedrijf BV',
   bestelnr: 'GD-00104',
+  korting: null,
   besteldatum: '4-7-2026',
   status: 'Verstuurd naar drukker',
   lineCount: 1,

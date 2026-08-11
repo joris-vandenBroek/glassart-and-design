@@ -9,6 +9,7 @@ import { useAfwijzenBevestiging, AfwijzenBevestigingTekst, AfwijzenBevestigingAc
 import { useBestellingHistorie } from '@/lib/useBestellingHistorie';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { resolveBtwPercentage } from '@/lib/resolveBtw';
+import { berekenBestellingTotalen } from '@/lib/bestellingTotalen';
 import { ProductImage } from '@/components/ProductImage';
 import type { Bestelling, BestellingLine } from './BestellingenSection';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from './materiaalTypes';
@@ -44,8 +45,7 @@ interface BestellingModalProps {
   onClose: () => void;
   onUpdated: (bestelling: Bestelling) => void;
   onAfronden: (bestelling: Bestelling) => void;
-  onLinePrijsVastgesteld: (bestellingId: string, lineId: string, prijs: number) => void;
-  onLineUpdated: (bestellingId: string, lineId: string, updates: Partial<BestellingLine>) => void;
+  onBestellingGewijzigd: (bestelling: Bestelling) => void;
   /** True zolang ergens (bulkknop, bevestigingsdialoog, of deze knop zelf elders) een
    * afrondronde loopt -- schakelt de "Afronden"-knop uit zodat deze derde ingang naar
    * startAfronden niet buiten de gedeelde afrondBezig-mutex om kan lopen. */
@@ -76,8 +76,7 @@ export function BestellingModal({
   onClose,
   onUpdated,
   onAfronden,
-  onLinePrijsVastgesteld,
-  onLineUpdated,
+  onBestellingGewijzigd,
   isAfrondBezig = false,
 }: BestellingModalProps) {
   const t = useTranslations('beheer');
@@ -104,23 +103,22 @@ export function BestellingModal({
     (materiaalsoorten ?? []).map((soort) => [soort.id, soort.omschrijvingNl])
   );
 
-  const heeftOngeprijsdeRegel = (bestelling?.lines ?? []).some((line) => line.prijs === null);
+  const klant = bestelling ? (klanten ?? []).find((k) => k.klantnr === bestelling.klantnr) : undefined;
+  const land = klant ? klant.invoiceLand || klant.land || null : null;
+  const klantBtwPercentage = btwTarieven ? resolveBtwPercentage(btwTarieven.tarieven, land) : null;
+  const totalen = bestelling
+    ? berekenBestellingTotalen(bestelling.lines, bestelling.korting, klantBtwPercentage)
+    : null;
+  const heeftOngeprijsdeRegel = totalen?.heeftOngeprijsdeRegel ?? false;
   const totaalWeergave =
     bestelling && bestelling.lines.length > 0
       ? heeftOngeprijsdeRegel
         ? t('bestellingenModalTotalIncomplete')
-        : formatCurrency(bestelling.lines.reduce((sum, line) => sum + (line.prijs ?? 0) * line.quantity, 0))
+        : formatCurrency(totalen!.totaalExclBtw!)
       : null;
-  const totaalExclBtwGetal =
-    bestelling && !heeftOngeprijsdeRegel
-      ? bestelling.lines.reduce((sum, line) => sum + (line.prijs ?? 0) * line.quantity, 0)
-      : null;
-  const klant = bestelling ? (klanten ?? []).find((k) => k.klantnr === bestelling.klantnr) : undefined;
-  const land = klant ? klant.invoiceLand || klant.land || null : null;
-  const btwPercentage = btwTarieven ? resolveBtwPercentage(btwTarieven.tarieven, land) : null;
-  const btwBedrag =
-    totaalExclBtwGetal !== null && btwPercentage != null ? totaalExclBtwGetal * (btwPercentage / 100) : null;
-  const totaalInclBtw = totaalExclBtwGetal !== null && btwBedrag !== null ? totaalExclBtwGetal + btwBedrag : null;
+  const btwPercentage = totalen?.btwPercentage ?? null;
+  const btwBedrag = totalen?.btwBedrag ?? null;
+  const totaalInclBtw = totalen?.totaalInclBtw ?? null;
 
   async function handleGoedkeuren() {
     if (!bestelling) return;
@@ -207,7 +205,10 @@ export function BestellingModal({
       );
       if (!response.ok) throw new Error('update failed');
       void logActiviteit('bestelling_prijs_vastgesteld', bestelling.bestelnr);
-      onLinePrijsVastgesteld(bestelling.id, line.id, prijs);
+      onBestellingGewijzigd({
+        ...bestelling,
+        lines: bestelling.lines.map((l) => (l.id === line.id ? { ...l, prijs } : l)),
+      });
     } catch {
       setError(t('bestellingenActionError'));
     }
@@ -267,7 +268,10 @@ export function BestellingModal({
       );
       if (!response.ok) throw new Error('update failed');
       void logActiviteit('bestelling_regel_gewijzigd', bestelling.bestelnr);
-      onLineUpdated(bestelling.id, line.id, updates);
+      onBestellingGewijzigd({
+        ...bestelling,
+        lines: bestelling.lines.map((l) => (l.id === line.id ? { ...l, ...updates } : l)),
+      });
       cancelEditRegel();
     } catch {
       setError(t('bestellingenActionError'));
@@ -313,6 +317,16 @@ export function BestellingModal({
                 >
                   {totaalWeergave}
                 </span>
+                {totalen && totalen.korting > 0 && (
+                  <div data-testid="bestelling-modal-korting" className="contents">
+                    <span className="text-[0.65rem] uppercase tracking-wide text-white/40">
+                      {t('bestellingenModalKortingLabel')}
+                    </span>
+                    <span className="text-right text-sm text-white/80 tabular-nums">
+                      -{formatCurrency(totalen.korting)}
+                    </span>
+                  </div>
+                )}
                 {btwBedrag !== null && (
                   <div data-testid="bestelling-modal-btw" className="contents">
                     <span className="text-[0.65rem] uppercase tracking-wide text-white/40">

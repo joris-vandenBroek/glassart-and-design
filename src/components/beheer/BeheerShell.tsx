@@ -88,6 +88,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
           klantnr: string;
           bestelnr: string;
           zendingnummer?: string | null;
+          korting: number | null;
           besteldatum: string;
           status: string;
           lines: BestellingLine[];
@@ -99,6 +100,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
               klantnr: header.klantnr,
               bestelnr: header.bestelnr ?? header.id,
               zendingnummer: header.zendingnummer ?? null,
+              korting: header.korting ?? null,
               besteldatum: new Date(header.besteldatum).toLocaleDateString('nl-NL'),
               status: header.status,
               lineCount: header.lines.length,
@@ -197,26 +199,17 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   function handleBestellingUpdated(updated: Bestelling) {
     setRawBestellingen((current) =>
       (current ?? []).map((row) =>
-        row.id === updated.id ? { ...row, status: updated.status, zendingnummer: updated.zendingnummer ?? row.zendingnummer } : row
-      )
-    );
-  }
-
-  function handleLinePrijsVastgesteld(bestellingId: string, lineId: string, prijs: number) {
-    setRawBestellingen((current) =>
-      (current ?? []).map((row) =>
-        row.id === bestellingId
-          ? { ...row, lines: row.lines.map((line) => (line.id === lineId ? { ...line, prijs } : line)) }
-          : row
-      )
-    );
-  }
-
-  function handleLineUpdated(bestellingId: string, lineId: string, updates: Partial<BestellingLine>) {
-    setRawBestellingen((current) =>
-      (current ?? []).map((row) =>
-        row.id === bestellingId
-          ? { ...row, lines: row.lines.map((line) => (line.id === lineId ? { ...line, ...updates } : line)) }
+        row.id === updated.id
+          ? {
+              ...row,
+              status: updated.status,
+              zendingnummer: updated.zendingnummer ?? row.zendingnummer,
+              afwijsreden: updated.afwijsreden ?? row.afwijsreden,
+              korting: updated.korting,
+              lines: updated.lines,
+              lineCount: updated.lines.length,
+              totalQuantity: updated.lines.reduce((sum, line) => sum + line.quantity, 0),
+            }
           : row
       )
     );
@@ -319,8 +312,6 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             drukkers={drukkers.items}
             loadError={bestellingenLoadError}
             onBestellingUpdated={handleBestellingUpdated}
-            onLinePrijsVastgesteld={handleLinePrijsVastgesteld}
-            onLineUpdated={handleLineUpdated}
           />
         ) : activeSection === 'materiaalsoorten' ? (
           <MateriaalsoortenSection

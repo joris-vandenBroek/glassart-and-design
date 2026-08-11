@@ -239,6 +239,7 @@ describe('DrukkerModal — zending afronden', () => {
     klantnr: 'KN-1',
     companyName: 'Testbedrijf BV',
     bestelnr: 'GD-00201',
+    korting: null,
     besteldatum: '1-7-2026',
     status: 'Verstuurd naar drukker',
     lineCount: 1,

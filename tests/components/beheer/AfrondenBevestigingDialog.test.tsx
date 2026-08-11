@@ -12,6 +12,7 @@ function bestelling(id: string, bestelnr: string): Bestelling {
     klantnr: `klant-${id}`,
     companyName: `Bedrijf ${id}`,
     bestelnr,
+    korting: null,
     besteldatum: '1-8-2026',
     status: 'Verstuurd naar drukker',
     lineCount: 1,

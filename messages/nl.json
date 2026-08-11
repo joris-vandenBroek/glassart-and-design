@@ -537,6 +537,7 @@
     "bestellingenModalLabelPrijs": "Prijs",
     "bestellingenModalLabelAantal": "Aantal",
     "bestellingenModalTotalLabel": "Totaal",
+    "bestellingenModalKortingLabel": "Korting",
     "bestellingenModalTotalIncomplete": "Wordt nog vastgesteld",
     "bestellingenModalBtwLabel": "Btw ({percentage}%)",
     "bestellingenModalTotaalInclLabel": "Totaal incl. btw",

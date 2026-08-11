@@ -444,8 +444,8 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
       // Combineer beide bestellingen (van 2 verschillende klanten) in één mail.
       const mail = buildDrukkerMail({
         bestellingen: [
-          { id: headerX.id, klantnr: klantX.klantnr, companyName: klantX.email, bestelnr: headerX.bestelnr, besteldatum: '', status: 'Te versturen naar drukker', lineCount: 1, totalQuantity: 1, lines: [{ id: 'l1', code: 'AUTOTEST Kunstwerk Drukker', maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 80, quantity: 1 }] },
-          { id: headerY.id, klantnr: klantY.klantnr, companyName: klantY.email, bestelnr: headerY.bestelnr, besteldatum: '', status: 'Te versturen naar drukker', lineCount: 1, totalQuantity: 1, lines: [{ id: 'l2', code: 'AUTOTEST Kunstwerk Drukker', maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 80, quantity: 1 }] },
+          { id: headerX.id, klantnr: klantX.klantnr, companyName: klantX.email, bestelnr: headerX.bestelnr, korting: null, besteldatum: '', status: 'Te versturen naar drukker', lineCount: 1, totalQuantity: 1, lines: [{ id: 'l1', code: 'AUTOTEST Kunstwerk Drukker', maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 80, quantity: 1 }] },
+          { id: headerY.id, klantnr: klantY.klantnr, companyName: klantY.email, bestelnr: headerY.bestelnr, korting: null, besteldatum: '', status: 'Te versturen naar drukker', lineCount: 1, totalQuantity: 1, lines: [{ id: 'l2', code: 'AUTOTEST Kunstwerk Drukker', maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 80, quantity: 1 }] },
         ],
         klanten: [],
         kunstwerken: [{ id: kunstwerkId, foto: '', code: 'AUTOTEST Kunstwerk Drukker', kunstenaarnr: null, segmentIds: [], materiaalIds: [fixture.materiaalId], maatIds: [fixture.maatId], omschrijvingNl: '', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }],

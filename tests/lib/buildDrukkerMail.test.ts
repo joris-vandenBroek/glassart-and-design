@@ -101,6 +101,7 @@ function bestelling(overrides: Partial<Bestelling> = {}): Bestelling {
     klantnr: 'KN-1',
     companyName: 'Testbedrijf BV',
     bestelnr: 'GD-00401',
+    korting: null,
     besteldatum: '1-7-2026',
     status: 'Te versturen naar drukker',
     lineCount: 1,
