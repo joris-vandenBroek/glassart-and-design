@@ -5,6 +5,7 @@ import { POST as createKunstwerk } from '@/app/api/kunstwerken/route';
 import { PATCH as patchKunstwerk, DELETE as deleteKunstwerk } from '@/app/api/kunstwerken/[id]/route';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { hashPassword } from '@/lib/server/password';
+import { veiligOpruimen } from '../../helpers/veiligOpruimen';
 
 const createdKunstwerkIds: string[] = [];
 const createdHeaderIds: string[] = [];
@@ -12,18 +13,26 @@ const createdKlantEmails: string[] = [];
 
 afterEach(async () => {
   if (createdHeaderIds.length > 0) {
-    await getPool().query('DELETE FROM bestelheaders WHERE id IN (?)', [createdHeaderIds]);
+    await veiligOpruimen('bestelheaders', () =>
+      getPool().query('DELETE FROM bestelheaders WHERE id IN (?)', [createdHeaderIds])
+    );
     createdHeaderIds.length = 0;
   }
   if (createdKlantEmails.length > 0) {
-    await getPool().query('DELETE FROM klanten WHERE email IN (?)', [createdKlantEmails]);
+    await veiligOpruimen('klanten', () =>
+      getPool().query('DELETE FROM klanten WHERE email IN (?)', [createdKlantEmails])
+    );
     createdKlantEmails.length = 0;
   }
   if (createdKunstwerkIds.length > 0) {
-    await getPool().query('DELETE FROM kunstwerken WHERE id IN (?)', [createdKunstwerkIds]);
+    await veiligOpruimen('kunstwerken', () =>
+      getPool().query('DELETE FROM kunstwerken WHERE id IN (?)', [createdKunstwerkIds])
+    );
     createdKunstwerkIds.length = 0;
   }
-  await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
+  await veiligOpruimen('sessions (medewerker staff-1)', () =>
+    getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'")
+  );
 });
 
 async function medewerkerCookie(): Promise<string> {

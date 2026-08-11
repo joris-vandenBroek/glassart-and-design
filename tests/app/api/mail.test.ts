@@ -2,6 +2,7 @@ import { describe, expect, it, afterEach, beforeEach, vi } from 'vitest';
 import { getPool } from '@/lib/server/db';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { insertRow } from '@/lib/server/crud';
+import { veiligOpruimen } from '../../helpers/veiligOpruimen';
 
 const verstuurMailMock = vi.fn();
 vi.mock('@/lib/server/mailRelay', () => ({
@@ -19,19 +20,27 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-  await getPool().query(
-    "DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'mail-staff-1'"
+  await veiligOpruimen('sessions (medewerker mail-staff-1)', () =>
+    getPool().query(
+      "DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'mail-staff-1'"
+    )
   );
   if (createdKlantIds.length > 0) {
-    await getPool().query('DELETE FROM sessions WHERE userType = ? AND userId IN (?)', [
-      'klant',
-      createdKlantIds,
-    ]);
-    await getPool().query('DELETE FROM klanten WHERE id IN (?)', [createdKlantIds]);
+    await veiligOpruimen('sessions (klant)', () =>
+      getPool().query('DELETE FROM sessions WHERE userType = ? AND userId IN (?)', [
+        'klant',
+        createdKlantIds,
+      ])
+    );
+    await veiligOpruimen('klanten', () =>
+      getPool().query('DELETE FROM klanten WHERE id IN (?)', [createdKlantIds])
+    );
     createdKlantIds.length = 0;
   }
   if (createdDrukkerIds.length > 0) {
-    await getPool().query('DELETE FROM drukkers WHERE id IN (?)', [createdDrukkerIds]);
+    await veiligOpruimen('drukkers', () =>
+      getPool().query('DELETE FROM drukkers WHERE id IN (?)', [createdDrukkerIds])
+    );
     createdDrukkerIds.length = 0;
   }
 });

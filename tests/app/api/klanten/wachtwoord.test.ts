@@ -7,6 +7,7 @@ import { createSession, validateSession, SESSION_COOKIE_NAME } from '@/lib/serve
 import { POST as geefWachtwoordUit } from '@/app/api/klanten/[id]/wachtwoord/route';
 import { POST as login } from '@/app/api/auth/login/route';
 import { sendWachtwoordUitgegevenMail } from '@/lib/server/sendWachtwoordUitgegevenMail';
+import { veiligOpruimen } from '../../../helpers/veiligOpruimen';
 
 /**
  * Schakelaar om de logregel -- de laatste van de vier mutaties -- te laten
@@ -46,15 +47,27 @@ afterEach(async () => {
   mailLukt.waarde = true;
   vi.mocked(sendWachtwoordUitgegevenMail).mockClear();
   if (createdMedewerkerIds.length > 0) {
-    await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId IN (?)", [createdMedewerkerIds]);
-    await getPool().query('DELETE FROM activiteitenlog WHERE actorId IN (?)', [createdMedewerkerIds]);
-    await getPool().query('DELETE FROM medewerkers WHERE id IN (?)', [createdMedewerkerIds]);
+    await veiligOpruimen('sessions (medewerkers)', () =>
+      getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId IN (?)", [createdMedewerkerIds])
+    );
+    await veiligOpruimen('activiteitenlog (medewerkers)', () =>
+      getPool().query('DELETE FROM activiteitenlog WHERE actorId IN (?)', [createdMedewerkerIds])
+    );
+    await veiligOpruimen('medewerkers', () =>
+      getPool().query('DELETE FROM medewerkers WHERE id IN (?)', [createdMedewerkerIds])
+    );
     createdMedewerkerIds.length = 0;
   }
   if (createdKlantIds.length > 0) {
-    await getPool().query("DELETE FROM sessions WHERE userType = 'klant' AND userId IN (?)", [createdKlantIds]);
-    await getPool().query("DELETE FROM passwordResetTokens WHERE userType = 'klant' AND userId IN (?)", [createdKlantIds]);
-    await getPool().query('DELETE FROM klanten WHERE id IN (?)', [createdKlantIds]);
+    await veiligOpruimen('sessions (klanten)', () =>
+      getPool().query("DELETE FROM sessions WHERE userType = 'klant' AND userId IN (?)", [createdKlantIds])
+    );
+    await veiligOpruimen('passwordResetTokens (klanten)', () =>
+      getPool().query("DELETE FROM passwordResetTokens WHERE userType = 'klant' AND userId IN (?)", [createdKlantIds])
+    );
+    await veiligOpruimen('klanten', () =>
+      getPool().query('DELETE FROM klanten WHERE id IN (?)', [createdKlantIds])
+    );
     createdKlantIds.length = 0;
   }
 });

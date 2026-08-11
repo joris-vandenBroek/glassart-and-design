@@ -3,6 +3,7 @@ import { getPool } from '@/lib/server/db';
 import { insertRow } from '@/lib/server/crud';
 import { hashPassword } from '@/lib/server/password';
 import { vervangRelaties } from '@/lib/server/kunstwerkRelaties';
+import { veiligOpruimen } from '../../helpers/veiligOpruimen';
 import {
   combineerPrijs,
   prijsopslagVoorKunstenaar,
@@ -24,31 +25,45 @@ const createdKlantEmails: string[] = [];
 afterEach(async () => {
   const pool = getPool();
   if (createdKunstwerkIds.length > 0) {
-    await pool.query('DELETE FROM kunstwerken WHERE id IN (?)', [createdKunstwerkIds]);
+    await veiligOpruimen('kunstwerken', () =>
+      pool.query('DELETE FROM kunstwerken WHERE id IN (?)', [createdKunstwerkIds])
+    );
     createdKunstwerkIds.length = 0;
   }
   if (createdKunstenaarIds.length > 0) {
-    await pool.query('DELETE FROM kunstenaars WHERE id IN (?)', [createdKunstenaarIds]);
+    await veiligOpruimen('kunstenaars', () =>
+      pool.query('DELETE FROM kunstenaars WHERE id IN (?)', [createdKunstenaarIds])
+    );
     createdKunstenaarIds.length = 0;
   }
   if (createdMaatIds.length > 0) {
-    await pool.query('DELETE FROM maten WHERE id IN (?)', [createdMaatIds]);
+    await veiligOpruimen('maten', () =>
+      pool.query('DELETE FROM maten WHERE id IN (?)', [createdMaatIds])
+    );
     createdMaatIds.length = 0;
   }
   if (createdMateriaalIds.length > 0) {
-    await pool.query('DELETE FROM materialen WHERE id IN (?)', [createdMateriaalIds]);
+    await veiligOpruimen('materialen', () =>
+      pool.query('DELETE FROM materialen WHERE id IN (?)', [createdMateriaalIds])
+    );
     createdMateriaalIds.length = 0;
   }
   if (createdMateriaalsoortIds.length > 0) {
-    await pool.query('DELETE FROM materiaalsoorten WHERE id IN (?)', [createdMateriaalsoortIds]);
+    await veiligOpruimen('materiaalsoorten', () =>
+      pool.query('DELETE FROM materiaalsoorten WHERE id IN (?)', [createdMateriaalsoortIds])
+    );
     createdMateriaalsoortIds.length = 0;
   }
   if (createdKlantEmails.length > 0) {
-    await pool.query('DELETE FROM klanten WHERE email IN (?)', [createdKlantEmails]);
+    await veiligOpruimen('klanten', () =>
+      pool.query('DELETE FROM klanten WHERE email IN (?)', [createdKlantEmails])
+    );
     createdKlantEmails.length = 0;
   }
   if (createdPrijsgroepIds.length > 0) {
-    await pool.query('DELETE FROM prijsgroepen WHERE id IN (?)', [createdPrijsgroepIds]);
+    await veiligOpruimen('prijsgroepen', () =>
+      pool.query('DELETE FROM prijsgroepen WHERE id IN (?)', [createdPrijsgroepIds])
+    );
     createdPrijsgroepIds.length = 0;
   }
 });

@@ -5,6 +5,7 @@ import { hashPassword } from '@/lib/server/password';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { POST as createKunstenaar } from '@/app/api/kunstenaars/route';
 import { PATCH as patchKunstenaar, DELETE as deleteKunstenaar } from '@/app/api/kunstenaars/[id]/route';
+import { veiligOpruimen } from '../../helpers/veiligOpruimen';
 
 const createdKunstenaarIds: string[] = [];
 const createdKlantEmails: string[] = [];
@@ -12,15 +13,21 @@ const createdKlantEmails: string[] = [];
 afterEach(async () => {
   // createSession('medewerker', 'staff-1') gebruikt een vast nep-userId (er bestaat geen
   // medewerkerrij voor), dus elke aanroep laat een losse sessions-rij achter.
-  await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
+  await veiligOpruimen('sessions (medewerker staff-1)', () =>
+    getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'")
+  );
   // De klant verwijst naar de kunstenaar, dus die moet eerst weg voordat de kunstenaar
   // zelf wordt opgeruimd.
   if (createdKlantEmails.length > 0) {
-    await getPool().query('DELETE FROM klanten WHERE email IN (?)', [createdKlantEmails]);
+    await veiligOpruimen('klanten', () =>
+      getPool().query('DELETE FROM klanten WHERE email IN (?)', [createdKlantEmails])
+    );
     createdKlantEmails.length = 0;
   }
   if (createdKunstenaarIds.length > 0) {
-    await getPool().query('DELETE FROM kunstenaars WHERE id IN (?)', [createdKunstenaarIds]);
+    await veiligOpruimen('kunstenaars', () =>
+      getPool().query('DELETE FROM kunstenaars WHERE id IN (?)', [createdKunstenaarIds])
+    );
     createdKunstenaarIds.length = 0;
   }
 });

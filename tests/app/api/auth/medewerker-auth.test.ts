@@ -4,6 +4,7 @@ import { insertRow } from '@/lib/server/crud';
 import { hashPassword } from '@/lib/server/password';
 import { POST as medewerkerLogin } from '@/app/api/auth/medewerker-login/route';
 import { GET as me } from '@/app/api/auth/me/route';
+import { veiligOpruimen } from '../../../helpers/veiligOpruimen';
 
 // Uses a clearly-fake @example.com test email -- never a real @glassartanddesign.com
 // address -- so this can never collide with (or require wiping) a real migrated
@@ -11,11 +12,15 @@ import { GET as me } from '@/app/api/auth/me/route';
 const TEST_EMAIL = 'test-medewerker@example.com';
 
 afterEach(async () => {
-  await getPool().query(
-    "DELETE FROM sessions WHERE userType = 'medewerker' AND userId IN (SELECT id FROM medewerkers WHERE email = ?)",
-    [TEST_EMAIL]
+  await veiligOpruimen('sessions (medewerker)', () =>
+    getPool().query(
+      "DELETE FROM sessions WHERE userType = 'medewerker' AND userId IN (SELECT id FROM medewerkers WHERE email = ?)",
+      [TEST_EMAIL]
+    )
   );
-  await getPool().query('DELETE FROM medewerkers WHERE email = ?', [TEST_EMAIL]);
+  await veiligOpruimen('medewerkers', () =>
+    getPool().query('DELETE FROM medewerkers WHERE email = ?', [TEST_EMAIL])
+  );
 });
 
 describe('medewerker login route', () => {

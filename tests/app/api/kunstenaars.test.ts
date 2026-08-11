@@ -1,5 +1,6 @@
 import { describe, expect, it, afterEach } from 'vitest';
 import { getPool } from '@/lib/server/db';
+import { veiligOpruimen } from '../../helpers/veiligOpruimen';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { insertRow } from '@/lib/server/crud';
 import { GET as listKunstenaars, POST as createKunstenaar } from '@/app/api/kunstenaars/route';
@@ -23,13 +24,19 @@ const createdKunstwerkIds: string[] = [];
 afterEach(async () => {
   // createSession('medewerker', 'staff-1') uses a fixed fake userId (no real medewerker
   // row exists for it), so every call leaves an orphaned `sessions` row.
-  await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
+  await veiligOpruimen('sessions (medewerker staff-1)', () =>
+    getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'")
+  );
   if (createdKunstwerkIds.length > 0) {
-    await getPool().query('DELETE FROM kunstwerken WHERE id IN (?)', [createdKunstwerkIds]);
+    await veiligOpruimen('kunstwerken', () =>
+      getPool().query('DELETE FROM kunstwerken WHERE id IN (?)', [createdKunstwerkIds])
+    );
     createdKunstwerkIds.length = 0;
   }
   if (createdKunstenaarIds.length > 0) {
-    await getPool().query('DELETE FROM kunstenaars WHERE id IN (?)', [createdKunstenaarIds]);
+    await veiligOpruimen('kunstenaars', () =>
+      getPool().query('DELETE FROM kunstenaars WHERE id IN (?)', [createdKunstenaarIds])
+    );
     createdKunstenaarIds.length = 0;
   }
 });

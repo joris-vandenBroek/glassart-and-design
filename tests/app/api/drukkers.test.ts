@@ -8,6 +8,7 @@ import {
   PATCH as patchDrukker,
   DELETE as deleteDrukker,
 } from '@/app/api/drukkers/[id]/route';
+import { veiligOpruimen } from '../../helpers/veiligOpruimen';
 
 // Tracks the exact ids each test creates and removes only those afterward -- never
 // a table-wide DELETE -- so this suite is safe to run against a table that already
@@ -17,14 +18,20 @@ const createdDrukkerIds: string[] = [];
 afterEach(async () => {
   // medewerkerCookie() uses a fixed fake userId (no real medewerker row exists for it), so
   // every call leaves an orphaned `sessions` row the drukker-scoped cleanup below never catches.
-  await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
+  await veiligOpruimen('sessions (medewerker staff-1)', () =>
+    getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'")
+  );
   if (createdDrukkerIds.length > 0) {
     // Zendingen cascaderen niet meer mee met een verwijderde drukker; eerst die weg.
-    await getPool().query(
-      'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
-      [createdDrukkerIds]
+    await veiligOpruimen('drukkerZendingen', () =>
+      getPool().query(
+        'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
+        [createdDrukkerIds]
+      )
     );
-    await getPool().query('DELETE FROM drukkers WHERE id IN (?)', [createdDrukkerIds]);
+    await veiligOpruimen('drukkers', () =>
+      getPool().query('DELETE FROM drukkers WHERE id IN (?)', [createdDrukkerIds])
+    );
     createdDrukkerIds.length = 0;
   }
 });

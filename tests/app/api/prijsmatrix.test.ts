@@ -4,6 +4,7 @@ import { getPool } from '@/lib/server/db';
 import { insertRow } from '@/lib/server/crud';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { GET as getMatrix, PUT as putMatrix } from '@/app/api/prijsmatrix/route';
+import { veiligOpruimen } from '../../helpers/veiligOpruimen';
 
 const createdMaatIds: string[] = [];
 const createdMateriaalsoortIds: string[] = [];
@@ -13,17 +14,23 @@ afterEach(async () => {
   const pool = getPool();
   // medewerkerCookie() uses a fixed fake userId (no real medewerker row exists for it), so
   // every call leaves an orphaned `sessions` row nothing else in this file would clean up.
-  await pool.query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
+  await veiligOpruimen('sessions (medewerker staff-1)', () =>
+    pool.query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'")
+  );
   if (createdMaatIds.length > 0) {
-    await pool.query('DELETE FROM maten WHERE id IN (?)', [createdMaatIds]);
+    await veiligOpruimen('maten', () => pool.query('DELETE FROM maten WHERE id IN (?)', [createdMaatIds]));
     createdMaatIds.length = 0;
   }
   if (createdMateriaalIds.length > 0) {
-    await pool.query('DELETE FROM materialen WHERE id IN (?)', [createdMateriaalIds]);
+    await veiligOpruimen('materialen', () =>
+      pool.query('DELETE FROM materialen WHERE id IN (?)', [createdMateriaalIds])
+    );
     createdMateriaalIds.length = 0;
   }
   if (createdMateriaalsoortIds.length > 0) {
-    await pool.query('DELETE FROM materiaalsoorten WHERE id IN (?)', [createdMateriaalsoortIds]);
+    await veiligOpruimen('materiaalsoorten', () =>
+      pool.query('DELETE FROM materiaalsoorten WHERE id IN (?)', [createdMateriaalsoortIds])
+    );
     createdMateriaalsoortIds.length = 0;
   }
 });

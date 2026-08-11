@@ -9,20 +9,27 @@ vi.mock('@/lib/server/sendResetEmail', () => ({ sendResetEmail: vi.fn().mockReso
 import { sendResetEmail } from '@/lib/server/sendResetEmail';
 import { POST as requestReset } from '@/app/api/auth/reset-password/request/route';
 import { POST as confirmReset } from '@/app/api/auth/reset-password/confirm/route';
+import { veiligOpruimen } from '../../../helpers/veiligOpruimen';
 
 // Every test uses a @example.com address -- a domain no real customer would
 // plausibly use -- so cleanup is scoped to exactly that pattern instead of a
 // table-wide DELETE, never touching a real customer or their reset tokens.
 afterEach(async () => {
-  await getPool().query(
-    "DELETE FROM passwordResetTokens WHERE userId IN (SELECT id FROM klanten WHERE email LIKE '%@example.com')"
+  await veiligOpruimen('passwordResetTokens', () =>
+    getPool().query(
+      "DELETE FROM passwordResetTokens WHERE userId IN (SELECT id FROM klanten WHERE email LIKE '%@example.com')"
+    )
   );
   // Sessies horen bij dezelfde fixture-klanten en zouden anders als weesrijen
   // blijven staan -- ook hier scoped op de @example.com-klanten, nooit breder.
-  await getPool().query(
-    "DELETE FROM sessions WHERE userType = 'klant' AND userId IN (SELECT id FROM klanten WHERE email LIKE '%@example.com')"
+  await veiligOpruimen('sessions (klant)', () =>
+    getPool().query(
+      "DELETE FROM sessions WHERE userType = 'klant' AND userId IN (SELECT id FROM klanten WHERE email LIKE '%@example.com')"
+    )
   );
-  await getPool().query("DELETE FROM klanten WHERE email LIKE '%@example.com'");
+  await veiligOpruimen('klanten', () =>
+    getPool().query("DELETE FROM klanten WHERE email LIKE '%@example.com'")
+  );
 });
 
 describe('password reset routes', () => {

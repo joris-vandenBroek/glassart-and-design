@@ -9,6 +9,7 @@ import {
 } from '@/app/api/[resource]/[id]/route';
 import { insertRow } from '@/lib/server/crud';
 import { hashPassword } from '@/lib/server/password';
+import { veiligOpruimen } from '../../helpers/veiligOpruimen';
 
 // Tracks the exact ids each test creates and removes only those afterward -- never
 // a table-wide DELETE. Previously "gets, updates and deletes a single segment" blindly
@@ -34,39 +35,57 @@ const createdLookupGuardKlantEmails: string[] = [];
 afterEach(async () => {
   // medewerkerCookie() uses a fixed fake userId (no real medewerker row exists for it), so
   // every call leaves an orphaned `sessions` row nothing else in this file would clean up.
-  await getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'");
+  await veiligOpruimen('sessions (medewerker staff-1)', () =>
+    getPool().query("DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'staff-1'")
+  );
   if (createdSegmentIds.length > 0) {
-    await getPool().query('DELETE FROM segmenten WHERE id IN (?)', [createdSegmentIds]);
+    await veiligOpruimen('segmenten', () =>
+      getPool().query('DELETE FROM segmenten WHERE id IN (?)', [createdSegmentIds])
+    );
     createdSegmentIds.length = 0;
   }
   if (createdBestellijnGuardHeaderIds.length > 0) {
     // Cascades to bestellines (ON DELETE CASCADE), and must run before deleting the klant
     // since bestelheaders.klantnr has a plain (non-cascading) FK to klanten.
-    await getPool().query('DELETE FROM bestelheaders WHERE id IN (?)', [createdBestellijnGuardHeaderIds]);
+    await veiligOpruimen('bestelheaders (bestellijn guard)', () =>
+      getPool().query('DELETE FROM bestelheaders WHERE id IN (?)', [createdBestellijnGuardHeaderIds])
+    );
     createdBestellijnGuardHeaderIds.length = 0;
   }
   if (createdBestellijnGuardKlantEmails.length > 0) {
-    await getPool().query('DELETE FROM klanten WHERE email IN (?)', [createdBestellijnGuardKlantEmails]);
+    await veiligOpruimen('klanten (bestellijn guard)', () =>
+      getPool().query('DELETE FROM klanten WHERE email IN (?)', [createdBestellijnGuardKlantEmails])
+    );
     createdBestellijnGuardKlantEmails.length = 0;
   }
   if (createdBestellijnGuardMaatIds.length > 0) {
-    await getPool().query('DELETE FROM maten WHERE id IN (?)', [createdBestellijnGuardMaatIds]);
+    await veiligOpruimen('maten (bestellijn guard)', () =>
+      getPool().query('DELETE FROM maten WHERE id IN (?)', [createdBestellijnGuardMaatIds])
+    );
     createdBestellijnGuardMaatIds.length = 0;
   }
   if (createdLookupGuardMateriaalIds.length > 0) {
-    await getPool().query('DELETE FROM materialen WHERE id IN (?)', [createdLookupGuardMateriaalIds]);
+    await veiligOpruimen('materialen (lookup guard)', () =>
+      getPool().query('DELETE FROM materialen WHERE id IN (?)', [createdLookupGuardMateriaalIds])
+    );
     createdLookupGuardMateriaalIds.length = 0;
   }
   if (createdLookupGuardMateriaalsoortIds.length > 0) {
-    await getPool().query('DELETE FROM materiaalsoorten WHERE id IN (?)', [createdLookupGuardMateriaalsoortIds]);
+    await veiligOpruimen('materiaalsoorten (lookup guard)', () =>
+      getPool().query('DELETE FROM materiaalsoorten WHERE id IN (?)', [createdLookupGuardMateriaalsoortIds])
+    );
     createdLookupGuardMateriaalsoortIds.length = 0;
   }
   if (createdLookupGuardKlantEmails.length > 0) {
-    await getPool().query('DELETE FROM klanten WHERE email IN (?)', [createdLookupGuardKlantEmails]);
+    await veiligOpruimen('klanten (lookup guard)', () =>
+      getPool().query('DELETE FROM klanten WHERE email IN (?)', [createdLookupGuardKlantEmails])
+    );
     createdLookupGuardKlantEmails.length = 0;
   }
   if (createdLookupGuardPrijsgroepIds.length > 0) {
-    await getPool().query('DELETE FROM prijsgroepen WHERE id IN (?)', [createdLookupGuardPrijsgroepIds]);
+    await veiligOpruimen('prijsgroepen (lookup guard)', () =>
+      getPool().query('DELETE FROM prijsgroepen WHERE id IN (?)', [createdLookupGuardPrijsgroepIds])
+    );
     createdLookupGuardPrijsgroepIds.length = 0;
   }
 });

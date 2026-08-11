@@ -6,6 +6,7 @@ import { POST as register } from '@/app/api/auth/register/route';
 import { POST as login } from '@/app/api/auth/login/route';
 import { POST as logout } from '@/app/api/auth/logout/route';
 import { GET as me } from '@/app/api/auth/me/route';
+import { veiligOpruimen } from '../../../helpers/veiligOpruimen';
 
 const createdPrijsgroepIds: string[] = [];
 
@@ -21,12 +22,18 @@ function jsonRequest(body: unknown, cookie?: string) {
 // customer would plausibly use -- so cleanup is scoped to exactly that pattern
 // instead of a table-wide DELETE, never touching a real customer registration.
 afterEach(async () => {
-  await getPool().query(
-    "DELETE FROM sessions WHERE userType = 'klant' AND userId IN (SELECT id FROM klanten WHERE email LIKE '%@example.com')"
+  await veiligOpruimen('sessions (klant)', () =>
+    getPool().query(
+      "DELETE FROM sessions WHERE userType = 'klant' AND userId IN (SELECT id FROM klanten WHERE email LIKE '%@example.com')"
+    )
   );
-  await getPool().query("DELETE FROM klanten WHERE email LIKE '%@example.com'");
+  await veiligOpruimen('klanten', () =>
+    getPool().query("DELETE FROM klanten WHERE email LIKE '%@example.com'")
+  );
   if (createdPrijsgroepIds.length > 0) {
-    await getPool().query('DELETE FROM prijsgroepen WHERE id IN (?)', [createdPrijsgroepIds]);
+    await veiligOpruimen('prijsgroepen', () =>
+      getPool().query('DELETE FROM prijsgroepen WHERE id IN (?)', [createdPrijsgroepIds])
+    );
     createdPrijsgroepIds.length = 0;
   }
 });

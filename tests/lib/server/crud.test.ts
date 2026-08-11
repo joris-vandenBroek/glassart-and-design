@@ -2,6 +2,7 @@ import { describe, expect, it, afterEach } from 'vitest';
 import { getPool } from '@/lib/server/db';
 import { listRows, getRow, insertRow, updateRow, deleteRow, parseJsonKolom } from '@/lib/server/crud';
 import { controleerKolommen } from '@/lib/server/tableColumns';
+import { veiligOpruimen } from '../../helpers/veiligOpruimen';
 
 // Every test tracks the exact ids it creates and removes only those afterward --
 // never a table-wide DELETE -- so this suite is safe to run against a segmenten/
@@ -12,15 +13,21 @@ const createdKlantIds: string[] = [];
 
 afterEach(async () => {
   if (createdSegmentIds.length > 0) {
-    await getPool().query('DELETE FROM segmenten WHERE id IN (?)', [createdSegmentIds]);
+    await veiligOpruimen('segmenten', () =>
+      getPool().query('DELETE FROM segmenten WHERE id IN (?)', [createdSegmentIds])
+    );
     createdSegmentIds.length = 0;
   }
   if (createdKunstenaarIds.length > 0) {
-    await getPool().query('DELETE FROM kunstenaars WHERE id IN (?)', [createdKunstenaarIds]);
+    await veiligOpruimen('kunstenaars', () =>
+      getPool().query('DELETE FROM kunstenaars WHERE id IN (?)', [createdKunstenaarIds])
+    );
     createdKunstenaarIds.length = 0;
   }
   if (createdKlantIds.length > 0) {
-    await getPool().query('DELETE FROM klanten WHERE id IN (?)', [createdKlantIds]);
+    await veiligOpruimen('klanten', () =>
+      getPool().query('DELETE FROM klanten WHERE id IN (?)', [createdKlantIds])
+    );
     createdKlantIds.length = 0;
   }
 });

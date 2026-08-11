@@ -4,6 +4,7 @@ import { insertRow } from '@/lib/server/crud';
 import { hashPassword, verifyPassword } from '@/lib/server/password';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { GET as getMe, PATCH as patchMe } from '@/app/api/klanten/me/route';
+import { veiligOpruimen } from '../../helpers/veiligOpruimen';
 
 // Every klant this suite creates uses a @example.com address, so cleanup is scoped
 // to exactly those ids -- never a table-wide DELETE -- and is safe to run against a
@@ -12,8 +13,12 @@ const createdKlantIds: string[] = [];
 
 afterEach(async () => {
   if (createdKlantIds.length > 0) {
-    await getPool().query('DELETE FROM sessions WHERE userId IN (?)', [createdKlantIds]);
-    await getPool().query('DELETE FROM klanten WHERE id IN (?)', [createdKlantIds]);
+    await veiligOpruimen('sessions (klant)', () =>
+      getPool().query('DELETE FROM sessions WHERE userId IN (?)', [createdKlantIds])
+    );
+    await veiligOpruimen('klanten', () =>
+      getPool().query('DELETE FROM klanten WHERE id IN (?)', [createdKlantIds])
+    );
     createdKlantIds.length = 0;
   }
 });
