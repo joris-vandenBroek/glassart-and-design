@@ -8,6 +8,7 @@ import { POST as createHeader, GET as listHeaders } from '@/app/api/bestelheader
 import { PATCH as patchHeader } from '@/app/api/bestelheaders/[id]/route';
 import { PATCH as patchLine } from '@/app/api/bestelheaders/[id]/bestellines/[lineId]/route';
 import { GET as getStatusHistorie } from '@/app/api/bestelheaders/[id]/statushistorie/route';
+import { vervangRelaties } from '@/lib/server/kunstwerkRelaties';
 
 const BESTELNR_PADDING = 5;
 
@@ -145,16 +146,11 @@ async function maakGeprijsdKunstwerk(
     materiaalId,
     matrixPrijs,
   ]);
-  const kunstwerk = await insertRow<{ id: string }>(
-    'kunstwerken',
-    {
-      code: `test-bestelheaders-werk-${++kunstwerkTeller}`,
-      kunstenaarnr,
-      materiaalIds: [materiaalId],
-      maatIds: [maatId],
-    } as never,
-    ['materiaalIds', 'maatIds']
-  );
+  const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+    code: `test-bestelheaders-werk-${++kunstwerkTeller}`,
+    kunstenaarnr,
+  } as never);
+  await vervangRelaties(getPool(), kunstwerk.id, { materiaalIds: [materiaalId], maatIds: [maatId] });
   createdKunstwerkIds.push(kunstwerk.id);
   return kunstwerk.id;
 }
@@ -273,11 +269,10 @@ describe('bestelheaders routes', () => {
     const { cookie } = await klant('nomatrix@example.com');
     const maatId = await maakMaat(44, 64);
     const materiaalId = await maakMateriaal();
-    const kunstwerk = await insertRow<{ id: string }>(
-      'kunstwerken',
-      { code: 'test-bestelheaders-ongeprijsd', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
-      ['materiaalIds', 'maatIds']
-    );
+    const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+      code: 'test-bestelheaders-ongeprijsd',
+    } as never);
+    await vervangRelaties(getPool(), kunstwerk.id, { materiaalIds: [materiaalId], maatIds: [maatId] });
     createdKunstwerkIds.push(kunstwerk.id);
 
     const response = await createHeader(
@@ -303,11 +298,10 @@ describe('bestelheaders routes', () => {
 
   it('computes a maatloos kunstwerk\'s prijs from prijsPerM2 and the submitted afmetingen', async () => {
     const { cookie } = await klant('maatloos@example.com');
-    const kunstwerk = await insertRow<{ id: string }>(
-      'kunstwerken',
-      { code: 'test-bestelheaders-maatloos', materiaalIds: [], maatIds: [], prijsPerM2: 100 } as never,
-      ['materiaalIds', 'maatIds']
-    );
+    const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+      code: 'test-bestelheaders-maatloos',
+      prijsPerM2: 100,
+    } as never);
     createdKunstwerkIds.push(kunstwerk.id);
 
     const response = await createHeader(
@@ -330,11 +324,10 @@ describe('bestelheaders routes', () => {
     const { cookie } = await klant('eigenmaat@example.com');
     const maatId = await maakMaat(45, 65);
     const materiaalId = await maakMateriaal();
-    const kunstwerk = await insertRow<{ id: string }>(
-      'kunstwerken',
-      { code: 'test-bestelheaders-eigenmaat', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
-      ['materiaalIds', 'maatIds']
-    );
+    const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+      code: 'test-bestelheaders-eigenmaat',
+    } as never);
+    await vervangRelaties(getPool(), kunstwerk.id, { materiaalIds: [materiaalId], maatIds: [maatId] });
     createdKunstwerkIds.push(kunstwerk.id);
 
     const response = await createHeader(
@@ -434,11 +427,10 @@ describe('bestelheaders routes', () => {
     const { cookie } = await klant('c@example.com');
     const maatId = await maakMaat(46, 66);
     const materiaalId = await maakMateriaal();
-    const kunstwerk = await insertRow<{ id: string }>(
-      'kunstwerken',
-      { code: 'test-bestelheaders-eigenmaat-2', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
-      ['materiaalIds', 'maatIds']
-    );
+    const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+      code: 'test-bestelheaders-eigenmaat-2',
+    } as never);
+    await vervangRelaties(getPool(), kunstwerk.id, { materiaalIds: [materiaalId], maatIds: [maatId] });
     createdKunstwerkIds.push(kunstwerk.id);
     const created = await createHeader(
       postRequest(
@@ -622,11 +614,10 @@ describe('bestelheaders routes', () => {
     const { cookie } = await klant('unauth-patch@example.com');
     const maatId = await maakMaat(47, 67);
     const materiaalId = await maakMateriaal();
-    const kunstwerk = await insertRow<{ id: string }>(
-      'kunstwerken',
-      { code: 'test-bestelheaders-eigenmaat-3', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
-      ['materiaalIds', 'maatIds']
-    );
+    const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+      code: 'test-bestelheaders-eigenmaat-3',
+    } as never);
+    await vervangRelaties(getPool(), kunstwerk.id, { materiaalIds: [materiaalId], maatIds: [maatId] });
     createdKunstwerkIds.push(kunstwerk.id);
     const created = await createHeader(
       postRequest(
@@ -665,11 +656,10 @@ describe('bestelheaders routes', () => {
 
   it('rejects a non-positive/non-integer breedte or hoogte on a maatloos kunstwerk', async () => {
     const { cookie } = await klant('badafmeting@example.com');
-    const kunstwerk = await insertRow<{ id: string }>(
-      'kunstwerken',
-      { code: 'test-bestelheaders-maatloos-2', materiaalIds: [], maatIds: [], prijsPerM2: 100 } as never,
-      ['materiaalIds', 'maatIds']
-    );
+    const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+      code: 'test-bestelheaders-maatloos-2',
+      prijsPerM2: 100,
+    } as never);
     createdKunstwerkIds.push(kunstwerk.id);
 
     const response = await createHeader(
@@ -689,11 +679,10 @@ describe('bestelheaders routes', () => {
 
   it('rejects a maatloos kunstwerk with a zero prijsPerM2 rather than storing a zero prijs', async () => {
     const { cookie } = await klant('zeroprijsperm2@example.com');
-    const kunstwerk = await insertRow<{ id: string }>(
-      'kunstwerken',
-      { code: 'test-bestelheaders-maatloos-gratis', materiaalIds: [], maatIds: [], prijsPerM2: 0 } as never,
-      ['materiaalIds', 'maatIds']
-    );
+    const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+      code: 'test-bestelheaders-maatloos-gratis',
+      prijsPerM2: 0,
+    } as never);
     createdKunstwerkIds.push(kunstwerk.id);
 
     const response = await createHeader(
@@ -766,11 +755,10 @@ describe('bestelheaders routes', () => {
     const { cookie } = await klant('geenafmeting@example.com');
     const maatId = await maakMaat(53, 73);
     const materiaalId = await maakMateriaal();
-    const kunstwerk = await insertRow<{ id: string }>(
-      'kunstwerken',
-      { code: 'test-bestelheaders-eigenmaat-zonder-afmeting', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
-      ['materiaalIds', 'maatIds']
-    );
+    const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+      code: 'test-bestelheaders-eigenmaat-zonder-afmeting',
+    } as never);
+    await vervangRelaties(getPool(), kunstwerk.id, { materiaalIds: [materiaalId], maatIds: [maatId] });
     createdKunstwerkIds.push(kunstwerk.id);
 
     const response = await createHeader(
@@ -823,16 +811,11 @@ describe('bestelheaders routes', () => {
     const { cookie } = await klant('maatloos-mat@example.com');
     const materiaalIdA = await maakMateriaal();
     const materiaalIdB = await maakMateriaal();
-    const kunstwerk = await insertRow<{ id: string }>(
-      'kunstwerken',
-      {
-        code: 'test-bestelheaders-maatloos-met-materialen',
-        materiaalIds: [materiaalIdA],
-        maatIds: [],
-        prijsPerM2: 50,
-      } as never,
-      ['materiaalIds', 'maatIds']
-    );
+    const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+      code: 'test-bestelheaders-maatloos-met-materialen',
+      prijsPerM2: 50,
+    } as never);
+    await vervangRelaties(getPool(), kunstwerk.id, { materiaalIds: [materiaalIdA] });
     createdKunstwerkIds.push(kunstwerk.id);
 
     const response = await createHeader(

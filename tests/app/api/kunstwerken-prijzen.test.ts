@@ -4,6 +4,7 @@ import { insertRow } from '@/lib/server/crud';
 import { hashPassword } from '@/lib/server/password';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { GET as getKunstwerkPrijzen } from '@/app/api/kunstwerken/prijzen/route';
+import { vervangRelaties } from '@/lib/server/kunstwerkRelaties';
 
 const createdMaatIds: string[] = [];
 const createdMateriaalsoortIds: string[] = [];
@@ -96,11 +97,8 @@ describe('GET /api/kunstwerken/prijzen', () => {
       materiaalId,
       150,
     ]);
-    const kunstwerk = await insertRow<{ id: string }>(
-      'kunstwerken',
-      { code: 'test-prijzen-bulk', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
-      ['materiaalIds', 'maatIds']
-    );
+    const kunstwerk = await insertRow<{ id: string }>('kunstwerken', { code: 'test-prijzen-bulk' } as never);
+    await vervangRelaties(getPool(), kunstwerk.id, { materiaalIds: [materiaalId], maatIds: [maatId] });
     createdKunstwerkIds.push(kunstwerk.id);
 
     const response = await getKunstwerkPrijzen(new Request('http://localhost/api/kunstwerken/prijzen'));
@@ -117,11 +115,8 @@ describe('GET /api/kunstwerken/prijzen', () => {
       materiaalId,
       100,
     ]);
-    const kunstwerk = await insertRow<{ id: string }>(
-      'kunstwerken',
-      { code: 'test-prijzen-bulk-korting', materiaalIds: [materiaalId], maatIds: [maatId] } as never,
-      ['materiaalIds', 'maatIds']
-    );
+    const kunstwerk = await insertRow<{ id: string }>('kunstwerken', { code: 'test-prijzen-bulk-korting' } as never);
+    await vervangRelaties(getPool(), kunstwerk.id, { materiaalIds: [materiaalId], maatIds: [maatId] });
     createdKunstwerkIds.push(kunstwerk.id);
     const cookie = await klantCookieMetPrijsgroep('bulk-prijzen-korting@example.com', { kortingspercentage: 15 });
 

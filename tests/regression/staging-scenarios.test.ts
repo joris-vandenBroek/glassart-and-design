@@ -30,6 +30,7 @@ import { getPool } from '@/lib/server/db';
 import { insertRow } from '@/lib/server/crud';
 import { hashPassword } from '@/lib/server/password';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
+import { vervangRelaties, haalRelatiesOpVoorEen } from '@/lib/server/kunstwerkRelaties';
 
 // The drukker-mail send is client-side (see the file header), but a wachtwoord-reset
 // e-mail is sent server-side from within the request-route itself (sendResetEmail.ts
@@ -179,16 +180,14 @@ describe('Deel C1 -- klant-kunstenaar exclusiviteit (echte workflow)', () => {
       fixture = await maakMaatMateriaal('C1');
       await zetMatrixPrijs(fixture.maatId, fixture.materiaalId, 100);
       stap(`Maat/materiaal + prijsmatrix-regel aangemaakt (matrixprijs EUR 100)`);
-      const kunstwerk = await insertRow<{ id: string }>(
-        'kunstwerken',
-        {
-          code: 'AUTOTEST Kunstwerk Exclusief',
-          kunstenaarnr,
-          materiaalIds: [fixture.materiaalId],
-          maatIds: [fixture.maatId],
-        } as never,
-        ['materiaalIds', 'maatIds']
-      );
+      const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+        code: 'AUTOTEST Kunstwerk Exclusief',
+        kunstenaarnr,
+      } as never);
+      await vervangRelaties(getPool(), kunstwerk.id, {
+        materiaalIds: [fixture.materiaalId],
+        maatIds: [fixture.maatId],
+      });
       kunstwerkId = kunstwerk.id;
       stap(`Kunstwerk "AUTOTEST Kunstwerk Exclusief" aangemaakt (${kunstwerkId})`);
 
@@ -279,16 +278,14 @@ describe('Deel C2 -- kunstenaarsopslag + prijsgroep (prijsopbouw van een bestell
       await zetMatrixPrijs(fixtureA.maatId, fixtureA.materiaalId, 100);
       await zetMatrixPrijs(fixtureB.maatId, fixtureB.materiaalId, 250);
 
-      const kunstwerk = await insertRow<{ id: string }>(
-        'kunstwerken',
-        {
-          code: 'AUTOTEST Kunstwerk Opslag',
-          kunstenaarnr,
-          materiaalIds: [fixtureA.materiaalId, fixtureB.materiaalId],
-          maatIds: [fixtureA.maatId, fixtureB.maatId],
-        } as never,
-        ['materiaalIds', 'maatIds']
-      );
+      const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+        code: 'AUTOTEST Kunstwerk Opslag',
+        kunstenaarnr,
+      } as never);
+      await vervangRelaties(getPool(), kunstwerk.id, {
+        materiaalIds: [fixtureA.materiaalId, fixtureB.materiaalId],
+        maatIds: [fixtureA.maatId, fixtureB.maatId],
+      });
       kunstwerkId = kunstwerk.id;
 
       stap(`Kunstenaar zonder opslag + kunstwerk met 2 materiaal/maat-combinaties (matrixprijzen EUR 100 en EUR 250)`);
@@ -389,15 +386,13 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
 
       fixture = await maakMaatMateriaal('C3');
       await zetMatrixPrijs(fixture.maatId, fixture.materiaalId, 80);
-      const kunstwerk = await insertRow<{ id: string }>(
-        'kunstwerken',
-        {
-          code: 'AUTOTEST Kunstwerk Drukker',
-          materiaalIds: [fixture.materiaalId],
-          maatIds: [fixture.maatId],
-        } as never,
-        ['materiaalIds', 'maatIds']
-      );
+      const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+        code: 'AUTOTEST Kunstwerk Drukker',
+      } as never);
+      await vervangRelaties(getPool(), kunstwerk.id, {
+        materiaalIds: [fixture.materiaalId],
+        maatIds: [fixture.maatId],
+      });
       kunstwerkId = kunstwerk.id;
 
       const klantX = await maakKlant('c3-klant-x');
@@ -658,11 +653,13 @@ describe('Bestelling-levenscyclus -- plaatsen tot verstuurd naar drukker', () =>
       // een "eigen maat" (maatId: '') op dit NIET-maatloze kunstwerk, wat altijd een NULL
       // prijs (op-aanvraag) oplevert, net als in de praktijk -- zie bestelheaders.test.ts's
       // "stores a null prijs for an eigen-maat line on a kunstwerk that is not maatloos".
-      const kunstwerk = await insertRow<{ id: string }>(
-        'kunstwerken',
-        { code: 'AUTOTEST Kunstwerk Eigen Maat', materiaalIds: [fixture.materiaalId], maatIds: [fixture.maatId] } as never,
-        ['materiaalIds', 'maatIds']
-      );
+      const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+        code: 'AUTOTEST Kunstwerk Eigen Maat',
+      } as never);
+      await vervangRelaties(getPool(), kunstwerk.id, {
+        materiaalIds: [fixture.materiaalId],
+        maatIds: [fixture.maatId],
+      });
       kunstwerkId = kunstwerk.id;
 
       const klant = await maakKlant('lifecycle-bestelling-klant');
@@ -780,11 +777,10 @@ describe('Materiaalloos kunstwerk (prijs per m2) + prijsgroep', () => {
     const prijsgroepIds: string[] = [];
 
     try {
-      const kunstwerk = await insertRow<{ id: string }>(
-        'kunstwerken',
-        { code: 'AUTOTEST Maatloos Kunstwerk', materiaalIds: [], maatIds: [], prijsPerM2: 100 } as never,
-        ['materiaalIds', 'maatIds']
-      );
+      const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+        code: 'AUTOTEST Maatloos Kunstwerk',
+        prijsPerM2: 100,
+      } as never);
       kunstwerkId = kunstwerk.id;
 
       const prijsgroep = await insertRow<{ id: string }>('prijsgroepen', {
@@ -945,15 +941,10 @@ describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
       stap(`Bevestigd: alle 3 staan echt als eigen rij in hun stamtabel (${segmentenLijst.length} segmenten, ${stijlenLijst.length} stijlen, ${onderwerpenLijst.length} onderwerpen totaal)`);
 
       // En staat de koppeling ook echt op het kunstwerk zelf?
-      const [rows] = await getPool().query(
-        'SELECT segmentIds, stijlIds, onderwerpIds FROM kunstwerken WHERE id = ?',
-        [kunstwerkId]
-      );
-      const row = (rows as Array<{ segmentIds: string | string[]; stijlIds: string | string[]; onderwerpIds: string | string[] }>)[0];
-      const parse = (v: string | string[]) => (typeof v === 'string' ? JSON.parse(v) : v);
-      expect(parse(row.segmentIds)).toEqual([segmentId]);
-      expect(parse(row.stijlIds)).toEqual([stijlId]);
-      expect(parse(row.onderwerpIds)).toEqual([onderwerpId]);
+      const relaties = await haalRelatiesOpVoorEen(getPool(), kunstwerkId as string);
+      expect(relaties.segmentIds).toEqual([segmentId]);
+      expect(relaties.stijlIds).toEqual([stijlId]);
+      expect(relaties.onderwerpIds).toEqual([onderwerpId]);
       stap('Bevestigd: de koppeling staat ook correct op het kunstwerk zelf.');
     } finally {
       const pool = getPool();
@@ -985,16 +976,14 @@ describe('Klant van een kunstenaar kan diens werk gewoon bestellen zonder exclus
 
       fixture = await maakMaatMateriaal('eigen-werk');
       await zetMatrixPrijs(fixture.maatId, fixture.materiaalId, 60);
-      const kunstwerk = await insertRow<{ id: string }>(
-        'kunstwerken',
-        {
-          code: 'AUTOTEST Kunstwerk Eigen Werk',
-          kunstenaarnr,
-          materiaalIds: [fixture.materiaalId],
-          maatIds: [fixture.maatId],
-        } as never,
-        ['materiaalIds', 'maatIds']
-      );
+      const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+        code: 'AUTOTEST Kunstwerk Eigen Werk',
+        kunstenaarnr,
+      } as never);
+      await vervangRelaties(getPool(), kunstwerk.id, {
+        materiaalIds: [fixture.materiaalId],
+        maatIds: [fixture.maatId],
+      });
       kunstwerkId = kunstwerk.id;
 
       const eigenKlant = await maakKlant('eigen-werk-klant');
@@ -1048,16 +1037,14 @@ describe('Klant met alleenrecht voor één kunstenaar', () => {
 
       fixture = await maakMaatMateriaal('alleenrecht');
       await zetMatrixPrijs(fixture.maatId, fixture.materiaalId, 70);
-      const kunstwerk = await insertRow<{ id: string }>(
-        'kunstwerken',
-        {
-          code: 'AUTOTEST Kunstwerk Alleenrecht',
-          kunstenaarnr,
-          materiaalIds: [fixture.materiaalId],
-          maatIds: [fixture.maatId],
-        } as never,
-        ['materiaalIds', 'maatIds']
-      );
+      const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+        code: 'AUTOTEST Kunstwerk Alleenrecht',
+        kunstenaarnr,
+      } as never);
+      await vervangRelaties(getPool(), kunstwerk.id, {
+        materiaalIds: [fixture.materiaalId],
+        maatIds: [fixture.maatId],
+      });
       kunstwerkId = kunstwerk.id;
 
       const bevoorrecht = await maakKlant('alleenrecht-bevoorrecht');
