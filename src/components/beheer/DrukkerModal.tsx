@@ -16,8 +16,10 @@ interface DrukkerModalProps {
   state: ModalState;
   bestellingen: Bestelling[] | null;
   onClose: () => void;
-  onAdd: (data: Omit<Drukker, 'id'>) => Promise<boolean>;
-  onUpdate: (id: string, data: Omit<Drukker, 'id'>) => Promise<boolean>;
+  // drukkernr is server-eigendom (zie POST/PATCH /api/drukkers, die het uit de body
+  // weggooien) -- de modal verzamelt en verstuurt het dus niet.
+  onAdd: (data: Omit<Drukker, 'id' | 'drukkernr'>) => Promise<boolean>;
+  onUpdate: (id: string, data: Omit<Drukker, 'id' | 'drukkernr'>) => Promise<boolean>;
   onRemove: (id: string) => Promise<boolean>;
   onBestellingUpdated: (bestelling: Bestelling) => void;
 }
@@ -163,6 +165,11 @@ export function DrukkerModal({
       onClose={onClose}
       closeLabel={t('modalClose')}
       title={t('drukkersModalTitel')}
+      subtitle={
+        state?.mode === 'edit' ? (
+          <span data-testid="drukker-modal-drukkernr">{state.drukker.drukkernr}</span>
+        ) : undefined
+      }
       footerActions={
         <>
           <button

@@ -11,7 +11,7 @@ export function findVeiligheidsglasMateriaalId(
 ): string | undefined {
   const veiligheidsglasSoortIds = new Set(
     materiaalsoorten
-      .filter((soort) => soort.omschrijving === VEILIGHEIDSGLAS_SOORT_NAAM)
+      .filter((soort) => soort.omschrijvingNl === VEILIGHEIDSGLAS_SOORT_NAAM)
       .map((soort) => soort.id)
   );
   return materialen.find(
@@ -36,7 +36,7 @@ export function resolveKunstwerkMateriaalLabel(
 
   const beschikbareMaterialen = materialen.filter((materiaal) => kunstwerk.materiaalIds.includes(materiaal.id));
   if (beschikbareMaterialen.length > 0) {
-    const materiaalsoortNaamById = new Map(materiaalsoorten.map((soort) => [soort.id, soort.omschrijving]));
+    const materiaalsoortNaamById = new Map(materiaalsoorten.map((soort) => [soort.id, soort.omschrijvingNl]));
     return beschikbareMaterialen
       .map(
         (materiaal) =>

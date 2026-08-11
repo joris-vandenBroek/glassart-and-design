@@ -37,6 +37,7 @@
     "kunstenaarFilterPlaceholder": "Nach Künstler suchen…",
     "kunstenaarFilterClear": "Alle Künstler",
     "kunstenaarFilterNoResults": "Keine Künstler gefunden",
+    "kunstenaarWebsiteZin": "Mehr über {naam} erfahren? Besuchen Sie {website}",
     "breadcrumbHome": "Home",
     "collectieFacetTitle": "Kollektion",
     "kunstenaarFacetTitle": "Künstler",

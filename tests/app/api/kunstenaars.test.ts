@@ -46,7 +46,7 @@ describe('kunstenaars + kunstenaarAfspraken routes', () => {
   it('lists kunstenaars publicly, without ever exposing prijsafspraken', async () => {
     const kunstenaar = await insertRow<{ id: string }>(
       'kunstenaars',
-      { naam: 'Anna', exclusieveKlantIds: [] } as never,
+      { kunstenaarnr: 'AT-K-KUN-2', naam: 'Anna', exclusieveKlantIds: [] } as never,
       ['exclusieveKlantIds']
     );
     createdKunstenaarIds.push(kunstenaar.id);
@@ -89,13 +89,13 @@ describe('kunstenaars + kunstenaarAfspraken routes', () => {
 
     const kunstenaar = await insertRow<{ id: string }>(
       'kunstenaars',
-      { naam: 'Referenced Artiest', exclusieveKlantIds: [] } as never,
+      { kunstenaarnr: 'AT-K-KUN-3', naam: 'Referenced Artiest', exclusieveKlantIds: [] } as never,
       ['exclusieveKlantIds']
     );
     createdKunstenaarIds.push(kunstenaar.id);
     const kunstwerk = await insertRow<{ id: string }>(
       'kunstwerken',
-      { code: 'test-kunstenaars-referenced', kunstenaarId: kunstenaar.id, materiaalIds: [], maatIds: [] } as never,
+      { code: 'test-kunstenaars-referenced', kunstenaarnr: 'AT-K-KUN-3', materiaalIds: [], maatIds: [] } as never,
       ['materiaalIds', 'maatIds']
     );
     createdKunstwerkIds.push(kunstwerk.id);
@@ -163,7 +163,7 @@ describe('kunstenaars + kunstenaarAfspraken routes', () => {
   it('stores and retrieves prijsafspraken and prijsopslag only for staff, keyed by the kunstenaar id', async () => {
     const kunstenaar = await insertRow<{ id: string }>(
       'kunstenaars',
-      { naam: 'Dana', exclusieveKlantIds: [] } as never,
+      { kunstenaarnr: 'AT-K-KUN-4', naam: 'Dana', exclusieveKlantIds: [] } as never,
       ['exclusieveKlantIds']
     );
     createdKunstenaarIds.push(kunstenaar.id);
@@ -189,6 +189,7 @@ describe('kunstenaars + kunstenaarAfspraken routes', () => {
 
   it('defaults prijsopslag to 0 for a kunstenaar with no kunstenaarAfspraken row yet', async () => {
     const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+      kunstenaarnr: 'AT-K-KUN-1',
       naam: 'Erik',
     } as never);
     createdKunstenaarIds.push(kunstenaar.id);

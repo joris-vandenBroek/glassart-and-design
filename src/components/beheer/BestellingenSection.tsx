@@ -37,6 +37,7 @@ export interface Bestelling {
   lineCount: number;
   totalQuantity: number;
   lines: BestellingLine[];
+  afwijsreden?: string | null;
 }
 
 interface BestellingenSectionProps {

@@ -83,7 +83,7 @@ const KLANTEN: Klant[] = [
     invoiceCity: '',
     status: 'Goedgekeurd',
     prijsgroepId: null,
-    kunstenaarId: null,
+    kunstenaarnr: null,
   },
   {
     id: 'klant-2',
@@ -104,7 +104,7 @@ const KLANTEN: Klant[] = [
     invoiceCity: '',
     status: 'Goedgekeurd',
     prijsgroepId: null,
-    kunstenaarId: 'ka-1',
+    kunstenaarnr: 'KU-00007',
   },
   {
     id: 'klant-3',
@@ -125,15 +125,17 @@ const KLANTEN: Klant[] = [
     invoiceCity: '',
     status: 'Goedgekeurd',
     prijsgroepId: null,
-    kunstenaarId: null,
+    kunstenaarnr: null,
   },
 ];
 
 const KUNSTENAARS: Kunstenaar[] = [
   {
     id: 'ka-1',
+    kunstenaarnr: 'KU-00007',
     naam: 'Sabrina Glasser',
     foto: null,
+    website: null,
     omschrijvingNl: 'Werkt met gesmolten glas.',
     omschrijvingFr: '',
     omschrijvingDe: '',
@@ -208,6 +210,17 @@ describe('KunstenaarsSection', () => {
     expect(screen.getByTestId('data-table-row-ka-1')).toHaveTextContent('Galerie De Boer, Sabrina Glasser (eigen account)');
   });
 
+  it('toont het kunstenaarnr in de lijst', async () => {
+    renderSection();
+    expect(await screen.findByText('KU-00007')).toBeInTheDocument();
+  });
+
+  it('toont het kunstenaarnr als subtitel bij het bewerken', async () => {
+    renderSection();
+    fireEvent.click(await screen.findByText('Sabrina Glasser'));
+    expect(await screen.findByTestId('kunstenaar-modal-kunstenaarnr')).toHaveTextContent('KU-00007');
+  });
+
   it('disables Opslaan until naam and the NL description are filled in', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('kunstenaars-add'));
@@ -237,6 +250,7 @@ describe('KunstenaarsSection', () => {
     expect(JSON.parse(kunstenaarPostCall()![1].body as string)).toEqual({
       foto: 'https://storage.example.com/nieuw.jpg',
       naam: 'Nieuwe Kunstenaar',
+      website: '',
       omschrijvingNl: 'Werkt met glas.',
       omschrijvingFr: '',
       omschrijvingDe: '',
@@ -255,6 +269,43 @@ describe('KunstenaarsSection', () => {
       'kunstenaar_toegevoegd',
       'Nieuwe Kunstenaar'
     );
+  });
+
+  it('adds a new kunstenaar with a website filled in', async () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstenaars-add'));
+    fireEvent.change(screen.getByTestId('kunstenaar-modal-naam'), { target: { value: 'Nieuwe Kunstenaar' } });
+    fireEvent.change(screen.getByTestId('kunstenaar-modal-omschrijving-nl'), { target: { value: 'Werkt met glas.' } });
+    fireEvent.change(screen.getByTestId('kunstenaar-modal-website'), {
+      target: { value: 'https://www.voorbeeld.nl/' },
+    });
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-opslaan'));
+
+    await waitFor(() => expect(kunstenaarPostCall()).toBeDefined());
+    expect(JSON.parse(kunstenaarPostCall()![1].body as string)).toEqual({
+      foto: null,
+      naam: 'Nieuwe Kunstenaar',
+      website: 'https://www.voorbeeld.nl/',
+      omschrijvingNl: 'Werkt met glas.',
+      omschrijvingFr: '',
+      omschrijvingDe: '',
+      omschrijvingEn: '',
+      exclusieveKlantIds: [],
+    });
+  });
+
+  it('pre-fills the website field when opening an existing kunstenaar, leaving it blank when null', async () => {
+    renderSection({
+      kunstenaars: [{ ...KUNSTENAARS[0], website: 'https://www.jacksart.nl/' }],
+    });
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+    expect(screen.getByTestId('kunstenaar-modal-website')).toHaveValue('https://www.jacksart.nl/');
+  });
+
+  it('leaves the website field blank when the kunstenaar has none', async () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+    expect(screen.getByTestId('kunstenaar-modal-website')).toHaveValue('');
   });
 
   it('a new kunstenaar cannot select a second exclusieve klant -- there is no own account yet to satisfy the rule', async () => {
@@ -355,7 +406,7 @@ describe('KunstenaarsSection', () => {
   it('re-validates exclusieveKlantIds at save time, blocking a save when the list became invalid outside this session', async () => {
     // Simulates staff having reassigned/cleared the own-klant link on the Klant screen
     // after this 2-entry list was originally saved as valid: neither klant-1 nor klant-3
-    // has kunstenaarId 'ka-1', so this list is invalid even though no checkbox was ever
+    // has kunstenaarnr 'KU-00007', so this list is invalid even though no checkbox was ever
     // toggled in this render.
     const { onUpdate } = renderSection({
       kunstenaars: [{ ...KUNSTENAARS[0], exclusieveKlantIds: ['klant-1', 'klant-3'] }],
@@ -453,6 +504,7 @@ describe('KunstenaarsSection', () => {
       expect(onUpdate).toHaveBeenCalledWith('ka-1', {
         foto: null,
         naam: 'Sabrina G.',
+        website: '',
         omschrijvingNl: 'Werkt met gesmolten glas.',
         omschrijvingFr: '',
         omschrijvingDe: '',
@@ -471,7 +523,9 @@ describe('KunstenaarsSection', () => {
   });
 
   it('deletes a kunstenaar and logs kunstenaar_verwijderd', async () => {
-    const { onRemove } = renderSection();
+    // Zonder gekoppelde klant -- KLANTEN's klant-2 wijst normaal naar deze kunstenaar
+    // (kunstenaarnr 'KU-00007'), wat de nieuwe klant-koppelingscontrole zou triggeren.
+    const { onRemove } = renderSection({ klanten: [KLANTEN[0], KLANTEN[2]] });
     fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
     fireEvent.click(screen.getByTestId('kunstenaar-modal-verwijderen'));
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith('ka-1'));
@@ -606,7 +660,7 @@ describe('KunstenaarsSection', () => {
 
   it('blocks deleting a kunstenaar that is still linked to a kunstwerk', async () => {
     const { onRemove } = renderSection({
-      kunstwerken: [{ id: 'kw-1', kunstenaarId: 'ka-1' } as never],
+      kunstwerken: [{ id: 'kw-1', kunstenaarnr: 'KU-00007' } as never],
     });
     fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
     fireEvent.click(screen.getByTestId('kunstenaar-modal-verwijderen'));
@@ -618,6 +672,28 @@ describe('KunstenaarsSection', () => {
 
   it('blocks deleting while the kunstwerken have not loaded, instead of assuming "not in use"', async () => {
     const { onRemove } = renderSection({ kunstwerken: null });
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-verwijderen'));
+    expect(await screen.findByTestId('kunstenaar-modal-error')).toHaveTextContent(
+      'Kan nog niet controleren of deze kunstenaar in gebruik is. Probeer het opnieuw.'
+    );
+    expect(onRemove).not.toHaveBeenCalled();
+  });
+
+  it('blocks deleting a kunstenaar that is still linked to a klant', async () => {
+    const { onRemove } = renderSection({
+      klanten: [{ ...KLANTEN[0], id: 'klant-gekoppeld', kunstenaarnr: 'KU-00007' }],
+    });
+    fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-verwijderen'));
+    expect(await screen.findByTestId('kunstenaar-modal-error')).toHaveTextContent(
+      'Deze kunstenaar is nog aan een klant gekoppeld en kan niet verwijderd worden.'
+    );
+    expect(onRemove).not.toHaveBeenCalled();
+  });
+
+  it('blocks deleting while the klanten have not loaded, instead of assuming "not in use"', async () => {
+    const { onRemove } = renderSection({ klanten: null });
     fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
     fireEvent.click(screen.getByTestId('kunstenaar-modal-verwijderen'));
     expect(await screen.findByTestId('kunstenaar-modal-error')).toHaveTextContent(

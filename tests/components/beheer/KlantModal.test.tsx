@@ -41,10 +41,10 @@ const KLANT: Klant = {
   invoiceLand: '',
   status: 'Beoordelen',
   prijsgroepId: null,
-  kunstenaarId: null,
+  kunstenaarnr: null,
 };
 
-const ANDERE_KLANT: Klant = { ...KLANT, id: 'uid-2', companyName: 'Ander Bedrijf BV', kunstenaarId: 'ka-2' };
+const ANDERE_KLANT: Klant = { ...KLANT, id: 'uid-2', companyName: 'Ander Bedrijf BV', kunstenaarnr: 'KU-00002' };
 
 const PRIJSGROEPEN: Prijsgroep[] = [
   { id: 'pg-1', naam: 'Standaard', kortingspercentage: 0, opslagpercentage: null },
@@ -54,8 +54,10 @@ const PRIJSGROEPEN: Prijsgroep[] = [
 const KUNSTENAARS: Kunstenaar[] = [
   {
     id: 'ka-1',
+    kunstenaarnr: 'KU-00001',
     naam: 'Sabrina Glasser',
     foto: null,
+    website: null,
     omschrijvingNl: 'Werkt met glas.',
     omschrijvingFr: '',
     omschrijvingDe: '',
@@ -64,8 +66,10 @@ const KUNSTENAARS: Kunstenaar[] = [
   },
   {
     id: 'ka-2',
+    kunstenaarnr: 'KU-00002',
     naam: 'Bram Steen',
     foto: null,
+    website: null,
     omschrijvingNl: 'Werkt met steen.',
     omschrijvingFr: '',
     omschrijvingDe: '',
@@ -430,19 +434,71 @@ describe('KlantModal', () => {
     );
   });
 
-  it('rejects the klant and calls onUpdated with the updated klant', async () => {
+  it('opens the afwijzen confirmation without patching immediately', () => {
+    renderModal(KLANT);
+    fireEvent.click(screen.getByTestId('klant-modal-afwijzen'));
+    expect(screen.getByTestId('klant-modal-afwijzen-bevestiging')).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('disables the afwijzen confirm button until a reason is entered', () => {
+    renderModal(KLANT);
+    fireEvent.click(screen.getByTestId('klant-modal-afwijzen'));
+    expect(screen.getByTestId('klant-modal-afwijzen-bevestigen')).toBeDisabled();
+    fireEvent.change(screen.getByTestId('klant-modal-afwijzen-bevestiging-reden'), {
+      target: { value: 'Onvolledige aanvraag' },
+    });
+    expect(screen.getByTestId('klant-modal-afwijzen-bevestigen')).not.toBeDisabled();
+  });
+
+  it('rejects the klant with the given reason and calls onUpdated with afwijsreden', async () => {
     const { onUpdated } = renderModal(KLANT);
     fireEvent.click(screen.getByTestId('klant-modal-afwijzen'));
+    fireEvent.change(screen.getByTestId('klant-modal-afwijzen-bevestiging-reden'), {
+      target: { value: 'Onvolledige aanvraag' },
+    });
+    fireEvent.click(screen.getByTestId('klant-modal-afwijzen-bevestigen'));
 
     await waitFor(() => expect(patchCall()).toBeDefined());
-    expect(patchBody()).toEqual({ status: 'Afgewezen' });
-    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, status: 'Afgewezen' }));
+    expect(patchBody()).toEqual({ status: 'Afgewezen', afwijsreden: 'Onvolledige aanvraag' });
+    await waitFor(() =>
+      expect(onUpdated).toHaveBeenCalledWith({
+        ...KLANT,
+        status: 'Afgewezen',
+        afwijsreden: 'Onvolledige aanvraag',
+      })
+    );
+  });
+
+  it('cancels the afwijzen confirmation without patching, and returns to the normal view', () => {
+    renderModal(KLANT);
+    fireEvent.click(screen.getByTestId('klant-modal-afwijzen'));
+    fireEvent.change(screen.getByTestId('klant-modal-afwijzen-bevestiging-reden'), {
+      target: { value: 'Wordt niet verstuurd' },
+    });
+    fireEvent.click(screen.getByTestId('klant-modal-afwijzen-annuleren'));
+    expect(screen.queryByTestId('klant-modal-afwijzen-bevestiging')).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('shows the stored afwijsreden when the klant is Afgewezen', () => {
+    renderModal({ ...KLANT, status: 'Afgewezen', afwijsreden: 'Onvolledige aanvraag' });
+    expect(screen.getByTestId('klant-modal-afwijsreden')).toHaveTextContent('Onvolledige aanvraag');
+  });
+
+  it('does not show an afwijsreden block for a klant that is not Afgewezen', () => {
+    renderModal(KLANT);
+    expect(screen.queryByTestId('klant-modal-afwijsreden')).not.toBeInTheDocument();
   });
 
   it('shows an error and does not call onUpdated when the save request fails', async () => {
     fetchMock.mockResolvedValue({ ok: false });
     const { onUpdated } = renderModal(KLANT);
     fireEvent.click(screen.getByTestId('klant-modal-afwijzen'));
+    fireEvent.change(screen.getByTestId('klant-modal-afwijzen-bevestiging-reden'), {
+      target: { value: 'Reden' },
+    });
+    fireEvent.click(screen.getByTestId('klant-modal-afwijzen-bevestigen'));
 
     expect(await screen.findByTestId('klant-modal-error')).toBeInTheDocument();
     expect(onUpdated).not.toHaveBeenCalled();
@@ -460,13 +516,17 @@ describe('KlantModal', () => {
     );
   });
 
-  it('logs klant_afgewezen with the logged-in medewerker on rejection', async () => {
+  it('logs klant_afgewezen with the reason included', async () => {
     renderModal(KLANT);
     fireEvent.click(screen.getByTestId('klant-modal-afwijzen'));
+    fireEvent.change(screen.getByTestId('klant-modal-afwijzen-bevestiging-reden'), {
+      target: { value: 'Onvolledige aanvraag' },
+    });
+    fireEvent.click(screen.getByTestId('klant-modal-afwijzen-bevestigen'));
     await waitFor(() =>
       expect(logActiviteitMock).toHaveBeenCalledWith(
         'klant_afgewezen',
-        'Testbedrijf BV'
+        'Testbedrijf BV: Onvolledige aanvraag'
       )
     );
   });
@@ -475,6 +535,10 @@ describe('KlantModal', () => {
     fetchMock.mockResolvedValue({ ok: false });
     renderModal(KLANT);
     fireEvent.click(screen.getByTestId('klant-modal-afwijzen'));
+    fireEvent.change(screen.getByTestId('klant-modal-afwijzen-bevestiging-reden'), {
+      target: { value: 'Reden' },
+    });
+    fireEvent.click(screen.getByTestId('klant-modal-afwijzen-bevestigen'));
     await screen.findByTestId('klant-modal-error');
     expect(logActiviteitMock).not.toHaveBeenCalled();
   });
@@ -490,15 +554,15 @@ describe('KlantModal', () => {
     expect(screen.queryByTestId('klant-modal-exclusief-ka-2')).not.toBeInTheDocument();
   });
 
-  it('links this klant account to a kunstenaar via the combobox and saves kunstenaarId', async () => {
+  it('links this klant account to a kunstenaar via the combobox and saves kunstenaarnr', async () => {
     const { onUpdated } = renderModal(KLANT);
     fireEvent.focus(screen.getByTestId('klant-modal-kunstenaar'));
-    fireEvent.click(screen.getByTestId('klant-modal-kunstenaar-option-ka-1'));
+    fireEvent.click(screen.getByTestId('klant-modal-kunstenaar-option-KU-00001'));
     fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
 
     await waitFor(() => expect(patchCall()).toBeDefined());
-    expect(patchBody()).toEqual({ kunstenaarId: 'ka-1' });
-    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, kunstenaarId: 'ka-1' }));
+    expect(patchBody()).toEqual({ kunstenaarnr: 'KU-00001' });
+    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, kunstenaarnr: 'KU-00001' }));
     expect(logActiviteitMock).toHaveBeenCalledWith(
       'klant_kunstenaarkoppeling_gewijzigd',
       'Testbedrijf BV'
@@ -508,7 +572,7 @@ describe('KlantModal', () => {
   it('blocks linking a kunstenaar that another klant already claims', () => {
     renderModal(KLANT);
     fireEvent.focus(screen.getByTestId('klant-modal-kunstenaar'));
-    fireEvent.click(screen.getByTestId('klant-modal-kunstenaar-option-ka-2'));
+    fireEvent.click(screen.getByTestId('klant-modal-kunstenaar-option-KU-00002'));
     expect(screen.getByTestId('klant-modal-error')).toHaveTextContent(
       'Deze kunstenaar is al gekoppeld aan een ander klantaccount.'
     );
@@ -516,14 +580,14 @@ describe('KlantModal', () => {
   });
 
   it('allows clearing an existing kunstenaar-koppeling', async () => {
-    const { onUpdated } = renderModal({ ...KLANT, kunstenaarId: 'ka-1' });
+    const { onUpdated } = renderModal({ ...KLANT, kunstenaarnr: 'KU-00001' });
     fireEvent.focus(screen.getByTestId('klant-modal-kunstenaar'));
     fireEvent.click(screen.getByTestId('klant-modal-kunstenaar-option-clear'));
     fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
 
     await waitFor(() => expect(patchCall()).toBeDefined());
-    expect(patchBody()).toEqual({ kunstenaarId: null });
-    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, kunstenaarId: null }));
+    expect(patchBody()).toEqual({ kunstenaarnr: null });
+    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith({ ...KLANT, kunstenaarnr: null }));
   });
 
   it('shows a help popover with an explanation of the screen', () => {

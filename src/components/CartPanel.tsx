@@ -65,7 +65,7 @@ export function CartPanel() {
     const blockedItem = items.find((item) => {
       const kunstwerk = (kunstwerken.items ?? []).find((kw) => kw.id === item.kunstwerkId);
       if (!kunstwerk) return true; // huidige staat niet te controleren — behandel als geblokkeerd
-      return !resolveOrderRight(kunstwerk.kunstenaarId, kunstenaars.items, user.uid).canOrder;
+      return !resolveOrderRight(kunstwerk.kunstenaarnr, kunstenaars.items, user.uid).canOrder;
     });
     if (blockedItem) {
       setPlaceOrderError(t('placeOrderBlockedItem', { omschrijving: blockedItem.omschrijving }));

@@ -24,7 +24,7 @@ function bestelling(id: string, status: Bestelling['status']): Bestelling {
 }
 
 function zending(id: string, bestellingIds: string[]): Zending {
-  return { id, drukkerId: `drukker-${id}`, drukkerNaam: `Drukker ${id}`, verzondenOp: null, bestellingIds };
+  return { id, drukkernr: `DR-drukker-${id}`, drukkerNaam: `Drukker ${id}`, verzondenOp: null, bestellingIds };
 }
 
 describe('openstaandeZendingGenoten', () => {
@@ -84,7 +84,7 @@ describe('openstaandeZendingGenoten', () => {
 function rawZendingRow(id: string, bestellingIds: string[]) {
   return {
     id,
-    drukkerId: 'drukker-1',
+    drukkernr: 'DR-00001',
     drukkerNaam: 'Drukkerij Janssen',
     verzondenOp: null,
     bestellingIds,

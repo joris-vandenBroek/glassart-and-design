@@ -7,6 +7,7 @@ import { useCustomerAuth } from '@/lib/useCustomerAuth';
 import { logActiviteit } from '@/lib/logActiviteit';
 import { useOverlayDismiss } from '@/lib/useOverlayDismiss';
 import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving';
+import { resolveOmschrijving } from '@/lib/resolveOmschrijving';
 import { resolveOrderRight } from '@/lib/resolveOrderRight';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { findVeiligheidsglasMateriaalId, MATERIAALLOOS_LABEL } from '@/lib/kunstwerkMateriaal';
@@ -137,14 +138,14 @@ export function ProductModal({
 
   // Dezelfde helper als CartPanel gebruikt bij het plaatsen van de bestelling, zodat de
   // UI-blokkade niet uit de pas kan lopen met de controle vlak vóór het wegschrijven.
-  const { canOrder, blockedReason } = resolveOrderRight(kunstwerk.kunstenaarId, kunstenaars, user?.uid);
+  const { canOrder, blockedReason } = resolveOrderRight(kunstwerk.kunstenaarnr, kunstenaars, user?.uid);
 
   const beschikbareMaterialen = (materialen ?? []).filter((materiaal) =>
     kunstwerk.materiaalIds.includes(materiaal.id)
   );
   const beschikbareMaten = (maten ?? []).filter((maat) => kunstwerk.maatIds.includes(maat.id));
   const materiaalsoortNaamById = new Map(
-    (materiaalsoorten ?? []).map((soort) => [soort.id, soort.omschrijving])
+    (materiaalsoorten ?? []).map((soort) => [soort.id, resolveOmschrijving(soort, locale)])
   );
   function resolvedMateriaalLabel(materiaal: Materiaal): string {
     return materiaalLabel(materiaal, materiaalsoortNaamById.get(materiaal.materiaalsoortId) ?? materiaal.materiaalsoortId);
@@ -164,18 +165,21 @@ export function ProductModal({
     : undefined;
   const omschrijving = resolveKunstwerkOmschrijving(kunstwerk, locale);
 
-  const artiestNaam = kunstwerk.kunstenaarId
-    ? (kunstenaars ?? []).find((kunstenaar) => kunstenaar.id === kunstwerk.kunstenaarId)?.naam ?? ''
+  const artiestNaam = kunstwerk.kunstenaarnr
+    ? (kunstenaars ?? []).find((kunstenaar) => kunstenaar.kunstenaarnr === kunstwerk.kunstenaarnr)?.naam ?? ''
     : '';
-  const collectieLabels = kunstwerk.segmentIds.map(
-    (segmentId) => (segmenten ?? []).find((segment) => segment.id === segmentId)?.omschrijving ?? segmentId
-  );
-  const stijlLabels = (kunstwerk.stijlIds ?? []).map(
-    (stijlId) => (stijlen ?? []).find((stijl) => stijl.id === stijlId)?.omschrijving ?? stijlId
-  );
-  const onderwerpLabels = (kunstwerk.onderwerpIds ?? []).map(
-    (onderwerpId) => (onderwerpen ?? []).find((onderwerp) => onderwerp.id === onderwerpId)?.omschrijving ?? onderwerpId
-  );
+  const collectieLabels = kunstwerk.segmentIds.map((segmentId) => {
+    const segment = (segmenten ?? []).find((s) => s.id === segmentId);
+    return segment ? resolveOmschrijving(segment, locale) : segmentId;
+  });
+  const stijlLabels = (kunstwerk.stijlIds ?? []).map((stijlId) => {
+    const stijl = (stijlen ?? []).find((s) => s.id === stijlId);
+    return stijl ? resolveOmschrijving(stijl, locale) : stijlId;
+  });
+  const onderwerpLabels = (kunstwerk.onderwerpIds ?? []).map((onderwerpId) => {
+    const onderwerp = (onderwerpen ?? []).find((o) => o.id === onderwerpId);
+    return onderwerp ? resolveOmschrijving(onderwerp, locale) : onderwerpId;
+  });
   const heeftMetaInfo =
     Boolean(artiestNaam) || collectieLabels.length > 0 || stijlLabels.length > 0 || onderwerpLabels.length > 0;
 
@@ -408,7 +412,7 @@ export function ProductModal({
                 data-testid="product-modal-materiaal-omschrijving"
                 className="pt-1 text-[0.7rem] normal-case tracking-normal text-white/50"
               >
-                {geselecteerdMateriaal.omschrijving}
+                {resolveOmschrijving(geselecteerdMateriaal, locale)}
               </span>
             )}
           </label>

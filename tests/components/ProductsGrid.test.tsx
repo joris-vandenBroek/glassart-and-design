@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { ProductsGrid } from '@/components/ProductsGrid';
 import { CartProvider } from '@/lib/useCart';
@@ -19,8 +19,8 @@ vi.mock('@/lib/logActiviteit', () => ({
   logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),}));
 
 const SEGMENTEN = [
-  { id: 'seg-hotel', omschrijving: 'Hotel' },
-  { id: 'seg-wellness', omschrijving: 'Wellness' },
+  { id: 'seg-hotel', omschrijvingNl: 'Hotel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'seg-wellness', omschrijvingNl: 'Wellness', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const KUNSTWERKEN = [
   {
@@ -31,7 +31,7 @@ const KUNSTWERKEN = [
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
     formaat: 'staand',
-    kunstenaarId: 'ka-1',
+    kunstenaarnr: 'KU-00001',
     stijlIds: ['stijl-abstract'],
     onderwerpIds: ['onderwerp-bloemen'],
     omschrijvingNl: 'Hotel paneel',
@@ -79,13 +79,14 @@ const KUNSTWERKEN_PRIJZEN: Record<string, Array<{ materiaalId: string; maatId: s
   'kw-alle': [],
 };
 const MATERIALEN = [
-  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Veiligheidsglas' },
+  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijvingNl: 'Veiligheidsglas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const MATEN = [{ id: 'maat-1', breedte: 40, hoogte: 60 }];
-const MATERIAALSOORTEN = [{ id: 'soort-1', omschrijving: 'Veiligheidsglas' }];
+const MATERIAALSOORTEN = [{ id: 'soort-1', omschrijvingNl: 'Veiligheidsglas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }];
 const KUNSTENAARS = [
   {
     id: 'ka-1',
+    kunstenaarnr: 'KU-00001',
     naam: 'Sabrina Glasser',
     foto: null,
     omschrijvingNl: 'Werkt met gesmolten glas.',
@@ -96,12 +97,12 @@ const KUNSTENAARS = [
   },
 ];
 const STIJLEN = [
-  { id: 'stijl-abstract', omschrijving: 'Abstract' },
-  { id: 'stijl-minimalistisch', omschrijving: 'Minimalistisch' },
+  { id: 'stijl-abstract', omschrijvingNl: 'Abstract', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'stijl-minimalistisch', omschrijvingNl: 'Minimalistisch', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const ONDERWERPEN = [
-  { id: 'onderwerp-bloemen', omschrijving: 'Bloemen' },
-  { id: 'onderwerp-dieren', omschrijving: 'Dieren' },
+  { id: 'onderwerp-bloemen', omschrijvingNl: 'Bloemen', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'onderwerp-dieren', omschrijvingNl: 'Dieren', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 
 let collections: Record<string, unknown[]> = {};
@@ -217,7 +218,7 @@ describe('ProductsGrid', () => {
   it('shows the artiest/collectie/stijl/onderwerp info block once the dialog is opened', async () => {
     renderProductsGrid();
     const cards = await screen.findAllByTestId('product-card');
-    fireEvent.click(cards[0]); // kw-1: kunstenaarId 'ka-1', segmentIds ['seg-hotel'], stijlIds ['stijl-abstract'], onderwerpIds ['onderwerp-bloemen']
+    fireEvent.click(cards[0]); // kw-1: kunstenaarnr 'KU-00001', segmentIds ['seg-hotel'], stijlIds ['stijl-abstract'], onderwerpIds ['onderwerp-bloemen']
     expect(screen.getByTestId('product-modal-artiest')).toHaveTextContent('Sabrina Glasser');
     expect(screen.getByTestId('product-modal-collecties')).toHaveTextContent('Hotel');
     expect(screen.getByTestId('product-modal-stijl')).toHaveTextContent('Abstract');
@@ -280,6 +281,23 @@ describe('ProductsGrid', () => {
     expect(cards[0]).not.toHaveTextContent('4mm Veiligheidsglas');
   });
 
+  it('shows the German omschrijving on the card instead of the Dutch one when locale is de', async () => {
+    mockCollections({
+      kunstwerken: [{ ...KUNSTWERKEN[0], omschrijvingNl: 'Hotel paneel', omschrijvingDe: 'Hotel Panel DE' }],
+    });
+    render(
+      <NextIntlClientProvider locale="de" messages={messages}>
+        <CustomerAuthProvider>
+          <CartProvider>
+            <ProductsGrid />
+          </CartProvider>
+        </CustomerAuthProvider>
+      </NextIntlClientProvider>
+    );
+    const cards = await screen.findAllByTestId('product-card');
+    expect(cards[0]).toHaveTextContent('Hotel Panel DE');
+  });
+
   it('shows a breadcrumb that ends on "Collecties" when no segment is selected, and on the segment name once one is', async () => {
     renderProductsGrid();
     await screen.findAllByTestId('product-card');
@@ -298,10 +316,31 @@ describe('ProductsGrid', () => {
     renderProductsGrid();
     await screen.findAllByTestId('product-card');
     fireEvent.focus(screen.getByTestId('kunstenaar-filter'));
-    fireEvent.click(screen.getByTestId('kunstenaar-filter-option-ka-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-filter-option-KU-00001'));
     expect(screen.getByTestId('kunstenaar-banner')).toHaveTextContent('Sabrina Glasser');
     expect(screen.getByTestId('kunstenaar-banner')).toHaveTextContent('Werkt met gesmolten glas.');
     expect(screen.getAllByTestId('product-card')).toHaveLength(1);
+  });
+
+  it('adds a translated website sentence with a clickable link to the artist banner when website is filled in', async () => {
+    mockCollections({
+      kunstenaars: [{ ...KUNSTENAARS[0], website: 'https://www.jacksart.nl/' }],
+    });
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+    fireEvent.focus(screen.getByTestId('kunstenaar-filter'));
+    fireEvent.click(screen.getByTestId('kunstenaar-filter-option-ka-1'));
+    const banner = screen.getByTestId('kunstenaar-banner');
+    expect(banner).toHaveTextContent('Meer weten over Sabrina Glasser? Bekijk https://www.jacksart.nl/');
+    expect(within(banner).getByRole('link')).toHaveAttribute('href', 'https://www.jacksart.nl/');
+  });
+
+  it('does not add a website sentence to the artist banner when website is empty', async () => {
+    renderProductsGrid();
+    await screen.findAllByTestId('product-card');
+    fireEvent.focus(screen.getByTestId('kunstenaar-filter'));
+    fireEvent.click(screen.getByTestId('kunstenaar-filter-option-ka-1'));
+    expect(within(screen.getByTestId('kunstenaar-banner')).queryByRole('link')).not.toBeInTheDocument();
   });
 
   it('filters by formaat, combines with segment via AND, and shows counts per formaat option', async () => {
@@ -366,7 +405,7 @@ describe('ProductsGrid', () => {
 
     fireEvent.click(screen.getByTestId('filter-seg-hotel'));
     fireEvent.focus(screen.getByTestId('kunstenaar-filter'));
-    fireEvent.click(screen.getByTestId('kunstenaar-filter-option-ka-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-filter-option-KU-00001'));
     fireEvent.click(screen.getByTestId('facet-formaat-option-staand'));
     fireEvent.click(screen.getByTestId('facet-stijl-option-stijl-abstract'));
     fireEvent.click(screen.getByTestId('facet-onderwerp-option-onderwerp-bloemen'));

@@ -22,11 +22,13 @@ CREATE TABLE klanten (
   invoiceLand VARCHAR(2),
   status VARCHAR(50) NOT NULL DEFAULT 'Beoordelen',
   prijsgroepId CHAR(36),
-  kunstenaarId CHAR(36),
+  kunstenaarnr VARCHAR(20),
   minimaleAfname INT,
   klantnr VARCHAR(20),
   createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uniq_klanten_kunstenaarId (kunstenaarId),
+  afwijsreden TEXT,
+  UNIQUE KEY uniq_klanten_kunstenaarnr (kunstenaarnr),
+  FOREIGN KEY (kunstenaarnr) REFERENCES kunstenaars(kunstenaarnr),
   UNIQUE KEY uniek_klantnr (klantnr)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -56,22 +58,34 @@ CREATE TABLE passwordResetTokens (
 
 CREATE TABLE segmenten (
   id CHAR(36) PRIMARY KEY,
-  omschrijving VARCHAR(255) NOT NULL
+  omschrijvingNl VARCHAR(255) NOT NULL,
+  omschrijvingFr VARCHAR(255),
+  omschrijvingDe VARCHAR(255),
+  omschrijvingEn VARCHAR(255)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE stijlen (
   id CHAR(36) PRIMARY KEY,
-  omschrijving VARCHAR(255) NOT NULL
+  omschrijvingNl VARCHAR(255) NOT NULL,
+  omschrijvingFr VARCHAR(255),
+  omschrijvingDe VARCHAR(255),
+  omschrijvingEn VARCHAR(255)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE onderwerpen (
   id CHAR(36) PRIMARY KEY,
-  omschrijving VARCHAR(255) NOT NULL
+  omschrijvingNl VARCHAR(255) NOT NULL,
+  omschrijvingFr VARCHAR(255),
+  omschrijvingDe VARCHAR(255),
+  omschrijvingEn VARCHAR(255)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE materiaalsoorten (
   id CHAR(36) PRIMARY KEY,
-  omschrijving VARCHAR(255) NOT NULL,
+  omschrijvingNl VARCHAR(255) NOT NULL,
+  omschrijvingFr VARCHAR(255),
+  omschrijvingDe VARCHAR(255),
+  omschrijvingEn VARCHAR(255),
   staatEigenMaatToe BOOLEAN DEFAULT FALSE,
   maxBreedte INT,
   maxHoogte INT,
@@ -82,7 +96,10 @@ CREATE TABLE materialen (
   id CHAR(36) PRIMARY KEY,
   materiaalsoortId CHAR(36) NOT NULL,
   materiaaldikte DECIMAL(5,1) NOT NULL,
-  omschrijving VARCHAR(255) NOT NULL,
+  omschrijvingNl VARCHAR(255) NOT NULL,
+  omschrijvingFr VARCHAR(255),
+  omschrijvingDe VARCHAR(255),
+  omschrijvingEn VARCHAR(255),
   FOREIGN KEY (materiaalsoortId) REFERENCES materiaalsoorten(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -113,13 +130,16 @@ CREATE TABLE prijsmatrix (
 
 CREATE TABLE kunstenaars (
   id CHAR(36) PRIMARY KEY,
+  kunstenaarnr VARCHAR(20) NOT NULL,
   naam VARCHAR(255) NOT NULL,
   foto VARCHAR(500),
+  website VARCHAR(500),
   omschrijvingNl TEXT,
   omschrijvingFr TEXT,
   omschrijvingDe TEXT,
   omschrijvingEn TEXT,
-  exclusieveKlantIds JSON
+  exclusieveKlantIds JSON,
+  UNIQUE KEY uniek_kunstenaarnr (kunstenaarnr)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE kunstenaarAfspraken (
@@ -131,18 +151,20 @@ CREATE TABLE kunstenaarAfspraken (
 
 CREATE TABLE drukkers (
   id CHAR(36) PRIMARY KEY,
+  drukkernr VARCHAR(20) NOT NULL,
   naam VARCHAR(255) NOT NULL,
   adres VARCHAR(255),
   postcode VARCHAR(20),
   plaats VARCHAR(255),
   email VARCHAR(255),
   prijsafspraken TEXT,
-  standaard BOOLEAN DEFAULT FALSE
+  standaard BOOLEAN DEFAULT FALSE,
+  UNIQUE KEY uniek_drukkernr (drukkernr)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE drukkerZendingen (
   id CHAR(36) PRIMARY KEY,
-  drukkerId CHAR(36) NOT NULL,
+  drukkernr VARCHAR(20) NOT NULL,
   verzondenOp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   onderwerp VARCHAR(255),
   body TEXT,
@@ -151,14 +173,14 @@ CREATE TABLE drukkerZendingen (
   aantalRegels INT NOT NULL DEFAULT 0,
   verzondDoor VARCHAR(255),
   zendingnummer VARCHAR(20),
-  FOREIGN KEY (drukkerId) REFERENCES drukkers(id) ON DELETE CASCADE
+  FOREIGN KEY (drukkernr) REFERENCES drukkers(drukkernr)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE kunstwerken (
   id CHAR(36) PRIMARY KEY,
   foto VARCHAR(500),
   code VARCHAR(255) NOT NULL DEFAULT '',
-  kunstenaarId CHAR(36),
+  kunstenaarnr VARCHAR(20),
   formaat VARCHAR(20),
   omschrijvingNl TEXT,
   omschrijvingFr TEXT,
@@ -172,7 +194,7 @@ CREATE TABLE kunstwerken (
   aiGegenereerd BOOLEAN DEFAULT FALSE,
   prijsPerM2 DECIMAL(10,2),
   UNIQUE KEY uniek_code (code),
-  FOREIGN KEY (kunstenaarId) REFERENCES kunstenaars(id)
+  FOREIGN KEY (kunstenaarnr) REFERENCES kunstenaars(kunstenaarnr)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE instellingen (
@@ -195,6 +217,8 @@ CREATE TABLE counters (
 INSERT INTO counters (id, value) VALUES ('bestelnummer', 0);
 INSERT INTO counters (id, value) VALUES ('zendingnummer', 0);
 INSERT INTO counters (id, value) VALUES ('klantnummer', 0);
+INSERT INTO counters (id, value) VALUES ('kunstenaarnummer', 0);
+INSERT INTO counters (id, value) VALUES ('drukkernummer', 0);
 
 CREATE TABLE bestelheaders (
   id CHAR(36) PRIMARY KEY,
@@ -203,6 +227,7 @@ CREATE TABLE bestelheaders (
   besteldatum TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   status VARCHAR(50) NOT NULL DEFAULT 'Te beoordelen',
   zendingnummer VARCHAR(20),
+  afwijsreden TEXT,
   FOREIGN KEY (klantnr) REFERENCES klanten(klantnr),
   UNIQUE KEY uniek_bestelnr (bestelnr)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

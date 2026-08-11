@@ -121,12 +121,12 @@ async function maakMaat(breedte: number, hoogte: number): Promise<string> {
 }
 
 async function maakMateriaal(): Promise<string> {
-  const soort = await insertRow<{ id: string }>('materiaalsoorten', { omschrijving: 'Test soort' } as never);
+  const soort = await insertRow<{ id: string }>('materiaalsoorten', { omschrijvingNl: 'Test soort' } as never);
   createdMateriaalsoortIds.push(soort.id);
   const materiaal = await insertRow<{ id: string }>('materialen', {
     materiaalsoortId: soort.id,
     materiaaldikte: 4,
-    omschrijving: 'Test materiaal',
+    omschrijvingNl: 'Test materiaal',
   } as never);
   createdMateriaalIds.push(materiaal.id);
   return materiaal.id;
@@ -138,7 +138,7 @@ async function maakGeprijsdKunstwerk(
   maatId: string,
   materiaalId: string,
   matrixPrijs: number,
-  kunstenaarId: string | null = null
+  kunstenaarnr: string | null = null
 ): Promise<string> {
   await getPool().query('INSERT INTO prijsmatrix (id, maatId, materiaalId, prijs) VALUES (UUID(), ?, ?, ?)', [
     maatId,
@@ -149,7 +149,7 @@ async function maakGeprijsdKunstwerk(
     'kunstwerken',
     {
       code: `test-bestelheaders-werk-${++kunstwerkTeller}`,
-      kunstenaarId,
+      kunstenaarnr,
       materiaalIds: [materiaalId],
       maatIds: [maatId],
     } as never,
@@ -195,11 +195,12 @@ describe('bestelheaders routes', () => {
     const maatId = await maakMaat(43, 63);
     const materiaalId = await maakMateriaal();
     const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+      kunstenaarnr: 'AT-K-BH-1',
       naam: 'Opslag Artiest',
     } as never);
     createdKunstenaarIds.push(kunstenaar.id);
     await getPool().query('INSERT INTO kunstenaarAfspraken (id, prijsopslag) VALUES (?, ?)', [kunstenaar.id, 40]);
-    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100, kunstenaar.id);
+    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100, 'AT-K-BH-1');
 
     const response = await createHeader(
       postRequest({ lines: [{ kunstwerkId, maatId, materiaalId, prijs: 1, quantity: 1 }] }, cookie)
@@ -230,11 +231,12 @@ describe('bestelheaders routes', () => {
     const maatId = await maakMaat(56, 76);
     const materiaalId = await maakMateriaal();
     const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+      kunstenaarnr: 'AT-K-BH-2',
       naam: 'Opslag Artiest 2',
     } as never);
     createdKunstenaarIds.push(kunstenaar.id);
     await getPool().query('INSERT INTO kunstenaarAfspraken (id, prijsopslag) VALUES (?, ?)', [kunstenaar.id, 40]);
-    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100, kunstenaar.id);
+    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100, 'AT-K-BH-2');
 
     const response = await createHeader(
       postRequest({ lines: [{ kunstwerkId, maatId, materiaalId, prijs: 1, quantity: 1 }] }, cookie)
@@ -778,11 +780,11 @@ describe('bestelheaders routes', () => {
     const materiaalId = await maakMateriaal();
     const kunstenaar = await insertRow<{ id: string }>(
       'kunstenaars',
-      { naam: 'Exclusieve Artiest', exclusieveKlantIds: [klantB.id] } as never,
+      { kunstenaarnr: 'AT-K-BH-3', naam: 'Exclusieve Artiest', exclusieveKlantIds: [klantB.id] } as never,
       ['exclusieveKlantIds']
     );
     createdKunstenaarIds.push(kunstenaar.id);
-    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100, kunstenaar.id);
+    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100, 'AT-K-BH-3');
 
     const response = await createHeader(
       postRequest({ lines: [{ kunstwerkId, maatId, materiaalId, prijs: 100, quantity: 1 }] }, klantA.cookie)
@@ -860,15 +862,76 @@ describe('bestelheaders routes', () => {
     const materiaalId = await maakMateriaal();
     const kunstenaar = await insertRow<{ id: string }>(
       'kunstenaars',
-      { naam: 'Twee-klanten Artiest', exclusieveKlantIds: [klantA.id, klantB.id] } as never,
+      { kunstenaarnr: 'AT-K-BH-4', naam: 'Twee-klanten Artiest', exclusieveKlantIds: [klantA.id, klantB.id] } as never,
       ['exclusieveKlantIds']
     );
     createdKunstenaarIds.push(kunstenaar.id);
-    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100, kunstenaar.id);
+    const kunstwerkId = await maakGeprijsdKunstwerk(maatId, materiaalId, 100, 'AT-K-BH-4');
 
     const line = { kunstwerkId, maatId, materiaalId, prijs: 100, quantity: 1 };
     expect((await createHeader(postRequest({ lines: [line] }, klantA.cookie))).status).toBe(201);
     expect((await createHeader(postRequest({ lines: [line] }, klantB.cookie))).status).toBe(201);
     expect((await createHeader(postRequest({ lines: [line] }, klantC.cookie))).status).toBe(403);
+  });
+
+  it('stores and returns an afwijsreden when a bestelling is rejected', async () => {
+    const { cookie } = await klant('test-afwijsreden-bestelling@example.com');
+    const created = await createHeader(postRequest({ lines: [] }, cookie));
+    const header = await created.json();
+    const staffCookie = await medewerkerCookie();
+
+    await patchHeader(
+      new Request('http://localhost/api', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', cookie: staffCookie },
+        body: JSON.stringify({ status: 'Afgewezen', afwijsreden: 'Klant heeft nog een openstaande factuur.' }),
+      }),
+      { params: { id: header.id } }
+    );
+
+    const [rows] = await getPool().query('SELECT status, afwijsreden FROM bestelheaders WHERE id = ?', [header.id]);
+    const rij = (rows as Array<{ status: string; afwijsreden: string | null }>)[0];
+    expect(rij.status).toBe('Afgewezen');
+    expect(rij.afwijsreden).toBe('Klant heeft nog een openstaande factuur.');
+  });
+
+  it('strips afwijsreden from a klant\'s own view of their orders, but includes it for a medewerker', async () => {
+    const { id: klantId, cookie } = await klant('test-afwijsreden-lek@example.com');
+    const created = await createHeader(postRequest({ lines: [] }, cookie));
+    const header = await created.json();
+    const staffCookie = await medewerkerCookie();
+
+    await patchHeader(
+      new Request('http://localhost/api', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', cookie: staffCookie },
+        body: JSON.stringify({ status: 'Afgewezen', afwijsreden: 'Onvoldoende gegevens.' }),
+      }),
+      { params: { id: header.id } }
+    );
+
+    const asKlant = await listHeaders(
+      new Request(`http://localhost/api/bestelheaders?klantId=${klantId}`, {
+        headers: { cookie },
+      })
+    );
+    const klantBody = await asKlant.json();
+    expect(klantBody).toHaveLength(1);
+    expect('afwijsreden' in klantBody[0]).toBe(false);
+
+    const asStaffForKlant = await listHeaders(
+      new Request(`http://localhost/api/bestelheaders?klantId=${klantId}`, {
+        headers: { cookie: staffCookie },
+      })
+    );
+    const staffBody = await asStaffForKlant.json();
+    expect(staffBody[0].afwijsreden).toBe('Onvoldoende gegevens.');
+
+    const bulkAsStaff = await listHeaders(
+      new Request('http://localhost/api/bestelheaders', { headers: { cookie: staffCookie } })
+    );
+    const bulkBody = await bulkAsStaff.json();
+    const bulkRow = bulkBody.find((row: { id: string }) => row.id === header.id);
+    expect(bulkRow.afwijsreden).toBe('Onvoldoende gegevens.');
   });
 });

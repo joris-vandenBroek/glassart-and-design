@@ -21,6 +21,7 @@ vi.mock('@/lib/logActiviteit', () => ({
 
 const DRUKKER: Drukker = {
   id: 'drukker-1',
+  drukkernr: 'DR-00003',
   naam: 'Drukkerij Janssen',
   adres: 'Perslaan 1',
   postcode: '1000 AA',
@@ -64,6 +65,20 @@ describe('DrukkerModal verplichte velden', () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     renderModal({ mode: 'add' });
     expect(screen.getByTestId('drukker-modal-verplicht-legende')).toHaveTextContent('* verplicht veld');
+  });
+});
+
+describe('DrukkerModal drukkernr', () => {
+  it('toont het drukkernr als subtitel bij het bewerken', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal({ mode: 'edit', drukker: DRUKKER });
+    expect(await screen.findByTestId('drukker-modal-drukkernr')).toHaveTextContent('DR-00003');
+  });
+
+  it('toont geen drukkernr-subtitel bij het toevoegen', () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal({ mode: 'add' });
+    expect(screen.queryByTestId('drukker-modal-drukkernr')).toBeNull();
   });
 });
 

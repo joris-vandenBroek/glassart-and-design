@@ -8,11 +8,18 @@ import { POST as createZending } from '@/app/api/drukkers/[id]/zendingen/route';
 // Elke test maakt zijn eigen drukker met een verse UUID; de bestellingIds zijn
 // `autotest-`-gemarkeerde literals die nergens anders voorkomen, zodat de lookup
 // nooit echte zendingen uit staging raakt. De drukker wordt op vastgelegd id
-// verwijderd (cascade ruimt de zendingen mee op) -- nooit een ongefilterde DELETE.
+// verwijderd -- nooit een ongefilterde DELETE. drukkerZendingen cascadeert niet
+// meer mee, dus de afterEach ruimt de zendingen expliciet eerst op.
 describe('drukkerzendingen lookup route', () => {
   const createdDrukkerIds: string[] = [];
 
   afterEach(async () => {
+    if (createdDrukkerIds.length > 0) {
+      await getPool().query(
+        'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
+        [createdDrukkerIds]
+      );
+    }
     while (createdDrukkerIds.length > 0) {
       await deleteRow('drukkers', createdDrukkerIds.pop()!);
     }
@@ -20,7 +27,10 @@ describe('drukkerzendingen lookup route', () => {
   });
 
   async function maakZending(bestellingIds: string[], cookie: string) {
-    const drukker = await insertRow<{ id: string }>('drukkers', { naam: 'AUTOTEST PrintCo' } as never);
+    const drukker = await insertRow<{ id: string; drukkernr: string }>('drukkers', {
+      drukkernr: 'AT-D-DZL-1',
+      naam: 'AUTOTEST PrintCo',
+    } as never);
     createdDrukkerIds.push(drukker.id);
     await createZending(
       new Request('http://localhost/api', {
@@ -59,7 +69,7 @@ describe('drukkerzendingen lookup route', () => {
 
     expect(response.status).toBe(200);
     expect(body).toHaveLength(1);
-    expect(body[0].drukkerId).toBe(drukker.id);
+    expect(body[0].drukkernr).toBe(drukker.drukkernr);
     expect(body[0].drukkerNaam).toBe('AUTOTEST PrintCo');
     expect(body[0].bestellingIds).toEqual(['autotest-a1', 'autotest-a2']);
   });

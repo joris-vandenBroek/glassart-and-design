@@ -77,7 +77,7 @@ describe('klanten self-service route', () => {
           companyName: 'Escalatiepoging BV',
           status: 'Goedgekeurd',
           prijsgroepId: 'pg-1',
-          kunstenaarId: 'kunstenaar-1',
+          kunstenaarnr: 'KU-99999',
           minimaleAfname: 1,
         },
         cookie
@@ -180,6 +180,17 @@ describe('klanten self-service route', () => {
     expect(response.status).toBe(200);
     const [rows] = await getPool().query('SELECT btwNummer FROM klanten WHERE id = ?', [klant.id]);
     expect((rows as Array<{ btwNummer: string | null }>)[0].btwNummer).toBeNull();
+  });
+
+  it('does not expose afwijsreden in the response, even when the klant is Afgewezen with a stored reason', async () => {
+    const { cookie } = await createKlantWithCookie({ status: 'Afgewezen', afwijsreden: 'Onvoldoende gegevens.' });
+    const response = await getMe(req('GET', undefined, cookie));
+    // Guards against a false pass: without this, a 500 (empty error body) would also
+    // satisfy the assertions below without actually proving the field is stripped.
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.afwijsreden).toBeUndefined();
+    expect('afwijsreden' in body).toBe(false);
   });
 
   it('geeft het klantnummer terug maar laat de klant het niet zelf zetten', async () => {

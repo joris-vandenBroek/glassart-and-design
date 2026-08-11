@@ -23,7 +23,7 @@ const KUNSTWERK: Kunstwerk = {
   id: 'kw-1',
   foto: 'https://example.com/kw-1.jpg',
   code: 'Hotel paneel',
-  kunstenaarId: null,
+  kunstenaarnr: null,
   segmentIds: ['seg-1'],
   materiaalIds: ['mat-1', 'mat-2'],
   maatIds: ['maat-1', 'maat-2'],
@@ -39,25 +39,25 @@ const KUNSTWERK_PRIJZEN = [
   { materiaalId: 'mat-2', maatId: 'maat-2', prijs: 225 },
 ];
 const MATERIALEN: Materiaal[] = [
-  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Extra diepte en stevigheid voor een indrukwekkend effect.' },
-  { id: 'mat-2', materiaalsoortId: 'soort-2', materiaaldikte: 3, omschrijving: 'Lichtgewicht en flexibel voor grote oppervlaktes.' },
+  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijvingNl: 'Extra diepte en stevigheid voor een indrukwekkend effect.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'mat-2', materiaalsoortId: 'soort-2', materiaaldikte: 3, omschrijvingNl: 'Lichtgewicht en flexibel voor grote oppervlaktes.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const MATEN: Maat[] = [
   { id: 'maat-1', breedte: 40, hoogte: 60 },
   { id: 'maat-2', breedte: 60, hoogte: 90 },
 ];
 const MATERIAALSOORTEN: Materiaalsoort[] = [
-  { id: 'soort-1', omschrijving: 'Veiligheidsglas' },
-  { id: 'soort-2', omschrijving: 'Acryl' },
+  { id: 'soort-1', omschrijvingNl: 'Veiligheidsglas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'soort-2', omschrijvingNl: 'Acryl', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
-const SEGMENTEN: Segment[] = [{ id: 'seg-1', omschrijving: 'Hotel' }];
-const STIJLEN: Stijl[] = [{ id: 'stijl-1', omschrijving: 'Abstract' }];
-const ONDERWERPEN: Onderwerp[] = [{ id: 'onderwerp-1', omschrijving: 'Bloemen' }];
+const SEGMENTEN: Segment[] = [{ id: 'seg-1', omschrijvingNl: 'Hotel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }];
+const STIJLEN: Stijl[] = [{ id: 'stijl-1', omschrijvingNl: 'Abstract', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }];
+const ONDERWERPEN: Onderwerp[] = [{ id: 'onderwerp-1', omschrijvingNl: 'Bloemen', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }];
 const MATERIAALLOOS_KUNSTWERK: Kunstwerk = {
   id: 'kw-akoestisch',
   foto: 'https://example.com/akoestisch.jpg',
   code: 'Akoestisch paneel',
-  kunstenaarId: null,
+  kunstenaarnr: null,
   segmentIds: [],
   materiaalIds: [],
   maatIds: [],
@@ -71,7 +71,7 @@ const MAATLOOS_MET_MATERIAAL_KUNSTWERK: Kunstwerk = {
   id: 'kw-veiligheidsglas-per-m2',
   foto: 'https://example.com/veiligheidsglas.jpg',
   code: '4mm veiligheidsglas per m2',
-  kunstenaarId: null,
+  kunstenaarnr: null,
   segmentIds: [],
   materiaalIds: ['mat-1'],
   maatIds: [],
@@ -94,8 +94,10 @@ const MATERIAALLOOS_MET_ONVERWACHTE_MAATIDS_KUNSTWERK: Kunstwerk = {
 const KUNSTENAARS: Kunstenaar[] = [
   {
     id: 'ka-open',
+    kunstenaarnr: 'KU-00001',
     naam: 'Open Artiest',
     foto: null,
+    website: null,
     omschrijvingNl: '',
     omschrijvingFr: '',
     omschrijvingDe: '',
@@ -104,8 +106,10 @@ const KUNSTENAARS: Kunstenaar[] = [
   },
   {
     id: 'ka-exclusief',
+    kunstenaarnr: 'KU-00002',
     naam: 'Exclusieve Artiest',
     foto: null,
+    website: null,
     omschrijvingNl: '',
     omschrijvingFr: '',
     omschrijvingDe: '',
@@ -114,8 +118,10 @@ const KUNSTENAARS: Kunstenaar[] = [
   },
   {
     id: 'ka-eigen',
+    kunstenaarnr: 'KU-00003',
     naam: 'Eigen Artiest',
     foto: null,
+    website: null,
     omschrijvingNl: '',
     omschrijvingFr: '',
     omschrijvingDe: '',
@@ -181,8 +187,8 @@ afterEach(() => {
 
 describe('ProductModal', () => {
   const MATERIAALSOORTEN_MET_EIGEN_MAAT: Materiaalsoort[] = [
-    { id: 'soort-1', omschrijving: 'Veiligheidsglas', staatEigenMaatToe: true, levertijdMaandenEigenMaat: 3 },
-    { id: 'soort-2', omschrijving: 'Acryl', staatEigenMaatToe: true, maxBreedte: 200, maxHoogte: 300 },
+    { id: 'soort-1', omschrijvingNl: 'Veiligheidsglas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', staatEigenMaatToe: true, levertijdMaandenEigenMaat: 3 },
+    { id: 'soort-2', omschrijvingNl: 'Acryl', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', staatEigenMaatToe: true, maxBreedte: 200, maxHoogte: 300 },
   ];
 
   it('renders nothing when kunstwerk is null', () => {
@@ -191,7 +197,7 @@ describe('ProductModal', () => {
   });
 
   it('disables the confirm button and explains why for a kunstwerk exclusive to another klant', () => {
-    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-exclusief' });
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarnr: 'KU-00002' });
     expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
     expect(screen.getByTestId('product-modal-order-blocked')).toHaveTextContent(
       'Dit kunstwerk is exclusief voorbehouden aan een andere klant.'
@@ -199,30 +205,30 @@ describe('ProductModal', () => {
   });
 
   it('does not block ordering for a kunstwerk with no kunstenaar or an open one', () => {
-    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: null });
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarnr: null });
     expect(screen.queryByTestId('product-modal-order-blocked')).not.toBeInTheDocument();
-    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-open' });
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarnr: 'KU-00001' });
     expect(screen.queryByTestId('product-modal-order-blocked')).not.toBeInTheDocument();
   });
 
-  it('keeps a legacy kunstwerk document without a kunstenaarId field orderable', () => {
+  it('keeps a legacy kunstwerk document without a kunstenaarnr field orderable', () => {
     // Zoals useApiCollection het via de API leest: het veld ontbreekt gewoon.
-    const { kunstenaarId: _weg, ...legacyKunstwerk } = KUNSTWERK;
+    const { kunstenaarnr: _weg, ...legacyKunstwerk } = KUNSTWERK;
     renderModal(() => {}, legacyKunstwerk as Kunstwerk);
     expect(screen.queryByTestId('product-modal-order-blocked')).not.toBeInTheDocument();
     expect(screen.getByTestId('product-modal-confirm')).not.toBeDisabled();
   });
 
   it('fails closed while the kunstenaars collection has not loaded yet', () => {
-    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-open' }, null);
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarnr: 'KU-00001' }, null);
     expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
     expect(screen.getByTestId('product-modal-order-blocked')).toHaveTextContent(
       'Dit kunstwerk kan op dit moment niet besteld worden. Probeer het later opnieuw.'
     );
   });
 
-  it('fails closed for a kunstenaarId that no longer exists in the loaded kunstenaars', () => {
-    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-verwijderd' });
+  it('fails closed for a kunstenaarnr that no longer exists in the loaded kunstenaars', () => {
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarnr: 'KU-99999' });
     expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
     expect(screen.getByTestId('product-modal-order-blocked')).toHaveTextContent(
       'Dit kunstwerk kan op dit moment niet besteld worden. Probeer het later opnieuw.'
@@ -235,7 +241,7 @@ describe('ProductModal', () => {
     // an explicit entry in exclusieveKlantIds does.
     vi.useRealTimers();
     authUser = { id: 'kunstenaar-uid', email: 'ka@example.com', status: 'Goedgekeurd', companyName: 'Atelier' };
-    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: 'ka-eigen' });
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarnr: 'KU-00003' });
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
@@ -254,10 +260,34 @@ describe('ProductModal', () => {
     expect(screen.getByTestId('product-modal-quantity-value')).toHaveValue(1);
   });
 
+  it('shows the German omschrijving instead of the Dutch one when locale is de', () => {
+    render(
+      <NextIntlClientProvider locale="de" messages={messages}>
+        <CustomerAuthProvider>
+          <CartProvider>
+            <ProductModal
+              kunstwerk={{ ...KUNSTWERK, omschrijvingNl: 'Wellness paneel', omschrijvingDe: 'Wellness Panel DE' }}
+              prijzen={KUNSTWERK_PRIJZEN}
+              materialen={MATERIALEN}
+              maten={MATEN}
+              materiaalsoorten={MATERIAALSOORTEN}
+              kunstenaars={KUNSTENAARS}
+              segmenten={SEGMENTEN}
+              stijlen={STIJLEN}
+              onderwerpen={ONDERWERPEN}
+              onClose={() => {}}
+            />
+          </CartProvider>
+        </CustomerAuthProvider>
+      </NextIntlClientProvider>
+    );
+    expect(screen.getByTestId('product-modal-omschrijving')).toHaveTextContent('Wellness Panel DE');
+  });
+
   it('defaults to the 4mm Veiligheidsglas materiaal when available, instead of the first-listed materiaal', () => {
     const MATERIALEN_ACRYL_EERST: Materiaal[] = [
-      { id: 'mat-2', materiaalsoortId: 'soort-2', materiaaldikte: 3, omschrijving: 'Lichtgewicht en flexibel voor grote oppervlaktes.' },
-      { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Extra diepte en stevigheid voor een indrukwekkend effect.' },
+      { id: 'mat-2', materiaalsoortId: 'soort-2', materiaaldikte: 3, omschrijvingNl: 'Lichtgewicht en flexibel voor grote oppervlaktes.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+      { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijvingNl: 'Extra diepte en stevigheid voor een indrukwekkend effect.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
     ];
     render(
       <NextIntlClientProvider locale="nl" messages={messages}>
@@ -744,8 +774,8 @@ describe('ProductModal', () => {
 
   it('resets to a standard maat when switching to a materiaal whose soort does not allow eigen maat', () => {
     const MATERIAALSOORTEN_MIXED: Materiaalsoort[] = [
-      { id: 'soort-1', omschrijving: 'Veiligheidsglas', staatEigenMaatToe: true, levertijdMaandenEigenMaat: 3 },
-      { id: 'soort-2', omschrijving: 'Acryl' },
+      { id: 'soort-1', omschrijvingNl: 'Veiligheidsglas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', staatEigenMaatToe: true, levertijdMaandenEigenMaat: 3 },
+      { id: 'soort-2', omschrijvingNl: 'Acryl', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
     ];
     render(
       <NextIntlClientProvider locale="nl" messages={messages}>
@@ -1079,7 +1109,7 @@ describe('ProductModal', () => {
   it('shows artiest, collectie, stijl and onderwerp when the kunstwerk has them', () => {
     renderModal(() => {}, {
       ...KUNSTWERK,
-      kunstenaarId: 'ka-open',
+      kunstenaarnr: 'KU-00001',
       segmentIds: ['seg-1'],
       stijlIds: ['stijl-1'],
       onderwerpIds: ['onderwerp-1'],
@@ -1092,12 +1122,12 @@ describe('ProductModal', () => {
   });
 
   it('omits the whole info block when the kunstwerk has no artiest, collectie, stijl or onderwerp', () => {
-    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: null, segmentIds: [], stijlIds: [], onderwerpIds: [] });
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarnr: null, segmentIds: [], stijlIds: [], onderwerpIds: [] });
     expect(screen.queryByTestId('product-modal-meta')).not.toBeInTheDocument();
   });
 
   it('only shows the fields that have data, omitting the rest', () => {
-    renderModal(() => {}, { ...KUNSTWERK, kunstenaarId: null, segmentIds: ['seg-1'], stijlIds: [], onderwerpIds: [] });
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarnr: null, segmentIds: ['seg-1'], stijlIds: [], onderwerpIds: [] });
     expect(screen.getByTestId('product-modal-collecties')).toHaveTextContent('Hotel');
     expect(screen.queryByTestId('product-modal-artiest')).not.toBeInTheDocument();
     expect(screen.queryByTestId('product-modal-stijl')).not.toBeInTheDocument();

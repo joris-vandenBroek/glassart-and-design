@@ -12,8 +12,8 @@ export interface OrderRight {
  *
  * Spiegelt bewust `checkOrderRight` in `POST /api/bestelheaders` — dát is de enige echte
  * handhaving, deze client-side versie is puur een UX-hint. Waar de servercheck faalt
- * (een dangling `kunstenaarId` is daar een afwijzing), faalt deze helper óók: een nog niet
- * geladen collectie of een dangling `kunstenaarId` levert `blockedReason: 'unavailable'`
+ * (een dangling `kunstenaarnr` is daar een afwijzing), faalt deze helper óók: een nog niet
+ * geladen collectie of een dangling `kunstenaarnr` levert `blockedReason: 'unavailable'`
  * op in plaats van stilzwijgend "wel bestelbaar".
  *
  * `exclusieveKlantIds` is de enige bron van waarheid: een lege lijst is open voor
@@ -22,17 +22,17 @@ export interface OrderRight {
  * automatische "kunstenaar mag altijd eigen werk bestellen"-uitzondering meer.
  */
 export function resolveOrderRight(
-  kunstenaarId: string | null,
+  kunstenaarnr: string | null,
   kunstenaars: Kunstenaar[] | null,
   userUid: string | undefined
 ): OrderRight {
   // Bewust losse `== null`: kunstwerk-rijen van vóór deze feature hebben helemaal geen
-  // `kunstenaarId`-kolom, en useApiCollection geeft de ruwe API-respons door, dus die
+  // `kunstenaarnr`-kolom, en useApiCollection geeft de ruwe API-respons door, dus die
   // lezen als `undefined`. Een lege string blijft wél dichtklappen.
-  const dataReady = kunstenaarId == null || kunstenaars !== null;
+  const dataReady = kunstenaarnr == null || kunstenaars !== null;
   const kunstenaar =
-    kunstenaarId && kunstenaars ? kunstenaars.find((item) => item.id === kunstenaarId) ?? null : null;
-  const missing = kunstenaarId != null && kunstenaars !== null && kunstenaar === null;
+    kunstenaarnr && kunstenaars ? kunstenaars.find((item) => item.kunstenaarnr === kunstenaarnr) ?? null : null;
+  const missing = kunstenaarnr != null && kunstenaars !== null && kunstenaar === null;
   const exclusieveKlantIds = kunstenaar?.exclusieveKlantIds ?? [];
   const isRestricted = exclusieveKlantIds.length > 0;
   const isAllowed = userUid != null && exclusieveKlantIds.includes(userUid);

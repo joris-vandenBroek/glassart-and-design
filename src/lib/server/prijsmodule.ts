@@ -22,9 +22,23 @@ export function combineerPrijs(basisPrijs: number, opslag: number): number {
   return Math.round((basisPrijs + opslag) * 100) / 100;
 }
 
-export async function prijsopslagVoorKunstenaar(db: Queryable, kunstenaarId: string | null): Promise<number> {
-  if (!kunstenaarId) return 0;
-  const [rows] = await db.query('SELECT prijsopslag FROM kunstenaarAfspraken WHERE id = ?', [kunstenaarId]);
+/**
+ * kunstenaarAfspraken hangt op de UUID van de kunstenaar (id is daar tegelijk primary
+ * key en foreign key), terwijl een kunstwerk het kunstenaarnr draagt -- vandaar de
+ * join. Zie het ontwerp, beslissing 2.
+ */
+export async function prijsopslagVoorKunstenaar(
+  db: Queryable,
+  kunstenaarnr: string | null
+): Promise<number> {
+  if (!kunstenaarnr) return 0;
+  const [rows] = await db.query(
+    `SELECT a.prijsopslag
+     FROM kunstenaarAfspraken a
+     JOIN kunstenaars k ON k.id = a.id
+     WHERE k.kunstenaarnr = ?`,
+    [kunstenaarnr]
+  );
   const row = (rows as Array<{ prijsopslag: string | null }>)[0];
   return row?.prijsopslag != null ? Number(row.prijsopslag) : 0;
 }
@@ -47,7 +61,7 @@ export async function prijsgroepVoorKlant(db: Queryable, klantId: string | null)
 
 export async function berekenPrijzenVoorCombinaties(
   db: Queryable,
-  kunstenaarId: string | null,
+  kunstenaarnr: string | null,
   materiaalIds: string[],
   maatIds: string[]
 ): Promise<PrijsCombinatie[]> {
@@ -58,7 +72,7 @@ export async function berekenPrijzenVoorCombinaties(
     'SELECT maatId, materiaalId, prijs FROM prijsmatrix WHERE maatId IN (?) AND materiaalId IN (?) AND prijs IS NOT NULL',
     [maatIds, materiaalIds]
   );
-  const opslag = await prijsopslagVoorKunstenaar(db, kunstenaarId);
+  const opslag = await prijsopslagVoorKunstenaar(db, kunstenaarnr);
   return (matrixRows as Array<{ maatId: string; materiaalId: string; prijs: string }>).map((row) => ({
     maatId: row.maatId,
     materiaalId: row.materiaalId,
@@ -70,29 +84,33 @@ export async function berekenPrijzenVoorAlleKunstwerken(
   db: Queryable,
   klantId: string | null = null
 ): Promise<Record<string, PrijsCombinatie[]>> {
-  const [kunstwerkRows] = await db.query('SELECT id, kunstenaarId, materiaalIds, maatIds FROM kunstwerken');
+  const [kunstwerkRows] = await db.query('SELECT id, kunstenaarnr, materiaalIds, maatIds FROM kunstwerken');
   const [matrixRows] = await db.query('SELECT maatId, materiaalId, prijs FROM prijsmatrix WHERE prijs IS NOT NULL');
   const matrixByKey = new Map<string, number>();
   for (const row of matrixRows as Array<{ maatId: string; materiaalId: string; prijs: string }>) {
     matrixByKey.set(`${row.maatId}:${row.materiaalId}`, Number(row.prijs));
   }
-  const [afsprakenRows] = await db.query('SELECT id, prijsopslag FROM kunstenaarAfspraken');
-  const opslagByKunstenaarId = new Map<string, number>();
-  for (const row of afsprakenRows as Array<{ id: string; prijsopslag: string | null }>) {
-    opslagByKunstenaarId.set(row.id, row.prijsopslag != null ? Number(row.prijsopslag) : 0);
+  const [afsprakenRows] = await db.query(
+    `SELECT k.kunstenaarnr, a.prijsopslag
+     FROM kunstenaarAfspraken a
+     JOIN kunstenaars k ON k.id = a.id`
+  );
+  const opslagByKunstenaarnr = new Map<string, number>();
+  for (const row of afsprakenRows as Array<{ kunstenaarnr: string; prijsopslag: string | null }>) {
+    opslagByKunstenaarnr.set(row.kunstenaarnr, row.prijsopslag != null ? Number(row.prijsopslag) : 0);
   }
   const prijsgroep = await prijsgroepVoorKlant(db, klantId);
 
   const result: Record<string, PrijsCombinatie[]> = {};
   for (const row of kunstwerkRows as Array<{
     id: string;
-    kunstenaarId: string | null;
+    kunstenaarnr: string | null;
     materiaalIds: string | string[] | null;
     maatIds: string | string[] | null;
   }>) {
     const materiaalIds = parseJsonKolom<string[]>(row.materiaalIds, []);
     const maatIds = parseJsonKolom<string[]>(row.maatIds, []);
-    const opslag = row.kunstenaarId ? opslagByKunstenaarId.get(row.kunstenaarId) ?? 0 : 0;
+    const opslag = row.kunstenaarnr ? opslagByKunstenaarnr.get(row.kunstenaarnr) ?? 0 : 0;
     const combinaties: PrijsCombinatie[] = [];
     for (const materiaalId of materiaalIds) {
       for (const maatId of maatIds) {
@@ -109,7 +127,7 @@ export async function berekenPrijzenVoorAlleKunstwerken(
 
 export async function berekenBestellijnPrijs(
   db: Queryable,
-  kunstwerk: { kunstenaarId: string | null; maatIds: string[]; prijsPerM2: number | null },
+  kunstwerk: { kunstenaarnr: string | null; maatIds: string[]; prijsPerM2: number | null },
   line: { maatId: string; materiaalId: string; breedte?: number; hoogte?: number },
   klantId: string | null = null
 ): Promise<LijnPrijsResultaat> {
@@ -137,7 +155,7 @@ export async function berekenBestellijnPrijs(
   if (matrixPrijs == null) {
     return { status: 'onbekend' };
   }
-  const opslag = await prijsopslagVoorKunstenaar(db, kunstwerk.kunstenaarId);
+  const opslag = await prijsopslagVoorKunstenaar(db, kunstwerk.kunstenaarnr);
   const prijsgroep = await prijsgroepVoorKlant(db, klantId);
   return { status: 'vast', prijs: pasPrijsgroepToe(combineerPrijs(Number(matrixPrijs), opslag), prijsgroep) };
 }

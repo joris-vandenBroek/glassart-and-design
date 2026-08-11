@@ -50,7 +50,7 @@ async function updateEnKenKlantnummerToe(
   }
 }
 
-// Full-field admin edit (status, prijsgroepId, kunstenaarId, ...) -- staff only.
+// Full-field admin edit (status, prijsgroepId, kunstenaarnr, ...) -- staff only.
 // A klant's own self-service edit goes through the narrowly-scoped /api/klanten/me instead.
 export const PATCH = withApiErrorHandling(
   'PATCH /api/klanten/[id]',

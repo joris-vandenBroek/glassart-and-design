@@ -39,12 +39,12 @@ vi.mock('@/lib/logActiviteit', () => ({
   logActiviteit: (...args: unknown[]) => logActiviteitMock(...args),}));
 
 const SEGMENTEN: Segment[] = [
-  { id: 'seg-1', omschrijving: 'Hotel' },
-  { id: 'seg-2', omschrijving: 'Restaurant' },
+  { id: 'seg-1', omschrijvingNl: 'Hotel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'seg-2', omschrijvingNl: 'Restaurant', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const MATERIALEN: Materiaal[] = [
-  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Veiligheidsglas' },
-  { id: 'mat-2', materiaalsoortId: 'soort-2', materiaaldikte: 3, omschrijving: 'Acryl' },
+  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijvingNl: 'Veiligheidsglas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'mat-2', materiaalsoortId: 'soort-2', materiaaldikte: 3, omschrijvingNl: 'Acryl', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const MATEN: Maat[] = [
   { id: 'maat-1', breedte: 40, hoogte: 60 },
@@ -52,18 +52,20 @@ const MATEN: Maat[] = [
   { id: 'maat-3', breedte: 50, hoogte: 50 },
 ];
 const STIJLEN: Stijl[] = [
-  { id: 'stijl-1', omschrijving: 'Abstract' },
-  { id: 'stijl-2', omschrijving: 'Minimalistisch' },
+  { id: 'stijl-1', omschrijvingNl: 'Abstract', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'stijl-2', omschrijvingNl: 'Minimalistisch', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const ONDERWERPEN: Onderwerp[] = [
-  { id: 'onderwerp-1', omschrijving: 'Bloemen' },
-  { id: 'onderwerp-2', omschrijving: 'Landschappen' },
+  { id: 'onderwerp-1', omschrijvingNl: 'Bloemen', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'onderwerp-2', omschrijvingNl: 'Landschappen', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const KUNSTENAARS: Kunstenaar[] = [
   {
     id: 'ka-1',
+    kunstenaarnr: 'KU-00001',
     naam: 'Sabrina Glasser',
     foto: null,
+    website: null,
     omschrijvingNl: 'Werkt met glas.',
     omschrijvingFr: '',
     omschrijvingDe: '',
@@ -76,7 +78,7 @@ const KUNSTWERKEN: Kunstwerk[] = [
     id: 'kw-1',
     foto: 'https://storage.example.com/kw-1.jpg',
     code: 'Hotel paneel 1',
-    kunstenaarId: null,
+    kunstenaarnr: null,
     formaat: 'staand',
     segmentIds: ['seg-1'],
     materiaalIds: ['mat-1'],
@@ -90,7 +92,7 @@ const KUNSTWERKEN: Kunstwerk[] = [
     id: 'kw-2',
     foto: 'https://storage.example.com/kw-2.jpg',
     code: 'Restaurant paneel 1',
-    kunstenaarId: null,
+    kunstenaarnr: null,
     formaat: 'staand',
     segmentIds: ['seg-2'],
     // Deliberately has every materiaal/maat checked, unlike kw-1, so it never counts toward
@@ -252,7 +254,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
     fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Vibrant Spirit' } });
-    fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'ka-1' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'KU-00001' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Nieuw kunstwerk' } });
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
 
@@ -260,7 +262,7 @@ describe('KunstwerkenSection', () => {
       expect(onAdd).toHaveBeenCalledWith({
         foto: 'https://storage.example.com/nieuw.jpg',
         code: 'Vibrant Spirit',
-        kunstenaarId: 'ka-1',
+        kunstenaarnr: 'KU-00001',
         formaat: 'staand',
         segmentIds: ['seg-1'],
         materiaalIds: ['mat-1'],
@@ -292,7 +294,7 @@ describe('KunstwerkenSection', () => {
       expect(onUpdate).toHaveBeenCalledWith('kw-1', {
         foto: 'https://storage.example.com/kw-1.jpg',
         code: 'Hotel paneel 1',
-        kunstenaarId: null,
+        kunstenaarnr: null,
         formaat: 'staand',
         segmentIds: ['seg-1'],
         materiaalIds: ['mat-1'],
@@ -568,7 +570,7 @@ describe('KunstwerkenSection', () => {
       expect(onAdd).toHaveBeenCalledWith({
         foto: 'https://storage.example.com/nieuw.jpg',
         code: 'Akoestisch paneel',
-        kunstenaarId: null,
+        kunstenaarnr: null,
         formaat: 'vierkant',
         segmentIds: ['seg-1'],
         materiaalIds: [],
@@ -912,7 +914,14 @@ describe('KunstwerkenSection', () => {
 
     fireEvent.change(screen.getByTestId('kunstwerk-modal-nieuwe-stijl-naam'), { target: { value: 'Jugendstil' } });
     fireEvent.click(screen.getByTestId('kunstwerk-modal-nieuwe-stijl-toevoegen'));
-    await waitFor(() => expect(onAddStijl).toHaveBeenCalledWith({ omschrijving: 'Jugendstil' }));
+    await waitFor(() =>
+      expect(onAddStijl).toHaveBeenCalledWith({
+        omschrijvingNl: 'Jugendstil',
+        omschrijvingFr: '',
+        omschrijvingDe: '',
+        omschrijvingEn: '',
+      })
+    );
 
     // Simulate BeheerShell re-rendering this component with the freshly-refetched stijlen list,
     // the way it really would once onAddStijl's API call resolves and useApiCollection refetches.
@@ -926,7 +935,7 @@ describe('KunstwerkenSection', () => {
               materialen={MATERIALEN}
               materiaalsoorten={null}
               maten={MATEN}
-              stijlen={[...STIJLEN, { id: 'stijl-3', omschrijving: 'Jugendstil' }]}
+              stijlen={[...STIJLEN, { id: 'stijl-3', omschrijvingNl: 'Jugendstil', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }]}
               onderwerpen={ONDERWERPEN}
               kunstenaars={KUNSTENAARS}
               loadError={null}
@@ -954,7 +963,14 @@ describe('KunstwerkenSection', () => {
 
     fireEvent.change(screen.getByTestId('kunstwerk-modal-nieuwe-segment-naam'), { target: { value: 'Kantoor' } });
     fireEvent.click(screen.getByTestId('kunstwerk-modal-nieuwe-segment-toevoegen'));
-    await waitFor(() => expect(onAddSegment).toHaveBeenCalledWith({ omschrijving: 'Kantoor' }));
+    await waitFor(() =>
+      expect(onAddSegment).toHaveBeenCalledWith({
+        omschrijvingNl: 'Kantoor',
+        omschrijvingFr: '',
+        omschrijvingDe: '',
+        omschrijvingEn: '',
+      })
+    );
 
     // Simulate BeheerShell re-rendering this component with the freshly-refetched segmenten list,
     // the way it really would once onAddSegment's API call resolves and useApiCollection refetches.
@@ -964,7 +980,7 @@ describe('KunstwerkenSection', () => {
           <CartProvider>
             <KunstwerkenSection
               kunstwerken={KUNSTWERKEN}
-              segmenten={[...SEGMENTEN, { id: 'seg-3', omschrijving: 'Kantoor' }]}
+              segmenten={[...SEGMENTEN, { id: 'seg-3', omschrijvingNl: 'Kantoor', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }]}
               materialen={MATERIALEN}
               materiaalsoorten={null}
               maten={MATEN}
@@ -1130,5 +1146,56 @@ describe('KunstwerkenSection', () => {
 
     expect(screen.getByTestId('kunstwerk-modal-error')).toHaveTextContent('Deze code bestaat al.');
     expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it('toont het prefixveld bij het aanmaken van een nieuw kunstwerk', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    expect(screen.getByTestId('kunstwerk-modal-prefix')).toBeInTheDocument();
+  });
+
+  it('toont geen prefixveld bij het bewerken van een bestaand kunstwerk', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+    expect(screen.queryByTestId('kunstwerk-modal-prefix')).toBeNull();
+  });
+
+  it('vult het codeveld met een voorstel zodra een prefix wordt gekozen', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-prefix'), { target: { value: 'GLA-AFR' } });
+    expect(screen.getByTestId('kunstwerk-modal-code')).toHaveValue('GLA-AFR-00001');
+  });
+
+  it('vult het codeveld met een voorstel op basis van een bestaand prefix, niet alleen een nieuw prefix', () => {
+    const kunstwerkenMetPrefix: Kunstwerk[] = [
+      ...KUNSTWERKEN,
+      {
+        id: 'kw-3',
+        foto: 'https://storage.example.com/kw-3.jpg',
+        code: 'GLA-AFR-00007',
+        kunstenaarnr: null,
+        formaat: 'staand',
+        segmentIds: ['seg-1'],
+        materiaalIds: ['mat-1'],
+        maatIds: ['maat-1'],
+        omschrijvingNl: 'Testwerk met prefix',
+        omschrijvingFr: '',
+        omschrijvingDe: '',
+        omschrijvingEn: '',
+      },
+    ];
+    renderSection({ kunstwerken: kunstwerkenMetPrefix });
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-prefix'), { target: { value: 'GLA-AFR' } });
+    expect(screen.getByTestId('kunstwerk-modal-code')).toHaveValue('GLA-AFR-00008');
+  });
+
+  it('laat het codeveld na het voorstel gewoon vrij overschrijfbaar', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-prefix'), { target: { value: 'GLA-AFR' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'GLA-AFR-eigen' } });
+    expect(screen.getByTestId('kunstwerk-modal-code')).toHaveValue('GLA-AFR-eigen');
   });
 });

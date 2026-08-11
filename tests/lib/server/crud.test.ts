@@ -27,24 +27,27 @@ afterEach(async () => {
 
 describe('generic CRUD helpers (against segmenten table)', () => {
   it('inserts and lists a row', async () => {
-    const created = await insertRow<{ id: string; omschrijving: string }>('segmenten', {
-      omschrijving: 'Hotel',
+    const created = await insertRow<{ id: string; omschrijvingNl: string }>('segmenten', {
+      omschrijvingNl: 'Hotel',
     });
     createdSegmentIds.push(created.id);
-    expect(created.omschrijving).toBe('Hotel');
+    expect(created.omschrijvingNl).toBe('Hotel');
     expect(created.id).toMatch(/^[0-9a-f-]{36}$/);
 
-    const rows = await listRows<{ id: string; omschrijving: string }>('segmenten');
-    expect(rows).toContainEqual(created);
+    const rows = await listRows<{ id: string; omschrijvingNl: string }>('segmenten');
+    // De rij komt terug met de volledige kolomset (omschrijvingFr/De/En, hier
+    // niet gezet en dus null) -- objectContaining, niet een volledige match,
+    // want `created` bevat alleen wat deze test zelf heeft meegegeven.
+    expect(rows).toContainEqual(expect.objectContaining(created));
   });
 
   it('gets a single row by id', async () => {
-    const created = await insertRow<{ id: string; omschrijving: string }>('segmenten', {
-      omschrijving: 'Restaurant',
+    const created = await insertRow<{ id: string; omschrijvingNl: string }>('segmenten', {
+      omschrijvingNl: 'Restaurant',
     });
     createdSegmentIds.push(created.id);
-    const found = await getRow<{ id: string; omschrijving: string }>('segmenten', created.id);
-    expect(found).toEqual(created);
+    const found = await getRow<{ id: string; omschrijvingNl: string }>('segmenten', created.id);
+    expect(found).toEqual(expect.objectContaining(created));
   });
 
   it('returns null when getRow finds nothing', async () => {
@@ -53,18 +56,18 @@ describe('generic CRUD helpers (against segmenten table)', () => {
   });
 
   it('updates a row', async () => {
-    const created = await insertRow<{ id: string; omschrijving: string }>('segmenten', {
-      omschrijving: 'Kantoor',
+    const created = await insertRow<{ id: string; omschrijvingNl: string }>('segmenten', {
+      omschrijvingNl: 'Kantoor',
     });
     createdSegmentIds.push(created.id);
-    await updateRow('segmenten', created.id, { omschrijving: 'Kantoorpand' });
-    const found = await getRow<{ id: string; omschrijving: string }>('segmenten', created.id);
-    expect(found?.omschrijving).toBe('Kantoorpand');
+    await updateRow('segmenten', created.id, { omschrijvingNl: 'Kantoorpand' });
+    const found = await getRow<{ id: string; omschrijvingNl: string }>('segmenten', created.id);
+    expect(found?.omschrijvingNl).toBe('Kantoorpand');
   });
 
   it('deletes a row', async () => {
-    const created = await insertRow<{ id: string; omschrijving: string }>('segmenten', {
-      omschrijving: 'Winkel',
+    const created = await insertRow<{ id: string; omschrijvingNl: string }>('segmenten', {
+      omschrijvingNl: 'Winkel',
     });
     await deleteRow('segmenten', created.id);
     const found = await getRow('segmenten', created.id);
@@ -116,7 +119,7 @@ describe('generic CRUD helpers (against segmenten table)', () => {
 // geparameteriseerd worden. Deze allowlist is wat dat afgrenst.
 describe('kolom-allowlist', () => {
   it('accepteert de kolommen die in db/schema.sql staan', () => {
-    expect(() => controleerKolommen('segmenten', ['id', 'omschrijving'])).not.toThrow();
+    expect(() => controleerKolommen('segmenten', ['id', 'omschrijvingNl'])).not.toThrow();
   });
 
   it('weigert een kolom die niet in de tabel bestaat', () => {
@@ -133,12 +136,12 @@ describe('kolom-allowlist', () => {
 
   it('laat insertRow gooien in plaats van een gemanipuleerde kolomnaam te gebruiken', async () => {
     await expect(
-      insertRow('segmenten', { omschrijving: 'AUTOTEST', ['x`, `y']: 1 } as never)
+      insertRow('segmenten', { omschrijvingNl: 'AUTOTEST', ['x`, `y']: 1 } as never)
     ).rejects.toThrow(/Onbekende kolom/);
   });
 
   it('laat updateRow gooien op een onbekende kolom', async () => {
-    const segment = await insertRow<{ id: string }>('segmenten', { omschrijving: 'AUTOTEST crud' } as never);
+    const segment = await insertRow<{ id: string }>('segmenten', { omschrijvingNl: 'AUTOTEST crud' } as never);
     createdSegmentIds.push(segment.id);
     await expect(updateRow('segmenten', segment.id, { verzonnen: 1 })).rejects.toThrow(/Onbekende kolom/);
   });

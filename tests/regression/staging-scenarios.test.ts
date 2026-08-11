@@ -132,12 +132,12 @@ async function opruimenKlanten(emails: string[]) {
 
 async function maakMaatMateriaal(label: string) {
   const soort = await insertRow<{ id: string }>('materiaalsoorten', {
-    omschrijving: `AUTOTEST soort ${label}`,
+    omschrijvingNl: `AUTOTEST soort ${label}`,
   } as never);
   const materiaal = await insertRow<{ id: string }>('materialen', {
     materiaalsoortId: soort.id,
     materiaaldikte: 6,
-    omschrijving: `AUTOTEST materiaal ${label}`,
+    omschrijvingNl: `AUTOTEST materiaal ${label}`,
   } as never);
   const maat = await insertRow<{ id: string }>('maten', { breedte: 40, hoogte: 60 } as never);
   return {
@@ -168,7 +168,9 @@ describe('Deel C1 -- klant-kunstenaar exclusiviteit (echte workflow)', () => {
     let fixture: Awaited<ReturnType<typeof maakMaatMateriaal>> | null = null;
 
     try {
+      const kunstenaarnr = 'AT-K-REG-1';
       const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+        kunstenaarnr,
         naam: 'AUTOTEST Kunstenaar Exclusief',
       } as never);
       kunstenaarId = kunstenaar.id;
@@ -181,7 +183,7 @@ describe('Deel C1 -- klant-kunstenaar exclusiviteit (echte workflow)', () => {
         'kunstwerken',
         {
           code: 'AUTOTEST Kunstwerk Exclusief',
-          kunstenaarId,
+          kunstenaarnr,
           materiaalIds: [fixture.materiaalId],
           maatIds: [fixture.maatId],
         } as never,
@@ -203,7 +205,7 @@ describe('Deel C1 -- klant-kunstenaar exclusiviteit (echte workflow)', () => {
       const staff = await medewerkerCookie();
 
       // "Dit klantaccount is van kunstenaar" -- koppel eigenAccount aan de kunstenaar.
-      const linkKlant = await patchKlant(req('PATCH', { kunstenaarId }, staff), {
+      const linkKlant = await patchKlant(req('PATCH', { kunstenaarnr }, staff), {
         params: { id: eigenAccount.id },
       });
       expect(linkKlant.status).toBe(200);
@@ -263,7 +265,9 @@ describe('Deel C2 -- kunstenaarsopslag + prijsgroep (prijsopbouw van een bestell
     try {
       const staff = await medewerkerCookie();
 
+      const kunstenaarnr = 'AT-K-REG-2';
       const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+        kunstenaarnr,
         naam: 'AUTOTEST Kunstenaar Opslag',
       } as never);
       kunstenaarId = kunstenaar.id;
@@ -279,7 +283,7 @@ describe('Deel C2 -- kunstenaarsopslag + prijsgroep (prijsopbouw van een bestell
         'kunstwerken',
         {
           code: 'AUTOTEST Kunstwerk Opslag',
-          kunstenaarId,
+          kunstenaarnr,
           materiaalIds: [fixtureA.materiaalId, fixtureB.materiaalId],
           maatIds: [fixtureA.maatId, fixtureB.maatId],
         } as never,
@@ -421,11 +425,13 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
       stap('Beide bestellingen goedgekeurd -> "Te versturen naar drukker"');
 
       const drukkerStandaard = await insertRow<{ id: string; naam: string }>('drukkers', {
+        drukkernr: 'AT-D-REG-1',
         naam: 'AUTOTEST Drukker Standaard',
         email: 'autotest-standaard@example.com',
         standaard: true,
       } as never);
       const drukkerAlternatief = await insertRow<{ id: string; naam: string }>('drukkers', {
+        drukkernr: 'AT-D-REG-2',
         naam: 'AUTOTEST Drukker Alternatief',
         email: 'autotest-alternatief@example.com',
         standaard: false,
@@ -440,10 +446,10 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
           { id: headerY.id, klantnr: klantY.klantnr, companyName: klantY.email, bestelnr: headerY.bestelnr, besteldatum: '', status: 'Te versturen naar drukker', lineCount: 1, totalQuantity: 1, lines: [{ id: 'l2', code: 'AUTOTEST Kunstwerk Drukker', maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 80, quantity: 1 }] },
         ],
         klanten: [],
-        kunstwerken: [{ id: kunstwerkId, foto: '', code: 'AUTOTEST Kunstwerk Drukker', kunstenaarId: null, segmentIds: [], materiaalIds: [fixture.materiaalId], maatIds: [fixture.maatId], omschrijvingNl: '', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }],
-        materialen: [{ id: fixture.materiaalId, materiaalsoortId: 'x', materiaaldikte: 6, omschrijving: 'AUTOTEST' }],
+        kunstwerken: [{ id: kunstwerkId, foto: '', code: 'AUTOTEST Kunstwerk Drukker', kunstenaarnr: null, segmentIds: [], materiaalIds: [fixture.materiaalId], maatIds: [fixture.maatId], omschrijvingNl: '', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }],
+        materialen: [{ id: fixture.materiaalId, materiaalsoortId: 'x', materiaaldikte: 6, omschrijvingNl: 'AUTOTEST', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }],
         maten: [{ id: fixture.maatId, breedte: 40, hoogte: 60 }],
-        materiaalsoorten: [{ id: 'x', omschrijving: 'AUTOTEST soort' }],
+        materiaalsoorten: [{ id: 'x', omschrijvingNl: 'AUTOTEST soort', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }],
         bedrijfsgegevens: BEDRIJFSGEGEVENS_SEED,
       });
       // companyName fallback ("Onbekend klant" resolution) still yields one section per klant.
@@ -500,7 +506,14 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
       const pool = getPool();
       if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
       if (fixture) await fixture.opruimen();
-      if (drukkerIds.length > 0) await pool.query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]); // cascades drukkerZendingen
+      if (drukkerIds.length > 0) {
+        // drukkerZendingen cascadeert niet meer mee met een verwijderde drukker; eerst die weg.
+        await pool.query(
+          'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
+          [drukkerIds]
+        );
+        await pool.query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]);
+      }
     }
   });
 });
@@ -693,6 +706,7 @@ describe('Bestelling-levenscyclus -- plaatsen tot verstuurd naar drukker', () =>
       stap('Bestelling goedgekeurd -> "Te versturen naar drukker"');
 
       const drukker = await insertRow<{ id: string; naam: string }>('drukkers', {
+        drukkernr: 'AT-D-REG-3',
         naam: 'AUTOTEST Drukker Levenscyclus',
         email: 'autotest-levenscyclus-drukker@example.com',
         standaard: false,
@@ -725,7 +739,14 @@ describe('Bestelling-levenscyclus -- plaatsen tot verstuurd naar drukker', () =>
       const pool = getPool();
       if (kunstwerkId) await pool.query('DELETE FROM kunstwerken WHERE id = ?', [kunstwerkId]);
       if (fixture) await fixture.opruimen();
-      if (drukkerIds.length > 0) await pool.query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]);
+      if (drukkerIds.length > 0) {
+        // drukkerZendingen cascadeert niet meer mee met een verwijderde drukker; eerst die weg.
+        await pool.query(
+          'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
+          [drukkerIds]
+        );
+        await pool.query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]);
+      }
       stap('Opgeruimd: klant, kunstwerk, maat/materiaal, drukker.');
     }
   });
@@ -849,20 +870,20 @@ describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
       // wordt meteen als los record aangemaakt (niet pas bij het opslaan van het kunstwerk),
       // en pas daarna gekoppeld via de id in segmentIds/stijlIds/onderwerpIds.
       const segmentResponse = await postResource(
-        req('POST', { omschrijving: 'AUTOTEST Segment Inline' }, staff),
+        req('POST', { omschrijvingNl: 'AUTOTEST Segment Inline' }, staff),
         { params: { resource: 'segmenten' } }
       );
       expect(segmentResponse.status).toBe(201);
       segmentId = (await segmentResponse.json()).id;
 
-      const stijlResponse = await postResource(req('POST', { omschrijving: 'AUTOTEST Stijl Inline' }, staff), {
+      const stijlResponse = await postResource(req('POST', { omschrijvingNl: 'AUTOTEST Stijl Inline' }, staff), {
         params: { resource: 'stijlen' },
       });
       expect(stijlResponse.status).toBe(201);
       stijlId = (await stijlResponse.json()).id;
 
       const onderwerpResponse = await postResource(
-        req('POST', { omschrijving: 'AUTOTEST Onderwerp Inline' }, staff),
+        req('POST', { omschrijvingNl: 'AUTOTEST Onderwerp Inline' }, staff),
         { params: { resource: 'onderwerpen' } }
       );
       expect(onderwerpResponse.status).toBe(201);
@@ -893,13 +914,13 @@ describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
       // Staan de nieuwe stamgegevens echt in hun eigen tabel (niet alleen als losse id op
       // het kunstwerk)?
       const segmentenLijst = await (await listResource(req('GET'), { params: { resource: 'segmenten' } })).json();
-      expect(segmentenLijst.some((s: { id: string; omschrijving: string }) => s.id === segmentId && s.omschrijving === 'AUTOTEST Segment Inline')).toBe(true);
+      expect(segmentenLijst.some((s: { id: string; omschrijvingNl: string }) => s.id === segmentId && s.omschrijvingNl === 'AUTOTEST Segment Inline')).toBe(true);
       const stijlenLijst = await (await listResource(req('GET'), { params: { resource: 'stijlen' } })).json();
-      expect(stijlenLijst.some((s: { id: string; omschrijving: string }) => s.id === stijlId && s.omschrijving === 'AUTOTEST Stijl Inline')).toBe(true);
+      expect(stijlenLijst.some((s: { id: string; omschrijvingNl: string }) => s.id === stijlId && s.omschrijvingNl === 'AUTOTEST Stijl Inline')).toBe(true);
       const onderwerpenLijst = await (
         await listResource(req('GET'), { params: { resource: 'onderwerpen' } })
       ).json();
-      expect(onderwerpenLijst.some((o: { id: string; omschrijving: string }) => o.id === onderwerpId && o.omschrijving === 'AUTOTEST Onderwerp Inline')).toBe(true);
+      expect(onderwerpenLijst.some((o: { id: string; omschrijvingNl: string }) => o.id === onderwerpId && o.omschrijvingNl === 'AUTOTEST Onderwerp Inline')).toBe(true);
       stap(`Bevestigd: alle 3 staan echt als eigen rij in hun stamtabel (${segmentenLijst.length} segmenten, ${stijlenLijst.length} stijlen, ${onderwerpenLijst.length} onderwerpen totaal)`);
 
       // En staat de koppeling ook echt op het kunstwerk zelf?
@@ -925,7 +946,7 @@ describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
 });
 
 describe('Klant van een kunstenaar kan diens werk gewoon bestellen zonder exclusiviteit', () => {
-  it('koppelen van een klant aan een kunstenaar (kunstenaarId) beperkt op zichzelf niets -- die klant én andere klanten kunnen het werk gewoon bestellen', async () => {
+  it('koppelen van een klant aan een kunstenaar (kunstenaarnr) beperkt op zichzelf niets -- die klant én andere klanten kunnen het werk gewoon bestellen', async () => {
     const klantEmails: string[] = [];
     let kunstenaarId: string | null = null;
     let kunstwerkId: string | null = null;
@@ -934,7 +955,9 @@ describe('Klant van een kunstenaar kan diens werk gewoon bestellen zonder exclus
     try {
       const staff = await medewerkerCookie();
 
+      const kunstenaarnr = 'AT-K-REG-3';
       const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+        kunstenaarnr,
         naam: 'AUTOTEST Kunstenaar Eigen Werk',
       } as never);
       kunstenaarId = kunstenaar.id;
@@ -945,7 +968,7 @@ describe('Klant van een kunstenaar kan diens werk gewoon bestellen zonder exclus
         'kunstwerken',
         {
           code: 'AUTOTEST Kunstwerk Eigen Werk',
-          kunstenaarId,
+          kunstenaarnr,
           materiaalIds: [fixture.materiaalId],
           maatIds: [fixture.maatId],
         } as never,
@@ -959,9 +982,9 @@ describe('Klant van een kunstenaar kan diens werk gewoon bestellen zonder exclus
       klantEmails.push(anderKlant.email);
       stap(`2 klanten aangemaakt: ${eigenKlant.email} (wordt gekoppeld), ${anderKlant.email} (blijft los)`);
 
-      const koppeling = await patchKlant(req('PATCH', { kunstenaarId }, staff), { params: { id: eigenKlant.id } });
+      const koppeling = await patchKlant(req('PATCH', { kunstenaarnr }, staff), { params: { id: eigenKlant.id } });
       expect(koppeling.status).toBe(200);
-      stap(`eigenKlant gekoppeld aan de kunstenaar (kunstenaarId), geen exclusiviteit ingesteld`);
+      stap(`eigenKlant gekoppeld aan de kunstenaar (kunstenaarnr), geen exclusiviteit ingesteld`);
 
       const lijn = { kunstwerkId, maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 1, quantity: 1 };
       const bestellingEigenKlant = await createHeader(req('POST', { lines: [lijn] }, eigenKlant.cookie));
@@ -995,7 +1018,9 @@ describe('Klant met alleenrecht voor één kunstenaar', () => {
     try {
       const staff = await medewerkerCookie();
 
+      const kunstenaarnr = 'AT-K-REG-4';
       const kunstenaar = await insertRow<{ id: string }>('kunstenaars', {
+        kunstenaarnr,
         naam: 'AUTOTEST Kunstenaar Alleenrecht',
       } as never);
       kunstenaarId = kunstenaar.id;
@@ -1006,7 +1031,7 @@ describe('Klant met alleenrecht voor één kunstenaar', () => {
         'kunstwerken',
         {
           code: 'AUTOTEST Kunstwerk Alleenrecht',
-          kunstenaarId,
+          kunstenaarnr,
           materiaalIds: [fixture.materiaalId],
           maatIds: [fixture.maatId],
         } as never,
@@ -1190,6 +1215,7 @@ describe('Bestelling afronden -- van plaatsing tot "Afgerond" met bestelstatusHi
       expect(goedkeuren.status).toBe(200);
 
       const drukker = await insertRow<{ id: string; naam: string }>('drukkers', {
+        drukkernr: 'AT-D-REG-4',
         naam: 'AUTOTEST Drukker Afronden',
         email: 'autotest-afronden-drukker@example.com',
         standaard: false,
@@ -1242,7 +1268,14 @@ describe('Bestelling afronden -- van plaatsing tot "Afgerond" met bestelstatusHi
       // opruimenKlanten verwijdert ook de bestelheader (via klantnr IN (...)) -- geen
       // apart headerId-cleanup nodig, zelfde patroon als de andere scenario's in dit bestand.
       await opruimenKlanten(klantEmails);
-      if (drukkerIds.length > 0) await getPool().query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]); // cascades drukkerZendingen
+      if (drukkerIds.length > 0) {
+        // drukkerZendingen cascadeert niet meer mee met een verwijderde drukker; eerst die weg.
+        await getPool().query(
+          'DELETE z FROM drukkerZendingen z JOIN drukkers d ON d.drukkernr = z.drukkernr WHERE d.id IN (?)',
+          [drukkerIds]
+        );
+        await getPool().query('DELETE FROM drukkers WHERE id IN (?)', [drukkerIds]);
+      }
     }
   });
 });

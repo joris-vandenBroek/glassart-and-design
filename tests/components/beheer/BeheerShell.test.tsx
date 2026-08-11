@@ -33,7 +33,7 @@ const KLANT_DATA = {
   invoiceCity: '',
   status: 'Beoordelen',
   prijsgroepId: null,
-  kunstenaarId: null,
+  kunstenaarnr: null,
   minimaleAfname: null,
 };
 
@@ -44,10 +44,22 @@ const DEFAULT_COLLECTIONS: Record<string, unknown[]> = {
   klanten: [],
   bestelheaders: [],
   activiteitenlog: [],
-  materiaalsoorten: [{ id: 'soort-1', omschrijving: 'Veiligheidsglas' }],
-  materialen: [{ id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Test' }],
+  materiaalsoorten: [
+    { id: 'soort-1', omschrijvingNl: 'Veiligheidsglas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  ],
+  materialen: [
+    {
+      id: 'mat-1',
+      materiaalsoortId: 'soort-1',
+      materiaaldikte: 4,
+      omschrijvingNl: 'Test',
+      omschrijvingFr: '',
+      omschrijvingDe: '',
+      omschrijvingEn: '',
+    },
+  ],
   maten: [{ id: 'maat-1', breedte: 40, hoogte: 60 }],
-  segmenten: [{ id: 'seg-1', omschrijving: 'Hotel' }],
+  segmenten: [{ id: 'seg-1', omschrijvingNl: 'Hotel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }],
   stijlen: [],
   onderwerpen: [],
   prijsgroepen: [],
@@ -186,7 +198,7 @@ describe('BeheerShell', () => {
     mockCollections({
       klanten: [{ id: 'uid-1', ...KLANT_DATA }],
       kunstenaars: [
-        { id: 'ka-1', naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', exclusieveKlantIds: [] },
+        { id: 'ka-1', kunstenaarnr: 'KU-00001', naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', exclusieveKlantIds: [] },
       ],
     });
     renderShell();
@@ -197,7 +209,7 @@ describe('BeheerShell', () => {
     expect(await screen.findByTestId('klant-modal')).toBeInTheDocument();
 
     fireEvent.focus(screen.getByTestId('klant-modal-kunstenaar'));
-    fireEvent.click(screen.getByTestId('klant-modal-kunstenaar-option-ka-1'));
+    fireEvent.click(screen.getByTestId('klant-modal-kunstenaar-option-KU-00001'));
     fireEvent.click(screen.getByTestId('klant-modal-opslaan'));
 
     await waitFor(() =>
@@ -205,7 +217,7 @@ describe('BeheerShell', () => {
         '/api/klanten/uid-1',
         expect.objectContaining({
           method: 'PATCH',
-          body: JSON.stringify({ kunstenaarId: 'ka-1' }),
+          body: JSON.stringify({ kunstenaarnr: 'KU-00001' }),
         })
       )
     );
@@ -214,8 +226,8 @@ describe('BeheerShell', () => {
   it('shows the materiaalsoorten count and switches to the Materiaalsoorten section', async () => {
     mockCollections({
       materiaalsoorten: [
-        { id: 'soort-1', omschrijving: 'Veiligheidsglas' },
-        { id: 'soort-2', omschrijving: 'Dibond' },
+        { id: 'soort-1', omschrijvingNl: 'Veiligheidsglas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+        { id: 'soort-2', omschrijvingNl: 'Dibond', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
       ],
     });
     renderShell();
@@ -228,8 +240,8 @@ describe('BeheerShell', () => {
   it('opens the Stamgegevens nav group when switching to a grouped section like Materiaalsoorten', async () => {
     mockCollections({
       materiaalsoorten: [
-        { id: 'soort-1', omschrijving: 'Veiligheidsglas' },
-        { id: 'soort-2', omschrijving: 'Dibond' },
+        { id: 'soort-1', omschrijvingNl: 'Veiligheidsglas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+        { id: 'soort-2', omschrijvingNl: 'Dibond', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
       ],
     });
     renderShell();
@@ -312,8 +324,8 @@ describe('BeheerShell', () => {
   it('shows the segmenten count and switches to the Segmenten section', async () => {
     mockCollections({
       segmenten: [
-        { id: 'seg-1', omschrijving: 'Hotel' },
-        { id: 'seg-2', omschrijving: 'Restaurant' },
+        { id: 'seg-1', omschrijvingNl: 'Hotel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+        { id: 'seg-2', omschrijvingNl: 'Restaurant', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
       ],
     });
     renderShell();
@@ -379,7 +391,7 @@ describe('BeheerShell', () => {
   it('shows the count and switches to the Kunstenaars section', async () => {
     mockCollections({
       kunstenaars: [
-        { id: 'ka-1', naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', exclusieveKlantIds: [] },
+        { id: 'ka-1', kunstenaarnr: 'KU-00001', naam: 'Sabrina Glasser', foto: null, omschrijvingNl: 'Werkt met glas.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '', exclusieveKlantIds: [] },
       ],
     });
     renderShell();

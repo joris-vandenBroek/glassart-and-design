@@ -6,7 +6,7 @@ const BASE_KUNSTWERK: Kunstwerk = {
   id: 'kw-1',
   foto: 'https://example.com/foto.jpg',
   code: 'Kunstwerk',
-  kunstenaarId: null,
+  kunstenaarnr: null,
   segmentIds: [],
   materiaalIds: [],
   maatIds: [],

@@ -12,7 +12,7 @@ const KUNSTWERKEN: Kunstwerk[] = [
     id: 'kw-1',
     foto: 'https://example.com/kw-1.jpg',
     code: 'Hotel paneel',
-    kunstenaarId: null,
+    kunstenaarnr: null,
     segmentIds: [],
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
@@ -23,7 +23,7 @@ const KUNSTWERKEN: Kunstwerk[] = [
   },
 ];
 const MATERIALEN: Materiaal[] = [
-  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijving: 'Extra diepte en stevigheid.' },
+  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijvingNl: 'Extra diepte en stevigheid.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const MATEN: Maat[] = [{ id: 'maat-1', breedte: 40, hoogte: 60 }];
 const BTWTARIEVEN: BtwTarieven = { tarieven: [{ land: 'NL', percentage: 21 }] };

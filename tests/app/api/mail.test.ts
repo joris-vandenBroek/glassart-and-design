@@ -101,6 +101,7 @@ describe('POST /api/mail', () => {
   it('stuurt een drukkersmail naar het bij drukkerId bekende adres, niet naar een adres uit de body', async () => {
     const cookie = await medewerkerCookie();
     const drukker = await insertRow<{ id: string }>('drukkers', {
+      drukkernr: 'AT-D-MAIL-1',
       naam: 'AUTOTEST Drukkerij',
       email: 'mailtest-drukker@example.com',
     } as never);
@@ -132,6 +133,7 @@ describe('POST /api/mail', () => {
   it('geeft 400 wanneer de drukker geen e-mailadres heeft', async () => {
     const cookie = await medewerkerCookie();
     const drukker = await insertRow<{ id: string }>('drukkers', {
+      drukkernr: 'AT-D-MAIL-2',
       naam: 'AUTOTEST Drukkerij zonder mail',
       email: null,
     } as never);

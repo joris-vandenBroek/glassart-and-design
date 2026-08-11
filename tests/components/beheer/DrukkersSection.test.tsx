@@ -19,6 +19,7 @@ vi.mock('@/lib/logActiviteit', () => ({
 const DRUKKERS: Drukker[] = [
   {
     id: 'drukker-1',
+    drukkernr: 'DR-00003',
     naam: 'Drukkerij Janssen',
     adres: 'Perslaan 1',
     postcode: '1000 AA',
@@ -95,6 +96,11 @@ describe('DrukkersSection', () => {
     renderSection();
     expect(screen.getByTestId('data-table-row-drukker-1')).toHaveTextContent('Drukkerij Janssen');
     expect(screen.getByTestId('data-table-row-drukker-1')).toHaveTextContent('Utrecht');
+  });
+
+  it('toont het drukkernr in de lijst', async () => {
+    renderSection();
+    expect(await screen.findByText('DR-00003')).toBeInTheDocument();
   });
 
   it('shows a Standaard badge next to the standaard drukker and not next to others', () => {

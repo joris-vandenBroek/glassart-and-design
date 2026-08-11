@@ -53,24 +53,36 @@ const KLANT: Klant = {
   invoiceCity: '',
   status: 'Goedgekeurd',
   prijsgroepId: 'pg-1',
-  kunstenaarId: null,
+  kunstenaarnr: null,
 };
 
 const DRUKKERS: Drukker[] = [
-  { id: 'drukker-1', naam: 'Drukkerij Janssen', adres: 'Perslaan 1', postcode: '1000 AA', plaats: 'Utrecht', email: 'info@janssen.nl', prijsafspraken: '' },
+  { id: 'drukker-1', drukkernr: 'DR-00005', naam: 'Drukkerij Janssen', adres: 'Perslaan 1', postcode: '1000 AA', plaats: 'Utrecht', email: 'info@janssen.nl', prijsafspraken: '' },
 ];
 
 const DRUKKERS_MET_STANDAARD: Drukker[] = [
-  { id: 'drukker-1', naam: 'Drukkerij Janssen', adres: 'Perslaan 1', postcode: '1000 AA', plaats: 'Utrecht', email: 'info@janssen.nl', prijsafspraken: '' },
-  { id: 'drukker-2', naam: 'Drukkerij Tweede', adres: 'Perslaan 2', postcode: '1000 AB', plaats: 'Utrecht', email: 'info@tweede.nl', prijsafspraken: '', standaard: true },
+  { id: 'drukker-1', drukkernr: 'DR-00005', naam: 'Drukkerij Janssen', adres: 'Perslaan 1', postcode: '1000 AA', plaats: 'Utrecht', email: 'info@janssen.nl', prijsafspraken: '' },
+  { id: 'drukker-2', drukkernr: 'DR-00006', naam: 'Drukkerij Tweede', adres: 'Perslaan 2', postcode: '1000 AB', plaats: 'Utrecht', email: 'info@tweede.nl', prijsafspraken: '', standaard: true },
 ];
 
 const KUNSTWERKEN: Kunstwerk[] = [
-  { id: 'kw-1', foto: 'https://example.com/hotel-paneel.jpg', code: 'Hotel paneel', kunstenaarId: null, segmentIds: [], materiaalIds: ['mat-1'], maatIds: ['maat-1'], omschrijvingNl: 'Hotel paneel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'kw-1', foto: 'https://example.com/hotel-paneel.jpg', code: 'Hotel paneel', kunstenaarnr: null, segmentIds: [], materiaalIds: ['mat-1'], maatIds: ['maat-1'], omschrijvingNl: 'Hotel paneel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
-const MATERIALEN: Materiaal[] = [{ id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 6, omschrijving: 'Helder' }];
+const MATERIALEN: Materiaal[] = [
+  {
+    id: 'mat-1',
+    materiaalsoortId: 'soort-1',
+    materiaaldikte: 6,
+    omschrijvingNl: 'Helder',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+  },
+];
 const MATEN: Maat[] = [{ id: 'maat-1', breedte: 40, hoogte: 60 }];
-const MATERIAALSOORTEN: Materiaalsoort[] = [{ id: 'soort-1', omschrijving: 'Glas' }];
+const MATERIAALSOORTEN: Materiaalsoort[] = [
+  { id: 'soort-1', omschrijvingNl: 'Glas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+];
 
 const BESTELLING: Bestelling = {
   id: 'header-1',

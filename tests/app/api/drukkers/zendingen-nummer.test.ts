@@ -23,7 +23,7 @@ describe('drukkerZendingen nummer route', () => {
   });
 
   it('rejects reserving a nummer without a medewerker session', async () => {
-    const drukker = await insertRow<{ id: string }>('drukkers', { naam: 'PrintCo' } as never);
+    const drukker = await insertRow<{ id: string }>('drukkers', { drukkernr: 'AT-D-ZN-1', naam: 'PrintCo' } as never);
     createdDrukkerIds.push(drukker.id);
     const response = await reserveerNummer(new Request('http://localhost/api', { method: 'POST' }), {
       params: { id: drukker.id },
@@ -32,7 +32,7 @@ describe('drukkerZendingen nummer route', () => {
   });
 
   it('reserves increasing ZD-numbers on consecutive calls', async () => {
-    const drukker = await insertRow<{ id: string }>('drukkers', { naam: 'PrintCo' } as never);
+    const drukker = await insertRow<{ id: string }>('drukkers', { drukkernr: 'AT-D-ZN-2', naam: 'PrintCo' } as never);
     createdDrukkerIds.push(drukker.id);
     const sessionId = await createSession('medewerker', 'staff-1');
     const cookie = `${SESSION_COOKIE_NAME}=${sessionId}`;

@@ -11,8 +11,10 @@ interface DrukkersSectionProps {
   drukkers: Drukker[] | null;
   bestellingen: Bestelling[] | null;
   loadError: string | null;
-  onAdd: (data: Omit<Drukker, 'id'>) => Promise<boolean>;
-  onUpdate: (id: string, data: Omit<Drukker, 'id'>) => Promise<boolean>;
+  // drukkernr is server-eigendom (zie POST/PATCH /api/drukkers, die het uit de body
+  // weggooien) -- deze sectie verzamelt en verstuurt het dus niet.
+  onAdd: (data: Omit<Drukker, 'id' | 'drukkernr'>) => Promise<boolean>;
+  onUpdate: (id: string, data: Omit<Drukker, 'id' | 'drukkernr'>) => Promise<boolean>;
   onRemove: (id: string) => Promise<boolean>;
   onBestellingUpdated: (bestelling: Bestelling) => void;
 }
@@ -44,6 +46,7 @@ export function DrukkersSection({
   }
 
   const columns: Column<Drukker>[] = [
+    { key: 'drukkernr', label: t('drukkersColDrukkernr') },
     {
       key: 'naam',
       label: t('drukkersColNaam'),

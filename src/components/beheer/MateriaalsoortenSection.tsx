@@ -30,7 +30,10 @@ export function MateriaalsoortenSection({
 }: MateriaalsoortenSectionProps) {
   const t = useTranslations('beheer');
   const [modalState, setModalState] = useState<ModalState>(null);
-  const [omschrijving, setOmschrijving] = useState('');
+  const [omschrijvingNl, setOmschrijvingNl] = useState('');
+  const [omschrijvingFr, setOmschrijvingFr] = useState('');
+  const [omschrijvingDe, setOmschrijvingDe] = useState('');
+  const [omschrijvingEn, setOmschrijvingEn] = useState('');
   const [staatEigenMaatToe, setStaatEigenMaatToe] = useState(false);
   const [maxBreedte, setMaxBreedte] = useState('');
   const [maxHoogte, setMaxHoogte] = useState('');
@@ -51,7 +54,10 @@ export function MateriaalsoortenSection({
   }
 
   function openAdd() {
-    setOmschrijving('');
+    setOmschrijvingNl('');
+    setOmschrijvingFr('');
+    setOmschrijvingDe('');
+    setOmschrijvingEn('');
     setStaatEigenMaatToe(false);
     setMaxBreedte('');
     setMaxHoogte('');
@@ -61,7 +67,10 @@ export function MateriaalsoortenSection({
   }
 
   function openEdit(materiaalsoort: Materiaalsoort) {
-    setOmschrijving(materiaalsoort.omschrijving);
+    setOmschrijvingNl(materiaalsoort.omschrijvingNl ?? '');
+    setOmschrijvingFr(materiaalsoort.omschrijvingFr ?? '');
+    setOmschrijvingDe(materiaalsoort.omschrijvingDe ?? '');
+    setOmschrijvingEn(materiaalsoort.omschrijvingEn ?? '');
     setStaatEigenMaatToe(materiaalsoort.staatEigenMaatToe ?? false);
     setMaxBreedte(materiaalsoort.maxBreedte != null ? String(materiaalsoort.maxBreedte) : '');
     setMaxHoogte(materiaalsoort.maxHoogte != null ? String(materiaalsoort.maxHoogte) : '');
@@ -79,7 +88,10 @@ export function MateriaalsoortenSection({
   async function handleSave() {
     if (!modalState) return;
     const data: Omit<Materiaalsoort, 'id'> = {
-      omschrijving,
+      omschrijvingNl,
+      omschrijvingFr,
+      omschrijvingDe,
+      omschrijvingEn,
       staatEigenMaatToe,
       maxBreedte: staatEigenMaatToe && maxBreedte ? Number(maxBreedte) : null,
       maxHoogte: staatEigenMaatToe && maxHoogte ? Number(maxHoogte) : null,
@@ -90,7 +102,7 @@ export function MateriaalsoortenSection({
     if (success) {
       void logActiviteit(
         modalState.mode === 'add' ? 'materiaalsoort_toegevoegd' : 'materiaalsoort_gewijzigd',
-        omschrijving
+        omschrijvingNl
       );
       closeModal();
     } else {
@@ -109,14 +121,14 @@ export function MateriaalsoortenSection({
     }
     const success = await onRemove(modalState.materiaalsoort.id);
     if (success) {
-      void logActiviteit('materiaalsoort_verwijderd', modalState.materiaalsoort.omschrijving);
+      void logActiviteit('materiaalsoort_verwijderd', modalState.materiaalsoort.omschrijvingNl);
       closeModal();
     } else {
       setActionError(t('materiaalsoortenActionError'));
     }
   }
 
-  const columns: Column<Materiaalsoort>[] = [{ key: 'omschrijving', label: t('materiaalsoortenColOmschrijving') }];
+  const columns: Column<Materiaalsoort>[] = [{ key: 'omschrijvingNl', label: t('materiaalsoortenColOmschrijving') }];
 
   return (
     <div data-testid="materiaalsoorten-section">
@@ -148,7 +160,7 @@ export function MateriaalsoortenSection({
             <button
               type="button"
               onClick={handleSave}
-              disabled={!omschrijving}
+              disabled={!omschrijvingNl}
               data-testid="materiaalsoort-modal-opslaan"
               className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
             >
@@ -170,14 +182,44 @@ export function MateriaalsoortenSection({
         <div data-testid="materiaalsoort-modal" className="flex flex-col gap-2 text-sm text-white/80">
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
             <span>
-              {t('materiaalsoortenLabelOmschrijving')}
+              {t('materiaalsoortenLabelOmschrijvingNl')}
               <RequiredMark />
             </span>
             <input
               type="text"
-              value={omschrijving}
-              onChange={(event) => setOmschrijving(event.target.value)}
+              value={omschrijvingNl}
+              onChange={(event) => setOmschrijvingNl(event.target.value)}
               data-testid="materiaalsoort-modal-omschrijving"
+              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+            {t('materiaalsoortenLabelOmschrijvingFr')}
+            <input
+              type="text"
+              value={omschrijvingFr}
+              onChange={(event) => setOmschrijvingFr(event.target.value)}
+              data-testid="materiaalsoort-modal-omschrijving-fr"
+              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+            {t('materiaalsoortenLabelOmschrijvingDe')}
+            <input
+              type="text"
+              value={omschrijvingDe}
+              onChange={(event) => setOmschrijvingDe(event.target.value)}
+              data-testid="materiaalsoort-modal-omschrijving-de"
+              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+            {t('materiaalsoortenLabelOmschrijvingEn')}
+            <input
+              type="text"
+              value={omschrijvingEn}
+              onChange={(event) => setOmschrijvingEn(event.target.value)}
+              data-testid="materiaalsoort-modal-omschrijving-en"
               className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
             />
           </label>

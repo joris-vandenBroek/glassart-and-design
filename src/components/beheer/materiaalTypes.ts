@@ -1,6 +1,9 @@
 export interface Materiaalsoort {
   id: string;
-  omschrijving: string;
+  omschrijvingNl: string;
+  omschrijvingFr: string;
+  omschrijvingDe: string;
+  omschrijvingEn: string;
   staatEigenMaatToe?: boolean;
   maxBreedte?: number | null;
   maxHoogte?: number | null;
@@ -11,7 +14,10 @@ export interface Materiaal {
   id: string;
   materiaalsoortId: string;
   materiaaldikte: number;
-  omschrijving: string;
+  omschrijvingNl: string;
+  omschrijvingFr: string;
+  omschrijvingDe: string;
+  omschrijvingEn: string;
 }
 
 export interface Maat {
@@ -28,24 +34,33 @@ export function isVierkanteMaat(maat: Maat): boolean {
 
 export interface Segment {
   id: string;
-  omschrijving: string;
+  omschrijvingNl: string;
+  omschrijvingFr: string;
+  omschrijvingDe: string;
+  omschrijvingEn: string;
 }
 
 export interface Stijl {
   id: string;
-  omschrijving: string;
+  omschrijvingNl: string;
+  omschrijvingFr: string;
+  omschrijvingDe: string;
+  omschrijvingEn: string;
 }
 
 export interface Onderwerp {
   id: string;
-  omschrijving: string;
+  omschrijvingNl: string;
+  omschrijvingFr: string;
+  omschrijvingDe: string;
+  omschrijvingEn: string;
 }
 
 export interface Kunstwerk {
   id: string;
   foto: string;
   code: string;
-  kunstenaarId: string | null;
+  kunstenaarnr: string | null;
   formaat?: KunstwerkFormaat | null;
   segmentIds: string[];
   materiaalIds: string[];
@@ -69,6 +84,7 @@ export interface Prijsgroep {
 
 export interface Drukker {
   id: string;
+  drukkernr: string;
   naam: string;
   adres: string;
   postcode: string;

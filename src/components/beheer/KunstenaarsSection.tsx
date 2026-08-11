@@ -30,6 +30,7 @@ type KunstenaarRow = Kunstenaar & { exclusiviteitLabel: string };
 const LEGE_FORM = {
   foto: null as string | null,
   naam: '',
+  website: '' as string,
   omschrijvingNl: '',
   omschrijvingFr: '',
   omschrijvingDe: '',
@@ -53,6 +54,7 @@ export function KunstenaarsSection({
   const [modalState, setModalState] = useState<ModalState>(null);
   const [foto, setFoto] = useState<string | null>(LEGE_FORM.foto);
   const [naam, setNaam] = useState(LEGE_FORM.naam);
+  const [website, setWebsite] = useState(LEGE_FORM.website);
   const [omschrijvingNl, setOmschrijvingNl] = useState(LEGE_FORM.omschrijvingNl);
   const [omschrijvingFr, setOmschrijvingFr] = useState(LEGE_FORM.omschrijvingFr);
   const [omschrijvingDe, setOmschrijvingDe] = useState(LEGE_FORM.omschrijvingDe);
@@ -78,11 +80,11 @@ export function KunstenaarsSection({
     return map;
   }, [klanten]);
 
-  // De klant (indien aanwezig) wiens kunstenaarId naar déze kunstenaar wijst -- gebruikt
+  // De klant (indien aanwezig) wiens kunstenaarnr naar déze kunstenaar wijst -- gebruikt
   // om de "bij 2 klanten moet 1 de kunstenaar zelf zijn"-regel te valideren.
-  function eigenKlantId(kunstenaarId: string | null): string | null {
-    if (kunstenaarId === null) return null;
-    return (klanten ?? []).find((klant) => klant.kunstenaarId === kunstenaarId)?.id ?? null;
+  function eigenKlantId(kunstenaarnr: string | null): string | null {
+    if (kunstenaarnr === null) return null;
+    return (klanten ?? []).find((klant) => klant.kunstenaarnr === kunstenaarnr)?.id ?? null;
   }
 
   const exclusieveKlantIds = [klant1Id, klant2Id].filter((id): id is string => id !== null);
@@ -110,6 +112,7 @@ export function KunstenaarsSection({
   function resetForm() {
     setFoto(LEGE_FORM.foto);
     setNaam(LEGE_FORM.naam);
+    setWebsite(LEGE_FORM.website);
     setOmschrijvingNl(LEGE_FORM.omschrijvingNl);
     setOmschrijvingFr(LEGE_FORM.omschrijvingFr);
     setOmschrijvingDe(LEGE_FORM.omschrijvingDe);
@@ -132,6 +135,7 @@ export function KunstenaarsSection({
   async function openEdit(kunstenaar: Kunstenaar) {
     setFoto(kunstenaar.foto);
     setNaam(kunstenaar.naam);
+    setWebsite(kunstenaar.website ?? '');
     setOmschrijvingNl(kunstenaar.omschrijvingNl);
     setOmschrijvingFr(kunstenaar.omschrijvingFr);
     setOmschrijvingDe(kunstenaar.omschrijvingDe);
@@ -204,12 +208,12 @@ export function KunstenaarsSection({
   }
 
   function selectKlant(slot: 'klant1' | 'klant2', nextId: string | null) {
-    const huidigeKunstenaarId = modalState?.mode === 'edit' ? modalState.kunstenaar.id : null;
+    const huidigeKunstenaarnr = modalState?.mode === 'edit' ? modalState.kunstenaar.kunstenaarnr : null;
     const nextKlant1 = slot === 'klant1' ? nextId : klant1Id;
     const nextKlant2 = slot === 'klant2' ? nextId : klant2Id;
     const nextIds = [nextKlant1, nextKlant2].filter((id): id is string => id !== null);
     if (nextIds.length === 2) {
-      const eigenId = eigenKlantId(huidigeKunstenaarId);
+      const eigenId = eigenKlantId(huidigeKunstenaarnr);
       if (eigenId === null || !nextIds.includes(eigenId)) {
         setActionError(t('kunstenaarsExclusiviteitOngeldig'));
         return;
@@ -231,8 +235,8 @@ export function KunstenaarsSection({
     // zou opslaan van een niet-gerelateerd veld die ongeldige lijst stilzwijgend
     // verbatim wegschrijven.
     if (exclusieveKlantIds.length === 2) {
-      const huidigeKunstenaarId = modalState.mode === 'edit' ? modalState.kunstenaar.id : null;
-      const eigenId = eigenKlantId(huidigeKunstenaarId);
+      const huidigeKunstenaarnr = modalState.mode === 'edit' ? modalState.kunstenaar.kunstenaarnr : null;
+      const eigenId = eigenKlantId(huidigeKunstenaarnr);
       if (eigenId === null || !exclusieveKlantIds.includes(eigenId)) {
         setActionError(t('kunstenaarsExclusiviteitOngeldig'));
         return;
@@ -241,6 +245,7 @@ export function KunstenaarsSection({
     const data = {
       foto,
       naam,
+      website,
       omschrijvingNl,
       omschrijvingFr,
       omschrijvingDe,
@@ -306,14 +311,24 @@ export function KunstenaarsSection({
   async function handleRemove() {
     if (modalState?.mode !== 'edit') return;
     // Nog niet geladen kunstwerken mogen niet als "niet in gebruik" gelezen worden: dat
-    // zou een kunstwerk met een dangling kunstenaarId achterlaten.
+    // zou een kunstwerk met een dangling kunstenaarnr achterlaten.
     if (kunstwerken === null) {
       setActionError(t('kunstenaarsVerwijderOnbekend'));
       return;
     }
-    const inUse = kunstwerken.some((kunstwerk) => kunstwerk.kunstenaarId === modalState.kunstenaar.id);
+    const inUse = kunstwerken.some((kunstwerk) => kunstwerk.kunstenaarnr === modalState.kunstenaar.kunstenaarnr);
     if (inUse) {
       setActionError(t('kunstenaarsVerwijderBlocked'));
+      return;
+    }
+    // Spiegelt de servercontrole in DELETE /api/kunstenaars/[id]. Nog niet geladen
+    // klanten mogen niet als "geen koppeling" gelezen worden.
+    if (klanten === null) {
+      setActionError(t('kunstenaarsVerwijderOnbekend'));
+      return;
+    }
+    if (klanten.some((klant) => klant.kunstenaarnr === modalState.kunstenaar.kunstenaarnr)) {
+      setActionError(t('kunstenaarsVerwijderBlockedKlant'));
       return;
     }
     let success: boolean;
@@ -333,6 +348,7 @@ export function KunstenaarsSection({
   }
 
   const columns: Column<KunstenaarRow>[] = [
+    { key: 'kunstenaarnr', label: t('kunstenaarsColKunstenaarnr') },
     { key: 'naam', label: t('kunstenaarsColNaam') },
     { key: 'exclusiviteitLabel', label: t('kunstenaarsColKlant') },
   ];
@@ -366,6 +382,11 @@ export function KunstenaarsSection({
             {modalState?.mode === 'edit' ? t('kunstenaarsModalTitelBewerken') : t('kunstenaarsModalTitelToevoegen')}
             <HelpHint text={t('kunstenaarsHelp')} testId="kunstenaar-modal-help" />
           </span>
+        }
+        subtitle={
+          modalState?.mode === 'edit' ? (
+            <span data-testid="kunstenaar-modal-kunstenaarnr">{modalState.kunstenaar.kunstenaarnr}</span>
+          ) : undefined
         }
         footerActions={
           <>
@@ -444,6 +465,17 @@ export function KunstenaarsSection({
               value={naam}
               onChange={(event) => setNaam(event.target.value)}
               data-testid="kunstenaar-modal-naam"
+              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+            {t('kunstenaarsLabelWebsite')}
+            <input
+              type="text"
+              value={website}
+              onChange={(event) => setWebsite(event.target.value)}
+              data-testid="kunstenaar-modal-website"
               className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
             />
           </label>

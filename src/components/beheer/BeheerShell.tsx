@@ -434,7 +434,11 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             drukkers={drukkers.items}
             bestellingen={bestellingen}
             loadError={drukkers.error === 'load' ? t('drukkersLoadError') : null}
-            onAdd={drukkers.add}
+            // drukkernr is server-eigendom (zie POST /api/drukkers); de meegegeven lege
+            // waarde wordt daar sowieso genegeerd, dit dient alleen om aan
+            // Omit<Drukker, 'id'> van useApiCollection's add te voldoen. update() accepteert
+            // al een Partial, dus die kan zonder wrapper doorgegeven worden.
+            onAdd={(data) => drukkers.add({ ...data, drukkernr: '' })}
             onUpdate={drukkers.update}
             onRemove={drukkers.remove}
             onBestellingUpdated={handleBestellingUpdated}

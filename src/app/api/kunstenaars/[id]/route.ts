@@ -33,7 +33,8 @@ export const PATCH = withApiErrorHandling(
     if (!(await requireMedewerker(request))) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
-    const data = await request.json();
+    // Zie POST: het nummer is server-eigendom en ligt na uitgifte vast.
+    const { kunstenaarnr: _genegeerd, ...data } = (await request.json()) as Record<string, unknown>;
     await updateRow('kunstenaars', params.id, data, KUNSTENAARS_JSON_COLUMNS);
     return NextResponse.json({ ok: true });
   }
@@ -45,16 +46,28 @@ export const DELETE = withApiErrorHandling(
     if (!(await requireMedewerker(request))) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
-    // KunstenaarsSection.tsx already blocks this client-side against already-loaded
-    // kunstwerken, but that's only a UX nicety -- without this, a direct API call (or
-    // stale client state) would previously hit kunstwerken.kunstenaarId's unnamed FK
-    // constraint as an uncaught exception instead of a clean response.
-    const [rows] = await getPool().query('SELECT 1 FROM kunstwerken WHERE kunstenaarId = ? LIMIT 1', [
-      params.id,
-    ]);
-    if ((rows as unknown[]).length > 0) {
+    const bestaand = await getRow<{ kunstenaarnr: string }>('kunstenaars', params.id);
+    // Geen rij: niets te doen, en de aanroeper krijgt hetzelfde antwoord als voorheen.
+    if (!bestaand) return NextResponse.json({ ok: true });
+
+    // KunstenaarsSection.tsx blokkeert dit ook al aan de clientkant, maar dat is een
+    // UX-nicety: zonder deze twee controles zou een directe API-aanroep (of verouderde
+    // schermstatus) op de foreign keys van kunstwerken en klanten stuklopen als
+    // onafgevangen fout in plaats van een nette 409.
+    const [kunstwerkRows] = await getPool().query(
+      'SELECT 1 FROM kunstwerken WHERE kunstenaarnr = ? LIMIT 1',
+      [bestaand.kunstenaarnr]
+    );
+    if ((kunstwerkRows as unknown[]).length > 0) {
       return NextResponse.json({ error: 'in-use' }, { status: 409 });
     }
+    const [klantRows] = await getPool().query('SELECT 1 FROM klanten WHERE kunstenaarnr = ? LIMIT 1', [
+      bestaand.kunstenaarnr,
+    ]);
+    if ((klantRows as unknown[]).length > 0) {
+      return NextResponse.json({ error: 'in-use' }, { status: 409 });
+    }
+
     await deleteRow('kunstenaars', params.id);
     return NextResponse.json({ ok: true });
   }

@@ -19,8 +19,8 @@ beforeEach(() => {
 });
 
 const STIJLEN: Stijl[] = [
-  { id: 'stijl-1', omschrijving: 'Modern' },
-  { id: 'stijl-2', omschrijving: 'Klassiek' },
+  { id: 'stijl-1', omschrijvingNl: 'Modern', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'stijl-2', omschrijvingNl: 'Klassiek', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 
 const KUNSTWERKEN: Kunstwerk[] = [
@@ -28,7 +28,7 @@ const KUNSTWERKEN: Kunstwerk[] = [
     id: 'kw-1',
     foto: 'https://example.com/kw-1.jpg',
     code: 'Klassiek paneel',
-    kunstenaarId: null,
+    kunstenaarnr: null,
     segmentIds: [],
     materiaalIds: [],
     maatIds: [],
@@ -82,7 +82,14 @@ describe('StijlenSection', () => {
     fireEvent.click(screen.getByTestId('stijlen-add'));
     fireEvent.change(screen.getByTestId('stijl-modal-omschrijving'), { target: { value: 'Minimalistisch' } });
     fireEvent.click(screen.getByTestId('stijl-modal-opslaan'));
-    await waitFor(() => expect(onAdd).toHaveBeenCalledWith({ omschrijving: 'Minimalistisch' }));
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith({
+        omschrijvingNl: 'Minimalistisch',
+        omschrijvingFr: '',
+        omschrijvingDe: '',
+        omschrijvingEn: '',
+      })
+    );
     await waitFor(() => expect(screen.queryByTestId('stijl-modal')).not.toBeInTheDocument());
   });
 
@@ -100,7 +107,14 @@ describe('StijlenSection', () => {
     expect(screen.getByTestId('stijl-modal-omschrijving')).toHaveValue('Klassiek');
     fireEvent.change(screen.getByTestId('stijl-modal-omschrijving'), { target: { value: 'Klassiek design' } });
     fireEvent.click(screen.getByTestId('stijl-modal-opslaan'));
-    await waitFor(() => expect(onUpdate).toHaveBeenCalledWith('stijl-2', { omschrijving: 'Klassiek design' }));
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith('stijl-2', {
+        omschrijvingNl: 'Klassiek design',
+        omschrijvingFr: '',
+        omschrijvingDe: '',
+        omschrijvingEn: '',
+      })
+    );
   });
 
   it('deletes a stijl that is not linked to any kunstwerk', async () => {

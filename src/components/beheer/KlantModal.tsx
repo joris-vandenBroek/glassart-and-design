@@ -12,6 +12,7 @@ import { KlantWachtwoordSectie } from './KlantWachtwoordSectie';
 import { LAND_OPTIONS, landNaam } from '@/data/landen';
 import { resolveBtwPercentage } from '@/lib/resolveBtw';
 import { normaliseerBtwNummer, valideerBtwNummer } from '@/lib/btwNummer';
+import { useAfwijzenBevestiging, AfwijzenBevestigingTekst, AfwijzenBevestigingActies } from './afwijzenBevestiging';
 import type { Klant } from './KlantenSection';
 import type { Prijsgroep } from './materiaalTypes';
 import type { Kunstenaar } from './kunstenaarTypes';
@@ -90,7 +91,7 @@ export function KlantModal({
 }: KlantModalProps) {
   const t = useTranslations('beheer');
   const [prijsgroepId, setPrijsgroepId] = useState('');
-  const [kunstenaarId, setKunstenaarId] = useState<string | null>(null);
+  const [kunstenaarnr, setKunstenaarnr] = useState<string | null>(null);
   const [minimaleAfname, setMinimaleAfname] = useState('');
   const [fields, setFields] = useState<EditableFields | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -101,6 +102,7 @@ export function KlantModal({
   // de beheerder op dat moment aan de telefoon aan het voorlezen is.
   const [wachtwoordZichtbaar, setWachtwoordZichtbaar] = useState(false);
   const { user } = useAdminAuth();
+  const bevestigingAfwijzen = useAfwijzenBevestiging();
 
   const land = fields ? fields.invoiceLand || fields.land || null : null;
   const btwPercentage = btwTarieven ? resolveBtwPercentage(btwTarieven.tarieven, land) : null;
@@ -113,12 +115,14 @@ export function KlantModal({
   useEffect(() => {
     if (klant) {
       setPrijsgroepId(klant.prijsgroepId ?? '');
-      setKunstenaarId(klant.kunstenaarId);
+      setKunstenaarnr(klant.kunstenaarnr);
       setMinimaleAfname(klant.minimaleAfname != null ? String(klant.minimaleAfname) : '');
       setFields(fieldsFromKlant(klant));
       setIsEditing(false);
       setError(null);
+      bevestigingAfwijzen.annuleer();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [klant]);
 
   function setField<K extends keyof EditableFields>(key: K, value: EditableFields[K]) {
@@ -136,10 +140,10 @@ export function KlantModal({
     setIsEditing(false);
   }
 
-  function handleKunstenaarChange(nextKunstenaarId: string | null) {
-    if (nextKunstenaarId) {
+  function handleKunstenaarChange(nextKunstenaarnr: string | null) {
+    if (nextKunstenaarnr) {
       const alreadyClaimedBy = (klanten ?? []).find(
-        (other) => other.id !== klant?.id && other.kunstenaarId === nextKunstenaarId
+        (other) => other.id !== klant?.id && other.kunstenaarnr === nextKunstenaarnr
       );
       if (alreadyClaimedBy) {
         setError(t('klantenKunstenaarBlocked'));
@@ -147,7 +151,7 @@ export function KlantModal({
       }
     }
     setError(null);
-    setKunstenaarId(nextKunstenaarId);
+    setKunstenaarnr(nextKunstenaarnr);
   }
 
   async function handleOpslaan() {
@@ -175,7 +179,7 @@ export function KlantModal({
       isEditing && (Object.keys(origineleFields) as (keyof EditableFields)[]).some((key) => fields[key] !== origineleFields[key]);
     const prijsgroepGewijzigd =
       klant.status === 'Goedgekeurd' && prijsgroepId !== '' && prijsgroepId !== (klant.prijsgroepId ?? '');
-    const kunstenaarIdGewijzigd = kunstenaarId !== (klant.kunstenaarId ?? null);
+    const kunstenaarIdGewijzigd = kunstenaarnr !== (klant.kunstenaarnr ?? null);
     const trimmedMinimaleAfname = minimaleAfname.trim();
     const parsedMinimaleAfname =
       trimmedMinimaleAfname === '' ? null : Math.max(1, Math.round(Number(trimmedMinimaleAfname)) || 1);
@@ -190,7 +194,7 @@ export function KlantModal({
       const updates: Partial<Klant> = {};
       if (veldenGewijzigd) Object.assign(updates, teBewarenFields);
       if (prijsgroepGewijzigd) updates.prijsgroepId = prijsgroepId;
-      if (kunstenaarIdGewijzigd) updates.kunstenaarId = kunstenaarId;
+      if (kunstenaarIdGewijzigd) updates.kunstenaarnr = kunstenaarnr;
       if (minimaleAfnameGewijzigd) updates.minimaleAfname = parsedMinimaleAfname;
 
       const response = await fetch(`/api/klanten/${klant.id}`, {
@@ -238,17 +242,18 @@ export function KlantModal({
     }
   }
 
-  async function handleAfwijzen() {
+  async function handleAfwijzen(reden: string) {
     if (!klant) return;
     try {
       const response = await fetch(`/api/klanten/${klant.id}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ status: 'Afgewezen' }),
+        body: JSON.stringify({ status: 'Afgewezen', afwijsreden: reden }),
       });
       if (!response.ok) throw new Error('update failed');
-      void logActiviteit('klant_afgewezen', klant.companyName);
-      onUpdated({ ...klant, status: 'Afgewezen' });
+      void logActiviteit('klant_afgewezen', `${klant.companyName}: ${reden}`);
+      onUpdated({ ...klant, status: 'Afgewezen', afwijsreden: reden });
+      bevestigingAfwijzen.annuleer();
     } catch {
       setError(t('klantenActionError'));
     }
@@ -270,356 +275,385 @@ export function KlantModal({
       }
       footerActions={
         klant && fields ? (
-          <>
-            {isEditing && (
+          bevestigingAfwijzen.open ? (
+            <AfwijzenBevestigingActies
+              reden={bevestigingAfwijzen.reden}
+              onBevestig={() => handleAfwijzen(bevestigingAfwijzen.reden)}
+              onAnnuleer={bevestigingAfwijzen.annuleer}
+              testIdPrefix="klant"
+            />
+          ) : (
+            <>
+              {isEditing && (
+                <button
+                  type="button"
+                  onClick={handleAnnuleren}
+                  data-testid="klant-modal-annuleren"
+                  className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                >
+                  {t('annuleren')}
+                </button>
+              )}
               <button
                 type="button"
-                onClick={handleAnnuleren}
-                data-testid="klant-modal-annuleren"
-                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
-              >
-                {t('annuleren')}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={handleOpslaan}
-              disabled={wachtwoordZichtbaar}
-              data-testid="klant-modal-opslaan"
-              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
-            >
-              {t('klantenOpslaan')}
-            </button>
-            {!isEditing && klant.status !== 'Goedgekeurd' && (
-              <button
-                type="button"
-                onClick={handleGoedkeuren}
-                disabled={!prijsgroepId || !heeftGeldigBtwTarief || wachtwoordZichtbaar}
-                data-testid="klant-modal-goedkeuren"
+                onClick={handleOpslaan}
+                disabled={wachtwoordZichtbaar}
+                data-testid="klant-modal-opslaan"
                 className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
               >
-                {t('klantenGoedkeuren')}
+                {t('klantenOpslaan')}
               </button>
-            )}
-            {!isEditing && (
-              <button
-                type="button"
-                onClick={handleAfwijzen}
-                disabled={wachtwoordZichtbaar}
-                data-testid="klant-modal-afwijzen"
-                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
-              >
-                {t('klantenAfwijzen')}
-              </button>
-            )}
-          </>
+              {!isEditing && klant.status !== 'Goedgekeurd' && (
+                <button
+                  type="button"
+                  onClick={handleGoedkeuren}
+                  disabled={!prijsgroepId || !heeftGeldigBtwTarief || wachtwoordZichtbaar}
+                  data-testid="klant-modal-goedkeuren"
+                  className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+                >
+                  {t('klantenGoedkeuren')}
+                </button>
+              )}
+              {!isEditing && (
+                <button
+                  type="button"
+                  onClick={bevestigingAfwijzen.vraag}
+                  disabled={wachtwoordZichtbaar}
+                  data-testid="klant-modal-afwijzen"
+                  className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
+                >
+                  {t('klantenAfwijzen')}
+                </button>
+              )}
+            </>
+          )
         ) : null
       }
     >
       {klant && fields && (
-        <div data-testid="klant-modal" className="flex flex-col gap-3 text-sm text-white/80">
-          <div className="flex items-center justify-between">
-            <span
-              data-testid="klant-modal-status"
-              className={`w-fit rounded-full px-3 py-1 text-xs uppercase tracking-wide ${STATUS_BADGE_CLASS[klant.status]}`}
-            >
-              {klant.status}
-            </span>
-            {!isEditing && (
-              <button
-                type="button"
-                onClick={handleBewerken}
-                data-testid="klant-modal-bewerken"
-                className="btn-beheer-secondary rounded-sm border border-white/20 px-3 py-1.5 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
-              >
-                {t('bewerken')}
-              </button>
-            )}
-          </div>
-
-          {!heeftGeldigBtwTarief && (
-            <p data-testid="klant-modal-btw-waarschuwing" className="text-xs text-amber-400">
-              {btwLoadError
-                ? t('klantenBtwWaarschuwingLaadfout')
-                : land === null
-                  ? t('klantenBtwWaarschuwingGeenLand')
-                  : t('klantenBtwWaarschuwing', { land: landNaam(land) })}
-            </p>
-          )}
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Veld
-              label={t('klantenColCompanyName')}
-              value={fields.companyName}
-              editing={isEditing}
-              testId="klant-modal-companyName"
-              onChange={(value) => setField('companyName', value)}
-            />
-            <Veld
-              label={t('klantenColKvk')}
-              value={fields.kvk}
-              editing={isEditing}
-              testId="klant-modal-kvk"
-              onChange={(value) => setField('kvk', value)}
-            />
-            <Veld
-              label={t('klantenColBtwNummer')}
-              value={fields.btwNummer}
-              editing={isEditing}
-              testId="klant-modal-btwNummer"
-              onChange={(value) => setField('btwNummer', value)}
-            />
-            <Veld
-              label={t('klantenColContactPerson')}
-              value={fields.contactPerson}
-              editing={isEditing}
-              testId="klant-modal-contactPerson"
-              onChange={(value) => setField('contactPerson', value)}
-            />
-            {isEditing ? (
-              <label className="flex flex-col gap-1">
-                <span className="text-xs uppercase tracking-wide text-white/60">
-                  {t('klantenContactPreference')}
-                </span>
-                <select
-                  value={fields.contactPreference}
-                  onChange={(event) => setField('contactPreference', event.target.value)}
-                  data-testid="klant-modal-contactPreference"
-                  className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-                >
-                  <option value="email">{t('klantenContactPreferenceEmail')}</option>
-                  <option value="phone">{t('klantenContactPreferencePhone')}</option>
-                  <option value="whatsapp">{t('klantenContactPreferenceWhatsapp')}</option>
-                </select>
-              </label>
-            ) : (
-              <Veld label={t('klantenContactPreference')} value={fields.contactPreference} editing={false} />
-            )}
-            <Veld
-              label={t('klantenColEmail')}
-              value={fields.email}
-              editing={isEditing}
-              testId="klant-modal-email"
-              onChange={(value) => setField('email', value)}
-            />
-            <Veld
-              label={t('klantenColPhone')}
-              value={fields.phone}
-              editing={isEditing}
-              testId="klant-modal-phone"
-              onChange={(value) => setField('phone', value)}
-            />
-            <Veld
-              label={t('klantenLabelAdres')}
-              value={fields.address}
-              editing={isEditing}
-              testId="klant-modal-address"
-              onChange={(value) => setField('address', value)}
-            />
-            <Veld
-              label={t('klantenLabelPostcode')}
-              value={fields.postcode}
-              editing={isEditing}
-              testId="klant-modal-postcode"
-              onChange={(value) => setField('postcode', value)}
-            />
-            <Veld
-              label={t('klantenLabelPlaats')}
-              value={fields.city}
-              editing={isEditing}
-              testId="klant-modal-city"
-              onChange={(value) => setField('city', value)}
-            />
-            {isEditing ? (
-              <label className="flex flex-col gap-1">
-                <span className="text-xs uppercase tracking-wide text-white/60">{t('klantenLabelLand')}</span>
-                <Combobox
-                  options={LAND_OPTIONS}
-                  value={fields.land || null}
-                  onChange={(value) => setField('land', value ?? '')}
-                  placeholder={t('klantenLabelLand')}
-                  noResultsLabel={t('klantenLabelLand')}
-                  testId="klant-modal-land"
-                />
-              </label>
-            ) : (
-              <Veld label={t('klantenLabelLand')} value={landNaam(fields.land)} editing={false} />
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
-            <span className="text-xs uppercase tracking-wide text-white/60">{t('klantenLabelAfleveradres')}</span>
-            {!isEditing && fields.deliveryAddress === '' ? (
-              <p data-testid="klant-modal-afleveradres-leeg" className="text-white/50">
-                {t('klantenLabelGebruiktStandaardadres')}
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Veld
-                  label={t('klantenLabelAdres')}
-                  value={fields.deliveryAddress}
-                  editing={isEditing}
-                  testId="klant-modal-deliveryAddress"
-                  onChange={(value) => setField('deliveryAddress', value)}
-                />
-                <Veld
-                  label={t('klantenLabelPostcode')}
-                  value={fields.deliveryPostcode}
-                  editing={isEditing}
-                  testId="klant-modal-deliveryPostcode"
-                  onChange={(value) => setField('deliveryPostcode', value)}
-                />
-                <Veld
-                  label={t('klantenLabelPlaats')}
-                  value={fields.deliveryCity}
-                  editing={isEditing}
-                  testId="klant-modal-deliveryCity"
-                  onChange={(value) => setField('deliveryCity', value)}
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
-            <span className="text-xs uppercase tracking-wide text-white/60">{t('klantenLabelFactuuradres')}</span>
-            {!isEditing && fields.invoiceAddress === '' ? (
-              <p data-testid="klant-modal-factuuradres-leeg" className="text-white/50">
-                {t('klantenLabelGebruiktStandaardadres')}
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Veld
-                  label={t('klantenLabelAdres')}
-                  value={fields.invoiceAddress}
-                  editing={isEditing}
-                  testId="klant-modal-invoiceAddress"
-                  onChange={(value) => setField('invoiceAddress', value)}
-                />
-                <Veld
-                  label={t('klantenLabelPostcode')}
-                  value={fields.invoicePostcode}
-                  editing={isEditing}
-                  testId="klant-modal-invoicePostcode"
-                  onChange={(value) => setField('invoicePostcode', value)}
-                />
-                <Veld
-                  label={t('klantenLabelPlaats')}
-                  value={fields.invoiceCity}
-                  editing={isEditing}
-                  testId="klant-modal-invoiceCity"
-                  onChange={(value) => setField('invoiceCity', value)}
-                />
-                {isEditing ? (
-                  <label className="flex flex-col gap-1">
-                    <span className="text-xs uppercase tracking-wide text-white/60">
-                      {t('klantenLabelLand')}
-                    </span>
-                    <Combobox
-                      options={LAND_OPTIONS}
-                      value={fields.invoiceLand || null}
-                      onChange={(value) => setField('invoiceLand', value ?? '')}
-                      placeholder={t('klantenLabelLand')}
-                      noResultsLabel={t('klantenLabelLand')}
-                      clearLabel={t('klantenLabelGebruiktStandaardadres')}
-                      testId="klant-modal-invoiceLand"
-                    />
-                  </label>
-                ) : (
-                  <Veld label={t('klantenLabelLand')} value={landNaam(fields.invoiceLand)} editing={false} />
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-end gap-2">
-            <label className="flex flex-1 flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-              <span>
-                {t('klantenLabelPrijsgroep')}
-                <RequiredMark />
-              </span>
-              <select
-                value={prijsgroepId}
-                onChange={(event) => setPrijsgroepId(event.target.value)}
-                data-testid="klant-modal-prijsgroep"
-                className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-              >
-                <option value="" disabled>
-                  {t('klantenLabelPrijsgroep')}
-                </option>
-                {(prijsgroepen ?? []).map((prijsgroep) => (
-                  <option key={prijsgroep.id} value={prijsgroep.id}>
-                    {prijsgroep.naam}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="flex items-end gap-2">
-            <label className="flex flex-1 flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-              {t('klantenLabelKunstenaar')}
-              <Combobox
-                options={(kunstenaars ?? []).map((kunstenaar) => ({ value: kunstenaar.id, label: kunstenaar.naam }))}
-                value={kunstenaarId}
-                onChange={handleKunstenaarChange}
-                placeholder={t('klantenKunstenaarPlaceholder')}
-                noResultsLabel={t('klantenKunstenaarGeenResultaten')}
-                clearLabel={t('klantenKunstenaarGeen')}
-                testId="klant-modal-kunstenaar"
-              />
-            </label>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-xs uppercase tracking-wide text-white/60">
-              {t('klantenLabelExclusieveKunstenaars')}
-            </span>
-            {(() => {
-              const namen = (kunstenaars ?? [])
-                .filter((kunstenaar) => kunstenaar.exclusieveKlantIds.includes(klant.id))
-                .map((kunstenaar) => kunstenaar.naam);
-              return namen.length === 0 ? (
-                <p data-testid="klant-modal-exclusieve-kunstenaars-leeg" className="text-white/50">
-                  {t('klantenExclusieveKunstenaarsLeeg')}
-                </p>
-              ) : (
-                <p data-testid="klant-modal-exclusieve-kunstenaars">{namen.join(', ')}</p>
-              );
-            })()}
-          </div>
-
-          <div className="flex items-end gap-2">
-            <label className="flex flex-1 flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-              {t('klantenLabelMinimaleAfname')}
-              <input
-                type="number"
-                min={1}
-                value={minimaleAfname}
-                onChange={(event) => setMinimaleAfname(event.target.value)}
-                data-testid="klant-modal-minimale-afname"
-                className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-              />
-            </label>
-          </div>
-
-          <KlantWachtwoordSectie
-            key={klant.id}
-            klantId={klant.id}
-            // Bewust het opgeslagen adres en niet `fields.email`: de route mailt
-            // naar de klantrij, dus een nog niet bewaarde wijziging in het
-            // formulier zou hier een adres tonen waar niets heen is gegaan.
-            klantEmail={klant.email}
-            onWachtwoordZichtbaar={setWachtwoordZichtbaar}
-          />
-
-          <RequiredLegend testId="klant-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
-
+        <>
           {error && (
             <p data-testid="klant-modal-error" className="text-xs text-red-400">
               {error}
             </p>
           )}
-        </div>
+          <div
+            data-testid="klant-modal"
+            hidden={bevestigingAfwijzen.open}
+            className={`${bevestigingAfwijzen.open ? 'hidden' : 'flex'} flex-col gap-3 text-sm text-white/80`}
+          >
+            <div className="flex items-center justify-between">
+              <span
+                data-testid="klant-modal-status"
+                className={`w-fit rounded-full px-3 py-1 text-xs uppercase tracking-wide ${STATUS_BADGE_CLASS[klant.status]}`}
+              >
+                {klant.status}
+              </span>
+              {!isEditing && (
+                <button
+                  type="button"
+                  onClick={handleBewerken}
+                  data-testid="klant-modal-bewerken"
+                  className="btn-beheer-secondary rounded-sm border border-white/20 px-3 py-1.5 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                >
+                  {t('bewerken')}
+                </button>
+              )}
+            </div>
+
+            {klant.status === 'Afgewezen' && klant.afwijsreden && (
+              <div data-testid="klant-modal-afwijsreden" className="flex flex-col gap-1">
+                <span className="text-xs uppercase tracking-wide text-white/60">{t('afwijsredenLabel')}</span>
+                <p className="text-white/80">{klant.afwijsreden}</p>
+              </div>
+            )}
+
+            {!heeftGeldigBtwTarief && (
+              <p data-testid="klant-modal-btw-waarschuwing" className="text-xs text-amber-400">
+                {btwLoadError
+                  ? t('klantenBtwWaarschuwingLaadfout')
+                  : land === null
+                    ? t('klantenBtwWaarschuwingGeenLand')
+                    : t('klantenBtwWaarschuwing', { land: landNaam(land) })}
+              </p>
+            )}
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Veld
+                label={t('klantenColCompanyName')}
+                value={fields.companyName}
+                editing={isEditing}
+                testId="klant-modal-companyName"
+                onChange={(value) => setField('companyName', value)}
+              />
+              <Veld
+                label={t('klantenColKvk')}
+                value={fields.kvk}
+                editing={isEditing}
+                testId="klant-modal-kvk"
+                onChange={(value) => setField('kvk', value)}
+              />
+              <Veld
+                label={t('klantenColBtwNummer')}
+                value={fields.btwNummer}
+                editing={isEditing}
+                testId="klant-modal-btwNummer"
+                onChange={(value) => setField('btwNummer', value)}
+              />
+              <Veld
+                label={t('klantenColContactPerson')}
+                value={fields.contactPerson}
+                editing={isEditing}
+                testId="klant-modal-contactPerson"
+                onChange={(value) => setField('contactPerson', value)}
+              />
+              {isEditing ? (
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs uppercase tracking-wide text-white/60">
+                    {t('klantenContactPreference')}
+                  </span>
+                  <select
+                    value={fields.contactPreference}
+                    onChange={(event) => setField('contactPreference', event.target.value)}
+                    data-testid="klant-modal-contactPreference"
+                    className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+                  >
+                    <option value="email">{t('klantenContactPreferenceEmail')}</option>
+                    <option value="phone">{t('klantenContactPreferencePhone')}</option>
+                    <option value="whatsapp">{t('klantenContactPreferenceWhatsapp')}</option>
+                  </select>
+                </label>
+              ) : (
+                <Veld label={t('klantenContactPreference')} value={fields.contactPreference} editing={false} />
+              )}
+              <Veld
+                label={t('klantenColEmail')}
+                value={fields.email}
+                editing={isEditing}
+                testId="klant-modal-email"
+                onChange={(value) => setField('email', value)}
+              />
+              <Veld
+                label={t('klantenColPhone')}
+                value={fields.phone}
+                editing={isEditing}
+                testId="klant-modal-phone"
+                onChange={(value) => setField('phone', value)}
+              />
+              <Veld
+                label={t('klantenLabelAdres')}
+                value={fields.address}
+                editing={isEditing}
+                testId="klant-modal-address"
+                onChange={(value) => setField('address', value)}
+              />
+              <Veld
+                label={t('klantenLabelPostcode')}
+                value={fields.postcode}
+                editing={isEditing}
+                testId="klant-modal-postcode"
+                onChange={(value) => setField('postcode', value)}
+              />
+              <Veld
+                label={t('klantenLabelPlaats')}
+                value={fields.city}
+                editing={isEditing}
+                testId="klant-modal-city"
+                onChange={(value) => setField('city', value)}
+              />
+              {isEditing ? (
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs uppercase tracking-wide text-white/60">{t('klantenLabelLand')}</span>
+                  <Combobox
+                    options={LAND_OPTIONS}
+                    value={fields.land || null}
+                    onChange={(value) => setField('land', value ?? '')}
+                    placeholder={t('klantenLabelLand')}
+                    noResultsLabel={t('klantenLabelLand')}
+                    testId="klant-modal-land"
+                  />
+                </label>
+              ) : (
+                <Veld label={t('klantenLabelLand')} value={landNaam(fields.land)} editing={false} />
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
+              <span className="text-xs uppercase tracking-wide text-white/60">{t('klantenLabelAfleveradres')}</span>
+              {!isEditing && fields.deliveryAddress === '' ? (
+                <p data-testid="klant-modal-afleveradres-leeg" className="text-white/50">
+                  {t('klantenLabelGebruiktStandaardadres')}
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Veld
+                    label={t('klantenLabelAdres')}
+                    value={fields.deliveryAddress}
+                    editing={isEditing}
+                    testId="klant-modal-deliveryAddress"
+                    onChange={(value) => setField('deliveryAddress', value)}
+                  />
+                  <Veld
+                    label={t('klantenLabelPostcode')}
+                    value={fields.deliveryPostcode}
+                    editing={isEditing}
+                    testId="klant-modal-deliveryPostcode"
+                    onChange={(value) => setField('deliveryPostcode', value)}
+                  />
+                  <Veld
+                    label={t('klantenLabelPlaats')}
+                    value={fields.deliveryCity}
+                    editing={isEditing}
+                    testId="klant-modal-deliveryCity"
+                    onChange={(value) => setField('deliveryCity', value)}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
+              <span className="text-xs uppercase tracking-wide text-white/60">{t('klantenLabelFactuuradres')}</span>
+              {!isEditing && fields.invoiceAddress === '' ? (
+                <p data-testid="klant-modal-factuuradres-leeg" className="text-white/50">
+                  {t('klantenLabelGebruiktStandaardadres')}
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Veld
+                    label={t('klantenLabelAdres')}
+                    value={fields.invoiceAddress}
+                    editing={isEditing}
+                    testId="klant-modal-invoiceAddress"
+                    onChange={(value) => setField('invoiceAddress', value)}
+                  />
+                  <Veld
+                    label={t('klantenLabelPostcode')}
+                    value={fields.invoicePostcode}
+                    editing={isEditing}
+                    testId="klant-modal-invoicePostcode"
+                    onChange={(value) => setField('invoicePostcode', value)}
+                  />
+                  <Veld
+                    label={t('klantenLabelPlaats')}
+                    value={fields.invoiceCity}
+                    editing={isEditing}
+                    testId="klant-modal-invoiceCity"
+                    onChange={(value) => setField('invoiceCity', value)}
+                  />
+                  {isEditing ? (
+                    <label className="flex flex-col gap-1">
+                      <span className="text-xs uppercase tracking-wide text-white/60">
+                        {t('klantenLabelLand')}
+                      </span>
+                      <Combobox
+                        options={LAND_OPTIONS}
+                        value={fields.invoiceLand || null}
+                        onChange={(value) => setField('invoiceLand', value ?? '')}
+                        placeholder={t('klantenLabelLand')}
+                        noResultsLabel={t('klantenLabelLand')}
+                        clearLabel={t('klantenLabelGebruiktStandaardadres')}
+                        testId="klant-modal-invoiceLand"
+                      />
+                    </label>
+                  ) : (
+                    <Veld label={t('klantenLabelLand')} value={landNaam(fields.invoiceLand)} editing={false} />
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-end gap-2">
+              <label className="flex flex-1 flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+                <span>
+                  {t('klantenLabelPrijsgroep')}
+                  <RequiredMark />
+                </span>
+                <select
+                  value={prijsgroepId}
+                  onChange={(event) => setPrijsgroepId(event.target.value)}
+                  data-testid="klant-modal-prijsgroep"
+                  className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+                >
+                  <option value="" disabled>
+                    {t('klantenLabelPrijsgroep')}
+                  </option>
+                  {(prijsgroepen ?? []).map((prijsgroep) => (
+                    <option key={prijsgroep.id} value={prijsgroep.id}>
+                      {prijsgroep.naam}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="flex items-end gap-2">
+              <label className="flex flex-1 flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+                {t('klantenLabelKunstenaar')}
+                <Combobox
+                  options={(kunstenaars ?? []).map((kunstenaar) => ({ value: kunstenaar.kunstenaarnr, label: kunstenaar.naam }))}
+                  value={kunstenaarnr}
+                  onChange={handleKunstenaarChange}
+                  placeholder={t('klantenKunstenaarPlaceholder')}
+                  noResultsLabel={t('klantenKunstenaarGeenResultaten')}
+                  clearLabel={t('klantenKunstenaarGeen')}
+                  testId="klant-modal-kunstenaar"
+                />
+              </label>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wide text-white/60">
+                {t('klantenLabelExclusieveKunstenaars')}
+              </span>
+              {(() => {
+                const namen = (kunstenaars ?? [])
+                  .filter((kunstenaar) => kunstenaar.exclusieveKlantIds.includes(klant.id))
+                  .map((kunstenaar) => kunstenaar.naam);
+                return namen.length === 0 ? (
+                  <p data-testid="klant-modal-exclusieve-kunstenaars-leeg" className="text-white/50">
+                    {t('klantenExclusieveKunstenaarsLeeg')}
+                  </p>
+                ) : (
+                  <p data-testid="klant-modal-exclusieve-kunstenaars">{namen.join(', ')}</p>
+                );
+              })()}
+            </div>
+
+            <div className="flex items-end gap-2">
+              <label className="flex flex-1 flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+                {t('klantenLabelMinimaleAfname')}
+                <input
+                  type="number"
+                  min={1}
+                  value={minimaleAfname}
+                  onChange={(event) => setMinimaleAfname(event.target.value)}
+                  data-testid="klant-modal-minimale-afname"
+                  className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+                />
+              </label>
+            </div>
+
+            <KlantWachtwoordSectie
+              key={klant.id}
+              klantId={klant.id}
+              // Bewust het opgeslagen adres en niet `fields.email`: de route mailt
+              // naar de klantrij, dus een nog niet bewaarde wijziging in het
+              // formulier zou hier een adres tonen waar niets heen is gegaan.
+              klantEmail={klant.email}
+              onWachtwoordZichtbaar={setWachtwoordZichtbaar}
+            />
+
+            <RequiredLegend testId="klant-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
+          </div>
+          {bevestigingAfwijzen.open && (
+            <AfwijzenBevestigingTekst
+              item={klant.companyName}
+              reden={bevestigingAfwijzen.reden}
+              onWijzigReden={bevestigingAfwijzen.wijzigReden}
+              testId="klant-modal-afwijzen-bevestiging"
+            />
+          )}
+        </>
       )}
     </Modal>
   );

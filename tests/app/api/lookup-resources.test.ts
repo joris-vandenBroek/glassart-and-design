@@ -112,7 +112,7 @@ async function maakBestellijnVoorMaat(maatId: string): Promise<{ headerId: strin
 describe('generic lookup-resource routes', () => {
   it('creates then lists a segment', async () => {
     const createResponse = await createResource(
-      jsonRequest('POST', { omschrijving: 'Hotel' }, await medewerkerCookie()),
+      jsonRequest('POST', { omschrijvingNl: 'Hotel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }, await medewerkerCookie()),
       { params: { resource: 'segmenten' } }
     );
     const created = await createResponse.json();
@@ -121,11 +121,11 @@ describe('generic lookup-resource routes', () => {
     const response = await listResource(jsonRequest('GET'), { params: { resource: 'segmenten' } });
     const body = await response.json();
     const found = body.find((row: { id: string }) => row.id === created.id);
-    expect(found.omschrijving).toBe('Hotel');
+    expect(found.omschrijvingNl).toBe('Hotel');
   });
 
   it('rejects writing a segment without a medewerker session', async () => {
-    const response = await createResource(jsonRequest('POST', { omschrijving: 'Hack' }), {
+    const response = await createResource(jsonRequest('POST', { omschrijvingNl: 'Hack', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }), {
       params: { resource: 'segmenten' },
     });
     expect(response.status).toBe(401);
@@ -170,7 +170,7 @@ describe('generic lookup-resource routes', () => {
   it('gets, updates and deletes a single segment', async () => {
     const cookie = await medewerkerCookie();
     const createResponse = await createResource(
-      jsonRequest('POST', { omschrijving: 'Restaurant' }, cookie),
+      jsonRequest('POST', { omschrijvingNl: 'Restaurant', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }, cookie),
       { params: { resource: 'segmenten' } }
     );
     const created = await createResponse.json();
@@ -178,15 +178,15 @@ describe('generic lookup-resource routes', () => {
     const getResponse = await getResource(jsonRequest('GET'), {
       params: { resource: 'segmenten', id: created.id },
     });
-    expect((await getResponse.json()).omschrijving).toBe('Restaurant');
+    expect((await getResponse.json()).omschrijvingNl).toBe('Restaurant');
 
-    await patchResource(jsonRequest('PATCH', { omschrijving: 'Restaurantpand' }, cookie), {
+    await patchResource(jsonRequest('PATCH', { omschrijvingNl: 'Restaurantpand' }, cookie), {
       params: { resource: 'segmenten', id: created.id },
     });
     const updatedResponse = await getResource(jsonRequest('GET'), {
       params: { resource: 'segmenten', id: created.id },
     });
-    expect((await updatedResponse.json()).omschrijving).toBe('Restaurantpand');
+    expect((await updatedResponse.json()).omschrijvingNl).toBe('Restaurantpand');
 
     await deleteResource(jsonRequest('DELETE', undefined, cookie), {
       params: { resource: 'segmenten', id: created.id },
@@ -200,13 +200,13 @@ describe('generic lookup-resource routes', () => {
   it('rejects updating or deleting a segment without a medewerker session', async () => {
     const cookie = await medewerkerCookie();
     const createResponse = await createResource(
-      jsonRequest('POST', { omschrijving: 'Kantoor' }, cookie),
+      jsonRequest('POST', { omschrijvingNl: 'Kantoor', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }, cookie),
       { params: { resource: 'segmenten' } }
     );
     const created = await createResponse.json();
     createdSegmentIds.push(created.id);
 
-    const patchResponse = await patchResource(jsonRequest('PATCH', { omschrijving: 'Hack' }), {
+    const patchResponse = await patchResource(jsonRequest('PATCH', { omschrijvingNl: 'Hack' }), {
       params: { resource: 'segmenten', id: created.id },
     });
     expect(patchResponse.status).toBe(401);
@@ -271,13 +271,13 @@ describe('generic lookup-resource routes', () => {
   it('rejects deleting a materiaalsoort still referenced by a materiaal, allows it once unreferenced', async () => {
     const cookie = await medewerkerCookie();
     const soortResponse = await createResource(
-      jsonRequest('POST', { omschrijving: 'Guard soort' }, cookie),
+      jsonRequest('POST', { omschrijvingNl: 'Guard soort', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }, cookie),
       { params: { resource: 'materiaalsoorten' } }
     );
     const soort = await soortResponse.json();
     createdLookupGuardMateriaalsoortIds.push(soort.id);
     const materiaalResponse = await createResource(
-      jsonRequest('POST', { materiaalsoortId: soort.id, materiaaldikte: 4, omschrijving: 'Guard materiaal' }, cookie),
+      jsonRequest('POST', { materiaalsoortId: soort.id, materiaaldikte: 4, omschrijvingNl: 'Guard materiaal', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }, cookie),
       { params: { resource: 'materialen' } }
     );
     const materiaal = await materiaalResponse.json();

@@ -15,6 +15,7 @@ import type { Kunstwerk, Segment, Materiaal, Materiaalsoort, Maat, KunstwerkForm
 import { isVierkanteMaat } from './materiaalTypes';
 import type { Kunstenaar } from './kunstenaarTypes';
 import { detectFormaatFromFile, detectFormaatFromImageUrl } from '@/lib/detectKunstwerkFormaat';
+import { stelVolgendeCodeVoor, vindBekendePrefixen } from '@/lib/kunstwerkCodeVoorstel';
 
 interface KunstwerkenSectionProps {
   kunstwerken: Kunstwerk[] | null;
@@ -53,7 +54,8 @@ function toggle(list: string[], id: string): string[] {
 const LEGE_FORM = {
   foto: '',
   code: '',
-  kunstenaarId: '' as string,
+  prefix: '',
+  kunstenaarnr: '' as string,
   formaat: null as KunstwerkFormaat | null,
   segmentIds: [] as string[],
   materiaalIds: [] as string[],
@@ -93,7 +95,8 @@ export function KunstwerkenSection({
   const [modalState, setModalState] = useState<ModalState>(null);
   const [foto, setFoto] = useState(LEGE_FORM.foto);
   const [code, setCode] = useState(LEGE_FORM.code);
-  const [kunstenaarId, setKunstenaarId] = useState(LEGE_FORM.kunstenaarId);
+  const [prefix, setPrefix] = useState(LEGE_FORM.prefix);
+  const [kunstenaarnr, setKunstenaarnr] = useState(LEGE_FORM.kunstenaarnr);
   const [formaat, setFormaatState] = useState<KunstwerkFormaat | null>(LEGE_FORM.formaat);
   const [segmentIds, setSegmentIds] = useState<string[]>(LEGE_FORM.segmentIds);
   const [materiaalIds, setMateriaalIds] = useState<string[]>(LEGE_FORM.materiaalIds);
@@ -133,7 +136,7 @@ export function KunstwerkenSection({
 
   useEffect(() => {
     if (!pendingNieuweSegmentNaam) return;
-    const gevonden = (segmenten ?? []).find((segment) => segment.omschrijving === pendingNieuweSegmentNaam);
+    const gevonden = (segmenten ?? []).find((segment) => segment.omschrijvingNl === pendingNieuweSegmentNaam);
     if (gevonden) {
       setSegmentIds((current) => (current.includes(gevonden.id) ? current : [...current, gevonden.id]));
       setPendingNieuweSegmentNaam(null);
@@ -143,7 +146,7 @@ export function KunstwerkenSection({
 
   useEffect(() => {
     if (!pendingNieuweStijlNaam) return;
-    const gevonden = (stijlen ?? []).find((stijl) => stijl.omschrijving === pendingNieuweStijlNaam);
+    const gevonden = (stijlen ?? []).find((stijl) => stijl.omschrijvingNl === pendingNieuweStijlNaam);
     if (gevonden) {
       setStijlIds((current) => (current.includes(gevonden.id) ? current : [...current, gevonden.id]));
       setPendingNieuweStijlNaam(null);
@@ -153,7 +156,7 @@ export function KunstwerkenSection({
 
   useEffect(() => {
     if (!pendingNieuweOnderwerpNaam) return;
-    const gevonden = (onderwerpen ?? []).find((onderwerp) => onderwerp.omschrijving === pendingNieuweOnderwerpNaam);
+    const gevonden = (onderwerpen ?? []).find((onderwerp) => onderwerp.omschrijvingNl === pendingNieuweOnderwerpNaam);
     if (gevonden) {
       setOnderwerpIds((current) => (current.includes(gevonden.id) ? current : [...current, gevonden.id]));
       setPendingNieuweOnderwerpNaam(null);
@@ -166,7 +169,7 @@ export function KunstwerkenSection({
     if (!naam) return;
     setSegmentToevoegenError(null);
     const bestaande = (segmenten ?? []).find(
-      (segment) => segment.omschrijving.toLowerCase() === naam.toLowerCase()
+      (segment) => segment.omschrijvingNl.toLowerCase() === naam.toLowerCase()
     );
     if (bestaande) {
       setSegmentIds((current) => (current.includes(bestaande.id) ? current : [...current, bestaande.id]));
@@ -174,7 +177,7 @@ export function KunstwerkenSection({
       return;
     }
     setPendingNieuweSegmentNaam(naam);
-    const success = await onAddSegment({ omschrijving: naam });
+    const success = await onAddSegment({ omschrijvingNl: naam, omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' });
     if (success) {
       void logActiviteit('segment_toegevoegd', naam);
     } else {
@@ -187,14 +190,14 @@ export function KunstwerkenSection({
     const naam = nieuweStijlNaam.trim();
     if (!naam) return;
     setStijlToevoegenError(null);
-    const bestaande = (stijlen ?? []).find((stijl) => stijl.omschrijving.toLowerCase() === naam.toLowerCase());
+    const bestaande = (stijlen ?? []).find((stijl) => stijl.omschrijvingNl.toLowerCase() === naam.toLowerCase());
     if (bestaande) {
       setStijlIds((current) => (current.includes(bestaande.id) ? current : [...current, bestaande.id]));
       setNieuweStijlNaam('');
       return;
     }
     setPendingNieuweStijlNaam(naam);
-    const success = await onAddStijl({ omschrijving: naam });
+    const success = await onAddStijl({ omschrijvingNl: naam, omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' });
     if (success) {
       void logActiviteit('stijl_toegevoegd');
     } else {
@@ -208,7 +211,7 @@ export function KunstwerkenSection({
     if (!naam) return;
     setOnderwerpToevoegenError(null);
     const bestaande = (onderwerpen ?? []).find(
-      (onderwerp) => onderwerp.omschrijving.toLowerCase() === naam.toLowerCase()
+      (onderwerp) => onderwerp.omschrijvingNl.toLowerCase() === naam.toLowerCase()
     );
     if (bestaande) {
       setOnderwerpIds((current) => (current.includes(bestaande.id) ? current : [...current, bestaande.id]));
@@ -216,7 +219,7 @@ export function KunstwerkenSection({
       return;
     }
     setPendingNieuweOnderwerpNaam(naam);
-    const success = await onAddOnderwerp({ omschrijving: naam });
+    const success = await onAddOnderwerp({ omschrijvingNl: naam, omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' });
     if (success) {
       void logActiviteit('onderwerp_toegevoegd');
     } else {
@@ -227,21 +230,23 @@ export function KunstwerkenSection({
 
   const segmentNaamById = useMemo(() => {
     const map = new Map<string, string>();
-    (segmenten ?? []).forEach((segment) => map.set(segment.id, segment.omschrijving));
+    (segmenten ?? []).forEach((segment) => map.set(segment.id, segment.omschrijvingNl));
     return map;
   }, [segmenten]);
 
   const materiaalsoortNaamById = useMemo(() => {
     const map = new Map<string, string>();
-    (materiaalsoorten ?? []).forEach((soort) => map.set(soort.id, soort.omschrijving));
+    (materiaalsoorten ?? []).forEach((soort) => map.set(soort.id, soort.omschrijvingNl));
     return map;
   }, [materiaalsoorten]);
 
-  const kunstenaarNaamById = useMemo(() => {
+  const kunstenaarNaamByNr = useMemo(() => {
     const map = new Map<string, string>();
-    (kunstenaars ?? []).forEach((kunstenaar) => map.set(kunstenaar.id, kunstenaar.naam));
+    (kunstenaars ?? []).forEach((kunstenaar) => map.set(kunstenaar.kunstenaarnr, kunstenaar.naam));
     return map;
   }, [kunstenaars]);
+
+  const bekendePrefixen = useMemo(() => vindBekendePrefixen(kunstwerken ?? []), [kunstwerken]);
 
   const isMateriaalloos = materiaalIds.length === 0;
   // Superset of isMateriaalloos: also true when a materiaal is chosen but every maat is
@@ -259,7 +264,7 @@ export function KunstwerkenSection({
     const params = new URLSearchParams({
       materiaalIds: materiaalIds.join(','),
       maatIds: maatIds.join(','),
-      ...(kunstenaarId ? { kunstenaarId } : {}),
+      ...(kunstenaarnr ? { kunstenaarnr } : {}),
     });
     fetch(`/api/kunstwerken/prijzen?${params.toString()}`)
       .then((response) => {
@@ -282,13 +287,13 @@ export function KunstwerkenSection({
     return () => {
       cancelled = true;
     };
-  }, [materiaalIds, maatIds, kunstenaarId, isMaatloos]);
+  }, [materiaalIds, maatIds, kunstenaarnr, isMaatloos]);
 
   function buildKunstwerkData(): Omit<Kunstwerk, 'id'> {
     const basis = {
       foto,
       code: code.trim(),
-      kunstenaarId: kunstenaarId || null,
+      kunstenaarnr: kunstenaarnr || null,
       formaat,
       segmentIds,
       materiaalIds,
@@ -313,7 +318,7 @@ export function KunstwerkenSection({
     [
       foto,
       code,
-      kunstenaarId,
+      kunstenaarnr,
       formaat,
       segmentIds,
       materiaalIds,
@@ -373,13 +378,14 @@ export function KunstwerkenSection({
   const rows: KunstwerkRow[] = kunstwerken.map((kunstwerk) => ({
     ...kunstwerk,
     segmentNamen: kunstwerk.segmentIds.map((id) => segmentNaamById.get(id) ?? id).join(', '),
-    kunstenaarNaam: kunstwerk.kunstenaarId ? kunstenaarNaamById.get(kunstwerk.kunstenaarId) ?? '' : '',
+    kunstenaarNaam: kunstwerk.kunstenaarnr ? kunstenaarNaamByNr.get(kunstwerk.kunstenaarnr) ?? '' : '',
   }));
 
   function resetForm() {
     setFoto(LEGE_FORM.foto);
     setCode(LEGE_FORM.code);
-    setKunstenaarId(LEGE_FORM.kunstenaarId);
+    setPrefix(LEGE_FORM.prefix);
+    setKunstenaarnr(LEGE_FORM.kunstenaarnr);
     setFormaatState(LEGE_FORM.formaat);
     setSegmentIds(LEGE_FORM.segmentIds);
     setNieuweSegmentNaam('');
@@ -419,7 +425,7 @@ export function KunstwerkenSection({
     const session = formaatSessionRef.current;
     setFoto(kunstwerk.foto);
     setCode(kunstwerk.code ?? '');
-    setKunstenaarId(kunstwerk.kunstenaarId ?? '');
+    setKunstenaarnr(kunstwerk.kunstenaarnr ?? '');
     setSegmentIds(kunstwerk.segmentIds);
     setMateriaalIds(kunstwerk.materiaalIds);
     setMaatIds(kunstwerk.maatIds);
@@ -785,6 +791,31 @@ export function KunstwerkenSection({
             </p>
           )}
 
+          {modalState?.mode === 'add' && (
+            <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+              <span>{t('kunstwerkenLabelPrefix')}</span>
+              <input
+                type="text"
+                list="kunstwerk-modal-prefixen"
+                value={prefix}
+                onChange={(event) => {
+                  const waarde = event.target.value;
+                  setPrefix(waarde);
+                  if (waarde.trim()) {
+                    setCode(stelVolgendeCodeVoor(kunstwerken ?? [], waarde));
+                  }
+                }}
+                data-testid="kunstwerk-modal-prefix"
+                className="rounded-sm border border-transparent bg-black/40 px-3 py-2 text-sm text-white"
+              />
+              <datalist id="kunstwerk-modal-prefixen">
+                {bekendePrefixen.map((optie) => (
+                  <option key={optie} value={optie} />
+                ))}
+              </datalist>
+            </label>
+          )}
+
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
             <span>
               {t('kunstwerkenLabelCode')}
@@ -814,14 +845,14 @@ export function KunstwerkenSection({
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
             {t('kunstwerkenLabelKunstenaar')}
             <select
-              value={kunstenaarId}
-              onChange={(event) => setKunstenaarId(event.target.value)}
+              value={kunstenaarnr}
+              onChange={(event) => setKunstenaarnr(event.target.value)}
               data-testid="kunstwerk-modal-kunstenaar"
               className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
             >
               <option value="">{t('kunstwerkenKunstenaarGeen')}</option>
               {(kunstenaars ?? []).map((kunstenaar) => (
-                <option key={kunstenaar.id} value={kunstenaar.id}>
+                <option key={kunstenaar.id} value={kunstenaar.kunstenaarnr}>
                   {kunstenaar.naam}
                 </option>
               ))}
@@ -886,7 +917,7 @@ export function KunstwerkenSection({
                   onChange={() => setSegmentIds((current) => toggle(current, segment.id))}
                   data-testid={`kunstwerk-modal-segment-${segment.id}`}
                 />
-                {segment.omschrijving}
+                {segment.omschrijvingNl}
               </label>
             ))}
             <div className="mt-1 flex gap-2">
@@ -1008,7 +1039,7 @@ export function KunstwerkenSection({
                   onChange={() => setStijlIds((current) => toggle(current, stijl.id))}
                   data-testid={`kunstwerk-modal-stijl-${stijl.id}`}
                 />
-                {stijl.omschrijving}
+                {stijl.omschrijvingNl}
               </label>
             ))}
             <div className="mt-1 flex gap-2">
@@ -1049,7 +1080,7 @@ export function KunstwerkenSection({
                   onChange={() => setOnderwerpIds((current) => toggle(current, onderwerp.id))}
                   data-testid={`kunstwerk-modal-onderwerp-${onderwerp.id}`}
                 />
-                {onderwerp.omschrijving}
+                {onderwerp.omschrijvingNl}
               </label>
             ))}
             <div className="mt-1 flex gap-2">

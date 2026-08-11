@@ -76,9 +76,10 @@ export async function getRow<T>(
 }
 
 /**
- * `connection` is optioneel, net als bij `updateRow` hieronder: een aanroeper die
- * al in een transactie zit kan de insert daarin meenemen, zodat de rij samen met
- * de rest van de handeling commit of samen met de rest verdwijnt.
+ * `connection` is optioneel zodat een aanroeper die al in een transactie zit dezelfde
+ * insert kan draaien -- nodig omdat het ophogen van een teller en het invoegen van de
+ * rij die het nummer krijgt in dezelfde transactie moeten zitten. Gelijk aan de
+ * `connection`-parameter van `updateRow` hieronder.
  */
 export async function insertRow<T extends { id?: string }>(
   table: string,
