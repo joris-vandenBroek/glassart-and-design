@@ -1098,12 +1098,14 @@ describe('KunstwerkenSection', () => {
     expect(screen.queryByTestId('kunstwerk-modal-tab-maten-error-dot')).not.toBeInTheDocument();
   });
 
-  it('shows a help popover explaining formaat and prijs-per-m²', () => {
+  it('links to the kunstwerken-code chapter of the gebruikershandleiding', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('kunstwerken-add'));
 
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-help'));
-    expect(screen.getByTestId('kunstwerk-modal-help-popover')).toHaveTextContent('Formaat');
+    expect(screen.getByTestId('kunstwerk-modal-help')).toHaveAttribute(
+      'href',
+      '/nl/beheer/documentatie#kunstwerken-code'
+    );
   });
 
   it('vraagt om bevestiging voordat een gewijzigde code wordt opgeslagen', async () => {
