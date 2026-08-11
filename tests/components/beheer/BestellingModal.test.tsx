@@ -629,6 +629,13 @@ const BESTELLING_BETAALD_EN_AFGEROND: Bestelling = {
   status: 'Betaald en afgerond',
 };
 
+const BESTELLING_TE_VERSTUREN: Bestelling = {
+  ...BESTELLING_VERSTUURD,
+  id: 'header-7',
+  bestelnr: 'GD-00107',
+  status: 'Te versturen naar drukker',
+};
+
 describe('BestellingModal — afronden/terugzetten', () => {
   it('shows only Afronden for a bestelling that is Verstuurd naar drukker', () => {
     renderModal(BESTELLING_VERSTUURD);
@@ -813,5 +820,104 @@ describe('BestellingModal — afronden/terugzetten', () => {
     const historie = await screen.findByTestId('bestelling-modal-historie');
     expect(within(historie).getAllByText('Betaald en afgerond')).toHaveLength(2);
     expect(within(historie).getAllByText('Verstuurd naar drukker')).toHaveLength(2);
+  });
+});
+
+describe('BestellingModal — regel verwijderen en toevoegen', () => {
+  it('shows regel-verwijderen and regel-toevoegen for a status where regelstructuur is still editable', () => {
+    renderModal(BESTELLING);
+    expect(screen.getByTestId('bestelling-modal-regel-verwijderen-line-1')).toBeInTheDocument();
+    expect(screen.getByTestId('bestelling-modal-regel-toevoegen')).toBeInTheDocument();
+  });
+
+  it('hides regel-verwijderen and regel-toevoegen from Verstuurd naar drukker onward, and for Afgewezen', () => {
+    renderModal(BESTELLING_VERSTUURD);
+    expect(screen.queryByTestId('bestelling-modal-regel-verwijderen-line-6')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-regel-toevoegen')).not.toBeInTheDocument();
+
+    renderModal(BESTELLING_TE_FACTUREREN);
+    expect(screen.queryByTestId('bestelling-modal-regel-toevoegen')).not.toBeInTheDocument();
+
+    renderModal({ ...BESTELLING, status: 'Afgewezen' });
+    expect(screen.queryByTestId('bestelling-modal-regel-toevoegen')).not.toBeInTheDocument();
+  });
+
+  it('shows regel-toevoegen while Te versturen naar drukker (still before Verstuurd naar drukker)', () => {
+    renderModal(BESTELLING_TE_VERSTUREN);
+    expect(screen.getByTestId('bestelling-modal-regel-toevoegen')).toBeInTheDocument();
+  });
+
+  it('marks a line for deletion, shows it struck through with an undo, and saves the deletion on Wijzigingen opslaan', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    const { onBestellingGewijzigd } = renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-verwijderen-line-1'));
+    expect(screen.getByTestId('bestelling-modal-regel-verwijderen-ongedaan-line-1')).toBeInTheDocument();
+    expect(screen.getByTestId('bestelling-modal-wijzigingen-opslaan')).toBeInTheDocument();
+
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ lines: [BESTELLING.lines[1]], korting: null }) });
+    fireEvent.click(screen.getByTestId('bestelling-modal-wijzigingen-opslaan'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-1/wijzigen',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ korting: null, updates: [], additions: [], deletions: ['line-1'] }),
+        })
+      )
+    );
+    await waitFor(() =>
+      expect(onBestellingGewijzigd).toHaveBeenCalledWith({ ...BESTELLING, lines: [BESTELLING.lines[1]], korting: null })
+    );
+  });
+
+  it('undoes a pending deletion', () => {
+    renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-verwijderen-line-1'));
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-verwijderen-ongedaan-line-1'));
+    expect(screen.queryByTestId('bestelling-modal-regel-verwijderen-ongedaan-line-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-wijzigingen-opslaan')).not.toBeInTheDocument();
+  });
+
+  it('adds a new line via the kunstwerk picker and saves it on Wijzigingen opslaan', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    const { onBestellingGewijzigd } = renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-toevoegen'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk'), { target: { value: 'kw-1' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-materiaal'), { target: { value: 'mat-1' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-maat'), { target: { value: 'maat-1' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-aantal'), { target: { value: '2' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen'));
+
+    expect(screen.getByTestId('bestelling-modal-wijzigingen-opslaan')).toBeInTheDocument();
+
+    const nieuweRegel = { id: 'line-nieuw', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 210, quantity: 2 };
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ lines: [...BESTELLING.lines, nieuweRegel], korting: null }),
+    });
+    fireEvent.click(screen.getByTestId('bestelling-modal-wijzigingen-opslaan'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-1/wijzigen',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({
+            korting: null,
+            updates: [],
+            additions: [{ kunstwerkId: 'kw-1', materiaalId: 'mat-1', maatId: 'maat-1', quantity: 2 }],
+            deletions: [],
+          }),
+        })
+      )
+    );
+    await waitFor(() =>
+      expect(onBestellingGewijzigd).toHaveBeenCalledWith({
+        ...BESTELLING,
+        lines: [...BESTELLING.lines, nieuweRegel],
+        korting: null,
+      })
+    );
   });
 });

@@ -43,6 +43,16 @@ interface ConceptUpdate {
   quantity?: number;
 }
 
+interface ConceptAddition {
+  tempId: string;
+  kunstwerkId: string;
+  materiaalId: string;
+  maatId: string;
+  breedte?: number;
+  hoogte?: number;
+  quantity: number;
+}
+
 interface BestellingModalProps {
   bestelling: Bestelling | null;
   kunstwerken: Kunstwerk[] | null;
@@ -94,6 +104,17 @@ export function BestellingModal({
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
   const [lineDraft, setLineDraft] = useState<LineDraft | null>(null);
   const [conceptUpdates, setConceptUpdates] = useState<Record<string, ConceptUpdate>>({});
+  const [conceptDeletions, setConceptDeletions] = useState<Set<string>>(new Set());
+  const [conceptAdditions, setConceptAdditions] = useState<ConceptAddition[]>([]);
+  const [toonNieuweRegel, setToonNieuweRegel] = useState(false);
+  const [nieuweRegelDraft, setNieuweRegelDraft] = useState({
+    kunstwerkId: '',
+    materiaalId: '',
+    maatId: '',
+    breedte: '',
+    hoogte: '',
+    quantity: '1',
+  });
   const [saving, setSaving] = useState(false);
   const { user } = useAdminAuth();
   const { historie } = useBestellingHistorie(bestelling?.id ?? null);
@@ -106,6 +127,9 @@ export function BestellingModal({
       setEditingLineId(null);
       setLineDraft(null);
       setConceptUpdates({});
+      setConceptDeletions(new Set());
+      setConceptAdditions([]);
+      setToonNieuweRegel(false);
       bevestigingAfwijzen.annuleer();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -131,6 +155,10 @@ export function BestellingModal({
   const btwPercentage = totalen?.btwPercentage ?? null;
   const btwBedrag = totalen?.btwBedrag ?? null;
   const totaalInclBtw = totalen?.totaalInclBtw ?? null;
+
+  const REGELSTRUCTUUR_OP_SLOT_STATUSSEN = ['Verstuurd naar drukker', 'Te factureren', 'Betaald en afgerond'];
+  const regelstructuurBewerkbaar =
+    !!bestelling && bestelling.status !== 'Afgewezen' && !REGELSTRUCTUUR_OP_SLOT_STATUSSEN.includes(bestelling.status);
 
   async function handleGoedkeuren() {
     if (!bestelling) return;
@@ -253,7 +281,58 @@ export function BestellingModal({
     cancelEditRegel();
   }
 
-  const heeftConceptWijziging = Object.keys(conceptUpdates).length > 0;
+  function markeerVoorVerwijdering(lineId: string) {
+    setConceptDeletions((current) => new Set(current).add(lineId));
+  }
+
+  function maakVerwijderingOngedaan(lineId: string) {
+    setConceptDeletions((current) => {
+      const next = new Set(current);
+      next.delete(lineId);
+      return next;
+    });
+  }
+
+  function handleNieuweRegelToevoegen() {
+    const kunstwerk = (kunstwerken ?? []).find((k) => k.id === nieuweRegelDraft.kunstwerkId);
+    const quantity = Number(nieuweRegelDraft.quantity);
+    if (!kunstwerk || !nieuweRegelDraft.materiaalId || !quantity || quantity <= 0) return;
+    const isEigenMaat = kunstwerk.maatIds.length === 0;
+    if (isEigenMaat) {
+      const breedte = Number(nieuweRegelDraft.breedte);
+      const hoogte = Number(nieuweRegelDraft.hoogte);
+      if (!breedte || breedte <= 0 || !hoogte || hoogte <= 0) return;
+      setConceptAdditions((current) => [
+        ...current,
+        {
+          tempId: `nieuw-${current.length}-${Date.now()}`,
+          kunstwerkId: kunstwerk.id,
+          materiaalId: nieuweRegelDraft.materiaalId,
+          maatId: '',
+          breedte,
+          hoogte,
+          quantity,
+        },
+      ]);
+    } else {
+      if (!nieuweRegelDraft.maatId) return;
+      setConceptAdditions((current) => [
+        ...current,
+        {
+          tempId: `nieuw-${current.length}-${Date.now()}`,
+          kunstwerkId: kunstwerk.id,
+          materiaalId: nieuweRegelDraft.materiaalId,
+          maatId: nieuweRegelDraft.maatId,
+          quantity,
+        },
+      ]);
+    }
+    setNieuweRegelDraft({ kunstwerkId: '', materiaalId: '', maatId: '', breedte: '', hoogte: '', quantity: '1' });
+    setToonNieuweRegel(false);
+  }
+
+  const heeftConceptWijziging =
+    Object.keys(conceptUpdates).length > 0 || conceptDeletions.size > 0 || conceptAdditions.length > 0;
 
   async function handleWijzigingenOpslaan() {
     if (!bestelling) return;
@@ -261,16 +340,20 @@ export function BestellingModal({
     setError(null);
     try {
       const updates = Object.entries(conceptUpdates).map(([id, patch]) => ({ id, ...patch }));
+      const additions = conceptAdditions.map(({ tempId: _tempId, ...addition }) => addition);
+      const deletions = Array.from(conceptDeletions);
       const response = await fetch(`/api/bestelheaders/${bestelling.id}/wijzigen`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ korting: bestelling.korting, updates, additions: [], deletions: [] }),
+        body: JSON.stringify({ korting: bestelling.korting, updates, additions, deletions }),
       });
       if (!response.ok) throw new Error('wijzigen failed');
       const body = (await response.json()) as { lines: BestellingLine[]; korting: number | null };
       void logActiviteit('bestelling_gewijzigd', bestelling.bestelnr);
       onBestellingGewijzigd({ ...bestelling, lines: body.lines, korting: body.korting });
       setConceptUpdates({});
+      setConceptDeletions(new Set());
+      setConceptAdditions([]);
     } catch {
       setError(t('bestellingenActionError'));
     } finally {
@@ -460,7 +543,9 @@ export function BestellingModal({
                   <li
                     key={line.id}
                     data-testid={`bestelling-modal-line-${line.id}`}
-                    className="flex gap-3 rounded-md border border-white/10 bg-white/[0.02] p-3"
+                    className={`flex gap-3 rounded-md border border-white/10 bg-white/[0.02] p-3 ${
+                      conceptDeletions.has(line.id) ? 'opacity-40 line-through' : ''
+                    }`}
                   >
                     {kunstwerk ? (
                       <ProductImage src={kunstwerk.foto} alt="" className="h-[72px] w-[72px] shrink-0 rounded-md" />
@@ -539,6 +624,26 @@ export function BestellingModal({
                               {t('bewerken')}
                             </button>
                           )}
+                          {regelstructuurBewerkbaar &&
+                            (conceptDeletions.has(line.id) ? (
+                              <button
+                                type="button"
+                                onClick={() => maakVerwijderingOngedaan(line.id)}
+                                data-testid={`bestelling-modal-regel-verwijderen-ongedaan-${line.id}`}
+                                className="mt-1.5 text-[0.65rem] uppercase tracking-wide text-white/40 underline underline-offset-2 hover:text-white/70"
+                              >
+                                {t('bestellingenRegelVerwijderenOngedaanMaken')}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => markeerVoorVerwijdering(line.id)}
+                                data-testid={`bestelling-modal-regel-verwijderen-${line.id}`}
+                                className="mt-1.5 text-[0.65rem] uppercase tracking-wide text-white/40 underline underline-offset-2 hover:text-white/70"
+                              >
+                                {t('bestellingenRegelVerwijderen')}
+                              </button>
+                            ))}
                         </>
                       ) : (
                         <div className="mt-1.5 flex flex-col gap-2">
@@ -656,6 +761,148 @@ export function BestellingModal({
                 );
               })}
             </ul>
+
+            {regelstructuurBewerkbaar && (
+              <div className="flex flex-col gap-2">
+                {conceptAdditions.map((addition) => {
+                  const kunstwerk = (kunstwerken ?? []).find((k) => k.id === addition.kunstwerkId);
+                  return (
+                    <p key={addition.tempId} className="text-xs text-white/60">
+                      {kunstwerk?.omschrijvingNl ?? addition.kunstwerkId} × {addition.quantity} —{' '}
+                      {t('bestellingenRegelPrijsNaOpslaan')}
+                    </p>
+                  );
+                })}
+                {toonNieuweRegel ? (
+                  <div className="flex flex-col gap-2 rounded-md border border-white/10 bg-white/[0.02] p-3">
+                    <select
+                      value={nieuweRegelDraft.kunstwerkId}
+                      onChange={(event) =>
+                        setNieuweRegelDraft((current) => ({
+                          ...current,
+                          kunstwerkId: event.target.value,
+                          materiaalId: '',
+                          maatId: '',
+                        }))
+                      }
+                      data-testid="bestelling-modal-nieuwe-regel-kunstwerk"
+                      className="rounded-sm bg-black/40 px-2 py-1.5 text-xs text-white"
+                    >
+                      <option value="">—</option>
+                      {(kunstwerken ?? []).map((k) => (
+                        <option key={k.id} value={k.id}>
+                          {k.omschrijvingNl}
+                        </option>
+                      ))}
+                    </select>
+                    {(() => {
+                      const gekozenKunstwerk = (kunstwerken ?? []).find((k) => k.id === nieuweRegelDraft.kunstwerkId);
+                      if (!gekozenKunstwerk) return null;
+                      const beschikbareMaterialen = (materialen ?? []).filter((m) =>
+                        gekozenKunstwerk.materiaalIds.includes(m.id)
+                      );
+                      const beschikbareMaten = (maten ?? []).filter((m) => gekozenKunstwerk.maatIds.includes(m.id));
+                      return (
+                        <>
+                          <select
+                            value={nieuweRegelDraft.materiaalId}
+                            onChange={(event) =>
+                              setNieuweRegelDraft((current) => ({ ...current, materiaalId: event.target.value }))
+                            }
+                            data-testid="bestelling-modal-nieuwe-regel-materiaal"
+                            className="rounded-sm bg-black/40 px-2 py-1.5 text-xs text-white"
+                          >
+                            <option value="">—</option>
+                            {beschikbareMaterialen.map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {m.materiaaldikte}mm {materiaalsoortNaamById.get(m.materiaalsoortId) ?? m.materiaalsoortId}
+                              </option>
+                            ))}
+                          </select>
+                          {gekozenKunstwerk.maatIds.length === 0 ? (
+                            <div className="flex gap-2">
+                              <input
+                                type="number"
+                                placeholder={t('bestellingenModalLabelMaat')}
+                                value={nieuweRegelDraft.breedte}
+                                onChange={(event) =>
+                                  setNieuweRegelDraft((current) => ({ ...current, breedte: event.target.value }))
+                                }
+                                data-testid="bestelling-modal-nieuwe-regel-breedte"
+                                className="w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
+                              />
+                              <input
+                                type="number"
+                                value={nieuweRegelDraft.hoogte}
+                                onChange={(event) =>
+                                  setNieuweRegelDraft((current) => ({ ...current, hoogte: event.target.value }))
+                                }
+                                data-testid="bestelling-modal-nieuwe-regel-hoogte"
+                                className="w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
+                              />
+                            </div>
+                          ) : (
+                            <select
+                              value={nieuweRegelDraft.maatId}
+                              onChange={(event) =>
+                                setNieuweRegelDraft((current) => ({ ...current, maatId: event.target.value }))
+                              }
+                              data-testid="bestelling-modal-nieuwe-regel-maat"
+                              className="rounded-sm bg-black/40 px-2 py-1.5 text-xs text-white"
+                            >
+                              <option value="">—</option>
+                              {beschikbareMaten.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                  {m.breedte}×{m.hoogte} cm
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </>
+                      );
+                    })()}
+                    <input
+                      type="number"
+                      min={1}
+                      placeholder={t('bestellingenModalLabelAantal')}
+                      value={nieuweRegelDraft.quantity}
+                      onChange={(event) =>
+                        setNieuweRegelDraft((current) => ({ ...current, quantity: event.target.value }))
+                      }
+                      data-testid="bestelling-modal-nieuwe-regel-aantal"
+                      className="w-16 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleNieuweRegelToevoegen}
+                        data-testid="bestelling-modal-nieuwe-regel-toevoegen-bevestigen"
+                        className="btn-beheer-primary rounded-sm bg-silver px-3 py-1.5 text-xs tracking-wide text-ink"
+                      >
+                        {t('bestellingenModalRegelOpslaan')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setToonNieuweRegel(false)}
+                        data-testid="bestelling-modal-nieuwe-regel-annuleren"
+                        className="btn-beheer-secondary rounded-sm border border-white/20 px-3 py-1.5 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                      >
+                        {t('annuleren')}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setToonNieuweRegel(true)}
+                    data-testid="bestelling-modal-regel-toevoegen"
+                    className="self-start text-[0.65rem] uppercase tracking-wide text-white/40 underline underline-offset-2 hover:text-white/70"
+                  >
+                    {t('bestellingenRegelToevoegen')}
+                  </button>
+                )}
+              </div>
+            )}
 
             <div className="flex flex-col gap-1 border-t border-white/10 pt-3 text-xs">
               <span className="text-[0.65rem] uppercase tracking-wide text-white/40">{t('bestellingenHistorieTitel')}</span>
