@@ -186,8 +186,8 @@ CREATE TABLE drukkerZendingBestellingen (
 
 CREATE TABLE kunstwerken (
   id CHAR(36) PRIMARY KEY,
-  foto VARCHAR(500),
   code VARCHAR(255) NOT NULL DEFAULT '',
+  foto VARCHAR(500),
   kunstenaarnr VARCHAR(20),
   formaat VARCHAR(20),
   omschrijvingNl TEXT,
