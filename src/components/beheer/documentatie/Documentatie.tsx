@@ -6,6 +6,7 @@ import { BestelprocesChapter } from './chapters/BestelprocesChapter';
 import { KunstwerkenChapter } from './chapters/KunstwerkenChapter';
 import { KunstenaarsChapter } from './chapters/KunstenaarsChapter';
 import { PrijsmatrixChapter } from './chapters/PrijsmatrixChapter';
+import { StamgegevensChapter } from './chapters/StamgegevensChapter';
 
 export function Documentatie() {
   return (
@@ -25,6 +26,7 @@ export function Documentatie() {
           <KunstwerkenChapter />
           <KunstenaarsChapter />
           <PrijsmatrixChapter />
+          <StamgegevensChapter />
         </div>
       </div>
     </main>
