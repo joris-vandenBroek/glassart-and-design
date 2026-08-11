@@ -1,4 +1,3 @@
-// src/components/beheer/documentatie/chapters/PrijsmatrixChapter.tsx
 import { Chapter, P, UL, DocLink } from '../DocumentatieBlocks';
 
 export function PrijsmatrixChapter() {

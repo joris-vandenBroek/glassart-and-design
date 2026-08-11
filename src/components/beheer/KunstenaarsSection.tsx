@@ -386,7 +386,7 @@ export function KunstenaarsSection({
         closeLabel={t('modalClose')}
         wide
         title={
-          <span className="flex w-full items-center justify-between gap-2">
+          <span className="flex w-full items-center justify-between gap-2 pr-2">
             {t('kunstenaarsModalTitel')}
             <HelpLink
               anchor="kunstenaars-exclusiviteit"

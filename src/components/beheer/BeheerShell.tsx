@@ -309,7 +309,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
           activiteitCount={activiteitCount}
         />
       </GlassPanel>
-      <GlassPanel className="relative w-full !max-w-none">
+      <GlassPanel className="w-full !max-w-none">
         <HelpLink
           anchor={SECTION_ANCHORS[activeSection]}
           label="Open het hoofdstuk over dit onderdeel in de gebruikershandleiding"

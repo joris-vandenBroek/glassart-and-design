@@ -31,10 +31,11 @@ describe('DocumentatieGate', () => {
     expect(screen.queryByTestId('documentatie-unauthorized')).not.toBeInTheDocument();
   });
 
-  it('shows an unauthorized message when not logged in', () => {
+  it('shows the login form when hydrated with no user', () => {
     mockAuthState = { user: null, isAdmin: false, isHydrated: true };
     renderGate();
-    expect(screen.getByTestId('documentatie-unauthorized')).toBeInTheDocument();
+    expect(screen.getByTestId('beheer-login-email')).toBeInTheDocument();
+    expect(screen.queryByTestId('documentatie-unauthorized')).not.toBeInTheDocument();
   });
 
   it('signs out and shows unauthorized when logged in without staff rights', async () => {

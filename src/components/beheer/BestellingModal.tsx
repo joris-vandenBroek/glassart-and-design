@@ -422,7 +422,7 @@ export function BestellingModal({
       onClose={onClose}
       closeLabel={t('modalClose')}
       title={
-        <span className="flex w-full items-center justify-between gap-2">
+        <span className="flex w-full items-center justify-between gap-2 pr-2">
           {t('bestellingenModalTitel')}
           <HelpLink
             anchor="bestelproces-bewerken"

@@ -1,4 +1,3 @@
-// src/components/beheer/documentatie/chapters/StamgegevensChapter.tsx
 import { Chapter, SubSection, P, DocLink } from '../DocumentatieBlocks';
 
 export function StamgegevensChapter() {

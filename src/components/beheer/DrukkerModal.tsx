@@ -166,7 +166,7 @@ export function DrukkerModal({
       onClose={onClose}
       closeLabel={t('modalClose')}
       title={
-        <span className="flex w-full items-center justify-between gap-2">
+        <span className="flex w-full items-center justify-between gap-2 pr-2">
           {t('drukkersModalTitel')}
           <HelpLink anchor="drukkers-standaard" label="Open het hoofdstuk over drukkers" testId="drukker-modal-help" />
         </span>

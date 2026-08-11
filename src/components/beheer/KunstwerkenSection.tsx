@@ -664,7 +664,7 @@ export function KunstwerkenSection({
         onClose={closeModal}
         closeLabel={t('modalClose')}
         title={
-          <span className="flex w-full items-center justify-between gap-2">
+          <span className="flex w-full items-center justify-between gap-2 pr-2">
             {t('kunstwerkenModalTitel')}
             <HelpLink anchor="kunstwerken-code" label="Open het hoofdstuk over kunstwerken" testId="kunstwerk-modal-help" />
           </span>

@@ -1,4 +1,3 @@
-// src/components/beheer/documentatie/chapters/KunstwerkenChapter.tsx
 import { Chapter, SubSection, P } from '../DocumentatieBlocks';
 
 export function KunstwerkenChapter() {

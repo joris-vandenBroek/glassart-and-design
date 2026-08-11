@@ -1,4 +1,3 @@
-// src/components/beheer/documentatie/chapters/InstellingenChapter.tsx
 import { Chapter, P } from '../DocumentatieBlocks';
 
 export function InstellingenChapter() {
