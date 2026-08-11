@@ -531,6 +531,7 @@
     "bestellingenModalTitel": "Bestelgegevens",
     "bestellingenHelp": "Zo doorloopt een bestelling de stappen:\n1. Te beoordelen: keur de bestelling goed of af, en stel eventueel ontbrekende prijzen vast.\n2. Te versturen naar drukker: vink een of meer bestellingen aan en klik op Versturen naar drukker — kies een drukker en bekijk de mail voordat je 'm verstuurt.\n3. Verstuurd naar drukker: zodra het drukwerk binnen is, vink aan en klik op Afronden. Zaten er nog andere bestellingen in dezelfde verzending naar de drukker die nog niet zijn afgerond? Dan vraagt het systeem of je die meteen meeneemt.\n4. Te factureren: vink aan en klik op Betaald en afgerond melden zodra de factuur verstuurd en betaald is.\n5. Een verstuurde mail naar de drukker terugvinden? Open de drukker zelf (scherm \"Drukkers\") — daar staat een overzicht van alle verstuurde mails.",
     "bestellingenRegelOnbekend": "Onbekend",
+    "bestellingenModalLabelCode": "Code",
     "bestellingenModalLabelMateriaal": "Materiaal",
     "bestellingenModalLabelMaat": "Maat",
     "bestellingenModalLabelPrijs": "Prijs",

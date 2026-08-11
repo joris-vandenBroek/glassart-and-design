@@ -462,6 +462,8 @@ export function BestellingModal({
                         <>
                           {kunstwerk && (
                             <div className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-white/60">
+                              <span className="text-white/35">{t('bestellingenModalLabelCode')}</span>
+                              <span>{kunstwerk.code}</span>
                               <span className="text-white/35">{t('bestellingenModalLabelMateriaal')}</span>
                               <span>
                                 {materiaal
