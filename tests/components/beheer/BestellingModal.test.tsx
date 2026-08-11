@@ -505,6 +505,7 @@ describe('BestellingModal — regel bewerken', () => {
     expect(await screen.findByTestId('bestelling-modal-error')).toBeInTheDocument();
     expect(onBestellingGewijzigd).not.toHaveBeenCalled();
     expect(screen.getByTestId('bestelling-modal-wijzigingen-opslaan')).toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-mail-vraag')).not.toBeInTheDocument();
   });
 });
 
@@ -985,5 +986,81 @@ describe('BestellingModal — wijzigingsmail', () => {
 
     expect(screen.queryByTestId('bestelling-modal-mail-vraag')).not.toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalledWith('/api/mail', expect.anything());
+  });
+});
+
+describe('BestellingModal — korting bewerken', () => {
+  it('drafts a korting via the korting input and sends it as korting on Wijzigingen opslaan', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    const { onBestellingGewijzigd } = renderModal(BESTELLING);
+    fireEvent.change(screen.getByTestId('bestelling-modal-korting-input'), { target: { value: '30' } });
+    expect(screen.getByTestId('bestelling-modal-wijzigingen-opslaan')).toBeInTheDocument();
+
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ lines: BESTELLING.lines, korting: 30 }) });
+    fireEvent.click(screen.getByTestId('bestelling-modal-wijzigingen-opslaan'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-1/wijzigen',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ korting: 30, updates: [], additions: [], deletions: [] }),
+        })
+      )
+    );
+    await waitFor(() =>
+      expect(onBestellingGewijzigd).toHaveBeenCalledWith({ ...BESTELLING, lines: BESTELLING.lines, korting: 30 })
+    );
+  });
+
+  it('sends korting: null when a previously set korting is cleared and saved', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal({ ...BESTELLING, korting: 50 });
+    fireEvent.change(screen.getByTestId('bestelling-modal-korting-input'), { target: { value: '' } });
+    expect(screen.getByTestId('bestelling-modal-wijzigingen-opslaan')).toBeInTheDocument();
+
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ lines: BESTELLING.lines, korting: null }) });
+    fireEvent.click(screen.getByTestId('bestelling-modal-wijzigingen-opslaan'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-1/wijzigen',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ korting: null, updates: [], additions: [], deletions: [] }),
+        })
+      )
+    );
+  });
+
+  it('hides the korting input when the bestelling is Afgewezen', () => {
+    renderModal({ ...BESTELLING, status: 'Afgewezen' });
+    expect(screen.queryByTestId('bestelling-modal-korting-input')).not.toBeInTheDocument();
+  });
+
+  it('keeps the korting input present and editable at Betaald en afgerond', () => {
+    renderModal(BESTELLING_BETAALD_EN_AFGEROND);
+    const input = screen.getByTestId('bestelling-modal-korting-input');
+    expect(input).toBeInTheDocument();
+    expect(input).not.toBeDisabled();
+  });
+});
+
+describe('BestellingModal — live totalen bij concept-wijzigingen', () => {
+  it('updates the header total live when a line price is drafted, before Wijzigingen opslaan', () => {
+    renderModal(BESTELLING);
+    expect(screen.getByTestId('bestelling-modal-total')).toHaveTextContent('€ 450,00');
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-1'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-regel-prijs-line-1'), { target: { value: '200' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-opslaan-line-1'));
+    // line-1: 200 × 3 = 600, line-2: 0 × 2 = 0 -> total 600
+    expect(screen.getByTestId('bestelling-modal-total')).toHaveTextContent('€ 600,00');
+  });
+
+  it('updates the header total live when a korting value is drafted, before Wijzigingen opslaan', () => {
+    renderModal(BESTELLING);
+    fireEvent.change(screen.getByTestId('bestelling-modal-korting-input'), { target: { value: '50' } });
+    // line-1: 450, korting 50 -> 400
+    expect(screen.getByTestId('bestelling-modal-total')).toHaveTextContent('€ 400,00');
   });
 });

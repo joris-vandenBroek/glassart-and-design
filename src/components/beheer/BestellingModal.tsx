@@ -108,6 +108,7 @@ export function BestellingModal({
   const [conceptAdditions, setConceptAdditions] = useState<ConceptAddition[]>([]);
   const [toonNieuweRegel, setToonNieuweRegel] = useState(false);
   const [toonMailVraag, setToonMailVraag] = useState(false);
+  const [conceptKorting, setConceptKorting] = useState<string>('');
   const [nieuweRegelDraft, setNieuweRegelDraft] = useState({
     kunstwerkId: '',
     materiaalId: '',
@@ -132,6 +133,8 @@ export function BestellingModal({
       setConceptAdditions([]);
       setToonNieuweRegel(false);
       setToonMailVraag(false);
+      setConceptKorting(bestelling.korting != null ? String(bestelling.korting) : '');
+      setNieuweRegelDraft({ kunstwerkId: '', materiaalId: '', maatId: '', breedte: '', hoogte: '', quantity: '1' });
       bevestigingAfwijzen.annuleer();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -144,8 +147,19 @@ export function BestellingModal({
   const klant = bestelling ? (klanten ?? []).find((k) => k.klantnr === bestelling.klantnr) : undefined;
   const land = klant ? klant.invoiceLand || klant.land || null : null;
   const klantBtwPercentage = btwTarieven ? resolveBtwPercentage(btwTarieven.tarieven, land) : null;
+  const conceptKortingValue = conceptKorting.trim() === '' ? null : Number(conceptKorting);
+  const kortingGewijzigd = !!bestelling && conceptKortingValue !== (bestelling.korting ?? null);
+  // Overlaat van bestelling.lines met de conceptwijzigingen (updates/deletions) erin verwerkt,
+  // zodat totalen/heeftOngeprijsdeRegel/Goedkeuren live meebewegen met wat de medewerker nog
+  // aan het bewerken is, in plaats van pas na Wijzigingen opslaan. conceptAdditions blijft hier
+  // bewust buiten: hun prijs is pas na opslaan bekend (zie "prijs bekend na opslaan" verderop).
+  const weergaveLines = bestelling
+    ? bestelling.lines
+        .filter((line) => !conceptDeletions.has(line.id))
+        .map((line) => (conceptUpdates[line.id] ? { ...line, ...conceptUpdates[line.id] } : line))
+    : [];
   const totalen = bestelling
-    ? berekenBestellingTotalen(bestelling.lines, bestelling.korting, klantBtwPercentage)
+    ? berekenBestellingTotalen(weergaveLines, conceptKortingValue, klantBtwPercentage)
     : null;
   const heeftOngeprijsdeRegel = totalen?.heeftOngeprijsdeRegel ?? false;
   const totaalWeergave =
@@ -334,7 +348,10 @@ export function BestellingModal({
   }
 
   const heeftConceptWijziging =
-    Object.keys(conceptUpdates).length > 0 || conceptDeletions.size > 0 || conceptAdditions.length > 0;
+    Object.keys(conceptUpdates).length > 0 ||
+    conceptDeletions.size > 0 ||
+    conceptAdditions.length > 0 ||
+    kortingGewijzigd;
 
   async function handleWijzigingenOpslaan() {
     if (!bestelling) return;
@@ -347,7 +364,7 @@ export function BestellingModal({
       const response = await fetch(`/api/bestelheaders/${bestelling.id}/wijzigen`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ korting: bestelling.korting, updates, additions, deletions }),
+        body: JSON.stringify({ korting: conceptKortingValue, updates, additions, deletions }),
       });
       if (!response.ok) throw new Error('wijzigen failed');
       const body = (await response.json()) as { lines: BestellingLine[]; korting: number | null };
@@ -356,6 +373,7 @@ export function BestellingModal({
       setConceptUpdates({});
       setConceptDeletions(new Set());
       setConceptAdditions([]);
+      setConceptKorting(body.korting != null ? String(body.korting) : '');
       setToonMailVraag(true);
     } catch {
       setError(t('bestellingenActionError'));
@@ -428,6 +446,21 @@ export function BestellingModal({
                     <span className="text-right text-sm text-white/80 tabular-nums">
                       -{formatCurrency(totalen.korting)}
                     </span>
+                  </div>
+                )}
+                {bestelling.status !== 'Afgewezen' && (
+                  <div className="contents">
+                    <span className="text-[0.65rem] uppercase tracking-wide text-white/40">
+                      {t('bestellingenModalKortingLabel')}
+                    </span>
+                    <input
+                      type="number"
+                      data-testid="bestelling-modal-korting-input"
+                      value={conceptKorting}
+                      onChange={(event) => setConceptKorting(event.target.value)}
+                      placeholder={t('bestellingenModalKortingLabel')}
+                      className="w-20 justify-self-end rounded-sm bg-black/40 px-2 py-1 text-right text-xs text-white"
+                    />
                   </div>
                 )}
                 {btwBedrag !== null && (
