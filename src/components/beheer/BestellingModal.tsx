@@ -137,6 +137,7 @@ export function BestellingModal({
   const [nieuweRegelPrijsvoorbeeld, setNieuweRegelPrijsvoorbeeld] = useState<
     { status: 'laden' } | { status: 'vast'; prijs: number } | { status: 'op-aanvraag' } | { status: 'onbekend' } | null
   >(null);
+  const [nieuweRegelError, setNieuweRegelError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const { user } = useAdminAuth();
   const { historie } = useBestellingHistorie(bestelling?.id ?? null);
@@ -156,6 +157,7 @@ export function BestellingModal({
       setConceptKorting(bestelling.korting != null ? String(bestelling.korting) : '');
       setNieuweRegelDraft({ kunstwerkId: '', materiaalId: '', maatId: '', breedte: '', hoogte: '', quantity: '1' });
       setNieuweRegelPrijsvoorbeeld(null);
+      setNieuweRegelError(null);
       bevestigingAfwijzen.annuleer();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -391,15 +393,34 @@ export function BestellingModal({
     });
   }
 
+  // Zet altijd óf een concept-toevoeging óf een concrete foutmelding -- nooit stilzwijgend
+  // niets doen. Een uitgeschakelde knop zonder uitleg liet een medewerker eerder denken dat
+  // een regel was toegevoegd terwijl dat niet zo was (die zag pas bij "Wijzigingen opslaan"
+  // dat de regel er niet bij stond, zonder te weten waarom).
   function handleNieuweRegelToevoegen() {
     const kunstwerk = (kunstwerken ?? []).find((k) => k.id === nieuweRegelDraft.kunstwerkId);
-    const quantity = Number(nieuweRegelDraft.quantity);
-    if (!kunstwerk || !nieuweRegelDraft.materiaalId || !Number.isInteger(quantity) || quantity <= 0) return;
+    if (!kunstwerk) {
+      setNieuweRegelError(t('bestellingenRegelToevoegenFoutKunstwerk'));
+      return;
+    }
+    if (!nieuweRegelDraft.materiaalId) {
+      setNieuweRegelError(t('bestellingenRegelToevoegenFoutMateriaal'));
+      return;
+    }
     const isEigenMaat = kunstwerk.maatIds.length === 0;
+    const quantity = Number(nieuweRegelDraft.quantity);
     if (isEigenMaat) {
       const breedte = Number(nieuweRegelDraft.breedte);
       const hoogte = Number(nieuweRegelDraft.hoogte);
-      if (!breedte || breedte <= 0 || !hoogte || hoogte <= 0) return;
+      if (!breedte || breedte <= 0 || !hoogte || hoogte <= 0) {
+        setNieuweRegelError(t('bestellingenRegelToevoegenFoutAfmeting'));
+        return;
+      }
+      if (!Number.isInteger(quantity) || quantity <= 0) {
+        setNieuweRegelError(t('bestellingenRegelToevoegenFoutAantal'));
+        return;
+      }
+      setNieuweRegelError(null);
       setConceptAdditions((current) => [
         ...current,
         {
@@ -413,7 +434,15 @@ export function BestellingModal({
         },
       ]);
     } else {
-      if (!nieuweRegelDraft.maatId) return;
+      if (!nieuweRegelDraft.maatId) {
+        setNieuweRegelError(t('bestellingenRegelToevoegenFoutMaat'));
+        return;
+      }
+      if (!Number.isInteger(quantity) || quantity <= 0) {
+        setNieuweRegelError(t('bestellingenRegelToevoegenFoutAantal'));
+        return;
+      }
+      setNieuweRegelError(null);
       setConceptAdditions((current) => [
         ...current,
         {
@@ -430,16 +459,7 @@ export function BestellingModal({
     setToonNieuweRegel(false);
   }
 
-  const nieuweRegelKunstwerk = (kunstwerken ?? []).find((k) => k.id === nieuweRegelDraft.kunstwerkId);
   const nieuweRegelAantal = Number(nieuweRegelDraft.quantity);
-  const nieuweRegelVolledig =
-    !!nieuweRegelKunstwerk &&
-    !!nieuweRegelDraft.materiaalId &&
-    (nieuweRegelKunstwerk.maatIds.length === 0
-      ? Number(nieuweRegelDraft.breedte) > 0 && Number(nieuweRegelDraft.hoogte) > 0
-      : !!nieuweRegelDraft.maatId) &&
-    Number.isInteger(nieuweRegelAantal) &&
-    nieuweRegelAantal > 0;
 
   const heeftConceptWijziging =
     Object.keys(conceptUpdates).length > 0 ||
@@ -1110,19 +1130,26 @@ export function BestellingModal({
                             : t('bestellingenModalPrijsOpAanvraag')}
                       </p>
                     )}
+                    {nieuweRegelError && (
+                      <p data-testid="bestelling-modal-nieuwe-regel-fout" className="text-xs text-red-400">
+                        {nieuweRegelError}
+                      </p>
+                    )}
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={handleNieuweRegelToevoegen}
-                        disabled={!nieuweRegelVolledig}
                         data-testid="bestelling-modal-nieuwe-regel-toevoegen-bevestigen"
-                        className="btn-beheer-primary rounded-sm bg-silver px-3 py-1.5 text-xs tracking-wide text-ink disabled:opacity-40"
+                        className="btn-beheer-primary rounded-sm bg-silver px-3 py-1.5 text-xs tracking-wide text-ink"
                       >
                         {t('bestellingenModalRegelOpslaan')}
                       </button>
                       <button
                         type="button"
-                        onClick={() => setToonNieuweRegel(false)}
+                        onClick={() => {
+                          setToonNieuweRegel(false);
+                          setNieuweRegelError(null);
+                        }}
                         data-testid="bestelling-modal-nieuwe-regel-annuleren"
                         className="btn-beheer-secondary rounded-sm border border-white/20 px-3 py-1.5 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
                       >
