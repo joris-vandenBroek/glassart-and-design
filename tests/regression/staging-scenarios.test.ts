@@ -40,7 +40,7 @@ vi.mock('@/lib/server/sendResetEmail', () => ({ sendResetEmail: vi.fn().mockReso
 
 import { POST as createHeader } from '@/app/api/bestelheaders/route';
 import { PATCH as patchHeader } from '@/app/api/bestelheaders/[id]/route';
-import { PATCH as patchLine } from '@/app/api/bestelheaders/[id]/bestellines/[lineId]/route';
+import { PATCH as patchWijzigen } from '@/app/api/bestelheaders/[id]/wijzigen/route';
 import { PATCH as patchKlant, DELETE as deleteKlant } from '@/app/api/klanten/[id]/route';
 import { PATCH as patchKunstenaar } from '@/app/api/kunstenaars/[id]/route';
 import { PUT as putKunstenaarAfspraken } from '@/app/api/kunstenaarAfspraken/[id]/route';
@@ -705,8 +705,8 @@ describe('Bestelling-levenscyclus -- plaatsen tot verstuurd naar drukker', () =>
       // (BestellingModal.tsx) -- de API zelf handhaaft dat niet, dus dat is hier bewust
       // geen server-side assertie. Zie de opmerking bij Deel C2/CLAUDE.md over vergelijkbare
       // client-only regels (minimaleAfname).
-      const prijsVaststellen = await patchLine(req('PATCH', { prijs: 245 }, staff), {
-        params: { id: header.id, lineId: line.id },
+      const prijsVaststellen = await patchWijzigen(req('PATCH', { updates: [{ id: line.id, prijs: 245 }] }, staff), {
+        params: { id: header.id },
       });
       expect(prijsVaststellen.status).toBe(200);
       stap('Medewerker stelt de prijs vast op EUR 245');
