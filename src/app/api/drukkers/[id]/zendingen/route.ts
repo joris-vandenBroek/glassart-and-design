@@ -59,7 +59,11 @@ export const POST = withMedewerker<Context>(
     const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
-      const insertData = { drukkernr: drukker.drukkernr, ...data };
+      // drukkernr komt uit de URL, niet uit de body: een client kan zo geen zending onder
+      // een andere drukker hangen. data mag een eigen drukkernr bevatten (de client stuurt
+      // die niet, maar niets garandeert dat) -- die wordt hier altijd overschreven doordat
+      // insertData's eigen drukkernr-key ná de spread komt.
+      const insertData = { ...data, drukkernr: drukker.drukkernr };
       const created = await insertRow<{ id: string; zendingnummer: string }>(
         'drukkerZendingen',
         insertData,
