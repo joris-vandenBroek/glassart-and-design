@@ -8,6 +8,7 @@ import { KunstenaarsChapter } from './chapters/KunstenaarsChapter';
 import { PrijsmatrixChapter } from './chapters/PrijsmatrixChapter';
 import { StamgegevensChapter } from './chapters/StamgegevensChapter';
 import { DrukkersChapter } from './chapters/DrukkersChapter';
+import { GlassartDesignChapter } from './chapters/GlassartDesignChapter';
 
 export function Documentatie() {
   return (
@@ -29,6 +30,7 @@ export function Documentatie() {
           <PrijsmatrixChapter />
           <StamgegevensChapter />
           <DrukkersChapter />
+          <GlassartDesignChapter />
         </div>
       </div>
     </main>
