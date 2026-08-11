@@ -205,6 +205,51 @@ CREATE TABLE kunstwerken (
   FOREIGN KEY (kunstenaarnr) REFERENCES kunstenaars(kunstenaarnr)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE kunstwerkSegmenten (
+  kunstwerkId CHAR(36) NOT NULL,
+  segmentId CHAR(36) NOT NULL,
+  volgorde INT NOT NULL,
+  PRIMARY KEY (kunstwerkId, segmentId),
+  FOREIGN KEY (kunstwerkId) REFERENCES kunstwerken(id) ON DELETE CASCADE,
+  FOREIGN KEY (segmentId) REFERENCES segmenten(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE kunstwerkMaterialen (
+  kunstwerkId CHAR(36) NOT NULL,
+  materiaalId CHAR(36) NOT NULL,
+  volgorde INT NOT NULL,
+  PRIMARY KEY (kunstwerkId, materiaalId),
+  FOREIGN KEY (kunstwerkId) REFERENCES kunstwerken(id) ON DELETE CASCADE,
+  FOREIGN KEY (materiaalId) REFERENCES materialen(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE kunstwerkMaten (
+  kunstwerkId CHAR(36) NOT NULL,
+  maatId CHAR(36) NOT NULL,
+  volgorde INT NOT NULL,
+  PRIMARY KEY (kunstwerkId, maatId),
+  FOREIGN KEY (kunstwerkId) REFERENCES kunstwerken(id) ON DELETE CASCADE,
+  FOREIGN KEY (maatId) REFERENCES maten(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE kunstwerkStijlen (
+  kunstwerkId CHAR(36) NOT NULL,
+  stijlId CHAR(36) NOT NULL,
+  volgorde INT NOT NULL,
+  PRIMARY KEY (kunstwerkId, stijlId),
+  FOREIGN KEY (kunstwerkId) REFERENCES kunstwerken(id) ON DELETE CASCADE,
+  FOREIGN KEY (stijlId) REFERENCES stijlen(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE kunstwerkOnderwerpen (
+  kunstwerkId CHAR(36) NOT NULL,
+  onderwerpId CHAR(36) NOT NULL,
+  volgorde INT NOT NULL,
+  PRIMARY KEY (kunstwerkId, onderwerpId),
+  FOREIGN KEY (kunstwerkId) REFERENCES kunstwerken(id) ON DELETE CASCADE,
+  FOREIGN KEY (onderwerpId) REFERENCES onderwerpen(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE instellingen (
   id VARCHAR(50) PRIMARY KEY,
   data JSON NOT NULL
