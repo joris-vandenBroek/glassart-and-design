@@ -237,7 +237,7 @@ export function BestellingenSection({
 
     let genoten: ZendingGenoten[] = [];
     try {
-      const zendingen = await fetchZendingen(teAfronden.map((b) => b.id));
+      const zendingen = await fetchZendingen(teAfronden.map((b) => b.bestelnr));
       genoten = openstaandeZendingGenoten(zendingen, teAfronden, bestellingen ?? []);
     } catch {
       // De zendinggenoot-melding is informatief. Faalt de lookup, dan is de

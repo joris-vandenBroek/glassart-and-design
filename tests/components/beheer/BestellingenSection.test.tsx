@@ -830,7 +830,7 @@ describe('BestellingenSection', () => {
 
         fetchMock.mockImplementation((url: string) => {
           if (typeof url === 'string' && url.startsWith('/api/drukkerzendingen')) {
-            if (url.includes('header-2')) {
+            if (url.includes('GD-00302')) {
               return Promise.resolve({
                 ok: true,
                 json: async () => [
@@ -863,7 +863,7 @@ describe('BestellingenSection', () => {
         fireEvent.click(screen.getByTestId('bestelling-modal-afronden'));
 
         const header5ZendingCalls = fetchMock.mock.calls.filter(
-          ([url]) => typeof url === 'string' && url.startsWith('/api/drukkerzendingen') && url.includes('header-5')
+          ([url]) => typeof url === 'string' && url.startsWith('/api/drukkerzendingen') && url.includes('GD-00305')
         );
         expect(header5ZendingCalls).toHaveLength(0);
         expect(onBestellingUpdated).not.toHaveBeenCalled();
@@ -894,7 +894,7 @@ describe('BestellingenSection', () => {
 
         fetchMock.mockImplementation((url: string) => {
           if (typeof url === 'string' && url.startsWith('/api/drukkerzendingen')) {
-            if (url.includes('header-2')) {
+            if (url.includes('GD-00302')) {
               return Promise.resolve({
                 ok: true,
                 json: async () => [
@@ -908,7 +908,7 @@ describe('BestellingenSection', () => {
                 ],
               });
             }
-            if (url.includes('header-5')) {
+            if (url.includes('GD-00305')) {
               return Promise.resolve({
                 ok: true,
                 json: async () => [
@@ -943,7 +943,7 @@ describe('BestellingenSection', () => {
         // De tweede ronde mag zelfs niet aan de lookup beginnen -- startAfronden
         // hoort direct terug te keren zolang de dialoog nog op een keuze wacht.
         const header5ZendingCalls = fetchMock.mock.calls.filter(
-          ([url]) => typeof url === 'string' && url.startsWith('/api/drukkerzendingen') && url.includes('header-5')
+          ([url]) => typeof url === 'string' && url.startsWith('/api/drukkerzendingen') && url.includes('GD-00305')
         );
         expect(header5ZendingCalls).toHaveLength(0);
 
