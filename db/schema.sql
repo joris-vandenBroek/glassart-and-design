@@ -1,6 +1,7 @@
 -- db/schema.sql
 CREATE TABLE klanten (
   id CHAR(36) PRIMARY KEY,
+  klantnr VARCHAR(20),
   email VARCHAR(255) NOT NULL UNIQUE,
   wachtwoordHash VARCHAR(255) NOT NULL,
   companyName VARCHAR(255),
@@ -24,7 +25,6 @@ CREATE TABLE klanten (
   prijsgroepId CHAR(36),
   kunstenaarnr VARCHAR(20),
   minimaleAfname INT,
-  klantnr VARCHAR(20),
   createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   afwijsreden TEXT,
   UNIQUE KEY uniq_klanten_kunstenaarnr (kunstenaarnr),
@@ -232,9 +232,9 @@ CREATE TABLE bestelheaders (
   id CHAR(36) PRIMARY KEY,
   klantnr VARCHAR(20) NOT NULL,
   bestelnr VARCHAR(20) NOT NULL,
+  zendingnummer VARCHAR(20),
   besteldatum TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   status VARCHAR(50) NOT NULL DEFAULT 'Te beoordelen',
-  zendingnummer VARCHAR(20),
   afwijsreden TEXT,
   FOREIGN KEY (klantnr) REFERENCES klanten(klantnr),
   UNIQUE KEY uniek_bestelnr (bestelnr)
