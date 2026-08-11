@@ -4,6 +4,7 @@ import { KlantWebsiteChapter } from './chapters/KlantWebsiteChapter';
 import { KlantRegistratieChapter } from './chapters/KlantRegistratieChapter';
 import { BestelprocesChapter } from './chapters/BestelprocesChapter';
 import { KunstwerkenChapter } from './chapters/KunstwerkenChapter';
+import { KunstenaarsChapter } from './chapters/KunstenaarsChapter';
 
 export function Documentatie() {
   return (
@@ -21,6 +22,7 @@ export function Documentatie() {
           <KlantRegistratieChapter />
           <BestelprocesChapter />
           <KunstwerkenChapter />
+          <KunstenaarsChapter />
         </div>
       </div>
     </main>
