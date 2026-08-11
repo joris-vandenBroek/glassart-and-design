@@ -216,6 +216,13 @@ export const PATCH = withMedewerker<{ params: { id: string } }>(
       }
 
       if (body.korting !== undefined) {
+        const geldigeKorting =
+          body.korting === null ||
+          (typeof body.korting === 'number' && Number.isFinite(body.korting) && body.korting >= 0);
+        if (!geldigeKorting) {
+          await connection.rollback();
+          return NextResponse.json({ error: 'invalid-korting' }, { status: 400 });
+        }
         await updateRow('bestelheaders', params.id, { korting: body.korting }, [], connection);
       }
 

@@ -334,6 +334,25 @@ describe('PATCH /api/bestelheaders/[id]/wijzigen', () => {
     expect((rows as Array<{ korting: number | null }>)[0].korting).toBeNull();
   });
 
+  it('weigert een negatieve korting en laat de opgeslagen korting ongewijzigd', async () => {
+    const klant = await maakKlant('wijzigen-negkorting@example.com');
+    const { header } = await maakBestelling(klant.klantnr, 'Te beoordelen', [
+      { code: 'x', maatId: null, materiaalId: null, prijs: 10, quantity: 1 },
+    ]);
+    const cookie = await medewerkerCookie();
+
+    const geldigeResponse = await wijzigenBestelling(req({ korting: 15 }, cookie), { params: { id: header.id } });
+    expect(geldigeResponse.status).toBe(200);
+    expect((await geldigeResponse.json()).korting).toBe(15);
+
+    const response = await wijzigenBestelling(req({ korting: -10 }, cookie), { params: { id: header.id } });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'invalid-korting' });
+
+    const [rows] = await getPool().query('SELECT korting FROM bestelheaders WHERE id = ?', [header.id]);
+    expect((rows as Array<{ korting: number | null }>)[0].korting).toBe(15);
+  });
+
   it('weigert een update met een niet-geheel aantal', async () => {
     const klant = await maakKlant('wijzigen-nonintqty@example.com');
     const { header, lineIds } = await maakBestelling(klant.klantnr, 'Te beoordelen', [

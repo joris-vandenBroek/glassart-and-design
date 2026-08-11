@@ -1044,6 +1044,11 @@ describe('BestellingModal — korting bewerken', () => {
     expect(input).toBeInTheDocument();
     expect(input).not.toBeDisabled();
   });
+
+  it('has min="0" on the korting input to discourage negative values', () => {
+    renderModal(BESTELLING);
+    expect(screen.getByTestId('bestelling-modal-korting-input')).toHaveAttribute('min', '0');
+  });
 });
 
 describe('BestellingModal — live totalen bij concept-wijzigingen', () => {

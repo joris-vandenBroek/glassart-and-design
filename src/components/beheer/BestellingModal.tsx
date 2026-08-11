@@ -455,6 +455,7 @@ export function BestellingModal({
                     </span>
                     <input
                       type="number"
+                      min="0"
                       data-testid="bestelling-modal-korting-input"
                       value={conceptKorting}
                       onChange={(event) => setConceptKorting(event.target.value)}
