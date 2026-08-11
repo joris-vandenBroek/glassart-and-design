@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
-import { HelpHint } from '@/components/HelpHint';
 import { BestellingModal } from './BestellingModal';
 import { VersturenNaarDrukkerDialog } from './VersturenNaarDrukkerDialog';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort, Drukker } from './materiaalTypes';
@@ -372,9 +371,6 @@ export function BestellingenSection({
           )}
         </div>
       )}
-      <div className="mb-3 flex items-center justify-end">
-        <HelpHint text={t('bestellingenHelp')} testId="bestellingen-help" />
-      </div>
       {afrondFout && (
         <p data-testid="bestellingen-afronden-fout" className="mb-3 text-xs text-red-400">
           {afrondFout}

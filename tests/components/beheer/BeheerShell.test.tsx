@@ -445,4 +445,18 @@ describe('BeheerShell', () => {
     fireEvent.click(screen.getByTestId('beheer-nav-instellingen'));
     expect(await screen.findByTestId('instellingen-section')).toBeInTheDocument();
   });
+
+  it('shows a section help link that points at the anchor for the active section', () => {
+    renderShell();
+    expect(screen.getByTestId('beheer-section-help')).toHaveAttribute(
+      'href',
+      '/nl/beheer/documentatie#klant-registratie'
+    );
+
+    fireEvent.click(screen.getByTestId('beheer-nav-instellingen'));
+    expect(screen.getByTestId('beheer-section-help')).toHaveAttribute(
+      'href',
+      '/nl/beheer/documentatie#instellingen'
+    );
+  });
 });

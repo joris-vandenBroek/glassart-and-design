@@ -221,12 +221,4 @@ describe('PrijsmatrixSection', () => {
 
     expect(headerTexts).toEqual(['3mm Acryl', '5mm Acryl', '3mm Glas', '5mm Glas']);
   });
-
-  it('shows a help popover explaining how the price is calculated', () => {
-    renderSection();
-    expect(screen.queryByTestId('prijsmatrix-help-popover')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByTestId('prijsmatrix-help'));
-    expect(screen.getByTestId('prijsmatrix-help-popover')).toHaveTextContent('basisprijs');
-  });
 });
