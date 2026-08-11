@@ -921,3 +921,69 @@ describe('BestellingModal — regel verwijderen en toevoegen', () => {
     );
   });
 });
+
+describe('BestellingModal — wijzigingsmail', () => {
+  it('shows the mail-confirmation dialog after a successful Wijzigingen opslaan, and not before', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-1'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-regel-aantal-line-1'), { target: { value: '5' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-opslaan-line-1'));
+    expect(screen.queryByTestId('bestelling-modal-mail-vraag')).not.toBeInTheDocument();
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ lines: [{ ...BESTELLING.lines[0], quantity: 5 }, BESTELLING.lines[1]], korting: null }),
+    });
+    fireEvent.click(screen.getByTestId('bestelling-modal-wijzigingen-opslaan'));
+
+    expect(await screen.findByTestId('bestelling-modal-mail-vraag')).toBeInTheDocument();
+  });
+
+  it('sends the wijzigingsmail and closes the dialog when Ja is clicked', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-1'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-regel-aantal-line-1'), { target: { value: '5' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-opslaan-line-1'));
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ lines: [{ ...BESTELLING.lines[0], quantity: 5 }, BESTELLING.lines[1]], korting: null }),
+    });
+    fireEvent.click(screen.getByTestId('bestelling-modal-wijzigingen-opslaan'));
+    await screen.findByTestId('bestelling-modal-mail-vraag');
+
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true }) });
+    fireEvent.click(screen.getByTestId('bestelling-modal-mail-ja'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/mail',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ soort: 'bestelwijziging', bestelheaderId: 'header-1' }),
+        })
+      )
+    );
+    await waitFor(() => expect(screen.queryByTestId('bestelling-modal-mail-vraag')).not.toBeInTheDocument());
+  });
+
+  it('closes the dialog without sending mail when Nee is clicked', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-1'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-regel-aantal-line-1'), { target: { value: '5' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-opslaan-line-1'));
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ lines: [{ ...BESTELLING.lines[0], quantity: 5 }, BESTELLING.lines[1]], korting: null }),
+    });
+    fireEvent.click(screen.getByTestId('bestelling-modal-wijzigingen-opslaan'));
+    await screen.findByTestId('bestelling-modal-mail-vraag');
+
+    fireEvent.click(screen.getByTestId('bestelling-modal-mail-nee'));
+
+    expect(screen.queryByTestId('bestelling-modal-mail-vraag')).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/mail', expect.anything());
+  });
+});

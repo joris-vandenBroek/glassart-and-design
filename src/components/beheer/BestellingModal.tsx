@@ -107,6 +107,7 @@ export function BestellingModal({
   const [conceptDeletions, setConceptDeletions] = useState<Set<string>>(new Set());
   const [conceptAdditions, setConceptAdditions] = useState<ConceptAddition[]>([]);
   const [toonNieuweRegel, setToonNieuweRegel] = useState(false);
+  const [toonMailVraag, setToonMailVraag] = useState(false);
   const [nieuweRegelDraft, setNieuweRegelDraft] = useState({
     kunstwerkId: '',
     materiaalId: '',
@@ -130,6 +131,7 @@ export function BestellingModal({
       setConceptDeletions(new Set());
       setConceptAdditions([]);
       setToonNieuweRegel(false);
+      setToonMailVraag(false);
       bevestigingAfwijzen.annuleer();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -354,11 +356,29 @@ export function BestellingModal({
       setConceptUpdates({});
       setConceptDeletions(new Set());
       setConceptAdditions([]);
+      setToonMailVraag(true);
     } catch {
       setError(t('bestellingenActionError'));
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleMailJa() {
+    if (!bestelling) return;
+    try {
+      await fetch('/api/mail', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ soort: 'bestelwijziging', bestelheaderId: bestelling.id }),
+      });
+    } finally {
+      setToonMailVraag(false);
+    }
+  }
+
+  function handleMailNee() {
+    setToonMailVraag(false);
   }
 
   return (
@@ -939,6 +959,33 @@ export function BestellingModal({
                 >
                   {t('bestellingenWijzigingenOpslaan')}
                 </button>
+              </div>
+            )}
+
+            {toonMailVraag && (
+              <div
+                data-testid="bestelling-modal-mail-vraag"
+                className="flex items-center justify-between gap-3 rounded-md border border-white/10 bg-white/[0.02] p-3 text-xs"
+              >
+                <span>{t('bestellingenMailVraag')}</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleMailJa}
+                    data-testid="bestelling-modal-mail-ja"
+                    className="btn-beheer-primary rounded-sm bg-silver px-3 py-1.5 text-xs tracking-wide text-ink"
+                  >
+                    {t('bestellingenMailJa')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleMailNee}
+                    data-testid="bestelling-modal-mail-nee"
+                    className="btn-beheer-secondary rounded-sm border border-white/20 px-3 py-1.5 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                  >
+                    {t('bestellingenMailNee')}
+                  </button>
+                </div>
               </div>
             )}
           </div>
