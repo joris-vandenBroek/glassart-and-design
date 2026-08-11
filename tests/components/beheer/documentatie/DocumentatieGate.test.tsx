@@ -52,5 +52,6 @@ describe('DocumentatieGate', () => {
     expect(document.getElementById('klant-website')).not.toBeNull();
     expect(document.getElementById('klant-registratie-goedkeuren')).not.toBeNull();
     expect(document.getElementById('bestelproces-drukker')).not.toBeNull();
+    expect(document.getElementById('kunstwerken-code')).not.toBeNull();
   });
 });

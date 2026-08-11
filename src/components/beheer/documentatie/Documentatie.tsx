@@ -3,6 +3,7 @@ import { DocumentatieSidebar } from './DocumentatieSidebar';
 import { KlantWebsiteChapter } from './chapters/KlantWebsiteChapter';
 import { KlantRegistratieChapter } from './chapters/KlantRegistratieChapter';
 import { BestelprocesChapter } from './chapters/BestelprocesChapter';
+import { KunstwerkenChapter } from './chapters/KunstwerkenChapter';
 
 export function Documentatie() {
   return (
@@ -19,6 +20,7 @@ export function Documentatie() {
           <KlantWebsiteChapter />
           <KlantRegistratieChapter />
           <BestelprocesChapter />
+          <KunstwerkenChapter />
         </div>
       </div>
     </main>
