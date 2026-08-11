@@ -34,6 +34,15 @@ interface LineDraft {
   quantity: string;
 }
 
+interface ConceptUpdate {
+  materiaalId?: string;
+  maatId?: string;
+  breedte?: number;
+  hoogte?: number;
+  prijs?: number | null;
+  quantity?: number;
+}
+
 interface BestellingModalProps {
   bestelling: Bestelling | null;
   kunstwerken: Kunstwerk[] | null;
@@ -84,6 +93,8 @@ export function BestellingModal({
   const [prijsDrafts, setPrijsDrafts] = useState<Record<string, string>>({});
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
   const [lineDraft, setLineDraft] = useState<LineDraft | null>(null);
+  const [conceptUpdates, setConceptUpdates] = useState<Record<string, ConceptUpdate>>({});
+  const [saving, setSaving] = useState(false);
   const { user } = useAdminAuth();
   const { historie } = useBestellingHistorie(bestelling?.id ?? null);
   const bevestigingAfwijzen = useAfwijzenBevestiging();
@@ -94,6 +105,7 @@ export function BestellingModal({
       setPrijsDrafts({});
       setEditingLineId(null);
       setLineDraft(null);
+      setConceptUpdates({});
       bevestigingAfwijzen.annuleer();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -190,28 +202,14 @@ export function BestellingModal({
     }
   }
 
-  async function handlePrijsVaststellen(line: BestellingLine) {
-    if (!bestelling) return;
+  function handlePrijsVaststellen(line: BestellingLine) {
     const prijs = Number(prijsDrafts[line.id]);
     if (!prijs || prijs <= 0) return;
-    try {
-      const response = await fetch(
-        `/api/bestelheaders/${bestelling.id}/bestellines/${line.id}`,
-        {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ prijs }),
-        }
-      );
-      if (!response.ok) throw new Error('update failed');
-      void logActiviteit('bestelling_prijs_vastgesteld', bestelling.bestelnr);
-      onBestellingGewijzigd({
-        ...bestelling,
-        lines: bestelling.lines.map((l) => (l.id === line.id ? { ...l, prijs } : l)),
-      });
-    } catch {
-      setError(t('bestellingenActionError'));
-    }
+    setConceptUpdates((current) => ({ ...current, [line.id]: { ...current[line.id], prijs } }));
+    setPrijsDrafts((current) => {
+      const { [line.id]: _verwijderd, ...rest } = current;
+      return rest;
+    });
   }
 
   function startEditRegel(line: BestellingLine) {
@@ -231,50 +229,52 @@ export function BestellingModal({
     setLineDraft(null);
   }
 
-  async function handleOpslaanRegel(line: BestellingLine) {
-    if (!bestelling || !lineDraft) return;
+  function handleOpslaanRegel(line: BestellingLine) {
+    if (!lineDraft) return;
     const quantity = Number(lineDraft.quantity);
     if (!lineDraft.materiaalId || !quantity || quantity <= 0) return;
     const prijs = lineDraft.prijs === '' ? null : Number(lineDraft.prijs);
     if (prijs !== null && prijs <= 0) return;
 
-    const payload: Record<string, unknown> = { materiaalId: lineDraft.materiaalId, prijs, quantity };
-    const updates: Partial<BestellingLine> = { materiaalId: lineDraft.materiaalId, prijs, quantity };
-
+    const patch: ConceptUpdate = { materiaalId: lineDraft.materiaalId, prijs, quantity };
     if (isCustomLine(line)) {
       const breedte = Number(lineDraft.breedte);
       const hoogte = Number(lineDraft.hoogte);
       if (!breedte || breedte <= 0 || !hoogte || hoogte <= 0) return;
-      payload.maatId = '';
-      payload.breedte = breedte;
-      payload.hoogte = hoogte;
-      updates.maatId = '';
-      updates.breedte = breedte;
-      updates.hoogte = hoogte;
+      patch.maatId = '';
+      patch.breedte = breedte;
+      patch.hoogte = hoogte;
     } else {
       if (!lineDraft.maatId) return;
-      payload.maatId = lineDraft.maatId;
-      updates.maatId = lineDraft.maatId;
+      patch.maatId = lineDraft.maatId;
     }
 
+    setConceptUpdates((current) => ({ ...current, [line.id]: { ...current[line.id], ...patch } }));
+    cancelEditRegel();
+  }
+
+  const heeftConceptWijziging = Object.keys(conceptUpdates).length > 0;
+
+  async function handleWijzigingenOpslaan() {
+    if (!bestelling) return;
+    setSaving(true);
+    setError(null);
     try {
-      const response = await fetch(
-        `/api/bestelheaders/${bestelling.id}/bestellines/${line.id}`,
-        {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(payload),
-        }
-      );
-      if (!response.ok) throw new Error('update failed');
-      void logActiviteit('bestelling_regel_gewijzigd', bestelling.bestelnr);
-      onBestellingGewijzigd({
-        ...bestelling,
-        lines: bestelling.lines.map((l) => (l.id === line.id ? { ...l, ...updates } : l)),
+      const updates = Object.entries(conceptUpdates).map(([id, patch]) => ({ id, ...patch }));
+      const response = await fetch(`/api/bestelheaders/${bestelling.id}/wijzigen`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ korting: bestelling.korting, updates, additions: [], deletions: [] }),
       });
-      cancelEditRegel();
+      if (!response.ok) throw new Error('wijzigen failed');
+      const body = (await response.json()) as { lines: BestellingLine[]; korting: number | null };
+      void logActiviteit('bestelling_gewijzigd', bestelling.bestelnr);
+      onBestellingGewijzigd({ ...bestelling, lines: body.lines, korting: body.korting });
+      setConceptUpdates({});
     } catch {
       setError(t('bestellingenActionError'));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -439,14 +439,16 @@ export function BestellingModal({
             <ul className="flex max-h-80 flex-col gap-3 overflow-y-auto text-xs">
               {bestelling.lines.map((line) => {
                 const kunstwerk = (kunstwerken ?? []).find((k) => k.code === line.code) ?? null;
-                const materiaal = (materialen ?? []).find((m) => m.id === line.materiaalId);
-                const maat = (maten ?? []).find((m) => m.id === line.maatId);
+                const isEditingLine = editingLineId === line.id;
+                const conceptPatch = conceptUpdates[line.id];
+                const weergaveLine = conceptPatch ? { ...line, ...conceptPatch } : line;
+                const materiaal = (materialen ?? []).find((m) => m.id === weergaveLine.materiaalId);
+                const maat = (maten ?? []).find((m) => m.id === weergaveLine.maatId);
                 const maatWeergave = maat
                   ? `${maat.breedte}×${maat.hoogte} cm`
-                  : line.breedte != null && line.hoogte != null
-                    ? `${line.breedte}×${line.hoogte} cm`
-                    : line.maatId;
-                const isEditingLine = editingLineId === line.id;
+                  : weergaveLine.breedte != null && weergaveLine.hoogte != null
+                    ? `${weergaveLine.breedte}×${weergaveLine.hoogte} cm`
+                    : weergaveLine.maatId;
                 const kunstwerkMaterialen = kunstwerk
                   ? (materialen ?? []).filter((m) => kunstwerk.materiaalIds.includes(m.id))
                   : [];
@@ -485,27 +487,27 @@ export function BestellingModal({
                                       materiaalsoortNaamById.get(materiaal.materiaalsoortId) ??
                                       materiaal.materiaalsoortId
                                     } — ${materiaal.omschrijvingNl}`
-                                  : line.materiaalId}
+                                  : weergaveLine.materiaalId}
                               </span>
                               <span className="text-white/35">{t('bestellingenModalLabelMaat')}</span>
                               <span>{maatWeergave}</span>
                             </div>
                           )}
                           <div className="mt-2 flex items-baseline justify-between border-t border-white/10 pt-1.5">
-                            {line.prijs !== null ? (
+                            {weergaveLine.prijs !== null ? (
                               <>
                                 <span className="text-white/45">
-                                  {line.quantity} × {formatCurrency(line.prijs)}
+                                  {weergaveLine.quantity} × {formatCurrency(weergaveLine.prijs)}
                                 </span>
                                 <span className="font-semibold text-white/90">
-                                  {formatCurrency(line.prijs * line.quantity)}
+                                  {formatCurrency(weergaveLine.prijs * weergaveLine.quantity)}
                                 </span>
                               </>
                             ) : (
                               <span className="text-white/45">{t('bestellingenModalPrijsOpAanvraag')}</span>
                             )}
                           </div>
-                          {line.prijs === null && (
+                          {weergaveLine.prijs === null && (
                             <div className="mt-1 flex items-center gap-2">
                               <input
                                 type="number"
@@ -530,7 +532,7 @@ export function BestellingModal({
                           {kunstwerk && (
                             <button
                               type="button"
-                              onClick={() => startEditRegel(line)}
+                              onClick={() => startEditRegel(weergaveLine)}
                               data-testid={`bestelling-modal-regel-bewerken-${line.id}`}
                               className="mt-1.5 text-[0.65rem] uppercase tracking-wide text-white/40 underline underline-offset-2 hover:text-white/70"
                             >
@@ -677,6 +679,20 @@ export function BestellingModal({
               <p data-testid="bestelling-modal-goedkeuren-blocked" className="text-xs text-amber-400">
                 {t('bestellingenGoedkeurenBlocked')}
               </p>
+            )}
+
+            {heeftConceptWijziging && (
+              <div className="flex justify-end border-t border-white/10 pt-3">
+                <button
+                  type="button"
+                  onClick={handleWijzigingenOpslaan}
+                  disabled={saving}
+                  data-testid="bestelling-modal-wijzigingen-opslaan"
+                  className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+                >
+                  {t('bestellingenWijzigingenOpslaan')}
+                </button>
+              </div>
             )}
           </div>
           {bevestigingAfwijzen.open && (
