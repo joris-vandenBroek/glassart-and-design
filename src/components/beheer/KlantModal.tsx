@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Modal } from '@/components/Modal';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { Combobox } from '@/components/Combobox';
-import { HelpHint } from '@/components/HelpHint';
+import { HelpLink } from '@/components/HelpLink';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit } from '@/lib/logActiviteit';
 import { KlantWachtwoordSectie } from './KlantWachtwoordSectie';
@@ -265,9 +265,13 @@ export function KlantModal({
       onClose={onClose}
       closeLabel={t('modalClose')}
       title={
-        <span className="inline-flex items-center gap-2">
+        <span className="flex w-full items-center justify-between gap-2">
           {t('klantenModalTitel')}
-          <HelpHint text={t('klantenHelp')} testId="klant-modal-help" />
+          <HelpLink
+            anchor="klant-registratie-goedkeuren"
+            label="Open het hoofdstuk over een klant goedkeuren"
+            testId="klant-modal-help"
+          />
         </span>
       }
       subtitle={
