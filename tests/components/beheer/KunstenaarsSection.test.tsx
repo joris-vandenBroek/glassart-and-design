@@ -702,13 +702,34 @@ describe('KunstenaarsSection', () => {
     expect(onRemove).not.toHaveBeenCalled();
   });
 
-  it('shows the toevoegen title when adding and the bewerken title when editing', () => {
+  it('shows the same "Kunstenaargegevens" title when adding and when editing', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('kunstenaars-add'));
-    expect(screen.getByTestId('modal-header')).toHaveTextContent('Kunstenaar toevoegen');
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Kunstenaargegevens');
     fireEvent.click(screen.getByTestId('modal-close'));
     fireEvent.click(screen.getByTestId('data-table-row-ka-1'));
-    expect(screen.getByTestId('modal-header')).toHaveTextContent('Kunstenaar bewerken');
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Kunstenaargegevens');
+  });
+
+  it('starts on the Algemeen tab and switches to Omschrijvingen when clicked', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstenaars-add'));
+    expect(screen.getByTestId('kunstenaar-modal-tab-algemeen')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('kunstenaar-modal-tab-omschrijvingen')).toHaveAttribute('aria-selected', 'false');
+    fireEvent.click(screen.getByTestId('kunstenaar-modal-tab-omschrijvingen'));
+    expect(screen.getByTestId('kunstenaar-modal-tab-omschrijvingen')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('kunstenaar-modal-tab-algemeen')).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('shows an error dot on the Algemeen tab when naam is empty, and on Omschrijvingen when omschrijvingNl is empty', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstenaars-add'));
+    expect(screen.getByTestId('kunstenaar-modal-tab-algemeen-error-dot')).toBeInTheDocument();
+    expect(screen.getByTestId('kunstenaar-modal-tab-omschrijvingen-error-dot')).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('kunstenaar-modal-naam'), { target: { value: 'Nieuwe Kunstenaar' } });
+    fireEvent.change(screen.getByTestId('kunstenaar-modal-omschrijving-nl'), { target: { value: 'Werkt met glas.' } });
+    expect(screen.queryByTestId('kunstenaar-modal-tab-algemeen-error-dot')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('kunstenaar-modal-tab-omschrijvingen-error-dot')).not.toBeInTheDocument();
   });
 
   it('shows the required-field legend when the modal is open', () => {

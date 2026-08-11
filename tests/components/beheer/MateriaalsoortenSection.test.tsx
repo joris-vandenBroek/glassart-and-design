@@ -262,13 +262,13 @@ describe('MateriaalsoortenSection', () => {
     expect(screen.getByTestId('materiaalsoort-modal-levertijd-maanden')).toHaveValue(3);
   });
 
-  it('shows the toevoegen title when adding and the bewerken title when editing', () => {
+  it('shows the same "Materiaalsoortgegevens" title when adding and when editing', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('materiaalsoorten-add'));
-    expect(screen.getByTestId('modal-header')).toHaveTextContent('Materiaalsoort toevoegen');
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Materiaalsoortgegevens');
     fireEvent.click(screen.getByTestId('modal-close'));
     fireEvent.click(screen.getByTestId('data-table-row-soort-2'));
-    expect(screen.getByTestId('modal-header')).toHaveTextContent('Materiaalsoort bewerken');
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Materiaalsoortgegevens');
   });
 
   it('shows the required-field legend', () => {

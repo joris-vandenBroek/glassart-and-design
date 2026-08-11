@@ -153,7 +153,7 @@ export function PrijsgroepenSection({
         closeLabel={t('modalClose')}
         title={
           <span className="inline-flex items-center gap-2">
-            {modalState?.mode === 'edit' ? t('prijsgroepenModalTitelBewerken') : t('prijsgroepenModalTitelToevoegen')}
+            {t('prijsgroepenModalTitel')}
             <HelpHint text={t('prijsgroepenHelp')} testId="prijsgroep-modal-help" />
           </span>
         }

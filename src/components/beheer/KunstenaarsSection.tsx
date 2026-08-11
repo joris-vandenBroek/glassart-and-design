@@ -7,6 +7,7 @@ import { Modal } from '@/components/Modal';
 import { Combobox } from '@/components/Combobox';
 import { HelpHint } from '@/components/HelpHint';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
+import { ModalTabs } from '@/components/ModalTabs';
 import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit } from '@/lib/logActiviteit';
@@ -25,6 +26,7 @@ interface KunstenaarsSectionProps {
 }
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; kunstenaar: Kunstenaar } | null;
+type TabId = 'algemeen' | 'omschrijvingen';
 type KunstenaarRow = Kunstenaar & { exclusiviteitLabel: string };
 
 const LEGE_FORM = {
@@ -52,6 +54,7 @@ export function KunstenaarsSection({
   const { uploading, error: fotoUploadError, upload } = useKunstwerkFotoUpload();
   const { user } = useAdminAuth();
   const [modalState, setModalState] = useState<ModalState>(null);
+  const [activeTab, setActiveTab] = useState<TabId>('algemeen');
   const [foto, setFoto] = useState<string | null>(LEGE_FORM.foto);
   const [naam, setNaam] = useState(LEGE_FORM.naam);
   const [website, setWebsite] = useState(LEGE_FORM.website);
@@ -127,12 +130,14 @@ export function KunstenaarsSection({
 
   function openAdd() {
     resetForm();
+    setActiveTab('algemeen');
     geopendeKunstenaarIdRef.current = null;
     nieuweKunstenaarIdRef.current = null;
     setModalState({ mode: 'add' });
   }
 
   async function openEdit(kunstenaar: Kunstenaar) {
+    setActiveTab('algemeen');
     setFoto(kunstenaar.foto);
     setNaam(kunstenaar.naam);
     setWebsite(kunstenaar.website ?? '');
@@ -224,6 +229,8 @@ export function KunstenaarsSection({
     setKlant2Id(nextKlant2);
   }
 
+  const algemeenHeeftFout = !naam;
+  const omschrijvingenHeeftFout = !omschrijvingNl;
   const opslaanDisabled = !naam || !omschrijvingNl || uploading || prijsafsprakenLaden;
 
   async function handleSave() {
@@ -377,9 +384,10 @@ export function KunstenaarsSection({
         isOpen={modalState !== null}
         onClose={closeModal}
         closeLabel={t('modalClose')}
+        wide
         title={
           <span className="inline-flex items-center gap-2">
-            {modalState?.mode === 'edit' ? t('kunstenaarsModalTitelBewerken') : t('kunstenaarsModalTitelToevoegen')}
+            {t('kunstenaarsModalTitel')}
             <HelpHint text={t('kunstenaarsHelp')} testId="kunstenaar-modal-help" />
           </span>
         }
@@ -413,171 +421,191 @@ export function KunstenaarsSection({
         }
       >
         <div data-testid="kunstenaar-modal" className="flex flex-col gap-3 text-sm text-white/80">
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('kunstenaarsLabelFoto')}
-            <span
-              onDragOver={handleFotoDragOver}
-              onDragLeave={handleFotoDragLeave}
-              onDrop={handleFotoDrop}
-              data-testid="kunstenaar-modal-foto-dropzone"
-              className={`flex flex-col items-center gap-2 rounded-sm border border-dashed px-3 py-4 text-center transition-colors ${
-                isDraggingFoto ? 'border-silver bg-white/10' : 'border-white/20'
-              }`}
-            >
-              <span className="text-xs normal-case tracking-normal text-white/60">
-                {t('kunstenaarsFotoDropHint')}
+          <div className="sticky top-0 z-10 bg-charcoal pb-2">
+            <ModalTabs
+              tabs={[
+                { id: 'algemeen', label: t('kunstenaarsTabAlgemeen'), hasError: algemeenHeeftFout },
+                { id: 'omschrijvingen', label: t('kunstenaarsTabOmschrijvingen'), hasError: omschrijvingenHeeftFout },
+              ]}
+              activeTabId={activeTab}
+              onTabChange={setActiveTab}
+              testIdPrefix="kunstenaar-modal"
+            />
+          </div>
+
+          <div className={activeTab === 'algemeen' ? 'grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-2' : 'hidden'}>
+            <div className="flex flex-col gap-3">
+              <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+                {t('kunstenaarsLabelFoto')}
+                <span
+                  onDragOver={handleFotoDragOver}
+                  onDragLeave={handleFotoDragLeave}
+                  onDrop={handleFotoDrop}
+                  data-testid="kunstenaar-modal-foto-dropzone"
+                  className={`flex flex-col items-center gap-2 rounded-sm border border-dashed px-3 py-4 text-center transition-colors ${
+                    isDraggingFoto ? 'border-silver bg-white/10' : 'border-white/20'
+                  }`}
+                >
+                  <span className="text-xs normal-case tracking-normal text-white/60">
+                    {t('kunstenaarsFotoDropHint')}
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFotoChange}
+                    data-testid="kunstenaar-modal-foto-input"
+                    className="text-sm text-white"
+                  />
+                </span>
+              </label>
+              {uploading && (
+                <p data-testid="kunstenaar-modal-foto-uploading" className="text-xs text-white/60">
+                  {t('kunstenaarsFotoUploading')}
+                </p>
+              )}
+              {fotoUploadError && (
+                <p data-testid="kunstenaar-modal-foto-error" className="text-xs text-red-400">
+                  {t(fotoUploadError === 'too-large' ? 'kunstenaarsFotoTooLarge' : 'kunstenaarsFotoUploadError')}
+                </p>
+              )}
+              {foto && (
+                <img
+                  src={foto}
+                  alt=""
+                  data-testid="kunstenaar-modal-foto-preview"
+                  className="h-24 w-24 rounded object-cover"
+                />
+              )}
+
+              <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+                <span>
+                  {t('kunstenaarsLabelNaam')}
+                  <RequiredMark />
+                </span>
+                <input
+                  type="text"
+                  value={naam}
+                  onChange={(event) => setNaam(event.target.value)}
+                  data-testid="kunstenaar-modal-naam"
+                  className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+                />
+              </label>
+
+              <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+                {t('kunstenaarsLabelWebsite')}
+                <input
+                  type="text"
+                  value={website}
+                  onChange={(event) => setWebsite(event.target.value)}
+                  data-testid="kunstenaar-modal-website"
+                  className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+                />
+              </label>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+                {t('kunstenaarsLabelPrijsafspraken')}
+                <textarea
+                  value={prijsafspraken}
+                  onChange={(event) => setPrijsafspraken(event.target.value)}
+                  data-testid="kunstenaar-modal-prijsafspraken"
+                  className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+                />
+              </label>
+
+              <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+                <span className="inline-flex items-center gap-2">
+                  {t('kunstenaarsLabelPrijsopslag')}
+                  <HelpHint text={t('kunstenaarsHelpOpslag')} size="sm" testId="kunstenaar-modal-help-opslag" />
+                </span>
+                <input
+                  type="number"
+                  value={prijsopslag}
+                  onChange={(event) => setPrijsopslag(Number(event.target.value))}
+                  data-testid="kunstenaar-modal-prijsopslag"
+                  className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+                />
+              </label>
+
+              <fieldset className="flex flex-col gap-3">
+                <legend className="inline-flex items-center gap-2 text-xs uppercase tracking-wide text-white/60">
+                  {t('kunstenaarsLabelKlant')}
+                  <HelpHint text={t('kunstenaarsHelpExclusiviteit')} size="sm" testId="kunstenaar-modal-help-exclusiviteit" />
+                </legend>
+                <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+                  {t('kunstenaarsLabelKlant1')}
+                  <Combobox
+                    options={(klanten ?? [])
+                      .filter((klant) => klant.id !== klant2Id)
+                      .map((klant) => ({ value: klant.id, label: klant.companyName }))}
+                    value={klant1Id}
+                    onChange={(value) => selectKlant('klant1', value)}
+                    placeholder={t('kunstenaarsKlantPlaceholder')}
+                    noResultsLabel={t('kunstenaarsKlantGeenResultaten')}
+                    clearLabel={t('kunstenaarsKlantGeen')}
+                    testId="kunstenaar-modal-klant-1"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+                  {t('kunstenaarsLabelKlant2')}
+                  <Combobox
+                    options={(klanten ?? [])
+                      .filter((klant) => klant.id !== klant1Id)
+                      .map((klant) => ({ value: klant.id, label: klant.companyName }))}
+                    value={klant2Id}
+                    onChange={(value) => selectKlant('klant2', value)}
+                    placeholder={t('kunstenaarsKlantPlaceholder')}
+                    noResultsLabel={t('kunstenaarsKlantGeenResultaten')}
+                    clearLabel={t('kunstenaarsKlantGeen')}
+                    testId="kunstenaar-modal-klant-2"
+                  />
+                </label>
+              </fieldset>
+            </div>
+          </div>
+
+          <div className={activeTab === 'omschrijvingen' ? 'flex flex-col gap-3' : 'hidden'}>
+            <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+              <span>
+                {t('kunstenaarsLabelOmschrijvingNl')}
+                <RequiredMark />
               </span>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFotoChange}
-                data-testid="kunstenaar-modal-foto-input"
-                className="text-sm text-white"
-              />
-            </span>
-          </label>
-          {uploading && (
-            <p data-testid="kunstenaar-modal-foto-uploading" className="text-xs text-white/60">
-              {t('kunstenaarsFotoUploading')}
-            </p>
-          )}
-          {fotoUploadError && (
-            <p data-testid="kunstenaar-modal-foto-error" className="text-xs text-red-400">
-              {t(fotoUploadError === 'too-large' ? 'kunstenaarsFotoTooLarge' : 'kunstenaarsFotoUploadError')}
-            </p>
-          )}
-          {foto && (
-            <img
-              src={foto}
-              alt=""
-              data-testid="kunstenaar-modal-foto-preview"
-              className="h-24 w-24 rounded object-cover"
-            />
-          )}
-
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            <span>
-              {t('kunstenaarsLabelNaam')}
-              <RequiredMark />
-            </span>
-            <input
-              type="text"
-              value={naam}
-              onChange={(event) => setNaam(event.target.value)}
-              data-testid="kunstenaar-modal-naam"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('kunstenaarsLabelWebsite')}
-            <input
-              type="text"
-              value={website}
-              onChange={(event) => setWebsite(event.target.value)}
-              data-testid="kunstenaar-modal-website"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            <span>
-              {t('kunstenaarsLabelOmschrijvingNl')}
-              <RequiredMark />
-            </span>
-            <textarea
-              value={omschrijvingNl}
-              onChange={(event) => setOmschrijvingNl(event.target.value)}
-              data-testid="kunstenaar-modal-omschrijving-nl"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('kunstenaarsLabelOmschrijvingFr')}
-            <textarea
-              value={omschrijvingFr}
-              onChange={(event) => setOmschrijvingFr(event.target.value)}
-              data-testid="kunstenaar-modal-omschrijving-fr"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('kunstenaarsLabelOmschrijvingDe')}
-            <textarea
-              value={omschrijvingDe}
-              onChange={(event) => setOmschrijvingDe(event.target.value)}
-              data-testid="kunstenaar-modal-omschrijving-de"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('kunstenaarsLabelOmschrijvingEn')}
-            <textarea
-              value={omschrijvingEn}
-              onChange={(event) => setOmschrijvingEn(event.target.value)}
-              data-testid="kunstenaar-modal-omschrijving-en"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('kunstenaarsLabelPrijsafspraken')}
-            <textarea
-              value={prijsafspraken}
-              onChange={(event) => setPrijsafspraken(event.target.value)}
-              data-testid="kunstenaar-modal-prijsafspraken"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            <span className="inline-flex items-center gap-2">
-              {t('kunstenaarsLabelPrijsopslag')}
-              <HelpHint text={t('kunstenaarsHelpOpslag')} size="sm" testId="kunstenaar-modal-help-opslag" />
-            </span>
-            <input
-              type="number"
-              value={prijsopslag}
-              onChange={(event) => setPrijsopslag(Number(event.target.value))}
-              data-testid="kunstenaar-modal-prijsopslag"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-            />
-          </label>
-
-          <fieldset className="flex flex-col gap-3">
-            <legend className="inline-flex items-center gap-2 text-xs uppercase tracking-wide text-white/60">
-              {t('kunstenaarsLabelKlant')}
-              <HelpHint text={t('kunstenaarsHelpExclusiviteit')} size="sm" testId="kunstenaar-modal-help-exclusiviteit" />
-            </legend>
-            <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-              {t('kunstenaarsLabelKlant1')}
-              <Combobox
-                options={(klanten ?? [])
-                  .filter((klant) => klant.id !== klant2Id)
-                  .map((klant) => ({ value: klant.id, label: klant.companyName }))}
-                value={klant1Id}
-                onChange={(value) => selectKlant('klant1', value)}
-                placeholder={t('kunstenaarsKlantPlaceholder')}
-                noResultsLabel={t('kunstenaarsKlantGeenResultaten')}
-                clearLabel={t('kunstenaarsKlantGeen')}
-                testId="kunstenaar-modal-klant-1"
+              <textarea
+                value={omschrijvingNl}
+                onChange={(event) => setOmschrijvingNl(event.target.value)}
+                data-testid="kunstenaar-modal-omschrijving-nl"
+                className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
               />
             </label>
             <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-              {t('kunstenaarsLabelKlant2')}
-              <Combobox
-                options={(klanten ?? [])
-                  .filter((klant) => klant.id !== klant1Id)
-                  .map((klant) => ({ value: klant.id, label: klant.companyName }))}
-                value={klant2Id}
-                onChange={(value) => selectKlant('klant2', value)}
-                placeholder={t('kunstenaarsKlantPlaceholder')}
-                noResultsLabel={t('kunstenaarsKlantGeenResultaten')}
-                clearLabel={t('kunstenaarsKlantGeen')}
-                testId="kunstenaar-modal-klant-2"
+              {t('kunstenaarsLabelOmschrijvingFr')}
+              <textarea
+                value={omschrijvingFr}
+                onChange={(event) => setOmschrijvingFr(event.target.value)}
+                data-testid="kunstenaar-modal-omschrijving-fr"
+                className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
               />
             </label>
-          </fieldset>
+            <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+              {t('kunstenaarsLabelOmschrijvingDe')}
+              <textarea
+                value={omschrijvingDe}
+                onChange={(event) => setOmschrijvingDe(event.target.value)}
+                data-testid="kunstenaar-modal-omschrijving-de"
+                className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+              {t('kunstenaarsLabelOmschrijvingEn')}
+              <textarea
+                value={omschrijvingEn}
+                onChange={(event) => setOmschrijvingEn(event.target.value)}
+                data-testid="kunstenaar-modal-omschrijving-en"
+                className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+              />
+            </label>
+          </div>
 
           <RequiredLegend testId="kunstenaar-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
 

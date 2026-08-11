@@ -197,13 +197,13 @@ describe('MatenSection', () => {
     expect(logActiviteitMock).not.toHaveBeenCalled();
   });
 
-  it('shows the toevoegen title when adding and the bewerken title when editing', () => {
+  it('shows the same "Maatgegevens" title when adding and when editing', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('maten-add'));
-    expect(screen.getByTestId('modal-header')).toHaveTextContent('Maat toevoegen');
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Maatgegevens');
     fireEvent.click(screen.getByTestId('modal-close'));
     fireEvent.click(screen.getByTestId('data-table-row-maat-2'));
-    expect(screen.getByTestId('modal-header')).toHaveTextContent('Maat bewerken');
+    expect(screen.getByTestId('modal-header')).toHaveTextContent('Maatgegevens');
   });
 
   it('shows the required-field legend', () => {
