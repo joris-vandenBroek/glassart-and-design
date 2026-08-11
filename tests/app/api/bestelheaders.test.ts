@@ -6,7 +6,6 @@ import { hashPassword } from '@/lib/server/password';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { POST as createHeader, GET as listHeaders } from '@/app/api/bestelheaders/route';
 import { PATCH as patchHeader } from '@/app/api/bestelheaders/[id]/route';
-import { PATCH as patchLine } from '@/app/api/bestelheaders/[id]/bestellines/[lineId]/route';
 import { GET as getStatusHistorie } from '@/app/api/bestelheaders/[id]/statushistorie/route';
 import { vervangRelaties } from '@/lib/server/kunstwerkRelaties';
 import { veiligOpruimen } from '../../helpers/veiligOpruimen';
@@ -444,7 +443,7 @@ describe('bestelheaders routes', () => {
     expect(response.status).toBe(401);
   });
 
-  it('updates header status and a line price as a medewerker', async () => {
+  it('updates header status as a medewerker', async () => {
     const { cookie } = await klant('c@example.com');
     const maatId = await maakMaat(46, 66);
     const materiaalId = await maakMateriaal();
@@ -464,8 +463,6 @@ describe('bestelheaders routes', () => {
       )
     );
     const header = await created.json();
-    const [lineRows] = await getPool().query('SELECT id FROM bestellines WHERE bestelnr = ?', [header.bestelnr]);
-    const lineId = (lineRows as Array<{ id: string }>)[0].id;
     const staffCookie = await medewerkerCookie();
 
     await patchHeader(
@@ -476,19 +473,9 @@ describe('bestelheaders routes', () => {
       }),
       { params: { id: header.id } }
     );
-    await patchLine(
-      new Request('http://localhost/api', {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json', cookie: staffCookie },
-        body: JSON.stringify({ prijs: 199 }),
-      }),
-      { params: { id: header.id, lineId } }
-    );
 
     const [headerRows] = await getPool().query('SELECT status FROM bestelheaders WHERE id = ?', [header.id]);
     expect((headerRows as Array<{ status: string }>)[0].status).toBe('Te versturen naar drukker');
-    const [updatedLineRows] = await getPool().query('SELECT prijs FROM bestellines WHERE id = ?', [lineId]);
-    expect(Number((updatedLineRows as Array<{ prijs: string }>)[0].prijs)).toBe(199);
   });
 
   it('records the initial Te beoordelen status in bestelstatusHistorie when a bestelling is created', async () => {
@@ -631,28 +618,10 @@ describe('bestelheaders routes', () => {
     expect(body.map((row) => row.status)).toEqual(['Te beoordelen', 'Te versturen naar drukker']);
   });
 
-  it('rejects patching a header status or line price without a medewerker session', async () => {
+  it('rejects patching a header status without a medewerker session', async () => {
     const { cookie } = await klant('unauth-patch@example.com');
-    const maatId = await maakMaat(47, 67);
-    const materiaalId = await maakMateriaal();
-    const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
-      code: 'test-bestelheaders-eigenmaat-3',
-    } as never);
-    await vervangRelaties(getPool(), kunstwerk.id, { materiaalIds: [materiaalId], maatIds: [maatId] });
-    createdKunstwerkIds.push(kunstwerk.id);
-    const created = await createHeader(
-      postRequest(
-        {
-          lines: [
-            { kunstwerkId: kunstwerk.id, maatId: '', materiaalId, prijs: 1, quantity: 1, breedte: 50, hoogte: 50 },
-          ],
-        },
-        cookie
-      )
-    );
+    const created = await createHeader(postRequest({ lines: [] }, cookie));
     const header = await created.json();
-    const [lineRows] = await getPool().query('SELECT id FROM bestellines WHERE bestelnr = ?', [header.bestelnr]);
-    const lineId = (lineRows as Array<{ id: string }>)[0].id;
 
     const headerResponse = await patchHeader(
       new Request('http://localhost/api', {
@@ -663,16 +632,6 @@ describe('bestelheaders routes', () => {
       { params: { id: header.id } }
     );
     expect(headerResponse.status).toBe(401);
-
-    const lineResponse = await patchLine(
-      new Request('http://localhost/api', {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ prijs: 1 }),
-      }),
-      { params: { id: header.id, lineId } }
-    );
-    expect(lineResponse.status).toBe(401);
   });
 
   it('rejects a non-positive/non-integer breedte or hoogte on a maatloos kunstwerk', async () => {

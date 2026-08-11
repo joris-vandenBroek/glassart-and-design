@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
@@ -83,6 +82,7 @@ const BESTELLING: Bestelling = {
   klantnr: 'KN-1',
   companyName: 'Testbedrijf BV',
   bestelnr: 'GD-00101',
+  korting: null,
   besteldatum: '1-7-2026',
   status: 'Te beoordelen',
   lineCount: 2,
@@ -100,8 +100,7 @@ function renderModal(
   const onClose = vi.fn();
   const onUpdated = vi.fn();
   const onAfronden = vi.fn();
-  const onLinePrijsVastgesteld = vi.fn();
-  const onLineUpdated = vi.fn();
+  const onBestellingGewijzigd = vi.fn();
   render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <BestellingModal
@@ -115,13 +114,12 @@ function renderModal(
         onClose={onClose}
         onUpdated={onUpdated}
         onAfronden={onAfronden}
-        onLinePrijsVastgesteld={onLinePrijsVastgesteld}
-        onLineUpdated={onLineUpdated}
+        onBestellingGewijzigd={onBestellingGewijzigd}
         {...overrides}
       />
     </NextIntlClientProvider>
   );
-  return { onClose, onUpdated, onAfronden, onLinePrijsVastgesteld, onLineUpdated };
+  return { onClose, onUpdated, onAfronden, onBestellingGewijzigd };
 }
 
 beforeEach(() => {
@@ -342,6 +340,7 @@ const BESTELLING_MET_EIGEN_MAAT: Bestelling = {
   klantnr: 'KN-2',
   companyName: 'Ander Bedrijf',
   bestelnr: 'GD-00102',
+  korting: null,
   besteldatum: '3-7-2026',
   status: 'Te beoordelen',
   lineCount: 1,
@@ -363,25 +362,6 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
     );
   });
 
-  it('sets a price on an unpriced line via "Prijs vaststellen", updates the order, logs the event, and re-enables Goedkeuren', async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
-    const { onLinePrijsVastgesteld } = renderModal(BESTELLING_MET_EIGEN_MAAT);
-    fireEvent.change(screen.getByTestId('bestelling-modal-prijs-input-line-3'), { target: { value: '275' } });
-    fireEvent.click(screen.getByTestId('bestelling-modal-prijs-vaststellen-line-3'));
-
-    await waitFor(() =>
-      expect(fetchMock).toHaveBeenCalledWith(
-        '/api/bestelheaders/header-2/bestellines/line-3',
-        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ prijs: 275 }) })
-      )
-    );
-    await waitFor(() => expect(onLinePrijsVastgesteld).toHaveBeenCalledWith('header-2', 'line-3', 275));
-    expect(logActiviteitMock).toHaveBeenCalledWith(
-      'bestelling_prijs_vastgesteld',
-      'GD-00102'
-    );
-  });
-
   it('keeps the "Prijs vaststellen" button disabled until a positive number is entered', () => {
     renderModal(BESTELLING_MET_EIGEN_MAAT);
     expect(screen.getByTestId('bestelling-modal-prijs-vaststellen-line-3')).toBeDisabled();
@@ -391,77 +371,47 @@ describe('BestellingModal — eigen maat / offerte pricing', () => {
     expect(screen.getByTestId('bestelling-modal-prijs-vaststellen-line-3')).not.toBeDisabled();
   });
 
+  it('drafts a price via "Prijs vaststellen" without patching immediately, shows it as pending, and saves it on Wijzigingen opslaan', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    const { onBestellingGewijzigd } = renderModal(BESTELLING_MET_EIGEN_MAAT);
+    fireEvent.change(screen.getByTestId('bestelling-modal-prijs-input-line-3'), { target: { value: '275' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-prijs-vaststellen-line-3'));
+
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      expect.stringContaining('/wijzigen'),
+      expect.anything()
+    );
+    expect(screen.getByTestId('bestelling-modal-wijzigingen-opslaan')).toBeInTheDocument();
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ lines: [{ ...BESTELLING_MET_EIGEN_MAAT.lines[0], prijs: 275 }], korting: null }),
+    });
+    fireEvent.click(screen.getByTestId('bestelling-modal-wijzigingen-opslaan'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-2/wijzigen',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ korting: null, updates: [{ id: 'line-3', prijs: 275 }], additions: [], deletions: [] }),
+        })
+      )
+    );
+    await waitFor(() =>
+      expect(onBestellingGewijzigd).toHaveBeenCalledWith({
+        ...BESTELLING_MET_EIGEN_MAAT,
+        lines: [{ ...BESTELLING_MET_EIGEN_MAAT.lines[0], prijs: 275 }],
+        korting: null,
+      })
+    );
+    expect(logActiviteitMock).toHaveBeenCalledWith('bestelling_gewijzigd', 'GD-00102');
+  });
+
   it('does not disable Goedkeuren when every line already has a price', () => {
     renderModal(BESTELLING);
     expect(screen.getByTestId('bestelling-modal-goedkeuren')).not.toBeDisabled();
     expect(screen.queryByTestId('bestelling-modal-goedkeuren-blocked')).not.toBeInTheDocument();
-  });
-
-  it('keeps the draft price of a still-unpriced line after submitting another line\'s price in the same order', async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
-
-    const BESTELLING_MET_TWEE_ONGEPRIJSDE_REGELS: Bestelling = {
-      id: 'header-3',
-      klantnr: 'KN-3',
-      companyName: 'Weer Een Bedrijf',
-      bestelnr: 'GD-00103',
-      besteldatum: '5-7-2026',
-      status: 'Te beoordelen',
-      lineCount: 2,
-      totalQuantity: 2,
-      lines: [
-        { id: 'line-4', code: 'Hotel paneel', maatId: '', materiaalId: 'mat-1', breedte: 50, hoogte: 80, prijs: null, quantity: 1 },
-        { id: 'line-5', code: 'Hotel paneel', maatId: '', materiaalId: 'mat-1', breedte: 60, hoogte: 90, prijs: null, quantity: 1 },
-      ],
-    };
-
-    // Mimics BestellingenSection: onLinePrijsVastgesteld merges the priced line into a
-    // brand-new `{ ...current, lines: [...] }` object, giving `bestelling` a new reference
-    // on every submit while the order id stays the same.
-    function Wrapper() {
-      const [bestelling, setBestelling] = useState(BESTELLING_MET_TWEE_ONGEPRIJSDE_REGELS);
-      return (
-        <NextIntlClientProvider locale="nl" messages={messages}>
-          <BestellingModal
-            bestelling={bestelling}
-            kunstwerken={KUNSTWERKEN}
-            materialen={MATERIALEN}
-            maten={MATEN}
-            materiaalsoorten={MATERIAALSOORTEN}
-            klanten={KLANTEN}
-            btwTarieven={BTWTARIEVEN}
-            onClose={vi.fn()}
-            onUpdated={vi.fn()}
-            onAfronden={vi.fn()}
-            onLinePrijsVastgesteld={(_bestellingId, lineId, prijs) => {
-              setBestelling((current) => ({
-                ...current,
-                lines: current.lines.map((line) => (line.id === lineId ? { ...line, prijs } : line)),
-              }));
-            }}
-            onLineUpdated={vi.fn()}
-          />
-        </NextIntlClientProvider>
-      );
-    }
-
-    render(<Wrapper />);
-
-    fireEvent.change(screen.getByTestId('bestelling-modal-prijs-input-line-4'), { target: { value: '100' } });
-    fireEvent.change(screen.getByTestId('bestelling-modal-prijs-input-line-5'), { target: { value: '200' } });
-
-    fireEvent.click(screen.getByTestId('bestelling-modal-prijs-vaststellen-line-4'));
-
-    await waitFor(() =>
-      expect(fetchMock).toHaveBeenCalledWith(
-        '/api/bestelheaders/header-3/bestellines/line-4',
-        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ prijs: 100 }) })
-      )
-    );
-
-    await waitFor(() =>
-      expect(screen.getByTestId('bestelling-modal-prijs-input-line-5')).toHaveValue(200)
-    );
   });
 });
 
@@ -473,39 +423,49 @@ describe('BestellingModal — regel bewerken', () => {
     expect(screen.queryByTestId('bestelling-modal-regel-bewerken-line-2')).not.toBeInTheDocument();
   });
 
-  it('edits a standard-maat line and saves materiaal/maat/prijs/aantal', async () => {
+  it('drafts materiaal/maat/prijs/aantal edits without patching immediately, then saves them all on Wijzigingen opslaan', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
-    const { onLineUpdated } = renderModal(BESTELLING);
+    const { onBestellingGewijzigd } = renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-1'));
     fireEvent.change(screen.getByTestId('bestelling-modal-regel-prijs-line-1'), { target: { value: '180' } });
     fireEvent.change(screen.getByTestId('bestelling-modal-regel-aantal-line-1'), { target: { value: '5' } });
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-opslaan-line-1'));
 
+    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('/wijzigen'), expect.anything());
+    expect(screen.queryByTestId('bestelling-modal-regel-materiaal-line-1')).not.toBeInTheDocument();
+
+    const bijgewerkteRegel = { ...BESTELLING.lines[0], materiaalId: 'mat-1', prijs: 180, quantity: 5, maatId: 'maat-1' };
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ lines: [bijgewerkteRegel, BESTELLING.lines[1]], korting: null }),
+    });
+    fireEvent.click(screen.getByTestId('bestelling-modal-wijzigingen-opslaan'));
+
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
-        '/api/bestelheaders/header-1/bestellines/line-1',
+        '/api/bestelheaders/header-1/wijzigen',
         expect.objectContaining({
           method: 'PATCH',
-          body: JSON.stringify({ materiaalId: 'mat-1', prijs: 180, quantity: 5, maatId: 'maat-1' }),
+          body: JSON.stringify({
+            korting: null,
+            updates: [{ id: 'line-1', materiaalId: 'mat-1', prijs: 180, quantity: 5, maatId: 'maat-1' }],
+            additions: [],
+            deletions: [],
+          }),
         })
       )
     );
     await waitFor(() =>
-      expect(onLineUpdated).toHaveBeenCalledWith('header-1', 'line-1', {
-        materiaalId: 'mat-1',
-        prijs: 180,
-        quantity: 5,
-        maatId: 'maat-1',
+      expect(onBestellingGewijzigd).toHaveBeenCalledWith({
+        ...BESTELLING,
+        lines: [bijgewerkteRegel, BESTELLING.lines[1]],
+        korting: null,
       })
     );
-    expect(logActiviteitMock).toHaveBeenCalledWith(
-      'bestelling_regel_gewijzigd',
-      'GD-00101'
-    );
-    expect(screen.queryByTestId('bestelling-modal-regel-materiaal-line-1')).not.toBeInTheDocument();
+    expect(logActiviteitMock).toHaveBeenCalledWith('bestelling_gewijzigd', 'GD-00101');
   });
 
-  it('discards edits when Annuleren is clicked', () => {
+  it('discards edits when Annuleren is clicked, and does not show a Wijzigingen opslaan button', () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     renderModal(BESTELLING);
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-1'));
@@ -513,42 +473,39 @@ describe('BestellingModal — regel bewerken', () => {
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-annuleren-line-1'));
     expect(screen.queryByTestId('bestelling-modal-regel-materiaal-line-1')).not.toBeInTheDocument();
     expect(screen.getByTestId('bestelling-modal-line-line-1')).toHaveTextContent('3 × € 150,00');
-    // Annuleren must not PATCH the line -- the component's mount-time historie GET is unrelated.
-    expect(fetchMock).not.toHaveBeenCalledWith(
-      '/api/bestelheaders/header-1/bestellines/line-1',
-      expect.anything()
-    );
+    expect(screen.queryByTestId('bestelling-modal-wijzigingen-opslaan')).not.toBeInTheDocument();
   });
 
-  it('shows breedte/hoogte inputs instead of a maat select for a custom-size line', async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
-    const { onLineUpdated } = renderModal(BESTELLING_MET_EIGEN_MAAT);
+  it('shows breedte/hoogte inputs instead of a maat select for a custom-size line, and drafts them', () => {
+    renderModal(BESTELLING_MET_EIGEN_MAAT);
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-3'));
     expect(screen.queryByTestId('bestelling-modal-regel-maat-line-3')).not.toBeInTheDocument();
     fireEvent.change(screen.getByTestId('bestelling-modal-regel-breedte-line-3'), { target: { value: '95' } });
     fireEvent.change(screen.getByTestId('bestelling-modal-regel-hoogte-line-3'), { target: { value: '145' } });
     fireEvent.change(screen.getByTestId('bestelling-modal-regel-prijs-line-3'), { target: { value: '300' } });
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-opslaan-line-3'));
+    expect(screen.getByTestId('bestelling-modal-wijzigingen-opslaan')).toBeInTheDocument();
+  });
 
-    await waitFor(() =>
-      expect(fetchMock).toHaveBeenCalledWith(
-        '/api/bestelheaders/header-2/bestellines/line-3',
-        expect.objectContaining({
-          method: 'PATCH',
-          body: JSON.stringify({ materiaalId: 'mat-1', prijs: 300, quantity: 1, maatId: '', breedte: 95, hoogte: 145 }),
-        })
-      )
+  it('does not show Wijzigingen opslaan when nothing has been drafted', () => {
+    renderModal(BESTELLING);
+    expect(screen.queryByTestId('bestelling-modal-wijzigingen-opslaan')).not.toBeInTheDocument();
+  });
+
+  it('shows an error and keeps the draft when the save request fails', async () => {
+    fetchMock.mockImplementation(async (url: string) =>
+      String(url).includes('/wijzigen') ? Promise.reject(new Error('offline')) : { ok: true, json: async () => [] }
     );
-    await waitFor(() =>
-      expect(onLineUpdated).toHaveBeenCalledWith('header-2', 'line-3', {
-        materiaalId: 'mat-1',
-        prijs: 300,
-        quantity: 1,
-        maatId: '',
-        breedte: 95,
-        hoogte: 145,
-      })
-    );
+    const { onBestellingGewijzigd } = renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-1'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-regel-aantal-line-1'), { target: { value: '5' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-opslaan-line-1'));
+    fireEvent.click(screen.getByTestId('bestelling-modal-wijzigingen-opslaan'));
+
+    expect(await screen.findByTestId('bestelling-modal-error')).toBeInTheDocument();
+    expect(onBestellingGewijzigd).not.toHaveBeenCalled();
+    expect(screen.getByTestId('bestelling-modal-wijzigingen-opslaan')).toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-mail-vraag')).not.toBeInTheDocument();
   });
 });
 
@@ -563,6 +520,18 @@ describe('BestellingModal — bestelling-totaal', () => {
     renderModal(BESTELLING_MET_EIGEN_MAAT);
     expect(screen.getByTestId('bestelling-modal-total')).toHaveTextContent('Wordt nog vastgesteld');
     expect(screen.getByTestId('bestelling-modal-goedkeuren')).toBeDisabled();
+  });
+
+  it('shows a korting row and subtracts it from the total when korting is set', () => {
+    renderModal({ ...BESTELLING, korting: 50 });
+    // line-1: 150 × 3 = 450, line-2: 0 × 2 = 0, korting 50 → 400
+    expect(screen.getByTestId('bestelling-modal-total')).toHaveTextContent('€ 400,00');
+    expect(screen.getByTestId('bestelling-modal-korting')).toHaveTextContent('€ 50,00');
+  });
+
+  it('shows no korting row when korting is null', () => {
+    renderModal(BESTELLING);
+    expect(screen.queryByTestId('bestelling-modal-korting')).not.toBeInTheDocument();
   });
 });
 
@@ -590,8 +559,7 @@ describe('BestellingModal — btw', () => {
           onClose={vi.fn()}
           onUpdated={vi.fn()}
           onAfronden={vi.fn()}
-          onLinePrijsVastgesteld={vi.fn()}
-          onLineUpdated={vi.fn()}
+          onBestellingGewijzigd={vi.fn()}
         />
       </NextIntlClientProvider>
     );
@@ -625,8 +593,7 @@ describe('BestellingModal — btw', () => {
           onClose={vi.fn()}
           onUpdated={vi.fn()}
           onAfronden={vi.fn()}
-          onLinePrijsVastgesteld={vi.fn()}
-          onLineUpdated={vi.fn()}
+          onBestellingGewijzigd={vi.fn()}
         />
       </NextIntlClientProvider>
     );
@@ -641,6 +608,7 @@ const BESTELLING_VERSTUURD: Bestelling = {
   klantnr: 'KN-1',
   companyName: 'Testbedrijf BV',
   bestelnr: 'GD-00104',
+  korting: null,
   besteldatum: '4-7-2026',
   status: 'Verstuurd naar drukker',
   lineCount: 1,
@@ -660,6 +628,13 @@ const BESTELLING_BETAALD_EN_AFGEROND: Bestelling = {
   id: 'header-6',
   bestelnr: 'GD-00106',
   status: 'Betaald en afgerond',
+};
+
+const BESTELLING_TE_VERSTUREN: Bestelling = {
+  ...BESTELLING_VERSTUURD,
+  id: 'header-7',
+  bestelnr: 'GD-00107',
+  status: 'Te versturen naar drukker',
 };
 
 describe('BestellingModal — afronden/terugzetten', () => {
@@ -846,5 +821,251 @@ describe('BestellingModal — afronden/terugzetten', () => {
     const historie = await screen.findByTestId('bestelling-modal-historie');
     expect(within(historie).getAllByText('Betaald en afgerond')).toHaveLength(2);
     expect(within(historie).getAllByText('Verstuurd naar drukker')).toHaveLength(2);
+  });
+});
+
+describe('BestellingModal — regel verwijderen en toevoegen', () => {
+  it('shows regel-verwijderen and regel-toevoegen for a status where regelstructuur is still editable', () => {
+    renderModal(BESTELLING);
+    expect(screen.getByTestId('bestelling-modal-regel-verwijderen-line-1')).toBeInTheDocument();
+    expect(screen.getByTestId('bestelling-modal-regel-toevoegen')).toBeInTheDocument();
+  });
+
+  it('hides regel-verwijderen and regel-toevoegen from Verstuurd naar drukker onward, and for Afgewezen', () => {
+    renderModal(BESTELLING_VERSTUURD);
+    expect(screen.queryByTestId('bestelling-modal-regel-verwijderen-line-6')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-regel-toevoegen')).not.toBeInTheDocument();
+
+    renderModal(BESTELLING_TE_FACTUREREN);
+    expect(screen.queryByTestId('bestelling-modal-regel-toevoegen')).not.toBeInTheDocument();
+
+    renderModal({ ...BESTELLING, status: 'Afgewezen' });
+    expect(screen.queryByTestId('bestelling-modal-regel-toevoegen')).not.toBeInTheDocument();
+  });
+
+  it('shows regel-toevoegen while Te versturen naar drukker (still before Verstuurd naar drukker)', () => {
+    renderModal(BESTELLING_TE_VERSTUREN);
+    expect(screen.getByTestId('bestelling-modal-regel-toevoegen')).toBeInTheDocument();
+  });
+
+  it('marks a line for deletion, shows it struck through with an undo, and saves the deletion on Wijzigingen opslaan', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    const { onBestellingGewijzigd } = renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-verwijderen-line-1'));
+    expect(screen.getByTestId('bestelling-modal-regel-verwijderen-ongedaan-line-1')).toBeInTheDocument();
+    expect(screen.getByTestId('bestelling-modal-wijzigingen-opslaan')).toBeInTheDocument();
+
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ lines: [BESTELLING.lines[1]], korting: null }) });
+    fireEvent.click(screen.getByTestId('bestelling-modal-wijzigingen-opslaan'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-1/wijzigen',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ korting: null, updates: [], additions: [], deletions: ['line-1'] }),
+        })
+      )
+    );
+    await waitFor(() =>
+      expect(onBestellingGewijzigd).toHaveBeenCalledWith({ ...BESTELLING, lines: [BESTELLING.lines[1]], korting: null })
+    );
+  });
+
+  it('undoes a pending deletion', () => {
+    renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-verwijderen-line-1'));
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-verwijderen-ongedaan-line-1'));
+    expect(screen.queryByTestId('bestelling-modal-regel-verwijderen-ongedaan-line-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-wijzigingen-opslaan')).not.toBeInTheDocument();
+  });
+
+  it('adds a new line via the kunstwerk picker and saves it on Wijzigingen opslaan', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    const { onBestellingGewijzigd } = renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-toevoegen'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk'), { target: { value: 'kw-1' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-materiaal'), { target: { value: 'mat-1' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-maat'), { target: { value: 'maat-1' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-aantal'), { target: { value: '2' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen'));
+
+    expect(screen.getByTestId('bestelling-modal-wijzigingen-opslaan')).toBeInTheDocument();
+
+    const nieuweRegel = { id: 'line-nieuw', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 210, quantity: 2 };
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ lines: [...BESTELLING.lines, nieuweRegel], korting: null }),
+    });
+    fireEvent.click(screen.getByTestId('bestelling-modal-wijzigingen-opslaan'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-1/wijzigen',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({
+            korting: null,
+            updates: [],
+            additions: [{ kunstwerkId: 'kw-1', materiaalId: 'mat-1', maatId: 'maat-1', quantity: 2 }],
+            deletions: [],
+          }),
+        })
+      )
+    );
+    await waitFor(() =>
+      expect(onBestellingGewijzigd).toHaveBeenCalledWith({
+        ...BESTELLING,
+        lines: [...BESTELLING.lines, nieuweRegel],
+        korting: null,
+      })
+    );
+  });
+});
+
+describe('BestellingModal — wijzigingsmail', () => {
+  it('shows the mail-confirmation dialog after a successful Wijzigingen opslaan, and not before', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-1'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-regel-aantal-line-1'), { target: { value: '5' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-opslaan-line-1'));
+    expect(screen.queryByTestId('bestelling-modal-mail-vraag')).not.toBeInTheDocument();
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ lines: [{ ...BESTELLING.lines[0], quantity: 5 }, BESTELLING.lines[1]], korting: null }),
+    });
+    fireEvent.click(screen.getByTestId('bestelling-modal-wijzigingen-opslaan'));
+
+    expect(await screen.findByTestId('bestelling-modal-mail-vraag')).toBeInTheDocument();
+  });
+
+  it('sends the wijzigingsmail and closes the dialog when Ja is clicked', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-1'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-regel-aantal-line-1'), { target: { value: '5' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-opslaan-line-1'));
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ lines: [{ ...BESTELLING.lines[0], quantity: 5 }, BESTELLING.lines[1]], korting: null }),
+    });
+    fireEvent.click(screen.getByTestId('bestelling-modal-wijzigingen-opslaan'));
+    await screen.findByTestId('bestelling-modal-mail-vraag');
+
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true }) });
+    fireEvent.click(screen.getByTestId('bestelling-modal-mail-ja'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/mail',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ soort: 'bestelwijziging', bestelheaderId: 'header-1' }),
+        })
+      )
+    );
+    await waitFor(() => expect(screen.queryByTestId('bestelling-modal-mail-vraag')).not.toBeInTheDocument());
+  });
+
+  it('closes the dialog without sending mail when Nee is clicked', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-1'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-regel-aantal-line-1'), { target: { value: '5' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-opslaan-line-1'));
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ lines: [{ ...BESTELLING.lines[0], quantity: 5 }, BESTELLING.lines[1]], korting: null }),
+    });
+    fireEvent.click(screen.getByTestId('bestelling-modal-wijzigingen-opslaan'));
+    await screen.findByTestId('bestelling-modal-mail-vraag');
+
+    fireEvent.click(screen.getByTestId('bestelling-modal-mail-nee'));
+
+    expect(screen.queryByTestId('bestelling-modal-mail-vraag')).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/mail', expect.anything());
+  });
+});
+
+describe('BestellingModal — korting bewerken', () => {
+  it('drafts a korting via the korting input and sends it as korting on Wijzigingen opslaan', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    const { onBestellingGewijzigd } = renderModal(BESTELLING);
+    fireEvent.change(screen.getByTestId('bestelling-modal-korting-input'), { target: { value: '30' } });
+    expect(screen.getByTestId('bestelling-modal-wijzigingen-opslaan')).toBeInTheDocument();
+
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ lines: BESTELLING.lines, korting: 30 }) });
+    fireEvent.click(screen.getByTestId('bestelling-modal-wijzigingen-opslaan'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-1/wijzigen',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ korting: 30, updates: [], additions: [], deletions: [] }),
+        })
+      )
+    );
+    await waitFor(() =>
+      expect(onBestellingGewijzigd).toHaveBeenCalledWith({ ...BESTELLING, lines: BESTELLING.lines, korting: 30 })
+    );
+  });
+
+  it('sends korting: null when a previously set korting is cleared and saved', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal({ ...BESTELLING, korting: 50 });
+    fireEvent.change(screen.getByTestId('bestelling-modal-korting-input'), { target: { value: '' } });
+    expect(screen.getByTestId('bestelling-modal-wijzigingen-opslaan')).toBeInTheDocument();
+
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ lines: BESTELLING.lines, korting: null }) });
+    fireEvent.click(screen.getByTestId('bestelling-modal-wijzigingen-opslaan'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-1/wijzigen',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ korting: null, updates: [], additions: [], deletions: [] }),
+        })
+      )
+    );
+  });
+
+  it('hides the korting input when the bestelling is Afgewezen', () => {
+    renderModal({ ...BESTELLING, status: 'Afgewezen' });
+    expect(screen.queryByTestId('bestelling-modal-korting-input')).not.toBeInTheDocument();
+  });
+
+  it('keeps the korting input present and editable at Betaald en afgerond', () => {
+    renderModal(BESTELLING_BETAALD_EN_AFGEROND);
+    const input = screen.getByTestId('bestelling-modal-korting-input');
+    expect(input).toBeInTheDocument();
+    expect(input).not.toBeDisabled();
+  });
+
+  it('has min="0" on the korting input to discourage negative values', () => {
+    renderModal(BESTELLING);
+    expect(screen.getByTestId('bestelling-modal-korting-input')).toHaveAttribute('min', '0');
+  });
+});
+
+describe('BestellingModal — live totalen bij concept-wijzigingen', () => {
+  it('updates the header total live when a line price is drafted, before Wijzigingen opslaan', () => {
+    renderModal(BESTELLING);
+    expect(screen.getByTestId('bestelling-modal-total')).toHaveTextContent('€ 450,00');
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-1'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-regel-prijs-line-1'), { target: { value: '200' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-opslaan-line-1'));
+    // line-1: 200 × 3 = 600, line-2: 0 × 2 = 0 -> total 600
+    expect(screen.getByTestId('bestelling-modal-total')).toHaveTextContent('€ 600,00');
+  });
+
+  it('updates the header total live when a korting value is drafted, before Wijzigingen opslaan', () => {
+    renderModal(BESTELLING);
+    fireEvent.change(screen.getByTestId('bestelling-modal-korting-input'), { target: { value: '50' } });
+    // line-1: 450, korting 50 -> 400
+    expect(screen.getByTestId('bestelling-modal-total')).toHaveTextContent('€ 400,00');
   });
 });

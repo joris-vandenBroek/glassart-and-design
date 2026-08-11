@@ -87,6 +87,7 @@ const TYPE_LABEL_KEYS: Record<ActiviteitType, string> = {
   bestelling_afgerond: 'activiteitTypeBestellingAfgerond',
   bestelling_afronding_teruggezet: 'activiteitTypeBestellingAfrondingTeruggezet',
   bestelling_gefactureerd: 'activiteitTypeBestellingGefactureerd',
+  bestelling_gewijzigd: 'activiteitTypeBestellingGewijzigd',
 };
 
 export function ActiviteitSection({ activiteiten, loadError }: ActiviteitSectionProps) {

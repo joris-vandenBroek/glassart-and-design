@@ -32,6 +32,7 @@ export interface Bestelling {
   companyName: string;
   bestelnr: string;
   zendingnummer?: string | null;
+  korting: number | null;
   besteldatum: string;
   status: 'Te beoordelen' | 'Te versturen naar drukker' | 'Verstuurd naar drukker' | 'Te factureren' | 'Betaald en afgerond' | 'Afgewezen';
   lineCount: number;
@@ -51,8 +52,6 @@ interface BestellingenSectionProps {
   drukkers: Drukker[] | null;
   loadError: string | null;
   onBestellingUpdated: (bestelling: Bestelling) => void;
-  onLinePrijsVastgesteld: (bestellingId: string, lineId: string, prijs: number) => void;
-  onLineUpdated: (bestellingId: string, lineId: string, updates: Partial<BestellingLine>) => void;
 }
 
 export function BestellingenSection({
@@ -66,8 +65,6 @@ export function BestellingenSection({
   drukkers,
   loadError,
   onBestellingUpdated,
-  onLinePrijsVastgesteld,
-  onLineUpdated,
 }: BestellingenSectionProps) {
   const t = useTranslations('beheer');
   const [selectedBestelling, setSelectedBestelling] = useState<Bestelling | null>(null);
@@ -153,22 +150,12 @@ export function BestellingenSection({
     });
   }
 
-  function handleLinePrijsVastgesteld(bestellingId: string, lineId: string, prijs: number) {
-    onLinePrijsVastgesteld(bestellingId, lineId, prijs);
-    setSelectedBestelling((current) =>
-      current && current.id === bestellingId
-        ? { ...current, lines: current.lines.map((line) => (line.id === lineId ? { ...line, prijs } : line)) }
-        : current
-    );
-  }
-
-  function handleLineUpdated(bestellingId: string, lineId: string, updates: Partial<BestellingLine>) {
-    onLineUpdated(bestellingId, lineId, updates);
-    setSelectedBestelling((current) =>
-      current && current.id === bestellingId
-        ? { ...current, lines: current.lines.map((line) => (line.id === lineId ? { ...line, ...updates } : line)) }
-        : current
-    );
+  // Anders dan handleBestellingUpdated (dat ook de modal sluit voor statuswijzigingen),
+  // moet de modal na een "Wijzigingen opslaan" open blijven -- de medewerker ziet meteen
+  // het resultaat en krijgt de mail-vraag terwijl de modal nog open staat.
+  function handleBestellingGewijzigd(updated: Bestelling) {
+    onBestellingUpdated(updated);
+    setSelectedBestelling(updated);
   }
 
   function sluitAfrondDialoog() {
@@ -462,8 +449,7 @@ export function BestellingenSection({
           // dus niet worden weggeveegd (zie afrondUitSelectieRef hierboven).
           void startAfronden([bestelling], false);
         }}
-        onLinePrijsVastgesteld={handleLinePrijsVastgesteld}
-        onLineUpdated={handleLineUpdated}
+        onBestellingGewijzigd={handleBestellingGewijzigd}
         // Ook uitgeschakeld terwijl de bevestigingsdialoog op een keuze wacht
         // (afrondGenoten.length > 0, dezelfde voorwaarde als de dialoog z'n
         // eigen isOpen hieronder) -- niet omdat het slot dat al niet zou

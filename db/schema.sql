@@ -275,6 +275,7 @@ CREATE TABLE bestelheaders (
   zendingnummer VARCHAR(20),
   besteldatum TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   status VARCHAR(50) NOT NULL DEFAULT 'Te beoordelen',
+  korting DECIMAL(10,2),
   afwijsreden TEXT,
   FOREIGN KEY (klantnr) REFERENCES klanten(klantnr),
   UNIQUE KEY uniek_bestelnr (bestelnr)

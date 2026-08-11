@@ -42,7 +42,7 @@ vi.mock('@/lib/server/sendResetEmail', () => ({ sendResetEmail: vi.fn().mockReso
 
 import { POST as createHeader } from '@/app/api/bestelheaders/route';
 import { PATCH as patchHeader } from '@/app/api/bestelheaders/[id]/route';
-import { PATCH as patchLine } from '@/app/api/bestelheaders/[id]/bestellines/[lineId]/route';
+import { PATCH as patchWijzigen } from '@/app/api/bestelheaders/[id]/wijzigen/route';
 import { PATCH as patchKlant, DELETE as deleteKlant } from '@/app/api/klanten/[id]/route';
 import { PATCH as patchKunstenaar } from '@/app/api/kunstenaars/[id]/route';
 import { PUT as putKunstenaarAfspraken } from '@/app/api/kunstenaarAfspraken/[id]/route';
@@ -466,8 +466,8 @@ describe('Deel C3 -- bestellingen van meerdere klanten combineren + niet-standaa
       // Combineer beide bestellingen (van 2 verschillende klanten) in één mail.
       const mail = buildDrukkerMail({
         bestellingen: [
-          { id: headerX.id, klantnr: klantX.klantnr, companyName: klantX.email, bestelnr: headerX.bestelnr, besteldatum: '', status: 'Te versturen naar drukker', lineCount: 1, totalQuantity: 1, lines: [{ id: 'l1', code: 'AUTOTEST Kunstwerk Drukker', maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 80, quantity: 1 }] },
-          { id: headerY.id, klantnr: klantY.klantnr, companyName: klantY.email, bestelnr: headerY.bestelnr, besteldatum: '', status: 'Te versturen naar drukker', lineCount: 1, totalQuantity: 1, lines: [{ id: 'l2', code: 'AUTOTEST Kunstwerk Drukker', maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 80, quantity: 1 }] },
+          { id: headerX.id, klantnr: klantX.klantnr, companyName: klantX.email, bestelnr: headerX.bestelnr, korting: null, besteldatum: '', status: 'Te versturen naar drukker', lineCount: 1, totalQuantity: 1, lines: [{ id: 'l1', code: 'AUTOTEST Kunstwerk Drukker', maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 80, quantity: 1 }] },
+          { id: headerY.id, klantnr: klantY.klantnr, companyName: klantY.email, bestelnr: headerY.bestelnr, korting: null, besteldatum: '', status: 'Te versturen naar drukker', lineCount: 1, totalQuantity: 1, lines: [{ id: 'l2', code: 'AUTOTEST Kunstwerk Drukker', maatId: fixture.maatId, materiaalId: fixture.materiaalId, prijs: 80, quantity: 1 }] },
         ],
         klanten: [],
         kunstwerken: [{ id: kunstwerkId, foto: '', code: 'AUTOTEST Kunstwerk Drukker', kunstenaarnr: null, segmentIds: [], materiaalIds: [fixture.materiaalId], maatIds: [fixture.maatId], omschrijvingNl: '', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }],
@@ -744,8 +744,8 @@ describe('Bestelling-levenscyclus -- plaatsen tot verstuurd naar drukker', () =>
       // (BestellingModal.tsx) -- de API zelf handhaaft dat niet, dus dat is hier bewust
       // geen server-side assertie. Zie de opmerking bij Deel C2/CLAUDE.md over vergelijkbare
       // client-only regels (minimaleAfname).
-      const prijsVaststellen = await patchLine(req('PATCH', { prijs: 245 }, staff), {
-        params: { id: header.id, lineId: line.id },
+      const prijsVaststellen = await patchWijzigen(req('PATCH', { updates: [{ id: line.id, prijs: 245 }] }, staff), {
+        params: { id: header.id },
       });
       expect(prijsVaststellen.status).toBe(200);
       stap('Medewerker stelt de prijs vast op EUR 245');

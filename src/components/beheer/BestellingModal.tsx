@@ -9,6 +9,7 @@ import { useAfwijzenBevestiging, AfwijzenBevestigingTekst, AfwijzenBevestigingAc
 import { useBestellingHistorie } from '@/lib/useBestellingHistorie';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { resolveBtwPercentage } from '@/lib/resolveBtw';
+import { berekenBestellingTotalen } from '@/lib/bestellingTotalen';
 import { ProductImage } from '@/components/ProductImage';
 import type { Bestelling, BestellingLine } from './BestellingenSection';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from './materiaalTypes';
@@ -33,6 +34,25 @@ interface LineDraft {
   quantity: string;
 }
 
+interface ConceptUpdate {
+  materiaalId?: string;
+  maatId?: string;
+  breedte?: number;
+  hoogte?: number;
+  prijs?: number | null;
+  quantity?: number;
+}
+
+interface ConceptAddition {
+  tempId: string;
+  kunstwerkId: string;
+  materiaalId: string;
+  maatId: string;
+  breedte?: number;
+  hoogte?: number;
+  quantity: number;
+}
+
 interface BestellingModalProps {
   bestelling: Bestelling | null;
   kunstwerken: Kunstwerk[] | null;
@@ -44,8 +64,7 @@ interface BestellingModalProps {
   onClose: () => void;
   onUpdated: (bestelling: Bestelling) => void;
   onAfronden: (bestelling: Bestelling) => void;
-  onLinePrijsVastgesteld: (bestellingId: string, lineId: string, prijs: number) => void;
-  onLineUpdated: (bestellingId: string, lineId: string, updates: Partial<BestellingLine>) => void;
+  onBestellingGewijzigd: (bestelling: Bestelling) => void;
   /** True zolang ergens (bulkknop, bevestigingsdialoog, of deze knop zelf elders) een
    * afrondronde loopt -- schakelt de "Afronden"-knop uit zodat deze derde ingang naar
    * startAfronden niet buiten de gedeelde afrondBezig-mutex om kan lopen. */
@@ -76,8 +95,7 @@ export function BestellingModal({
   onClose,
   onUpdated,
   onAfronden,
-  onLinePrijsVastgesteld,
-  onLineUpdated,
+  onBestellingGewijzigd,
   isAfrondBezig = false,
 }: BestellingModalProps) {
   const t = useTranslations('beheer');
@@ -85,6 +103,21 @@ export function BestellingModal({
   const [prijsDrafts, setPrijsDrafts] = useState<Record<string, string>>({});
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
   const [lineDraft, setLineDraft] = useState<LineDraft | null>(null);
+  const [conceptUpdates, setConceptUpdates] = useState<Record<string, ConceptUpdate>>({});
+  const [conceptDeletions, setConceptDeletions] = useState<Set<string>>(new Set());
+  const [conceptAdditions, setConceptAdditions] = useState<ConceptAddition[]>([]);
+  const [toonNieuweRegel, setToonNieuweRegel] = useState(false);
+  const [toonMailVraag, setToonMailVraag] = useState(false);
+  const [conceptKorting, setConceptKorting] = useState<string>('');
+  const [nieuweRegelDraft, setNieuweRegelDraft] = useState({
+    kunstwerkId: '',
+    materiaalId: '',
+    maatId: '',
+    breedte: '',
+    hoogte: '',
+    quantity: '1',
+  });
+  const [saving, setSaving] = useState(false);
   const { user } = useAdminAuth();
   const { historie } = useBestellingHistorie(bestelling?.id ?? null);
   const bevestigingAfwijzen = useAfwijzenBevestiging();
@@ -95,6 +128,13 @@ export function BestellingModal({
       setPrijsDrafts({});
       setEditingLineId(null);
       setLineDraft(null);
+      setConceptUpdates({});
+      setConceptDeletions(new Set());
+      setConceptAdditions([]);
+      setToonNieuweRegel(false);
+      setToonMailVraag(false);
+      setConceptKorting(bestelling.korting != null ? String(bestelling.korting) : '');
+      setNieuweRegelDraft({ kunstwerkId: '', materiaalId: '', maatId: '', breedte: '', hoogte: '', quantity: '1' });
       bevestigingAfwijzen.annuleer();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -104,23 +144,37 @@ export function BestellingModal({
     (materiaalsoorten ?? []).map((soort) => [soort.id, soort.omschrijvingNl])
   );
 
-  const heeftOngeprijsdeRegel = (bestelling?.lines ?? []).some((line) => line.prijs === null);
+  const klant = bestelling ? (klanten ?? []).find((k) => k.klantnr === bestelling.klantnr) : undefined;
+  const land = klant ? klant.invoiceLand || klant.land || null : null;
+  const klantBtwPercentage = btwTarieven ? resolveBtwPercentage(btwTarieven.tarieven, land) : null;
+  const conceptKortingValue = conceptKorting.trim() === '' ? null : Number(conceptKorting);
+  const kortingGewijzigd = !!bestelling && conceptKortingValue !== (bestelling.korting ?? null);
+  // Overlaat van bestelling.lines met de conceptwijzigingen (updates/deletions) erin verwerkt,
+  // zodat totalen/heeftOngeprijsdeRegel/Goedkeuren live meebewegen met wat de medewerker nog
+  // aan het bewerken is, in plaats van pas na Wijzigingen opslaan. conceptAdditions blijft hier
+  // bewust buiten: hun prijs is pas na opslaan bekend (zie "prijs bekend na opslaan" verderop).
+  const weergaveLines = bestelling
+    ? bestelling.lines
+        .filter((line) => !conceptDeletions.has(line.id))
+        .map((line) => (conceptUpdates[line.id] ? { ...line, ...conceptUpdates[line.id] } : line))
+    : [];
+  const totalen = bestelling
+    ? berekenBestellingTotalen(weergaveLines, conceptKortingValue, klantBtwPercentage)
+    : null;
+  const heeftOngeprijsdeRegel = totalen?.heeftOngeprijsdeRegel ?? false;
   const totaalWeergave =
     bestelling && bestelling.lines.length > 0
       ? heeftOngeprijsdeRegel
         ? t('bestellingenModalTotalIncomplete')
-        : formatCurrency(bestelling.lines.reduce((sum, line) => sum + (line.prijs ?? 0) * line.quantity, 0))
+        : formatCurrency(totalen!.totaalExclBtw!)
       : null;
-  const totaalExclBtwGetal =
-    bestelling && !heeftOngeprijsdeRegel
-      ? bestelling.lines.reduce((sum, line) => sum + (line.prijs ?? 0) * line.quantity, 0)
-      : null;
-  const klant = bestelling ? (klanten ?? []).find((k) => k.klantnr === bestelling.klantnr) : undefined;
-  const land = klant ? klant.invoiceLand || klant.land || null : null;
-  const btwPercentage = btwTarieven ? resolveBtwPercentage(btwTarieven.tarieven, land) : null;
-  const btwBedrag =
-    totaalExclBtwGetal !== null && btwPercentage != null ? totaalExclBtwGetal * (btwPercentage / 100) : null;
-  const totaalInclBtw = totaalExclBtwGetal !== null && btwBedrag !== null ? totaalExclBtwGetal + btwBedrag : null;
+  const btwPercentage = totalen?.btwPercentage ?? null;
+  const btwBedrag = totalen?.btwBedrag ?? null;
+  const totaalInclBtw = totalen?.totaalInclBtw ?? null;
+
+  const REGELSTRUCTUUR_OP_SLOT_STATUSSEN = ['Verstuurd naar drukker', 'Te factureren', 'Betaald en afgerond'];
+  const regelstructuurBewerkbaar =
+    !!bestelling && bestelling.status !== 'Afgewezen' && !REGELSTRUCTUUR_OP_SLOT_STATUSSEN.includes(bestelling.status);
 
   async function handleGoedkeuren() {
     if (!bestelling) return;
@@ -192,25 +246,14 @@ export function BestellingModal({
     }
   }
 
-  async function handlePrijsVaststellen(line: BestellingLine) {
-    if (!bestelling) return;
+  function handlePrijsVaststellen(line: BestellingLine) {
     const prijs = Number(prijsDrafts[line.id]);
     if (!prijs || prijs <= 0) return;
-    try {
-      const response = await fetch(
-        `/api/bestelheaders/${bestelling.id}/bestellines/${line.id}`,
-        {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ prijs }),
-        }
-      );
-      if (!response.ok) throw new Error('update failed');
-      void logActiviteit('bestelling_prijs_vastgesteld', bestelling.bestelnr);
-      onLinePrijsVastgesteld(bestelling.id, line.id, prijs);
-    } catch {
-      setError(t('bestellingenActionError'));
-    }
+    setConceptUpdates((current) => ({ ...current, [line.id]: { ...current[line.id], prijs } }));
+    setPrijsDrafts((current) => {
+      const { [line.id]: _verwijderd, ...rest } = current;
+      return rest;
+    });
   }
 
   function startEditRegel(line: BestellingLine) {
@@ -230,48 +273,130 @@ export function BestellingModal({
     setLineDraft(null);
   }
 
-  async function handleOpslaanRegel(line: BestellingLine) {
-    if (!bestelling || !lineDraft) return;
+  function handleOpslaanRegel(line: BestellingLine) {
+    if (!lineDraft) return;
     const quantity = Number(lineDraft.quantity);
     if (!lineDraft.materiaalId || !quantity || quantity <= 0) return;
     const prijs = lineDraft.prijs === '' ? null : Number(lineDraft.prijs);
     if (prijs !== null && prijs <= 0) return;
 
-    const payload: Record<string, unknown> = { materiaalId: lineDraft.materiaalId, prijs, quantity };
-    const updates: Partial<BestellingLine> = { materiaalId: lineDraft.materiaalId, prijs, quantity };
-
+    const patch: ConceptUpdate = { materiaalId: lineDraft.materiaalId, prijs, quantity };
     if (isCustomLine(line)) {
       const breedte = Number(lineDraft.breedte);
       const hoogte = Number(lineDraft.hoogte);
       if (!breedte || breedte <= 0 || !hoogte || hoogte <= 0) return;
-      payload.maatId = '';
-      payload.breedte = breedte;
-      payload.hoogte = hoogte;
-      updates.maatId = '';
-      updates.breedte = breedte;
-      updates.hoogte = hoogte;
+      patch.maatId = '';
+      patch.breedte = breedte;
+      patch.hoogte = hoogte;
     } else {
       if (!lineDraft.maatId) return;
-      payload.maatId = lineDraft.maatId;
-      updates.maatId = lineDraft.maatId;
+      patch.maatId = lineDraft.maatId;
     }
 
-    try {
-      const response = await fetch(
-        `/api/bestelheaders/${bestelling.id}/bestellines/${line.id}`,
+    setConceptUpdates((current) => ({ ...current, [line.id]: { ...current[line.id], ...patch } }));
+    cancelEditRegel();
+  }
+
+  function markeerVoorVerwijdering(lineId: string) {
+    setConceptDeletions((current) => new Set(current).add(lineId));
+  }
+
+  function maakVerwijderingOngedaan(lineId: string) {
+    setConceptDeletions((current) => {
+      const next = new Set(current);
+      next.delete(lineId);
+      return next;
+    });
+  }
+
+  function handleNieuweRegelToevoegen() {
+    const kunstwerk = (kunstwerken ?? []).find((k) => k.id === nieuweRegelDraft.kunstwerkId);
+    const quantity = Number(nieuweRegelDraft.quantity);
+    if (!kunstwerk || !nieuweRegelDraft.materiaalId || !quantity || quantity <= 0) return;
+    const isEigenMaat = kunstwerk.maatIds.length === 0;
+    if (isEigenMaat) {
+      const breedte = Number(nieuweRegelDraft.breedte);
+      const hoogte = Number(nieuweRegelDraft.hoogte);
+      if (!breedte || breedte <= 0 || !hoogte || hoogte <= 0) return;
+      setConceptAdditions((current) => [
+        ...current,
         {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(payload),
-        }
-      );
-      if (!response.ok) throw new Error('update failed');
-      void logActiviteit('bestelling_regel_gewijzigd', bestelling.bestelnr);
-      onLineUpdated(bestelling.id, line.id, updates);
-      cancelEditRegel();
+          tempId: `nieuw-${current.length}-${Date.now()}`,
+          kunstwerkId: kunstwerk.id,
+          materiaalId: nieuweRegelDraft.materiaalId,
+          maatId: '',
+          breedte,
+          hoogte,
+          quantity,
+        },
+      ]);
+    } else {
+      if (!nieuweRegelDraft.maatId) return;
+      setConceptAdditions((current) => [
+        ...current,
+        {
+          tempId: `nieuw-${current.length}-${Date.now()}`,
+          kunstwerkId: kunstwerk.id,
+          materiaalId: nieuweRegelDraft.materiaalId,
+          maatId: nieuweRegelDraft.maatId,
+          quantity,
+        },
+      ]);
+    }
+    setNieuweRegelDraft({ kunstwerkId: '', materiaalId: '', maatId: '', breedte: '', hoogte: '', quantity: '1' });
+    setToonNieuweRegel(false);
+  }
+
+  const heeftConceptWijziging =
+    Object.keys(conceptUpdates).length > 0 ||
+    conceptDeletions.size > 0 ||
+    conceptAdditions.length > 0 ||
+    kortingGewijzigd;
+
+  async function handleWijzigingenOpslaan() {
+    if (!bestelling) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const updates = Object.entries(conceptUpdates).map(([id, patch]) => ({ id, ...patch }));
+      const additions = conceptAdditions.map(({ tempId: _tempId, ...addition }) => addition);
+      const deletions = Array.from(conceptDeletions);
+      const response = await fetch(`/api/bestelheaders/${bestelling.id}/wijzigen`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ korting: conceptKortingValue, updates, additions, deletions }),
+      });
+      if (!response.ok) throw new Error('wijzigen failed');
+      const body = (await response.json()) as { lines: BestellingLine[]; korting: number | null };
+      void logActiviteit('bestelling_gewijzigd', bestelling.bestelnr);
+      onBestellingGewijzigd({ ...bestelling, lines: body.lines, korting: body.korting });
+      setConceptUpdates({});
+      setConceptDeletions(new Set());
+      setConceptAdditions([]);
+      setConceptKorting(body.korting != null ? String(body.korting) : '');
+      setToonMailVraag(true);
     } catch {
       setError(t('bestellingenActionError'));
+    } finally {
+      setSaving(false);
     }
+  }
+
+  async function handleMailJa() {
+    if (!bestelling) return;
+    try {
+      await fetch('/api/mail', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ soort: 'bestelwijziging', bestelheaderId: bestelling.id }),
+      });
+    } finally {
+      setToonMailVraag(false);
+    }
+  }
+
+  function handleMailNee() {
+    setToonMailVraag(false);
   }
 
   return (
@@ -313,6 +438,32 @@ export function BestellingModal({
                 >
                   {totaalWeergave}
                 </span>
+                {totalen && totalen.korting > 0 && (
+                  <div data-testid="bestelling-modal-korting" className="contents">
+                    <span className="text-[0.65rem] uppercase tracking-wide text-white/40">
+                      {t('bestellingenModalKortingLabel')}
+                    </span>
+                    <span className="text-right text-sm text-white/80 tabular-nums">
+                      -{formatCurrency(totalen.korting)}
+                    </span>
+                  </div>
+                )}
+                {bestelling.status !== 'Afgewezen' && (
+                  <div className="contents">
+                    <span className="text-[0.65rem] uppercase tracking-wide text-white/40">
+                      {t('bestellingenModalKortingLabel')}
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      data-testid="bestelling-modal-korting-input"
+                      value={conceptKorting}
+                      onChange={(event) => setConceptKorting(event.target.value)}
+                      placeholder={t('bestellingenModalKortingLabel')}
+                      className="w-20 justify-self-end rounded-sm bg-black/40 px-2 py-1 text-right text-xs text-white"
+                    />
+                  </div>
+                )}
                 {btwBedrag !== null && (
                   <div data-testid="bestelling-modal-btw" className="contents">
                     <span className="text-[0.65rem] uppercase tracking-wide text-white/40">
@@ -425,14 +576,16 @@ export function BestellingModal({
             <ul className="flex max-h-80 flex-col gap-3 overflow-y-auto text-xs">
               {bestelling.lines.map((line) => {
                 const kunstwerk = (kunstwerken ?? []).find((k) => k.code === line.code) ?? null;
-                const materiaal = (materialen ?? []).find((m) => m.id === line.materiaalId);
-                const maat = (maten ?? []).find((m) => m.id === line.maatId);
+                const isEditingLine = editingLineId === line.id;
+                const conceptPatch = conceptUpdates[line.id];
+                const weergaveLine = conceptPatch ? { ...line, ...conceptPatch } : line;
+                const materiaal = (materialen ?? []).find((m) => m.id === weergaveLine.materiaalId);
+                const maat = (maten ?? []).find((m) => m.id === weergaveLine.maatId);
                 const maatWeergave = maat
                   ? `${maat.breedte}×${maat.hoogte} cm`
-                  : line.breedte != null && line.hoogte != null
-                    ? `${line.breedte}×${line.hoogte} cm`
-                    : line.maatId;
-                const isEditingLine = editingLineId === line.id;
+                  : weergaveLine.breedte != null && weergaveLine.hoogte != null
+                    ? `${weergaveLine.breedte}×${weergaveLine.hoogte} cm`
+                    : weergaveLine.maatId;
                 const kunstwerkMaterialen = kunstwerk
                   ? (materialen ?? []).filter((m) => kunstwerk.materiaalIds.includes(m.id))
                   : [];
@@ -444,7 +597,9 @@ export function BestellingModal({
                   <li
                     key={line.id}
                     data-testid={`bestelling-modal-line-${line.id}`}
-                    className="flex gap-3 rounded-md border border-white/10 bg-white/[0.02] p-3"
+                    className={`flex gap-3 rounded-md border border-white/10 bg-white/[0.02] p-3 ${
+                      conceptDeletions.has(line.id) ? 'opacity-40 line-through' : ''
+                    }`}
                   >
                     {kunstwerk ? (
                       <ProductImage src={kunstwerk.foto} alt="" className="h-[72px] w-[72px] shrink-0 rounded-md" />
@@ -471,27 +626,27 @@ export function BestellingModal({
                                       materiaalsoortNaamById.get(materiaal.materiaalsoortId) ??
                                       materiaal.materiaalsoortId
                                     } — ${materiaal.omschrijvingNl}`
-                                  : line.materiaalId}
+                                  : weergaveLine.materiaalId}
                               </span>
                               <span className="text-white/35">{t('bestellingenModalLabelMaat')}</span>
                               <span>{maatWeergave}</span>
                             </div>
                           )}
                           <div className="mt-2 flex items-baseline justify-between border-t border-white/10 pt-1.5">
-                            {line.prijs !== null ? (
+                            {weergaveLine.prijs !== null ? (
                               <>
                                 <span className="text-white/45">
-                                  {line.quantity} × {formatCurrency(line.prijs)}
+                                  {weergaveLine.quantity} × {formatCurrency(weergaveLine.prijs)}
                                 </span>
                                 <span className="font-semibold text-white/90">
-                                  {formatCurrency(line.prijs * line.quantity)}
+                                  {formatCurrency(weergaveLine.prijs * weergaveLine.quantity)}
                                 </span>
                               </>
                             ) : (
                               <span className="text-white/45">{t('bestellingenModalPrijsOpAanvraag')}</span>
                             )}
                           </div>
-                          {line.prijs === null && (
+                          {weergaveLine.prijs === null && (
                             <div className="mt-1 flex items-center gap-2">
                               <input
                                 type="number"
@@ -516,13 +671,33 @@ export function BestellingModal({
                           {kunstwerk && (
                             <button
                               type="button"
-                              onClick={() => startEditRegel(line)}
+                              onClick={() => startEditRegel(weergaveLine)}
                               data-testid={`bestelling-modal-regel-bewerken-${line.id}`}
                               className="mt-1.5 text-[0.65rem] uppercase tracking-wide text-white/40 underline underline-offset-2 hover:text-white/70"
                             >
                               {t('bewerken')}
                             </button>
                           )}
+                          {regelstructuurBewerkbaar &&
+                            (conceptDeletions.has(line.id) ? (
+                              <button
+                                type="button"
+                                onClick={() => maakVerwijderingOngedaan(line.id)}
+                                data-testid={`bestelling-modal-regel-verwijderen-ongedaan-${line.id}`}
+                                className="mt-1.5 text-[0.65rem] uppercase tracking-wide text-white/40 underline underline-offset-2 hover:text-white/70"
+                              >
+                                {t('bestellingenRegelVerwijderenOngedaanMaken')}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => markeerVoorVerwijdering(line.id)}
+                                data-testid={`bestelling-modal-regel-verwijderen-${line.id}`}
+                                className="mt-1.5 text-[0.65rem] uppercase tracking-wide text-white/40 underline underline-offset-2 hover:text-white/70"
+                              >
+                                {t('bestellingenRegelVerwijderen')}
+                              </button>
+                            ))}
                         </>
                       ) : (
                         <div className="mt-1.5 flex flex-col gap-2">
@@ -641,6 +816,148 @@ export function BestellingModal({
               })}
             </ul>
 
+            {regelstructuurBewerkbaar && (
+              <div className="flex flex-col gap-2">
+                {conceptAdditions.map((addition) => {
+                  const kunstwerk = (kunstwerken ?? []).find((k) => k.id === addition.kunstwerkId);
+                  return (
+                    <p key={addition.tempId} className="text-xs text-white/60">
+                      {kunstwerk?.omschrijvingNl ?? addition.kunstwerkId} × {addition.quantity} —{' '}
+                      {t('bestellingenRegelPrijsNaOpslaan')}
+                    </p>
+                  );
+                })}
+                {toonNieuweRegel ? (
+                  <div className="flex flex-col gap-2 rounded-md border border-white/10 bg-white/[0.02] p-3">
+                    <select
+                      value={nieuweRegelDraft.kunstwerkId}
+                      onChange={(event) =>
+                        setNieuweRegelDraft((current) => ({
+                          ...current,
+                          kunstwerkId: event.target.value,
+                          materiaalId: '',
+                          maatId: '',
+                        }))
+                      }
+                      data-testid="bestelling-modal-nieuwe-regel-kunstwerk"
+                      className="rounded-sm bg-black/40 px-2 py-1.5 text-xs text-white"
+                    >
+                      <option value="">—</option>
+                      {(kunstwerken ?? []).map((k) => (
+                        <option key={k.id} value={k.id}>
+                          {k.omschrijvingNl}
+                        </option>
+                      ))}
+                    </select>
+                    {(() => {
+                      const gekozenKunstwerk = (kunstwerken ?? []).find((k) => k.id === nieuweRegelDraft.kunstwerkId);
+                      if (!gekozenKunstwerk) return null;
+                      const beschikbareMaterialen = (materialen ?? []).filter((m) =>
+                        gekozenKunstwerk.materiaalIds.includes(m.id)
+                      );
+                      const beschikbareMaten = (maten ?? []).filter((m) => gekozenKunstwerk.maatIds.includes(m.id));
+                      return (
+                        <>
+                          <select
+                            value={nieuweRegelDraft.materiaalId}
+                            onChange={(event) =>
+                              setNieuweRegelDraft((current) => ({ ...current, materiaalId: event.target.value }))
+                            }
+                            data-testid="bestelling-modal-nieuwe-regel-materiaal"
+                            className="rounded-sm bg-black/40 px-2 py-1.5 text-xs text-white"
+                          >
+                            <option value="">—</option>
+                            {beschikbareMaterialen.map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {m.materiaaldikte}mm {materiaalsoortNaamById.get(m.materiaalsoortId) ?? m.materiaalsoortId}
+                              </option>
+                            ))}
+                          </select>
+                          {gekozenKunstwerk.maatIds.length === 0 ? (
+                            <div className="flex gap-2">
+                              <input
+                                type="number"
+                                placeholder={t('bestellingenModalLabelMaat')}
+                                value={nieuweRegelDraft.breedte}
+                                onChange={(event) =>
+                                  setNieuweRegelDraft((current) => ({ ...current, breedte: event.target.value }))
+                                }
+                                data-testid="bestelling-modal-nieuwe-regel-breedte"
+                                className="w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
+                              />
+                              <input
+                                type="number"
+                                value={nieuweRegelDraft.hoogte}
+                                onChange={(event) =>
+                                  setNieuweRegelDraft((current) => ({ ...current, hoogte: event.target.value }))
+                                }
+                                data-testid="bestelling-modal-nieuwe-regel-hoogte"
+                                className="w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
+                              />
+                            </div>
+                          ) : (
+                            <select
+                              value={nieuweRegelDraft.maatId}
+                              onChange={(event) =>
+                                setNieuweRegelDraft((current) => ({ ...current, maatId: event.target.value }))
+                              }
+                              data-testid="bestelling-modal-nieuwe-regel-maat"
+                              className="rounded-sm bg-black/40 px-2 py-1.5 text-xs text-white"
+                            >
+                              <option value="">—</option>
+                              {beschikbareMaten.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                  {m.breedte}×{m.hoogte} cm
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </>
+                      );
+                    })()}
+                    <input
+                      type="number"
+                      min={1}
+                      placeholder={t('bestellingenModalLabelAantal')}
+                      value={nieuweRegelDraft.quantity}
+                      onChange={(event) =>
+                        setNieuweRegelDraft((current) => ({ ...current, quantity: event.target.value }))
+                      }
+                      data-testid="bestelling-modal-nieuwe-regel-aantal"
+                      className="w-16 rounded-sm bg-black/40 px-2 py-1 text-xs text-white"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleNieuweRegelToevoegen}
+                        data-testid="bestelling-modal-nieuwe-regel-toevoegen-bevestigen"
+                        className="btn-beheer-primary rounded-sm bg-silver px-3 py-1.5 text-xs tracking-wide text-ink"
+                      >
+                        {t('bestellingenModalRegelOpslaan')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setToonNieuweRegel(false)}
+                        data-testid="bestelling-modal-nieuwe-regel-annuleren"
+                        className="btn-beheer-secondary rounded-sm border border-white/20 px-3 py-1.5 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                      >
+                        {t('annuleren')}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setToonNieuweRegel(true)}
+                    data-testid="bestelling-modal-regel-toevoegen"
+                    className="self-start text-[0.65rem] uppercase tracking-wide text-white/40 underline underline-offset-2 hover:text-white/70"
+                  >
+                    {t('bestellingenRegelToevoegen')}
+                  </button>
+                )}
+              </div>
+            )}
+
             <div className="flex flex-col gap-1 border-t border-white/10 pt-3 text-xs">
               <span className="text-[0.65rem] uppercase tracking-wide text-white/40">{t('bestellingenHistorieTitel')}</span>
               <ul data-testid="bestelling-modal-historie" className="flex flex-col gap-0.5">
@@ -663,6 +980,47 @@ export function BestellingModal({
               <p data-testid="bestelling-modal-goedkeuren-blocked" className="text-xs text-amber-400">
                 {t('bestellingenGoedkeurenBlocked')}
               </p>
+            )}
+
+            {heeftConceptWijziging && (
+              <div className="flex justify-end border-t border-white/10 pt-3">
+                <button
+                  type="button"
+                  onClick={handleWijzigingenOpslaan}
+                  disabled={saving}
+                  data-testid="bestelling-modal-wijzigingen-opslaan"
+                  className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
+                >
+                  {t('bestellingenWijzigingenOpslaan')}
+                </button>
+              </div>
+            )}
+
+            {toonMailVraag && (
+              <div
+                data-testid="bestelling-modal-mail-vraag"
+                className="flex items-center justify-between gap-3 rounded-md border border-white/10 bg-white/[0.02] p-3 text-xs"
+              >
+                <span>{t('bestellingenMailVraag')}</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleMailJa}
+                    data-testid="bestelling-modal-mail-ja"
+                    className="btn-beheer-primary rounded-sm bg-silver px-3 py-1.5 text-xs tracking-wide text-ink"
+                  >
+                    {t('bestellingenMailJa')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleMailNee}
+                    data-testid="bestelling-modal-mail-nee"
+                    className="btn-beheer-secondary rounded-sm border border-white/20 px-3 py-1.5 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+                  >
+                    {t('bestellingenMailNee')}
+                  </button>
+                </div>
+              </div>
             )}
           </div>
           {bevestigingAfwijzen.open && (
