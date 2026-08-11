@@ -133,6 +133,9 @@ export function BestellingModal({
     hoogte: '',
     quantity: '1',
   });
+  const [nieuweRegelPrijsvoorbeeld, setNieuweRegelPrijsvoorbeeld] = useState<
+    { status: 'laden' } | { status: 'vast'; prijs: number } | { status: 'op-aanvraag' } | { status: 'onbekend' } | null
+  >(null);
   const [saving, setSaving] = useState(false);
   const { user } = useAdminAuth();
   const { historie } = useBestellingHistorie(bestelling?.id ?? null);
@@ -151,10 +154,72 @@ export function BestellingModal({
       setToonMailVraag(false);
       setConceptKorting(bestelling.korting != null ? String(bestelling.korting) : '');
       setNieuweRegelDraft({ kunstwerkId: '', materiaalId: '', maatId: '', breedte: '', hoogte: '', quantity: '1' });
+      setNieuweRegelPrijsvoorbeeld(null);
       bevestigingAfwijzen.annuleer();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bestelling?.id]);
+
+  // Live prijsvoorbeeld voor "Regel toevoegen": herberekent zodra kunstwerk/materiaal/maat
+  // (of, bij eigen maat, breedte/hoogte) compleet zijn, gedebounced zodat elke toetsaanslag
+  // in breedte/hoogte niet meteen een aparte aanvraag stuurt. Roept dezelfde
+  // resolveerBestellijnPrijs aan als de echte opslag (via .../prijsvoorbeeld), dus dit
+  // voorbeeld kan nooit afwijken van de prijs die "Wijzigingen opslaan" straks berekent.
+  useEffect(() => {
+    if (!bestelling || !toonNieuweRegel) {
+      setNieuweRegelPrijsvoorbeeld(null);
+      return;
+    }
+    const kunstwerk = (kunstwerken ?? []).find((k) => k.id === nieuweRegelDraft.kunstwerkId);
+    if (!kunstwerk || !nieuweRegelDraft.materiaalId) {
+      setNieuweRegelPrijsvoorbeeld(null);
+      return;
+    }
+    const isEigenMaat = kunstwerk.maatIds.length === 0;
+    const breedte = Number(nieuweRegelDraft.breedte);
+    const hoogte = Number(nieuweRegelDraft.hoogte);
+    if (isEigenMaat ? !breedte || breedte <= 0 || !hoogte || hoogte <= 0 : !nieuweRegelDraft.maatId) {
+      setNieuweRegelPrijsvoorbeeld(null);
+      return;
+    }
+
+    setNieuweRegelPrijsvoorbeeld({ status: 'laden' });
+    const timeoutId = window.setTimeout(async () => {
+      const params = new URLSearchParams({
+        kunstwerkId: nieuweRegelDraft.kunstwerkId,
+        materiaalId: nieuweRegelDraft.materiaalId,
+        maatId: isEigenMaat ? '' : nieuweRegelDraft.maatId,
+      });
+      if (isEigenMaat) {
+        params.set('breedte', nieuweRegelDraft.breedte);
+        params.set('hoogte', nieuweRegelDraft.hoogte);
+      }
+      try {
+        const response = await fetch(`/api/bestelheaders/${bestelling.id}/prijsvoorbeeld?${params.toString()}`);
+        if (!response.ok) {
+          setNieuweRegelPrijsvoorbeeld({ status: 'onbekend' });
+          return;
+        }
+        const body = (await response.json()) as { status: 'vast' | 'op-aanvraag' | 'onbekend'; prijs?: number };
+        setNieuweRegelPrijsvoorbeeld(
+          body.status === 'vast' ? { status: 'vast', prijs: body.prijs as number } : { status: body.status }
+        );
+      } catch {
+        setNieuweRegelPrijsvoorbeeld({ status: 'onbekend' });
+      }
+    }, 300);
+    return () => window.clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    bestelling?.id,
+    toonNieuweRegel,
+    nieuweRegelDraft.kunstwerkId,
+    nieuweRegelDraft.materiaalId,
+    nieuweRegelDraft.maatId,
+    nieuweRegelDraft.breedte,
+    nieuweRegelDraft.hoogte,
+    kunstwerken,
+  ]);
 
   const materiaalsoortNaamById = new Map(
     (materiaalsoorten ?? []).map((soort) => [soort.id, soort.omschrijvingNl])
@@ -328,7 +393,7 @@ export function BestellingModal({
   function handleNieuweRegelToevoegen() {
     const kunstwerk = (kunstwerken ?? []).find((k) => k.id === nieuweRegelDraft.kunstwerkId);
     const quantity = Number(nieuweRegelDraft.quantity);
-    if (!kunstwerk || !nieuweRegelDraft.materiaalId || !quantity || quantity <= 0) return;
+    if (!kunstwerk || !nieuweRegelDraft.materiaalId || !Number.isInteger(quantity) || quantity <= 0) return;
     const isEigenMaat = kunstwerk.maatIds.length === 0;
     if (isEigenMaat) {
       const breedte = Number(nieuweRegelDraft.breedte);
@@ -360,8 +425,20 @@ export function BestellingModal({
       ]);
     }
     setNieuweRegelDraft({ kunstwerkId: '', materiaalId: '', maatId: '', breedte: '', hoogte: '', quantity: '1' });
+    setNieuweRegelPrijsvoorbeeld(null);
     setToonNieuweRegel(false);
   }
+
+  const nieuweRegelKunstwerk = (kunstwerken ?? []).find((k) => k.id === nieuweRegelDraft.kunstwerkId);
+  const nieuweRegelAantal = Number(nieuweRegelDraft.quantity);
+  const nieuweRegelVolledig =
+    !!nieuweRegelKunstwerk &&
+    !!nieuweRegelDraft.materiaalId &&
+    (nieuweRegelKunstwerk.maatIds.length === 0
+      ? Number(nieuweRegelDraft.breedte) > 0 && Number(nieuweRegelDraft.hoogte) > 0
+      : !!nieuweRegelDraft.maatId) &&
+    Number.isInteger(nieuweRegelAantal) &&
+    nieuweRegelAantal > 0;
 
   const heeftConceptWijziging =
     Object.keys(conceptUpdates).length > 0 ||
@@ -604,7 +681,7 @@ export function BestellingModal({
                   ? `${maat.breedte}×${maat.hoogte} cm`
                   : weergaveLine.breedte != null && weergaveLine.hoogte != null
                     ? `${weergaveLine.breedte}×${weergaveLine.hoogte} cm`
-                    : weergaveLine.maatId;
+                    : t('bestellingenRegelOnbekend');
                 const kunstwerkMaterialen = kunstwerk
                   ? (materialen ?? []).filter((m) => kunstwerk.materiaalIds.includes(m.id))
                   : [];
@@ -645,7 +722,7 @@ export function BestellingModal({
                                       materiaalsoortNaamById.get(materiaal.materiaalsoortId) ??
                                       materiaal.materiaalsoortId
                                     } — ${materiaal.omschrijvingNl}`
-                                  : weergaveLine.materiaalId}
+                                  : t('bestellingenRegelOnbekend')}
                               </span>
                               <span className="text-white/35">{t('bestellingenModalLabelMaat')}</span>
                               <span>{maatWeergave}</span>
@@ -1012,12 +1089,24 @@ export function BestellingModal({
                         className={`w-16 rounded-sm bg-black/40 px-2 py-1 text-xs text-white ${GEEN_SPINNER}`}
                       />
                     </Veld>
+                    {nieuweRegelPrijsvoorbeeld && (
+                      <p data-testid="bestelling-modal-nieuwe-regel-prijsvoorbeeld" className="text-xs text-white/60">
+                        {nieuweRegelPrijsvoorbeeld.status === 'laden'
+                          ? '…'
+                          : nieuweRegelPrijsvoorbeeld.status === 'vast'
+                            ? `${nieuweRegelAantal || 1} × ${formatCurrency(nieuweRegelPrijsvoorbeeld.prijs)} = ${formatCurrency(
+                                nieuweRegelPrijsvoorbeeld.prijs * (nieuweRegelAantal || 1)
+                              )}`
+                            : t('bestellingenModalPrijsOpAanvraag')}
+                      </p>
+                    )}
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={handleNieuweRegelToevoegen}
+                        disabled={!nieuweRegelVolledig}
                         data-testid="bestelling-modal-nieuwe-regel-toevoegen-bevestigen"
-                        className="btn-beheer-primary rounded-sm bg-silver px-3 py-1.5 text-xs tracking-wide text-ink"
+                        className="btn-beheer-primary rounded-sm bg-silver px-3 py-1.5 text-xs tracking-wide text-ink disabled:opacity-40"
                       >
                         {t('bestellingenModalRegelOpslaan')}
                       </button>

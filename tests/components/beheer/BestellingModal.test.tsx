@@ -958,6 +958,105 @@ describe('BestellingModal — regel verwijderen en toevoegen', () => {
     expect(screen.queryByTestId(/^bestelling-modal-nieuwe-regel-kaart-/)).not.toBeInTheDocument();
     expect(screen.queryByTestId('bestelling-modal-wijzigingen-opslaan')).not.toBeInTheDocument();
   });
+
+  it('keeps "Regel toevoegen" opslaan disabled until kunstwerk/materiaal/maat and a whole positive aantal are all set', () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-toevoegen'));
+    expect(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen')).toBeDisabled();
+
+    fireEvent.focus(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk'));
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk-option-kw-1'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-materiaal'), { target: { value: 'mat-1' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-maat'), { target: { value: 'maat-1' } });
+    // aantal staat nog op de standaardwaarde '1' (geldig) -- de knop is dus al bruikbaar
+    // vóórdat er iets aan aantal wordt gewijzigd; dat is het gedrag dat de volgende twee
+    // wijzigingen (2.5, dan 2) verifiëren.
+    expect(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen')).not.toBeDisabled();
+
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-aantal'), { target: { value: '2.5' } });
+    expect(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen')).toBeDisabled();
+
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-aantal'), { target: { value: '2' } });
+    expect(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen')).not.toBeDisabled();
+  });
+
+  it('shows a live prijsvoorbeeld once kunstwerk/materiaal/maat are complete, calling the prijsvoorbeeld endpoint', async () => {
+    fetchMock.mockImplementation(async (url: string) =>
+      String(url).includes('/prijsvoorbeeld')
+        ? { ok: true, json: async () => ({ status: 'vast', code: 'Hotel paneel', prijs: 120 } as unknown) }
+        : { ok: true, json: async () => [] }
+    );
+    renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-toevoegen'));
+    fireEvent.focus(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk'));
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk-option-kw-1'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-materiaal'), { target: { value: 'mat-1' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-maat'), { target: { value: 'maat-1' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-aantal'), { target: { value: '3' } });
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-1/prijsvoorbeeld?kunstwerkId=kw-1&materiaalId=mat-1&maatId=maat-1'
+      )
+    );
+    expect(await screen.findByTestId('bestelling-modal-nieuwe-regel-prijsvoorbeeld')).toHaveTextContent(
+      '3 × € 120,00 = € 360,00'
+    );
+  });
+
+  it('shows "Prijs op aanvraag" in the prijsvoorbeeld when the combination has no fixed matrixprijs', async () => {
+    fetchMock.mockImplementation(async (url: string) =>
+      String(url).includes('/prijsvoorbeeld')
+        ? { ok: true, json: async () => ({ status: 'op-aanvraag', code: 'Hotel paneel' } as unknown) }
+        : { ok: true, json: async () => [] }
+    );
+    renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-toevoegen'));
+    fireEvent.focus(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk'));
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk-option-kw-1'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-materiaal'), { target: { value: 'mat-1' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-maat'), { target: { value: 'maat-1' } });
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-1/prijsvoorbeeld?kunstwerkId=kw-1&materiaalId=mat-1&maatId=maat-1'
+      )
+    );
+    expect(await screen.findByTestId('bestelling-modal-nieuwe-regel-prijsvoorbeeld')).toHaveTextContent(
+      'Prijs op aanvraag'
+    );
+  });
+
+  it('shows no prijsvoorbeeld until kunstwerk/materiaal/maat are all chosen', () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal(BESTELLING);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-toevoegen'));
+    expect(screen.queryByTestId('bestelling-modal-nieuwe-regel-prijsvoorbeeld')).not.toBeInTheDocument();
+  });
+});
+
+describe('BestellingModal — onbekend materiaal/maat op een bestaande regel', () => {
+  it('shows "Onbekend" instead of a raw id when a line references a materiaal/maat that no longer resolves', () => {
+    const BESTELLING_MET_STALE_IDS: Bestelling = {
+      ...BESTELLING,
+      lines: [
+        {
+          id: 'line-stale',
+          code: 'Hotel paneel',
+          maatId: 'oude-firestore-id-die-niet-meer-bestaat',
+          materiaalId: 'nog-een-oude-firestore-id',
+          prijs: 50,
+          quantity: 1,
+        },
+      ],
+    };
+    renderModal(BESTELLING_MET_STALE_IDS);
+    const line = screen.getByTestId('bestelling-modal-line-line-stale');
+    expect(line).toHaveTextContent('Onbekend');
+    expect(line).not.toHaveTextContent('oude-firestore-id-die-niet-meer-bestaat');
+    expect(line).not.toHaveTextContent('nog-een-oude-firestore-id');
+  });
 });
 
 describe('BestellingModal — wijzigingsmail', () => {

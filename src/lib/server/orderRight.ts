@@ -1,5 +1,5 @@
 import { parseJsonKolom } from '@/lib/server/crud';
-import type { PoolConnection } from 'mysql2/promise';
+import type { Queryable } from '@/lib/server/prijsmodule';
 
 // Mirrors src/lib/resolveOrderRight.ts, which is now a client-side UI hint only —
 // this is the real enforcement, since there is no rules-based enforcement layer anymore.
@@ -11,7 +11,7 @@ import type { PoolConnection } from 'mysql2/promise';
 // /api/bestelheaders/[id]/wijzigen need this same enforcement, so it lives here and both
 // route files import it.
 export async function checkOrderRight(
-  connection: PoolConnection,
+  connection: Queryable,
   kunstwerkId: string,
   klantId: string
 ): Promise<boolean> {
