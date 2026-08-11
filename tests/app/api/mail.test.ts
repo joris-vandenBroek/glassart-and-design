@@ -12,6 +12,7 @@ const { POST: postMail } = await import('@/app/api/mail/route');
 
 const createdKlantIds: string[] = [];
 const createdDrukkerIds: string[] = [];
+const createdHeaderIds: string[] = [];
 
 beforeEach(() => {
   verstuurMailMock.mockReset();
@@ -19,19 +20,47 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-  await getPool().query(
-    "DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'mail-staff-1'"
-  );
+  // Elke tabel-delete staat in zijn eigen try/catch: bestelheaders.klantnr heeft een FK
+  // (zonder CASCADE) naar klanten.klantnr, dus als de header-cleanup na de klant-cleanup zou
+  // draaien -- of als één delete faalt -- mag dat de rest van de opruiming niet blokkeren en
+  // testdata achterlaten.
+  try {
+    await getPool().query(
+      "DELETE FROM sessions WHERE userType = 'medewerker' AND userId = 'mail-staff-1'"
+    );
+  } catch {
+    // opruiming van de eigen medewerkersessie mag de rest niet blokkeren
+  }
+  if (createdHeaderIds.length > 0) {
+    try {
+      await getPool().query('DELETE FROM bestelheaders WHERE id IN (?)', [createdHeaderIds]);
+    } catch {
+      // idem
+    }
+    createdHeaderIds.length = 0;
+  }
   if (createdKlantIds.length > 0) {
-    await getPool().query('DELETE FROM sessions WHERE userType = ? AND userId IN (?)', [
-      'klant',
-      createdKlantIds,
-    ]);
-    await getPool().query('DELETE FROM klanten WHERE id IN (?)', [createdKlantIds]);
+    try {
+      await getPool().query('DELETE FROM sessions WHERE userType = ? AND userId IN (?)', [
+        'klant',
+        createdKlantIds,
+      ]);
+    } catch {
+      // idem
+    }
+    try {
+      await getPool().query('DELETE FROM klanten WHERE id IN (?)', [createdKlantIds]);
+    } catch {
+      // idem
+    }
     createdKlantIds.length = 0;
   }
   if (createdDrukkerIds.length > 0) {
-    await getPool().query('DELETE FROM drukkers WHERE id IN (?)', [createdDrukkerIds]);
+    try {
+      await getPool().query('DELETE FROM drukkers WHERE id IN (?)', [createdDrukkerIds]);
+    } catch {
+      // idem
+    }
     createdDrukkerIds.length = 0;
   }
 });
@@ -167,5 +196,76 @@ describe('POST /api/mail', () => {
     const { cookie } = await maakKlantMetSessie('mailtest-relay@example.com');
     const response = await postMail(req({ soort: 'bestelbevestiging', subject: 'S', body: 'B' }, cookie));
     expect(response.status).toBe(502);
+  });
+
+  it('weigert een wijzigingsmail zonder medewerkersessie', async () => {
+    const response = await postMail(req({ soort: 'bestelwijziging', bestelheaderId: 'maakt-niet-uit' }));
+    expect(response.status).toBe(401);
+    expect(verstuurMailMock).not.toHaveBeenCalled();
+  });
+
+  it('stuurt een wijzigingsmail naar het e-mailadres van de klant, opgebouwd uit de actuele bestelling in de database', async () => {
+    const cookie = await medewerkerCookie();
+    // klanten.klantnr en bestelheaders.bestelnr zijn VARCHAR(20) -- lange, leesbare AUTOTEST-
+    // literals worden hier stil afgekapt door MySQL en botsen dan onderling op de unieke index
+    // (zoals bestelheaders-wijzigen.test.ts ook al documenteert). Kort genoeg houden dus.
+    const klant = await insertRow<{ id: string; klantnr: string }>('klanten', {
+      email: 'mailtest-wijziging@example.com',
+      wachtwoordHash: 'x:y',
+      status: 'Goedgekeurd',
+      klantnr: 'AUTOTEST-mailwijz',
+    } as never);
+    createdKlantIds.push(klant.id);
+    const header = await insertRow<{ id: string; bestelnr: string }>('bestelheaders', {
+      klantnr: klant.klantnr,
+      bestelnr: 'AUTOTEST-BE-wijzig1',
+      status: 'Te beoordelen',
+      korting: 25,
+    } as never);
+    createdHeaderIds.push(header.id);
+    await insertRow('bestellines', {
+      bestelnr: header.bestelnr,
+      code: 'AUTOTEST-mail-regel',
+      maatId: null,
+      materiaalId: null,
+      prijs: 100,
+      quantity: 2,
+    } as never);
+
+    const response = await postMail(
+      req({ soort: 'bestelwijziging', bestelheaderId: header.id, to: 'aanvaller@example.com' }, cookie)
+    );
+
+    expect(response.status).toBe(200);
+    expect(verstuurMailMock).toHaveBeenCalledTimes(1);
+    const call = verstuurMailMock.mock.calls[0][0];
+    expect(call.to).toBe('mailtest-wijziging@example.com');
+    expect(call.html).toContain(header.bestelnr);
+    expect(call.html).toContain('25');
+  });
+
+  it('geeft 400 wanneer de bestelling van een wijzigingsmail geen bestaande klant-e-mail heeft', async () => {
+    const cookie = await medewerkerCookie();
+    // bestelheaders.klantnr heeft een FK naar klanten.klantnr (fk_bestelheaders_klantnr), dus een
+    // header kan niet naar een niet-bestaand klantnr wijzen -- de klant moet echt bestaan, alleen
+    // zonder (geldig) e-mailadres, om de 'geen-ontvanger'-tak te raken.
+    const klant = await insertRow<{ id: string; klantnr: string }>('klanten', {
+      email: '',
+      wachtwoordHash: 'x:y',
+      status: 'Goedgekeurd',
+      klantnr: 'AUTOTEST-geenmail',
+    } as never);
+    createdKlantIds.push(klant.id);
+    const header = await insertRow<{ id: string; bestelnr: string }>('bestelheaders', {
+      klantnr: klant.klantnr,
+      bestelnr: 'AUTOTEST-BE-geenml1',
+      status: 'Te beoordelen',
+    } as never);
+    createdHeaderIds.push(header.id);
+
+    const response = await postMail(req({ soort: 'bestelwijziging', bestelheaderId: header.id }, cookie));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'geen-ontvanger' });
+    expect(verstuurMailMock).not.toHaveBeenCalled();
   });
 });
