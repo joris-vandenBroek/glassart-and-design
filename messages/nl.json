@@ -678,6 +678,8 @@
     "kunstwerkenCodeWijzigenBevestig": "Code wijzigen",
     "kunstwerkenLabelKunstenaar": "Kunstenaar",
     "kunstwerkenKunstenaarGeen": "Geen kunstenaar gekoppeld",
+    "kunstwerkenKunstenaarKies": "Kies een kunstenaar",
+    "kunstwerkenKunstenaarVerplicht": "Kies een kunstenaar.",
     "kunstwerkenLabelFormaat": "Formaat",
     "kunstwerkenFormaat_vierkant": "Vierkant",
     "kunstwerkenFormaat_liggend": "Liggend",

@@ -227,6 +227,9 @@ describe('KunstwerkenSection', () => {
 
     fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Test' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Test' } });
+    expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled(); // kunstenaar still missing
+
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'KU-00001' } });
     expect(screen.getByTestId('kunstwerk-modal-opslaan')).not.toBeDisabled();
   });
 
@@ -430,6 +433,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
     fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Nieuw kunstwerk' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'KU-00001' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Nieuw kunstwerk' } });
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
 
@@ -480,6 +484,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
     fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Nieuw kunstwerk' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'KU-00001' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Nieuw kunstwerk' } });
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
 
@@ -549,6 +554,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-vierkant'));
     fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Akoestisch paneel' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'KU-00001' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Verbetert de akoestiek.' } });
     expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled();
 
@@ -560,7 +566,7 @@ describe('KunstwerkenSection', () => {
       expect(onAdd).toHaveBeenCalledWith({
         foto: 'https://storage.example.com/nieuw.jpg',
         code: 'Akoestisch paneel',
-        kunstenaarnr: null,
+        kunstenaarnr: 'KU-00001',
         formaat: 'vierkant',
         segmentIds: ['seg-1'],
         materiaalIds: [],
@@ -594,6 +600,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
     fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: '4mm veiligheidsglas per m2' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'KU-00001' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Op maat gezaagd.' } });
     expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled();
 
@@ -869,6 +876,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
     fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Test' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'KU-00001' } });
     fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
     // Pick the formaat first, then narrow down to just mat-1 + maat-1: choosing a formaat
     // re-checks every materiaal and every compatible maat, so narrowing before that point
