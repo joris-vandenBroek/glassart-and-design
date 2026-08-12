@@ -19,6 +19,12 @@ export function KunstwerkenChapter() {
           Zodra een kunstwerk in een bestelling zit, ligt de code vast — dan kun je &apos;m niet meer
           wijzigen, en kun je het kunstwerk ook niet meer verwijderen.
         </P>
+        <P>
+          <strong>Let op:</strong> wijzig je de code van een kunstwerk waarvan de drukker het masterbestand
+          al heeft (dus vóórdat de code vastligt)? Dan moet je zelf actie ondernemen: laat de drukker de
+          code bij dat bestand aanpassen, of stuur een nieuw masterbestand onder de nieuwe code. Beheer
+          regelt dit niet automatisch voor je.
+        </P>
       </SubSection>
       <SubSection id="kunstwerken-formaat" title="Formaat en maten">
         <P>
