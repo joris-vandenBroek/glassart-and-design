@@ -1,0 +1,53 @@
+name: Opschonen oude Actions-runs
+
+on:
+  schedule:
+    - cron: '0 3 * * 1' # elke maandag 03:00 UTC
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: 'Aantal recente runs om per workflow te bewaren'
+        required: false
+        default: '4'
+
+permissions:
+  actions: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verwijder oude workflow-runs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KEEP: ${{ github.event.inputs.keep || '4' }}
+        run: |
+          set -euo pipefail
+          repo="${{ github.repository }}"
+
+          # --paginate is nodig omdat een repo met 9+ pagina's aan runs ruim boven de
+          # standaard 30-per-pagina van de Actions API zit -- zonder paginate zou dit
+          # alleen de nieuwste pagina zien en per ongeluk bijna alles als "oud" behandelen.
+          gh api "repos/$repo/actions/runs" --paginate \
+            --jq '.workflow_runs[] | [.workflow_id, .id, .created_at, .status] | @tsv' \
+            > /tmp/all_runs.tsv
+
+          # Per workflow (niet globaal) de nieuwste $KEEP bewaren -- anders zou een
+          # workflow die vaak draait (bv. deploy) alle "slots" opsouperen en de runs van
+          # een workflow die zelden draait alsnog helemaal wegvallen.
+          cut -f1 /tmp/all_runs.tsv | sort -u | while read -r wf_id; do
+            awk -F'\t' -v wf="$wf_id" '$1 == wf' /tmp/all_runs.tsv \
+              | sort -t $'\t' -k3,3r \
+              | tail -n +"$((KEEP + 1))" \
+              | while IFS=$'\t' read -r _ run_id _ status; do
+                  # Alleen afgeronde runs verwijderen -- een run die nog bezig is (in_progress/
+                  # queued) hoort nooit weggegooid te worden, ook niet als hij toevallig niet
+                  # meer bij de laatste $KEEP van zijn workflow hoort.
+                  if [ "$status" = "completed" ]; then
+                    echo "Verwijder run $run_id (workflow $wf_id)"
+                    gh api -X DELETE "repos/$repo/actions/runs/$run_id" || true
+                  else
+                    echo "Sla run $run_id over (status: $status)"
+                  fi
+                done
+          done
