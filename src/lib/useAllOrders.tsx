@@ -24,6 +24,7 @@ export interface DisplayOrder {
   description: string;
   status: Bestelling['status'];
   lines: DisplayOrderLine[] | null;
+  korting: number | null;
 }
 
 interface RealOrder {
@@ -33,6 +34,7 @@ interface RealOrder {
   lineCount: number;
   totalQuantity: number;
   lines: DisplayOrderLine[];
+  korting: number | null;
 }
 
 export interface UseAllOrdersResult {
@@ -63,6 +65,7 @@ export function useAllOrders(): UseAllOrdersResult {
           bestelnr: string;
           besteldatum: string;
           status: Bestelling['status'];
+          korting: number | null;
           lines: Array<{
             id: string;
             code: string;
@@ -81,6 +84,7 @@ export function useAllOrders(): UseAllOrdersResult {
           lineCount: header.lines.length,
           totalQuantity: header.lines.reduce((sum, line) => sum + (line.quantity ?? 0), 0),
           lines: header.lines,
+          korting: header.korting ?? null,
         }));
         if (!cancelled) {
           setRealOrders(orders);
@@ -113,6 +117,7 @@ export function useAllOrders(): UseAllOrdersResult {
           quantity: order.totalQuantity,
         }),
         lines: order.lines,
+        korting: order.korting,
       };
     });
   }, [realOrders, tAccount]);

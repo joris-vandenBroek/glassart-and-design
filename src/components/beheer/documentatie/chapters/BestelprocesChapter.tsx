@@ -81,6 +81,11 @@ export function BestelprocesChapter() {
           aanvraag&quot;).
         </P>
         <P>
+          Bij het toevoegen van een regel bewaakt beheer ook de minimale afname van de klant (zie{' '}
+          <DocLink anchor="instellingen">Instellingen</DocLink>): vul je een aantal in dat daaronder zit,
+          dan krijg je een foutmelding en wordt de regel niet toegevoegd.
+        </P>
+        <P>
           Je kunt ook een korting instellen voor de hele bestelling — bijvoorbeeld vanwege een
           prijsafspraak met een kunstenaar. Die korting is een vast bedrag in euro&apos;s, dat pas
           helemaal aan het eind wordt afgetrokken van de totaalprijs: ná de prijs per regel, de eventuele

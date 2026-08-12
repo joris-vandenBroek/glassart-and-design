@@ -17,6 +17,7 @@ import type { Bestelling, BestellingLine } from './BestellingenSection';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from './materiaalTypes';
 import type { Klant } from './KlantenSection';
 import type { BtwTarieven } from './btwTarievenTypes';
+import type { Bestelinstellingen } from './bestelinstellingenTypes';
 
 const STATUS_BADGE_CLASS: Record<Bestelling['status'], string> = {
   'Te beoordelen': 'bg-amber-400/10 text-amber-300',
@@ -63,6 +64,7 @@ interface BestellingModalProps {
   materiaalsoorten: Materiaalsoort[] | null;
   klanten: Klant[] | null;
   btwTarieven: BtwTarieven | null;
+  bestelinstellingen: Bestelinstellingen | null;
   onClose: () => void;
   onUpdated: (bestelling: Bestelling) => void;
   onAfronden: (bestelling: Bestelling) => void;
@@ -109,6 +111,7 @@ export function BestellingModal({
   materiaalsoorten,
   klanten,
   btwTarieven,
+  bestelinstellingen,
   onClose,
   onUpdated,
   onAfronden,
@@ -229,6 +232,7 @@ export function BestellingModal({
   );
 
   const klant = bestelling ? (klanten ?? []).find((k) => k.klantnr === bestelling.klantnr) : undefined;
+  const effectiveMinimaleAfname = klant?.minimaleAfname ?? bestelinstellingen?.minimaleAfname ?? 1;
   const land = klant ? klant.invoiceLand || klant.land || null : null;
   const klantBtwPercentage = btwTarieven ? resolveBtwPercentage(btwTarieven.tarieven, land) : null;
   const conceptKortingValue = conceptKorting.trim() === '' ? null : Number(conceptKorting);
@@ -420,6 +424,10 @@ export function BestellingModal({
         setNieuweRegelError(t('bestellingenRegelToevoegenFoutAantal'));
         return;
       }
+      if (quantity < effectiveMinimaleAfname) {
+        setNieuweRegelError(t('bestellingenRegelToevoegenFoutMinimum', { minimum: effectiveMinimaleAfname }));
+        return;
+      }
       setNieuweRegelError(null);
       setConceptAdditions((current) => [
         ...current,
@@ -440,6 +448,10 @@ export function BestellingModal({
       }
       if (!Number.isInteger(quantity) || quantity <= 0) {
         setNieuweRegelError(t('bestellingenRegelToevoegenFoutAantal'));
+        return;
+      }
+      if (quantity < effectiveMinimaleAfname) {
+        setNieuweRegelError(t('bestellingenRegelToevoegenFoutMinimum', { minimum: effectiveMinimaleAfname }));
         return;
       }
       setNieuweRegelError(null);

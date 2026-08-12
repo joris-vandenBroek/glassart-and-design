@@ -100,6 +100,48 @@ describe('useAllOrders', () => {
     expect(result.current.orders).toHaveLength(0);
   });
 
+  it('passes through the korting from the bestelheader', async () => {
+    signedIn();
+    ordersResponse = {
+      ok: true,
+      body: [
+        {
+          id: 'header-1',
+          bestelnr: 'GD-00001',
+          besteldatum: '2026-07-01T14:30:00',
+          status: 'Te beoordelen',
+          korting: 50,
+          lines: [{ id: 'line-1', quantity: 3 }],
+        },
+      ],
+    };
+
+    const { result } = renderHook(() => useAllOrders(), { wrapper });
+    await waitFor(() => expect(result.current.orders).toHaveLength(1));
+    expect(result.current.orders[0].korting).toBe(50);
+  });
+
+  it('defaults korting to null when the bestelheader has none', async () => {
+    signedIn();
+    ordersResponse = {
+      ok: true,
+      body: [
+        {
+          id: 'header-1',
+          bestelnr: 'GD-00001',
+          besteldatum: '2026-07-01T14:30:00',
+          status: 'Te beoordelen',
+          korting: null,
+          lines: [{ id: 'line-1', quantity: 3 }],
+        },
+      ],
+    };
+
+    const { result } = renderHook(() => useAllOrders(), { wrapper });
+    await waitFor(() => expect(result.current.orders).toHaveLength(1));
+    expect(result.current.orders[0].korting).toBeNull();
+  });
+
   it('maps a missing prijs to null and passes through breedte/hoogte for a custom-size line', async () => {
     signedIn();
     ordersResponse = {

@@ -6,6 +6,7 @@ import type { Bestelling } from '@/components/beheer/BestellingenSection';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from '@/components/beheer/materiaalTypes';
 import type { Klant } from '@/components/beheer/KlantenSection';
 import type { BtwTarieven } from '@/components/beheer/btwTarievenTypes';
+import type { Bestelinstellingen } from '@/components/beheer/bestelinstellingenTypes';
 import messages from '../../../messages/nl.json';
 
 const fetchMock = vi.fn();
@@ -89,6 +90,7 @@ const KLANTEN: Klant[] = [
   },
 ];
 const BTWTARIEVEN: BtwTarieven = { tarieven: [{ land: 'NL', percentage: 21 }] };
+const BESTELINSTELLINGEN: Bestelinstellingen = { minimaleAfname: 1 };
 
 const BESTELLING: Bestelling = {
   id: 'header-1',
@@ -124,6 +126,7 @@ function renderModal(
         materiaalsoorten={MATERIAALSOORTEN}
         klanten={KLANTEN}
         btwTarieven={BTWTARIEVEN}
+        bestelinstellingen={BESTELINSTELLINGEN}
         onClose={onClose}
         onUpdated={onUpdated}
         onAfronden={onAfronden}
@@ -577,6 +580,7 @@ describe('BestellingModal — btw', () => {
           materiaalsoorten={MATERIAALSOORTEN}
           klanten={[klantZonderLand]}
           btwTarieven={{ tarieven: [{ land: 'DE', percentage: 19 }] }}
+          bestelinstellingen={BESTELINSTELLINGEN}
           onClose={vi.fn()}
           onUpdated={vi.fn()}
           onAfronden={vi.fn()}
@@ -611,6 +615,7 @@ describe('BestellingModal — btw', () => {
               { land: 'BE', percentage: 6 },
             ],
           }}
+          bestelinstellingen={BESTELINSTELLINGEN}
           onClose={vi.fn()}
           onUpdated={vi.fn()}
           onAfronden={vi.fn()}
@@ -1030,6 +1035,46 @@ describe('BestellingModal — regel verwijderen en toevoegen', () => {
 
     fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-breedte'), { target: { value: '90' } });
     fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-hoogte'), { target: { value: '140' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen'));
+    expect(screen.queryByTestId('bestelling-modal-nieuwe-regel-fout')).not.toBeInTheDocument();
+    expect(screen.getByTestId(/^bestelling-modal-nieuwe-regel-kaart-/)).toBeInTheDocument();
+  });
+
+  it('blocks a new line below the resolved minimale afname (global instellingen) with a specific reason', () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal(BESTELLING, { bestelinstellingen: { minimaleAfname: 5 } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-toevoegen'));
+    fireEvent.focus(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk'));
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk-option-kw-1'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-materiaal'), { target: { value: 'mat-1' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-maat'), { target: { value: 'maat-1' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-aantal'), { target: { value: '2' } });
+
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen'));
+    expect(screen.getByTestId('bestelling-modal-nieuwe-regel-fout')).toHaveTextContent(
+      'Aantal moet minimaal 5 zijn (minimale afname).'
+    );
+    expect(screen.queryByTestId(/^bestelling-modal-nieuwe-regel-kaart-/)).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-aantal'), { target: { value: '5' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen'));
+    expect(screen.queryByTestId('bestelling-modal-nieuwe-regel-fout')).not.toBeInTheDocument();
+    expect(screen.getByTestId(/^bestelling-modal-nieuwe-regel-kaart-/)).toBeInTheDocument();
+  });
+
+  it("lets a klant's own minimaleAfname override the global instellingen minimum", () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal(BESTELLING, {
+      bestelinstellingen: { minimaleAfname: 5 },
+      klanten: [{ ...KLANTEN[0], minimaleAfname: 2 }],
+    });
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-toevoegen'));
+    fireEvent.focus(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk'));
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk-option-kw-1'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-materiaal'), { target: { value: 'mat-1' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-maat'), { target: { value: 'maat-1' } });
+    fireEvent.change(screen.getByTestId('bestelling-modal-nieuwe-regel-aantal'), { target: { value: '2' } });
+
     fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-toevoegen-bevestigen'));
     expect(screen.queryByTestId('bestelling-modal-nieuwe-regel-fout')).not.toBeInTheDocument();
     expect(screen.getByTestId(/^bestelling-modal-nieuwe-regel-kaart-/)).toBeInTheDocument();
