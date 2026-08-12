@@ -66,6 +66,151 @@ KVK-nummer: 12345678
 Btw-nummer: NL001234567B01
 E-mailadres (voor facturen): info@glassartdesign.nl`;
 
+interface VoorbeeldRegel {
+  naam: string;
+  materiaal: string;
+  maat: string;
+  aantal: number;
+}
+
+interface VoorbeeldBestelling {
+  nr: string;
+  regels: VoorbeeldRegel[];
+}
+
+interface VoorbeeldSectie {
+  klantKop: string;
+  afleveradres: string;
+  bestellingen: VoorbeeldBestelling[];
+}
+
+// Zelfde 3 klanten/bestellingen als VOORBEELDMAIL hierboven, maar dan als data
+// zodat we ze door dezelfde opmaak kunnen renderen als de echte html-mail
+// (buildDrukkerMail.ts) — dit is puur de visuele weergave van diezelfde tekst.
+const VOORBEELDMAIL_SECTIES: VoorbeeldSectie[] = [
+  {
+    klantKop: 'Interieurstudio De Vries (KL-00042)',
+    afleveradres: 'Molenstraat 12, 3811 EX Amersfoort',
+    bestellingen: [
+      {
+        nr: 'B-2026-0301',
+        regels: [
+          { naam: 'GLA-JAC-00007', materiaal: '6mm Glas — Blank helder', maat: '60×90 cm (Staand)', aantal: 2 },
+          { naam: 'GLA-JAC-00012', materiaal: '6mm Glas — Blank helder', maat: '40×40 cm', aantal: 1 },
+        ],
+      },
+    ],
+  },
+  {
+    klantKop: 'Hotel Boschoord',
+    afleveradres: 'Bosweg 3, 7524 AB Enschede',
+    bestellingen: [
+      {
+        nr: 'B-2026-0304',
+        regels: [
+          { naam: 'GLA-JAC-00007', materiaal: '6mm Glas — Blank helder', maat: '90×60 cm (Liggend)', aantal: 4 },
+          { naam: 'GLA-JAC-00019', materiaal: '8mm Acryl — Mat wit', maat: '120×80 cm (Liggend)', aantal: 1 },
+        ],
+      },
+      {
+        nr: 'B-2026-0305',
+        regels: [{ naam: 'GLA-JAC-00012', materiaal: '6mm Glas — Blank helder', maat: '40×40 cm', aantal: 3 }],
+      },
+    ],
+  },
+  {
+    klantKop: 'Kantoorpand Zuidas (KL-00108)',
+    afleveradres: 'Zuidplein 90, 1077 XV Amsterdam',
+    bestellingen: [
+      {
+        nr: 'B-2026-0309',
+        regels: [
+          { naam: 'GLA-JAC-00019', materiaal: '8mm Acryl — Mat wit', maat: '120×80 cm (Liggend)', aantal: 2 },
+          { naam: 'GLA-JAC-00007', materiaal: '6mm Glas — Blank helder', maat: '60×90 cm (Staand)', aantal: 1 },
+        ],
+      },
+    ],
+  },
+];
+
+// Spiegelt de inline stijlen van formatRegelHtml/buildDrukkerMail.ts (html-tak) zo
+// letterlijk mogelijk, zodat dit precies toont hoe de echte mail eruitziet.
+function VoorbeeldmailHtml() {
+  return (
+    <div className="overflow-x-auto rounded-md border border-silver-dim bg-white p-4 shadow-sm">
+      {VOORBEELDMAIL_SECTIES.map((sectie) => (
+        <div key={sectie.klantKop} style={{ marginBottom: 24 }}>
+          <div style={{ background: '#f2f2f2', padding: '12px 16px', borderRadius: '4px 4px 0 0' }}>
+            <div style={{ fontFamily: 'Arial, sans-serif', fontSize: 15, fontWeight: 'bold', color: '#111111' }}>
+              {sectie.klantKop}
+            </div>
+            <div style={{ fontFamily: 'Arial, sans-serif', fontSize: 13, color: '#555555', marginTop: 2 }}>
+              Afleveradres: {sectie.afleveradres}
+            </div>
+          </div>
+          <div style={{ padding: '0 16px' }}>
+            {sectie.bestellingen.map((bestelling) => (
+              <div key={bestelling.nr}>
+                <div
+                  style={{
+                    padding: '12px 0 4px',
+                    fontFamily: 'Arial, sans-serif',
+                    fontSize: 13,
+                    fontWeight: 'bold',
+                    color: '#333333',
+                  }}
+                >
+                  Bestelling {bestelling.nr}
+                </div>
+                {bestelling.regels.map((regel, index) => (
+                  <div
+                    key={index}
+                    style={{ display: 'flex', gap: 12, padding: '8px 0', borderBottom: '1px solid #e5e5e5' }}
+                  >
+                    <div
+                      style={{
+                        width: 64,
+                        height: 64,
+                        flexShrink: 0,
+                        borderRadius: 4,
+                        background: '#f2f2f2',
+                        color: '#999999',
+                        textAlign: 'center',
+                        lineHeight: '64px',
+                        fontFamily: 'Arial, sans-serif',
+                        fontSize: 20,
+                        border: '1px solid #e5e5e5',
+                      }}
+                    >
+                      ?
+                    </div>
+                    <div style={{ fontFamily: 'Arial, sans-serif', fontSize: 13, color: '#333333' }}>
+                      <div style={{ fontWeight: 'bold', marginBottom: 2 }}>{regel.naam}</div>
+                      <div style={{ color: '#666666' }}>{regel.materiaal}</div>
+                      <div style={{ color: '#666666' }}>
+                        Maat: {regel.maat} · Aantal: {regel.aantal}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+      <div style={{ marginTop: 24, borderTop: '1px solid #e5e5e5', paddingTop: 12 }}>
+        <div style={{ fontFamily: 'Arial, sans-serif', fontSize: 12, color: '#666666' }}>
+          <div style={{ fontWeight: 'bold', color: '#333333', marginBottom: 2 }}>Glassart &amp; Design</div>
+          <div>Den Heuvel 21, 5688 EM Oirschot</div>
+          <div>KVK-nummer: 12345678</div>
+          <div>Btw-nummer: NL001234567B01</div>
+          <div>E-mailadres (voor facturen): info@glassartdesign.nl</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function BestelprocesChapter() {
   return (
     <Chapter id="bestelproces" title="3. Een bestelling verwerken">
@@ -115,6 +260,8 @@ export function BestelprocesChapter() {
         <pre className="overflow-x-auto rounded-md bg-silver/60 p-4 font-mono text-xs leading-relaxed text-ink">
           {VOORBEELDMAIL}
         </pre>
+        <P>Zo ziet diezelfde mail er in de praktijk uit — de drukker krijgt hem met deze opmaak, inclusief een fotominiatuur per regel (hieronder een grijs vlak, omdat dit een fictief voorbeeld is):</P>
+        <VoorbeeldmailHtml />
         <P>
           Onderaan de mail staan altijd je bedrijfsgegevens als factuurvoetje (adres, KvK-nummer,
           btw-nummer, e-mailadres) — zie <DocLink anchor="glassart-design">Glassart and design</DocLink>.
