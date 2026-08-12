@@ -1,4 +1,4 @@
-import { Chapter, SubSection, P, DocLink } from '../DocumentatieBlocks';
+import { Chapter, SubSection, P, UL, DocLink } from '../DocumentatieBlocks';
 
 function BestelprocesSchema() {
   const stappen = [
@@ -138,13 +138,30 @@ export function BestelprocesChapter() {
       </SubSection>
       <SubSection id="bestelproces-afronden-zending" title="Afronden binnen een zending">
         <P>
-          Een drukker-zending is één verzamelmail die bestellingen van meerdere klanten tegelijk kan
-          bevatten. Rond je een bestelling af terwijl er in dezelfde zending nog andere, nog niet
-          afgeronde bestellingen zitten? Dan toont het systeem die andere bestellingen (per zending, met
-          drukker en verzenddatum) en geef je aan wat je wilt: &quot;Ook deze afronden&quot; rondt ze
-          allemaal in één keer af, &quot;Alleen deze afronden&quot; laat de rest ongemoeid, en Annuleren
-          rondt niets af. De gedachte hierachter: bestellingen die samen naar de drukker zijn gestuurd,
-          zijn vaak ook samen klaar — zo vergeet je er geen, zonder dat het je dwingt.
+          Een drukker-zending is één verzamelmail die je in één keer naar de drukker stuurt, en die kan
+          bestellingen van meerdere klanten tegelijk bevatten. Rond je daarna één bestelling uit die
+          zending af, terwijl er nog andere bestellingen uit dezelfde zending nog niet zijn afgerond? Dan
+          opent er een bevestigingsscherm dat die andere, nog openstaande bestellingen toont — gegroepeerd
+          per zending, met de drukker en de verzenddatum erbij.
+        </P>
+        <P>Je kiest dan zelf wat er moet gebeuren:</P>
+        <UL>
+          <li>
+            <strong>Ook deze afronden</strong> — rondt in één keer alles af: je oorspronkelijke selectie
+            én de andere, nog openstaande bestellingen uit dezelfde zending.
+          </li>
+          <li>
+            <strong>Alleen deze afronden</strong> — rondt alleen je oorspronkelijke selectie af; de rest
+            blijft gewoon op &quot;Verstuurd naar drukker&quot; staan.
+          </li>
+          <li>
+            <strong>Annuleren</strong> — er wordt niets afgerond.
+          </li>
+        </UL>
+        <P>
+          De gedachte hierachter: bestellingen die samen naar de drukker zijn gestuurd, zijn vaak ook
+          samen klaar — zo vergeet je er niet één, zonder dat het je dwingt om ze ook echt samen af te
+          ronden.
         </P>
       </SubSection>
       <SubSection id="bestelproces-facturatie" title="Facturatie">
