@@ -874,6 +874,45 @@ describe('BestellingModal — regel verwijderen en toevoegen', () => {
     expect(screen.getByTestId('bestelling-modal-regel-toevoegen')).toBeInTheDocument();
   });
 
+  it('locks materiaal/maat/aantal in the regel-bewerken form once regelstructuur is locked, but keeps prijs editable', () => {
+    renderModal(BESTELLING_VERSTUURD);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-6'));
+    expect(screen.queryByTestId('bestelling-modal-regel-materiaal-line-6')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-regel-maat-line-6')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bestelling-modal-regel-aantal-line-6')).not.toBeInTheDocument();
+    expect(screen.getByTestId('bestelling-modal-regel-structuur-op-slot-line-6')).toHaveTextContent('40×60 cm');
+    expect(screen.getByTestId('bestelling-modal-regel-prijs-line-6')).toBeInTheDocument();
+  });
+
+  it('sends an update with only prijs when saving a line edit while regelstructuur is locked', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal(BESTELLING_VERSTUURD);
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-6'));
+    fireEvent.change(screen.getByTestId('bestelling-modal-regel-prijs-line-6'), { target: { value: '175' } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-opslaan-line-6'));
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ lines: [{ ...BESTELLING_VERSTUURD.lines[0], prijs: 175 }], korting: null }),
+    });
+    fireEvent.click(screen.getByTestId('bestelling-modal-wijzigingen-opslaan'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/bestelheaders/header-4/wijzigen',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({
+            korting: null,
+            updates: [{ id: 'line-6', prijs: 175 }],
+            additions: [],
+            deletions: [],
+          }),
+        })
+      )
+    );
+  });
+
   it('marks a line for deletion, shows it struck through with an undo, and saves the deletion on Wijzigingen opslaan', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     const { onBestellingGewijzigd } = renderModal(BESTELLING);
