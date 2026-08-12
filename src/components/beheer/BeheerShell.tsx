@@ -316,175 +316,177 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
           testId="beheer-section-help"
           className="absolute right-4 top-4 sm:right-6 sm:top-6"
         />
-        {activeSection === 'klanten' ? (
-          <KlantenSection
-            klanten={klanten}
-            prijsgroepen={prijsgroepen.items}
-            kunstenaars={kunstenaars.items}
-            btwTarieven={btwtarieven.data}
-            btwLoadError={btwtarieven.error === 'load'}
-            loadError={loadError}
-            onKlantUpdated={handleKlantUpdated}
-          />
-        ) : activeSection === 'bestellingen' ? (
-          <BestellingenSection
-            bestellingen={bestellingen}
-            kunstwerken={kunstwerken.items}
-            materialen={materialen.items}
-            maten={maten.items}
-            materiaalsoorten={materiaalsoorten.items}
-            klanten={klanten}
-            btwTarieven={btwtarieven.data}
-            bestelinstellingen={bestelinstellingen.data}
-            drukkers={drukkers.items}
-            loadError={bestellingenLoadError}
-            onBestellingUpdated={handleBestellingUpdated}
-          />
-        ) : activeSection === 'materiaalsoorten' ? (
-          <MateriaalsoortenSection
-            materiaalsoorten={materiaalsoorten.items}
-            materialen={materialen.items}
-            // Note: a write that succeeds but whose follow-up refetch fails also sets
-            // error to 'load' (not 'action'), so it surfaces here as a full-section
-            // error rather than the modal's actionError banner — treated as acceptable
-            // since the shown data is now stale and worth a hard refresh anyway.
-            loadError={materiaalsoorten.error === 'load' ? t('materiaalsoortenLoadError') : null}
-            onAdd={materiaalsoorten.add}
-            onUpdate={materiaalsoorten.update}
-            onRemove={materiaalsoorten.remove}
-          />
-        ) : activeSection === 'materialen' ? (
-          <MaterialenSection
-            materialen={materialen.items}
-            materiaalsoorten={materiaalsoorten.items}
-            kunstwerken={kunstwerken.items}
-            loadError={materialen.error === 'load' ? t('materialenLoadError') : null}
-            onAdd={materialen.add}
-            onUpdate={materialen.update}
-            onRemove={materialen.remove}
-          />
-        ) : activeSection === 'maten' ? (
-          <MatenSection
-            maten={maten.items}
-            kunstwerken={kunstwerken.items}
-            loadError={maten.error === 'load' ? t('matenLoadError') : null}
-            onAdd={maten.add}
-            onUpdate={maten.update}
-            onRemove={maten.remove}
-          />
-        ) : activeSection === 'segmenten' ? (
-          <SegmentenSection
-            segmenten={segmenten.items}
-            kunstwerken={kunstwerken.items}
-            loadError={segmenten.error === 'load' ? t('segmentenLoadError') : null}
-            onAdd={segmenten.add}
-            onUpdate={segmenten.update}
-            onRemove={segmenten.remove}
-          />
-        ) : activeSection === 'stijlen' ? (
-          <StijlenSection
-            stijlen={stijlen.items}
-            kunstwerken={kunstwerken.items}
-            loadError={stijlen.error === 'load' ? t('stijlenLoadError') : null}
-            onAdd={stijlen.add}
-            onUpdate={stijlen.update}
-            onRemove={stijlen.remove}
-          />
-        ) : activeSection === 'onderwerpen' ? (
-          <OnderwerpenSection
-            onderwerpen={onderwerpen.items}
-            kunstwerken={kunstwerken.items}
-            loadError={onderwerpen.error === 'load' ? t('onderwerpenLoadError') : null}
-            onAdd={onderwerpen.add}
-            onUpdate={onderwerpen.update}
-            onRemove={onderwerpen.remove}
-          />
-        ) : activeSection === 'kunstwerken' ? (
-          <KunstwerkenSection
-            kunstwerken={kunstwerken.items}
-            segmenten={segmenten.items}
-            materialen={materialen.items}
-            materiaalsoorten={materiaalsoorten.items}
-            maten={maten.items}
-            stijlen={stijlen.items}
-            onderwerpen={onderwerpen.items}
-            kunstenaars={kunstenaars.items}
-            loadError={kunstwerken.error === 'load' ? t('kunstwerkenLoadError') : null}
-            bestelCodes={bestelCodes}
-            actionErrorCode={kunstwerken.lastMutationErrorCode}
-            onAdd={kunstwerken.add}
-            onUpdate={kunstwerken.update}
-            onRemove={kunstwerken.remove}
-            onAddSegment={segmenten.add}
-            onAddStijl={stijlen.add}
-            onAddOnderwerp={onderwerpen.add}
-          />
-        ) : activeSection === 'kunstenaars' ? (
-          <KunstenaarsSection
-            kunstenaars={kunstenaars.items}
-            klanten={klanten}
-            kunstwerken={kunstwerken.items}
-            loadError={kunstenaars.error === 'load' ? t('kunstenaarsLoadError') : null}
-            onUpdate={kunstenaars.update}
-            onRemove={kunstenaars.remove}
-            onRefetch={kunstenaars.refetch}
-          />
-        ) : activeSection === 'prijsgroepen' ? (
-          <PrijsgroepenSection
-            prijsgroepen={prijsgroepen.items}
-            klanten={klanten}
-            loadError={prijsgroepen.error === 'load' ? t('prijsgroepenLoadError') : null}
-            onAdd={prijsgroepen.add}
-            onUpdate={prijsgroepen.update}
-            onRemove={prijsgroepen.remove}
-          />
-        ) : activeSection === 'prijsmatrix' ? (
-          <PrijsmatrixSection
-            prijsmatrix={prijsmatrix}
-            maten={maten.items}
-            materialen={materialen.items}
-            materiaalsoorten={materiaalsoorten.items}
-            loadError={prijsmatrixLoadError}
-            onRegelUpdated={handlePrijsmatrixRegelUpdated}
-          />
-        ) : activeSection === 'drukkers' ? (
-          <DrukkersSection
-            drukkers={drukkers.items}
-            bestellingen={bestellingen}
-            kunstwerken={kunstwerken.items}
-            materialen={materialen.items}
-            maten={maten.items}
-            materiaalsoorten={materiaalsoorten.items}
-            klanten={klanten}
-            btwTarieven={btwtarieven.data}
-            loadError={drukkers.error === 'load' ? t('drukkersLoadError') : null}
-            // drukkernr is server-eigendom (zie POST /api/drukkers); de meegegeven lege
-            // waarde wordt daar sowieso genegeerd, dit dient alleen om aan
-            // Omit<Drukker, 'id'> van useApiCollection's add te voldoen. update() accepteert
-            // al een Partial, dus die kan zonder wrapper doorgegeven worden.
-            onAdd={(data) => drukkers.add({ ...data, drukkernr: '' })}
-            onUpdate={drukkers.update}
-            onRemove={drukkers.remove}
-            onBestellingUpdated={handleBestellingUpdated}
-          />
-        ) : activeSection === 'glassartDesign' ? (
-          <GlassartDesignSection
-            bedrijfsgegevens={bedrijfsgegevens.data}
-            loadError={bedrijfsgegevens.error === 'load' ? t('glassartDesignLoadError') : null}
-            onSave={bedrijfsgegevens.save}
-          />
-        ) : activeSection === 'instellingen' ? (
-          <InstellingenSection
-            bestelinstellingen={bestelinstellingen.data}
-            loadError={bestelinstellingen.error === 'load' ? t('instellingenLoadError') : null}
-            onSave={bestelinstellingen.save}
-            btwTarieven={btwtarieven.data}
-            btwLoadError={btwtarieven.error === 'load' ? t('instellingenLoadError') : null}
-            onSaveBtw={btwtarieven.save}
-          />
-        ) : (
-          <ActiviteitSection activiteiten={activiteiten} loadError={activiteitenLoadError} />
-        )}
+        <div className="pt-3">
+          {activeSection === 'klanten' ? (
+            <KlantenSection
+              klanten={klanten}
+              prijsgroepen={prijsgroepen.items}
+              kunstenaars={kunstenaars.items}
+              btwTarieven={btwtarieven.data}
+              btwLoadError={btwtarieven.error === 'load'}
+              loadError={loadError}
+              onKlantUpdated={handleKlantUpdated}
+            />
+          ) : activeSection === 'bestellingen' ? (
+            <BestellingenSection
+              bestellingen={bestellingen}
+              kunstwerken={kunstwerken.items}
+              materialen={materialen.items}
+              maten={maten.items}
+              materiaalsoorten={materiaalsoorten.items}
+              klanten={klanten}
+              btwTarieven={btwtarieven.data}
+              bestelinstellingen={bestelinstellingen.data}
+              drukkers={drukkers.items}
+              loadError={bestellingenLoadError}
+              onBestellingUpdated={handleBestellingUpdated}
+            />
+          ) : activeSection === 'materiaalsoorten' ? (
+            <MateriaalsoortenSection
+              materiaalsoorten={materiaalsoorten.items}
+              materialen={materialen.items}
+              // Note: a write that succeeds but whose follow-up refetch fails also sets
+              // error to 'load' (not 'action'), so it surfaces here as a full-section
+              // error rather than the modal's actionError banner — treated as acceptable
+              // since the shown data is now stale and worth a hard refresh anyway.
+              loadError={materiaalsoorten.error === 'load' ? t('materiaalsoortenLoadError') : null}
+              onAdd={materiaalsoorten.add}
+              onUpdate={materiaalsoorten.update}
+              onRemove={materiaalsoorten.remove}
+            />
+          ) : activeSection === 'materialen' ? (
+            <MaterialenSection
+              materialen={materialen.items}
+              materiaalsoorten={materiaalsoorten.items}
+              kunstwerken={kunstwerken.items}
+              loadError={materialen.error === 'load' ? t('materialenLoadError') : null}
+              onAdd={materialen.add}
+              onUpdate={materialen.update}
+              onRemove={materialen.remove}
+            />
+          ) : activeSection === 'maten' ? (
+            <MatenSection
+              maten={maten.items}
+              kunstwerken={kunstwerken.items}
+              loadError={maten.error === 'load' ? t('matenLoadError') : null}
+              onAdd={maten.add}
+              onUpdate={maten.update}
+              onRemove={maten.remove}
+            />
+          ) : activeSection === 'segmenten' ? (
+            <SegmentenSection
+              segmenten={segmenten.items}
+              kunstwerken={kunstwerken.items}
+              loadError={segmenten.error === 'load' ? t('segmentenLoadError') : null}
+              onAdd={segmenten.add}
+              onUpdate={segmenten.update}
+              onRemove={segmenten.remove}
+            />
+          ) : activeSection === 'stijlen' ? (
+            <StijlenSection
+              stijlen={stijlen.items}
+              kunstwerken={kunstwerken.items}
+              loadError={stijlen.error === 'load' ? t('stijlenLoadError') : null}
+              onAdd={stijlen.add}
+              onUpdate={stijlen.update}
+              onRemove={stijlen.remove}
+            />
+          ) : activeSection === 'onderwerpen' ? (
+            <OnderwerpenSection
+              onderwerpen={onderwerpen.items}
+              kunstwerken={kunstwerken.items}
+              loadError={onderwerpen.error === 'load' ? t('onderwerpenLoadError') : null}
+              onAdd={onderwerpen.add}
+              onUpdate={onderwerpen.update}
+              onRemove={onderwerpen.remove}
+            />
+          ) : activeSection === 'kunstwerken' ? (
+            <KunstwerkenSection
+              kunstwerken={kunstwerken.items}
+              segmenten={segmenten.items}
+              materialen={materialen.items}
+              materiaalsoorten={materiaalsoorten.items}
+              maten={maten.items}
+              stijlen={stijlen.items}
+              onderwerpen={onderwerpen.items}
+              kunstenaars={kunstenaars.items}
+              loadError={kunstwerken.error === 'load' ? t('kunstwerkenLoadError') : null}
+              bestelCodes={bestelCodes}
+              actionErrorCode={kunstwerken.lastMutationErrorCode}
+              onAdd={kunstwerken.add}
+              onUpdate={kunstwerken.update}
+              onRemove={kunstwerken.remove}
+              onAddSegment={segmenten.add}
+              onAddStijl={stijlen.add}
+              onAddOnderwerp={onderwerpen.add}
+            />
+          ) : activeSection === 'kunstenaars' ? (
+            <KunstenaarsSection
+              kunstenaars={kunstenaars.items}
+              klanten={klanten}
+              kunstwerken={kunstwerken.items}
+              loadError={kunstenaars.error === 'load' ? t('kunstenaarsLoadError') : null}
+              onUpdate={kunstenaars.update}
+              onRemove={kunstenaars.remove}
+              onRefetch={kunstenaars.refetch}
+            />
+          ) : activeSection === 'prijsgroepen' ? (
+            <PrijsgroepenSection
+              prijsgroepen={prijsgroepen.items}
+              klanten={klanten}
+              loadError={prijsgroepen.error === 'load' ? t('prijsgroepenLoadError') : null}
+              onAdd={prijsgroepen.add}
+              onUpdate={prijsgroepen.update}
+              onRemove={prijsgroepen.remove}
+            />
+          ) : activeSection === 'prijsmatrix' ? (
+            <PrijsmatrixSection
+              prijsmatrix={prijsmatrix}
+              maten={maten.items}
+              materialen={materialen.items}
+              materiaalsoorten={materiaalsoorten.items}
+              loadError={prijsmatrixLoadError}
+              onRegelUpdated={handlePrijsmatrixRegelUpdated}
+            />
+          ) : activeSection === 'drukkers' ? (
+            <DrukkersSection
+              drukkers={drukkers.items}
+              bestellingen={bestellingen}
+              kunstwerken={kunstwerken.items}
+              materialen={materialen.items}
+              maten={maten.items}
+              materiaalsoorten={materiaalsoorten.items}
+              klanten={klanten}
+              btwTarieven={btwtarieven.data}
+              loadError={drukkers.error === 'load' ? t('drukkersLoadError') : null}
+              // drukkernr is server-eigendom (zie POST /api/drukkers); de meegegeven lege
+              // waarde wordt daar sowieso genegeerd, dit dient alleen om aan
+              // Omit<Drukker, 'id'> van useApiCollection's add te voldoen. update() accepteert
+              // al een Partial, dus die kan zonder wrapper doorgegeven worden.
+              onAdd={(data) => drukkers.add({ ...data, drukkernr: '' })}
+              onUpdate={drukkers.update}
+              onRemove={drukkers.remove}
+              onBestellingUpdated={handleBestellingUpdated}
+            />
+          ) : activeSection === 'glassartDesign' ? (
+            <GlassartDesignSection
+              bedrijfsgegevens={bedrijfsgegevens.data}
+              loadError={bedrijfsgegevens.error === 'load' ? t('glassartDesignLoadError') : null}
+              onSave={bedrijfsgegevens.save}
+            />
+          ) : activeSection === 'instellingen' ? (
+            <InstellingenSection
+              bestelinstellingen={bestelinstellingen.data}
+              loadError={bestelinstellingen.error === 'load' ? t('instellingenLoadError') : null}
+              onSave={bestelinstellingen.save}
+              btwTarieven={btwtarieven.data}
+              btwLoadError={btwtarieven.error === 'load' ? t('instellingenLoadError') : null}
+              onSaveBtw={btwtarieven.save}
+            />
+          ) : (
+            <ActiviteitSection activiteiten={activiteiten} loadError={activiteitenLoadError} />
+          )}
+        </div>
       </GlassPanel>
     </div>
   );

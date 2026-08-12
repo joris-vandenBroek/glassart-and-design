@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
+import { HelpLink } from '@/components/HelpLink';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit } from '@/lib/logActiviteit';
@@ -132,16 +133,6 @@ export function MateriaalsoortenSection({
 
   return (
     <div data-testid="materiaalsoorten-section">
-      <div className="mb-3 flex justify-end">
-        <button
-          type="button"
-          onClick={openAdd}
-          data-testid="materiaalsoorten-add"
-          className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
-        >
-          {t('materiaalsoortenToevoegen')}
-        </button>
-      </div>
       <DataTable<Materiaalsoort>
         columns={columns}
         rows={materiaalsoorten}
@@ -149,12 +140,31 @@ export function MateriaalsoortenSection({
         onRowClick={openEdit}
         emptyLabel={t('materiaalsoortenEmpty')}
         searchPlaceholder={t('dataTableSearchPlaceholder')}
+        headerAction={
+          <button
+            type="button"
+            onClick={openAdd}
+            data-testid="materiaalsoorten-add"
+            className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+          >
+            {t('materiaalsoortenToevoegen')}
+          </button>
+        }
       />
       <Modal
         isOpen={modalState !== null}
         onClose={closeModal}
         closeLabel={t('modalClose')}
-        title={t('materiaalsoortenModalTitel')}
+        title={
+          <span className="flex w-full items-center justify-between gap-2 pr-2">
+            {t('materiaalsoortenModalTitel')}
+            <HelpLink
+              anchor="stamgegevens-materiaalsoorten"
+              label="Open het hoofdstuk over materiaalsoorten"
+              testId="materiaalsoort-modal-help"
+            />
+          </span>
+        }
         footerActions={
           <>
             <button

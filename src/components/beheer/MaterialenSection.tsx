@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
+import { HelpLink } from '@/components/HelpLink';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit } from '@/lib/logActiviteit';
@@ -140,16 +141,6 @@ export function MaterialenSection({
 
   return (
     <div data-testid="materialen-section">
-      <div className="mb-3 flex justify-end">
-        <button
-          type="button"
-          onClick={openAdd}
-          data-testid="materialen-add"
-          className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
-        >
-          {t('materialenToevoegen')}
-        </button>
-      </div>
       <DataTable<MateriaalRow>
         columns={columns}
         rows={rows}
@@ -157,12 +148,31 @@ export function MaterialenSection({
         onRowClick={openEdit}
         emptyLabel={t('materialenEmpty')}
         searchPlaceholder={t('dataTableSearchPlaceholder')}
+        headerAction={
+          <button
+            type="button"
+            onClick={openAdd}
+            data-testid="materialen-add"
+            className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+          >
+            {t('materialenToevoegen')}
+          </button>
+        }
       />
       <Modal
         isOpen={modalState !== null}
         onClose={closeModal}
         closeLabel={t('modalClose')}
-        title={t('materialenModalTitel')}
+        title={
+          <span className="flex w-full items-center justify-between gap-2 pr-2">
+            {t('materialenModalTitel')}
+            <HelpLink
+              anchor="stamgegevens-materialen"
+              label="Open het hoofdstuk over materialen"
+              testId="materiaal-modal-help"
+            />
+          </span>
+        }
         footerActions={
           <>
             <button

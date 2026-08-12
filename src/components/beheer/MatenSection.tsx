@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
+import { HelpLink } from '@/components/HelpLink';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit } from '@/lib/logActiviteit';
@@ -96,16 +97,6 @@ export function MatenSection({ maten, kunstwerken, loadError, onAdd, onUpdate, o
 
   return (
     <div data-testid="maten-section">
-      <div className="mb-3 flex justify-end">
-        <button
-          type="button"
-          onClick={openAdd}
-          data-testid="maten-add"
-          className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
-        >
-          {t('matenToevoegen')}
-        </button>
-      </div>
       <DataTable<Maat>
         columns={columns}
         rows={maten}
@@ -113,12 +104,27 @@ export function MatenSection({ maten, kunstwerken, loadError, onAdd, onUpdate, o
         onRowClick={openEdit}
         emptyLabel={t('matenEmpty')}
         searchPlaceholder={t('dataTableSearchPlaceholder')}
+        headerAction={
+          <button
+            type="button"
+            onClick={openAdd}
+            data-testid="maten-add"
+            className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+          >
+            {t('matenToevoegen')}
+          </button>
+        }
       />
       <Modal
         isOpen={modalState !== null}
         onClose={closeModal}
         closeLabel={t('modalClose')}
-        title={t('matenModalTitel')}
+        title={
+          <span className="flex w-full items-center justify-between gap-2 pr-2">
+            {t('matenModalTitel')}
+            <HelpLink anchor="stamgegevens-maten" label="Open het hoofdstuk over maten" testId="maat-modal-help" />
+          </span>
+        }
         footerActions={
           <>
             <button
