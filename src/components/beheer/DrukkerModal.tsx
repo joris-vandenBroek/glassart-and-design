@@ -179,7 +179,13 @@ export function DrukkerModal({
     <>
     <Modal
       isOpen={state !== null}
-      onClose={onClose}
+      onClose={() => {
+        if (viewingZending) {
+          setViewingZending(null);
+          return;
+        }
+        onClose();
+      }}
       closeLabel={t('modalClose')}
       title={
         <span className="flex w-full items-center justify-between gap-2 pr-2">

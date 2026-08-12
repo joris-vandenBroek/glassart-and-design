@@ -75,9 +75,11 @@ export function ZendingBekijkenModal({
       {zending && (
         <div data-testid="zending-bekijken-modal" className="flex flex-col gap-4 text-sm text-white/80">
           {orders.length === 0 ? (
-            <p data-testid="zending-bekijken-modal-leeg" className="text-xs text-white/50">
-              {t('drukkersZendingModalGeenBestellingen')}
-            </p>
+            bestellingen === null ? null : (
+              <p data-testid="zending-bekijken-modal-leeg" className="text-xs text-white/50">
+                {t('drukkersZendingModalGeenBestellingen')}
+              </p>
+            )
           ) : (
             orders.map((bestelling) => {
               const klant = (klanten ?? []).find((k) => k.klantnr === bestelling.klantnr);

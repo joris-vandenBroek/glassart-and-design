@@ -183,6 +183,50 @@ describe('DrukkerModal zendingen', () => {
     expect(screen.queryByText(/Afleveradres/)).not.toBeInTheDocument();
   });
 
+  it('Escape closes only the zending popup, leaving DrukkerModal (with edits) open', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => [
+        {
+          id: 'zending-1',
+          verzondenOp: '2026-07-24T10:00:00Z',
+          onderwerp: 'Nieuwe order(s) voor de drukker – 24-7-2026',
+          body: '== Testbedrijf BV ==\nAfleveradres: Teststraat 1, 1234 AB Teststad\n- Hotel paneel',
+          bestellingIds: ['GD-00201'],
+          aantalKlanten: 1,
+          aantalRegels: 1,
+          verzondDoor: 'paul@glassartanddesign.com',
+        },
+      ],
+    });
+    const bestelling: Bestelling = {
+      id: 'header-1',
+      klantnr: 'KN-1',
+      companyName: 'Testbedrijf BV',
+      bestelnr: 'GD-00201',
+      korting: null,
+      besteldatum: '1-7-2026',
+      status: 'Verstuurd naar drukker',
+      lineCount: 0,
+      totalQuantity: 0,
+      lines: [],
+    };
+    const { onClose } = renderModal({ mode: 'edit', drukker: DRUKKER }, { bestellingen: [bestelling] });
+    await screen.findByTestId('drukker-zending-zending-1');
+    fireEvent.change(screen.getByTestId('drukker-modal-naam'), { target: { value: 'Gewijzigde naam' } });
+    fireEvent.click(screen.getByTestId('drukker-zending-bekijken-zending-1'));
+    await screen.findByTestId('zending-bekijken-modal');
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(screen.queryByTestId('zending-bekijken-modal')).not.toBeInTheDocument();
+    expect(screen.getByTestId('drukker-modal-naam')).toHaveValue('Gewijzigde naam');
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('shows the zendingnummer before the datum when present', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
