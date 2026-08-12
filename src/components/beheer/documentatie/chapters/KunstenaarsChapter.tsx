@@ -29,7 +29,7 @@ export function KunstenaarsChapter() {
       </SubSection>
       <SubSection id="kunstenaars-exclusiviteit" title="Exclusiviteit">
         <P>
-          Een kunstenaar kan exclusief werken voor precies twee klanten tegelijk — nooit voor precies één.
+          Een kunstenaar kan exclusief werken voor maximaal twee klanten tegelijk — nooit voor precies één.
           Laat je beide velden leeg, dan mag iedereen kunstwerken van deze kunstenaar bestellen. Vul je ze
           in, dan moet minstens één van de twee de klant zijn die zelf al aan deze kunstenaar gekoppeld is
           (dus de kunstenaar zelf).
