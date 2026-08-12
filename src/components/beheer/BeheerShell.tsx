@@ -456,7 +456,6 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
             maten={maten.items}
             materiaalsoorten={materiaalsoorten.items}
             klanten={klanten}
-            btwTarieven={btwtarieven.data}
             loadError={drukkers.error === 'load' ? t('drukkersLoadError') : null}
             // drukkernr is server-eigendom (zie POST /api/drukkers); de meegegeven lege
             // waarde wordt daar sowieso genegeerd, dit dient alleen om aan

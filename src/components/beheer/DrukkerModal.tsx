@@ -12,7 +12,6 @@ import { ZendingBekijkenModal } from './ZendingBekijkenModal';
 import type { Drukker, Kunstwerk, Materiaal, Maat, Materiaalsoort } from './materiaalTypes';
 import type { Bestelling } from './BestellingenSection';
 import type { Klant } from './KlantenSection';
-import type { BtwTarieven } from './btwTarievenTypes';
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; drukker: Drukker } | null;
 
@@ -24,7 +23,6 @@ interface DrukkerModalProps {
   maten: Maat[] | null;
   materiaalsoorten: Materiaalsoort[] | null;
   klanten: Klant[] | null;
-  btwTarieven: BtwTarieven | null;
   onClose: () => void;
   // drukkernr is server-eigendom (zie POST/PATCH /api/drukkers, die het uit de body
   // weggooien) -- de modal verzamelt en verstuurt het dus niet.
@@ -54,7 +52,6 @@ export function DrukkerModal({
   maten,
   materiaalsoorten,
   klanten,
-  btwTarieven,
   onClose,
   onAdd,
   onUpdate,
@@ -389,7 +386,6 @@ export function DrukkerModal({
       maten={maten}
       materiaalsoorten={materiaalsoorten}
       klanten={klanten}
-      btwTarieven={btwTarieven}
       onClose={() => setViewingZending(null)}
     />
     </>

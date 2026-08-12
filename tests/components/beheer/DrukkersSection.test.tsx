@@ -44,7 +44,6 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof DrukkersSe
         maten={null}
         materiaalsoorten={null}
         klanten={null}
-        btwTarieven={null}
         loadError={null}
         onAdd={onAdd}
         onUpdate={onUpdate}
