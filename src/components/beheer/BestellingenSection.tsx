@@ -73,6 +73,7 @@ export function BestellingenSection({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showVersturenDialog, setShowVersturenDialog] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
+  const [copiedZendingnummer, setCopiedZendingnummer] = useState<string | null>(null);
   const { user } = useAdminAuth();
   const [afrondKandidaten, setAfrondKandidaten] = useState<Bestelling[]>([]);
   const [afrondGenoten, setAfrondGenoten] = useState<ZendingGenoten[]>([]);
@@ -312,7 +313,36 @@ export function BestellingenSection({
 
   const columns: Column<Bestelling>[] = [
     { key: 'bestelnr', label: t('bestellingenColBestelnummer') },
-    { key: 'zendingnummer', label: t('bestellingenColZendingnummer'), render: (row) => row.zendingnummer ?? '' },
+    {
+      key: 'zendingnummer',
+      label: t('bestellingenColZendingnummer'),
+      render: (row) =>
+        row.zendingnummer ? (
+          <span className="inline-flex items-center gap-1.5">
+            {row.zendingnummer}
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                const zendingnummer = row.zendingnummer ?? '';
+                void navigator.clipboard?.writeText(zendingnummer);
+                setCopiedZendingnummer(zendingnummer);
+                window.setTimeout(() => {
+                  setCopiedZendingnummer((current) => (current === zendingnummer ? null : current));
+                }, 1500);
+              }}
+              title={t('bestellingenZendingnummerKopieren')}
+              aria-label={t('bestellingenZendingnummerKopieren')}
+              data-testid={`bestellingen-zendingnummer-kopieren-${row.id}`}
+              className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-white/20 text-[10px] leading-none text-white/60 transition hover:border-gold hover:text-gold"
+            >
+              {copiedZendingnummer === row.zendingnummer ? '✓' : '⧉'}
+            </button>
+          </span>
+        ) : (
+          ''
+        ),
+    },
     { key: 'companyName', label: t('bestellingenColKlant') },
     { key: 'besteldatum', label: t('bestellingenColDatum') },
     {
