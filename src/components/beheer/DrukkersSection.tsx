@@ -7,7 +7,6 @@ import { DrukkerModal } from './DrukkerModal';
 import type { Drukker, Kunstwerk, Materiaal, Maat, Materiaalsoort } from './materiaalTypes';
 import type { Bestelling } from './BestellingenSection';
 import type { Klant } from './KlantenSection';
-import type { BtwTarieven } from './btwTarievenTypes';
 
 interface DrukkersSectionProps {
   drukkers: Drukker[] | null;
@@ -17,7 +16,6 @@ interface DrukkersSectionProps {
   maten: Maat[] | null;
   materiaalsoorten: Materiaalsoort[] | null;
   klanten: Klant[] | null;
-  btwTarieven: BtwTarieven | null;
   loadError: string | null;
   // drukkernr is server-eigendom (zie POST/PATCH /api/drukkers, die het uit de body
   // weggooien) -- deze sectie verzamelt en verstuurt het dus niet.
@@ -37,7 +35,6 @@ export function DrukkersSection({
   maten,
   materiaalsoorten,
   klanten,
-  btwTarieven,
   loadError,
   onAdd,
   onUpdate,
@@ -110,7 +107,6 @@ export function DrukkersSection({
         maten={maten}
         materiaalsoorten={materiaalsoorten}
         klanten={klanten}
-        btwTarieven={btwTarieven}
         onClose={() => setModalState(null)}
         onAdd={onAdd}
         onUpdate={onUpdate}

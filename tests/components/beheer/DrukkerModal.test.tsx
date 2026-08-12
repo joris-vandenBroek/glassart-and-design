@@ -6,7 +6,6 @@ import type { Drukker } from '@/components/beheer/materiaalTypes';
 import type { Bestelling } from '@/components/beheer/BestellingenSection';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from '@/components/beheer/materiaalTypes';
 import type { Klant } from '@/components/beheer/KlantenSection';
-import type { BtwTarieven } from '@/components/beheer/btwTarievenTypes';
 import messages from '../../../messages/nl.json';
 
 const fetchMock = vi.fn();
@@ -43,7 +42,6 @@ function renderModal(
     maten?: Maat[] | null;
     materiaalsoorten?: Materiaalsoort[] | null;
     klanten?: Klant[] | null;
-    btwTarieven?: BtwTarieven | null;
   } = {}
 ) {
   const onClose = vi.fn();
@@ -61,7 +59,6 @@ function renderModal(
         maten={overrides.maten ?? null}
         materiaalsoorten={overrides.materiaalsoorten ?? null}
         klanten={overrides.klanten ?? null}
-        btwTarieven={overrides.btwTarieven ?? null}
         onClose={onClose}
         onAdd={onAdd}
         onUpdate={onUpdate}
@@ -180,7 +177,7 @@ describe('DrukkerModal zendingen', () => {
     expect(screen.queryByTestId('zending-bekijken-modal')).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId('drukker-zending-bekijken-zending-1'));
     expect(await screen.findByTestId('zending-bekijken-bestelling-header-1')).toHaveTextContent('Testbedrijf BV');
-    expect(screen.queryByText(/Afleveradres/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/== Testbedrijf BV ==/)).not.toBeInTheDocument();
   });
 
   it('Escape closes only the zending popup, leaving DrukkerModal (with edits) open', async () => {
@@ -282,7 +279,6 @@ describe('DrukkerModal zendingen', () => {
           maten={null}
           materiaalsoorten={null}
           klanten={null}
-          btwTarieven={null}
           onClose={vi.fn()}
           onAdd={vi.fn()}
           onUpdate={vi.fn().mockResolvedValue(true)}

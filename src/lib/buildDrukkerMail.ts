@@ -157,7 +157,11 @@ export function ontbrekendeKlantVelden(klant: Klant | null | undefined): KlantVe
   });
 }
 
-function formatAfleveradres(klant: Klant): string {
+/**
+ * Ook gebruikt door `ZendingBekijkenModal` (beheer) om het afleveradres exact zoals in de
+ * verzonden mail te tonen -- geen aparte formattering die uit de pas kan lopen met de mail zelf.
+ */
+export function formatAfleveradres(klant: Klant): string {
   const heeftAfleveradres = gebruiktAfleveradres(klant);
   const adres = tekst(heeftAfleveradres ? klant.deliveryAddress : klant.address);
   const postcode = tekst(heeftAfleveradres ? klant.deliveryPostcode : klant.postcode);
@@ -171,14 +175,19 @@ function formaatSuffix(kunstwerk: Kunstwerk | undefined): string {
   return '';
 }
 
-interface ResolvedRegel {
+export interface ResolvedRegel {
   kunstwerk: Kunstwerk | undefined;
   naam: string;
   materiaalOmschrijving: string;
   maatOmschrijving: string;
 }
 
-function resolveRegel(
+/**
+ * Ook gebruikt door `ZendingBekijkenModal` (beheer) om een regel exact zoals in de verzonden
+ * mail te tonen -- zelfde opzoeklogica en dezelfde terugvalteksten, zodat de popup nooit iets
+ * anders laat zien dan wat de drukker daadwerkelijk ontving.
+ */
+export function resolveRegel(
   line: BestellingLine,
   kunstwerken: Kunstwerk[],
   materialen: Materiaal[],
