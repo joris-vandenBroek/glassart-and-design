@@ -960,7 +960,7 @@ export function BestellingModal({
                           ) : (
                             <div
                               data-testid={`bestelling-modal-regel-structuur-op-slot-${line.id}`}
-                              className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs text-white/60"
+                              className="grid grid-cols-[auto_1fr] items-center gap-x-2 gap-y-1 text-xs text-white/60"
                             >
                               <span className="text-white/35">{t('bestellingenModalLabelMateriaal')}</span>
                               <span>
@@ -975,11 +975,23 @@ export function BestellingModal({
                               <span>{maatWeergave}</span>
                               <span className="text-white/35">{t('bestellingenModalLabelAantal')}</span>
                               <span>{weergaveLine.quantity}</span>
+                              <span className="text-white/35">{t('bestellingenModalLabelPrijs')}</span>
+                              <input
+                                type="number"
+                                value={lineDraft?.prijs ?? ''}
+                                onChange={(event) =>
+                                  setLineDraft((current) =>
+                                    current ? { ...current, prijs: event.target.value } : current
+                                  )
+                                }
+                                data-testid={`bestelling-modal-regel-prijs-${line.id}`}
+                                className={`w-24 justify-self-start rounded-sm bg-black/40 px-2 py-1 text-xs text-white ${GEEN_SPINNER}`}
+                              />
                             </div>
                           )}
 
-                          <div className="flex gap-2">
-                            {regelstructuurBewerkbaar && (
+                          {regelstructuurBewerkbaar && (
+                            <div className="flex gap-2">
                               <Veld label={t('bestellingenModalLabelAantal')}>
                               <input
                                 type="number"
@@ -994,21 +1006,21 @@ export function BestellingModal({
                                 className={`w-16 rounded-sm bg-black/40 px-2 py-1 text-xs text-white ${GEEN_SPINNER}`}
                               />
                               </Veld>
-                            )}
-                            <Veld label={t('bestellingenModalLabelPrijs')}>
-                            <input
-                              type="number"
-                              value={lineDraft?.prijs ?? ''}
-                              onChange={(event) =>
-                                setLineDraft((current) =>
-                                  current ? { ...current, prijs: event.target.value } : current
-                                )
-                              }
-                              data-testid={`bestelling-modal-regel-prijs-${line.id}`}
-                              className={`w-24 rounded-sm bg-black/40 px-2 py-1 text-xs text-white ${GEEN_SPINNER}`}
-                            />
-                            </Veld>
-                          </div>
+                              <Veld label={t('bestellingenModalLabelPrijs')}>
+                              <input
+                                type="number"
+                                value={lineDraft?.prijs ?? ''}
+                                onChange={(event) =>
+                                  setLineDraft((current) =>
+                                    current ? { ...current, prijs: event.target.value } : current
+                                  )
+                                }
+                                data-testid={`bestelling-modal-regel-prijs-${line.id}`}
+                                className={`w-24 rounded-sm bg-black/40 px-2 py-1 text-xs text-white ${GEEN_SPINNER}`}
+                              />
+                              </Veld>
+                            </div>
+                          )}
 
                           <div className="flex gap-2">
                             <button
