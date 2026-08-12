@@ -38,6 +38,8 @@ interface DataTableProps<T> {
   selection?: RowSelection<T>;
   emptyLabel: string;
   searchPlaceholder: string;
+  /** Bijv. de "toevoegen"-knop, in dezelfde rij als het zoekveld en rechts uitgelijnd. */
+  headerAction?: ReactNode;
   /**
    * Kolom waarop de tabel bij het openen gesorteerd staat. Standaard de eerste
    * sorteerbare kolom; geef `null` door om te starten in de volgorde waarin de
@@ -70,6 +72,7 @@ export function DataTable<T extends object>({
   selection,
   emptyLabel,
   searchPlaceholder,
+  headerAction,
   defaultSortKey,
   defaultSortDirection = 'asc',
 }: DataTableProps<T>) {
@@ -134,33 +137,36 @@ export function DataTable<T extends object>({
   return (
     <div data-testid="data-table">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <input
-          type="text"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder={searchPlaceholder}
-          data-testid="data-table-search"
-          className="w-full max-w-xs rounded-sm bg-black/40 px-3 py-2 text-xs text-white placeholder:text-white/40"
-        />
-        {quickFilter && (
-          <div className="flex items-center gap-4 text-xs">
-            {quickFilter.options.map((option) => (
-              <button
-                key={option.testId}
-                type="button"
-                onClick={() => quickFilter.onChange(option.value)}
-                data-testid={`data-table-quick-${option.testId}`}
-                className={
-                  quickFilter.value === option.value
-                    ? 'text-white underline underline-offset-4'
-                    : 'text-white/50 hover:text-white'
-                }
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="text"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={searchPlaceholder}
+            data-testid="data-table-search"
+            className="w-full max-w-xs rounded-sm bg-black/40 px-3 py-2 text-xs text-white placeholder:text-white/40"
+          />
+          {quickFilter && (
+            <div className="flex items-center gap-4 text-xs">
+              {quickFilter.options.map((option) => (
+                <button
+                  key={option.testId}
+                  type="button"
+                  onClick={() => quickFilter.onChange(option.value)}
+                  data-testid={`data-table-quick-${option.testId}`}
+                  className={
+                    quickFilter.value === option.value
+                      ? 'text-white underline underline-offset-4'
+                      : 'text-white/50 hover:text-white'
+                  }
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {headerAction && <div className="flex shrink-0 items-center gap-2">{headerAction}</div>}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm text-white/80">

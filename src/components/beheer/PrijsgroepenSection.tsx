@@ -129,16 +129,6 @@ export function PrijsgroepenSection({
 
   return (
     <div data-testid="prijsgroepen-section">
-      <div className="mb-3 flex justify-end">
-        <button
-          type="button"
-          onClick={openAdd}
-          data-testid="prijsgroepen-add"
-          className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
-        >
-          {t('prijsgroepenToevoegen')}
-        </button>
-      </div>
       <DataTable<Prijsgroep>
         columns={columns}
         rows={prijsgroepen}
@@ -146,13 +136,23 @@ export function PrijsgroepenSection({
         onRowClick={openEdit}
         emptyLabel={t('prijsgroepenEmpty')}
         searchPlaceholder={t('dataTableSearchPlaceholder')}
+        headerAction={
+          <button
+            type="button"
+            onClick={openAdd}
+            data-testid="prijsgroepen-add"
+            className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+          >
+            {t('prijsgroepenToevoegen')}
+          </button>
+        }
       />
       <Modal
         isOpen={modalState !== null}
         onClose={closeModal}
         closeLabel={t('modalClose')}
         title={
-          <span className="flex w-full items-center justify-between gap-2">
+          <span className="flex w-full items-center justify-between gap-2 pr-2">
             {t('prijsgroepenModalTitel')}
             <HelpLink
               anchor="stamgegevens-prijsgroepen"
