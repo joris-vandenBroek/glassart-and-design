@@ -382,10 +382,21 @@ export function BestellingModal({
 
   function handleOpslaanRegel(line: BestellingLine) {
     if (!lineDraft) return;
-    const quantity = Number(lineDraft.quantity);
-    if (!lineDraft.materiaalId || !quantity || quantity <= 0) return;
     const prijs = lineDraft.prijs === '' ? null : Number(lineDraft.prijs);
     if (prijs !== null && prijs <= 0) return;
+
+    // Zodra de regelstructuur op slot zit (zie REGELSTRUCTUUR_OP_SLOT_STATUSSEN in de
+    // wijzigen-route) mag alleen de prijs nog wijzigen -- materiaal/maat/aantal worden dan niet
+    // eens getoond als invoerveld, dus lineDraft's waarden daarvoor zijn ongewijzigd en horen
+    // niet mee in de patch (de server wijst zo'n patch anders sowieso af).
+    if (!regelstructuurBewerkbaar) {
+      setConceptUpdates((current) => ({ ...current, [line.id]: { ...current[line.id], prijs } }));
+      cancelEditRegel();
+      return;
+    }
+
+    const quantity = Number(lineDraft.quantity);
+    if (!lineDraft.materiaalId || !quantity || quantity <= 0) return;
 
     const patch: ConceptUpdate = { materiaalId: lineDraft.materiaalId, prijs, quantity };
     if (isCustomLine(line)) {
@@ -875,90 +886,113 @@ export function BestellingModal({
                         </>
                       ) : (
                         <div className="mt-1.5 flex flex-col gap-2">
-                          <Veld label={t('bestellingenModalLabelMateriaal')}>
-                          <select
-                            value={lineDraft?.materiaalId ?? ''}
-                            onChange={(event) =>
-                              setLineDraft((current) =>
-                                current ? { ...current, materiaalId: event.target.value } : current
-                              )
-                            }
-                            data-testid={`bestelling-modal-regel-materiaal-${line.id}`}
-                            className="rounded-sm bg-black/40 px-2 py-1.5 text-xs text-white"
-                          >
-                            {kunstwerkMaterialen.map((m) => (
-                              <option key={m.id} value={m.id}>
-                                {m.materiaaldikte}mm {materiaalsoortNaamById.get(m.materiaalsoortId) ?? m.materiaalsoortId}
-                              </option>
-                            ))}
-                          </select>
-                          </Veld>
+                          {regelstructuurBewerkbaar ? (
+                            <>
+                              <Veld label={t('bestellingenModalLabelMateriaal')}>
+                              <select
+                                value={lineDraft?.materiaalId ?? ''}
+                                onChange={(event) =>
+                                  setLineDraft((current) =>
+                                    current ? { ...current, materiaalId: event.target.value } : current
+                                  )
+                                }
+                                data-testid={`bestelling-modal-regel-materiaal-${line.id}`}
+                                className="rounded-sm bg-black/40 px-2 py-1.5 text-xs text-white"
+                              >
+                                {kunstwerkMaterialen.map((m) => (
+                                  <option key={m.id} value={m.id}>
+                                    {m.materiaaldikte}mm {materiaalsoortNaamById.get(m.materiaalsoortId) ?? m.materiaalsoortId}
+                                  </option>
+                                ))}
+                              </select>
+                              </Veld>
 
-                          {isCustomLine(line) ? (
-                            <div className="flex gap-2">
-                              <Veld label={t('matenLabelBreedte')}>
-                              <input
-                                type="number"
-                                value={lineDraft?.breedte ?? ''}
-                                onChange={(event) =>
-                                  setLineDraft((current) =>
-                                    current ? { ...current, breedte: event.target.value } : current
-                                  )
-                                }
-                                data-testid={`bestelling-modal-regel-breedte-${line.id}`}
-                                className={`w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white ${GEEN_SPINNER}`}
-                              />
-                              </Veld>
-                              <Veld label={t('matenLabelHoogte')}>
-                              <input
-                                type="number"
-                                value={lineDraft?.hoogte ?? ''}
-                                onChange={(event) =>
-                                  setLineDraft((current) =>
-                                    current ? { ...current, hoogte: event.target.value } : current
-                                  )
-                                }
-                                data-testid={`bestelling-modal-regel-hoogte-${line.id}`}
-                                className={`w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white ${GEEN_SPINNER}`}
-                              />
-                              </Veld>
-                            </div>
+                              {isCustomLine(line) ? (
+                                <div className="flex gap-2">
+                                  <Veld label={t('matenLabelBreedte')}>
+                                  <input
+                                    type="number"
+                                    value={lineDraft?.breedte ?? ''}
+                                    onChange={(event) =>
+                                      setLineDraft((current) =>
+                                        current ? { ...current, breedte: event.target.value } : current
+                                      )
+                                    }
+                                    data-testid={`bestelling-modal-regel-breedte-${line.id}`}
+                                    className={`w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white ${GEEN_SPINNER}`}
+                                  />
+                                  </Veld>
+                                  <Veld label={t('matenLabelHoogte')}>
+                                  <input
+                                    type="number"
+                                    value={lineDraft?.hoogte ?? ''}
+                                    onChange={(event) =>
+                                      setLineDraft((current) =>
+                                        current ? { ...current, hoogte: event.target.value } : current
+                                      )
+                                    }
+                                    data-testid={`bestelling-modal-regel-hoogte-${line.id}`}
+                                    className={`w-20 rounded-sm bg-black/40 px-2 py-1 text-xs text-white ${GEEN_SPINNER}`}
+                                  />
+                                  </Veld>
+                                </div>
+                              ) : (
+                                <Veld label={t('bestellingenModalLabelMaat')}>
+                                <select
+                                  value={lineDraft?.maatId ?? ''}
+                                  onChange={(event) =>
+                                    setLineDraft((current) =>
+                                      current ? { ...current, maatId: event.target.value } : current
+                                    )
+                                  }
+                                  data-testid={`bestelling-modal-regel-maat-${line.id}`}
+                                  className="rounded-sm bg-black/40 px-2 py-1.5 text-xs text-white"
+                                >
+                                  {kunstwerkMaten.map((m) => (
+                                    <option key={m.id} value={m.id}>
+                                      {m.breedte}×{m.hoogte} cm
+                                    </option>
+                                  ))}
+                                </select>
+                                </Veld>
+                              )}
+                            </>
                           ) : (
-                            <Veld label={t('bestellingenModalLabelMaat')}>
-                            <select
-                              value={lineDraft?.maatId ?? ''}
-                              onChange={(event) =>
-                                setLineDraft((current) =>
-                                  current ? { ...current, maatId: event.target.value } : current
-                                )
-                              }
-                              data-testid={`bestelling-modal-regel-maat-${line.id}`}
-                              className="rounded-sm bg-black/40 px-2 py-1.5 text-xs text-white"
+                            <div
+                              data-testid={`bestelling-modal-regel-structuur-op-slot-${line.id}`}
+                              className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs text-white/60"
                             >
-                              {kunstwerkMaten.map((m) => (
-                                <option key={m.id} value={m.id}>
-                                  {m.breedte}×{m.hoogte} cm
-                                </option>
-                              ))}
-                            </select>
-                            </Veld>
+                              <span className="text-white/35">{t('bestellingenModalLabelMateriaal')}</span>
+                              <span>
+                                {materiaal
+                                  ? `${materiaal.materiaaldikte}mm ${
+                                      materiaalsoortNaamById.get(materiaal.materiaalsoortId) ??
+                                      materiaal.materiaalsoortId
+                                    } — ${materiaal.omschrijvingNl}`
+                                  : t('bestellingenRegelOnbekend')}
+                              </span>
+                              <span className="text-white/35">{t('bestellingenModalLabelMaat')}</span>
+                              <span>{maatWeergave}</span>
+                            </div>
                           )}
 
                           <div className="flex gap-2">
-                            <Veld label={t('bestellingenModalLabelAantal')}>
-                            <input
-                              type="number"
-                              min={1}
-                              value={lineDraft?.quantity ?? ''}
-                              onChange={(event) =>
-                                setLineDraft((current) =>
-                                  current ? { ...current, quantity: event.target.value } : current
-                                )
-                              }
-                              data-testid={`bestelling-modal-regel-aantal-${line.id}`}
-                              className={`w-16 rounded-sm bg-black/40 px-2 py-1 text-xs text-white ${GEEN_SPINNER}`}
-                            />
-                            </Veld>
+                            {regelstructuurBewerkbaar && (
+                              <Veld label={t('bestellingenModalLabelAantal')}>
+                              <input
+                                type="number"
+                                min={1}
+                                value={lineDraft?.quantity ?? ''}
+                                onChange={(event) =>
+                                  setLineDraft((current) =>
+                                    current ? { ...current, quantity: event.target.value } : current
+                                  )
+                                }
+                                data-testid={`bestelling-modal-regel-aantal-${line.id}`}
+                                className={`w-16 rounded-sm bg-black/40 px-2 py-1 text-xs text-white ${GEEN_SPINNER}`}
+                              />
+                              </Veld>
+                            )}
                             <Veld label={t('bestellingenModalLabelPrijs')}>
                             <input
                               type="number"
