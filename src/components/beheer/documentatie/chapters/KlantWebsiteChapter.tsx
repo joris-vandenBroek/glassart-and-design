@@ -1,4 +1,4 @@
-import { Chapter, DocLink, P } from '../DocumentatieBlocks';
+import { Chapter, DocLink, P, SubSection, UL } from '../DocumentatieBlocks';
 
 export function KlantWebsiteChapter() {
   return (
@@ -20,6 +20,75 @@ export function KlantWebsiteChapter() {
         <DocLink anchor="kunstwerken">de kunstwerken die jij aanmaakt</DocLink>; de filters komen uit{' '}
         <DocLink anchor="stamgegevens">de overige stamgegevens</DocLink>.
       </P>
+      <SubSection id="klant-website-bestellen" title="Een kunstwerk bestellen">
+        <P>
+          Klikt een klant in Collecties op een kunstwerk? Dan opent een pop-up-scherm met de foto, de
+          omschrijving, en de bestelopties: het materiaal, de maat (of een eigen maat, als dat bij dit
+          kunstwerk mag), het aantal en de bijbehorende prijs. Met de knop &quot;Toevoegen&quot; komt het
+          kunstwerk in het winkelmandje.
+        </P>
+        <P>In deze gevallen kan een klant een kunstwerk niet toevoegen aan het mandje:</P>
+        <UL>
+          <li>Er is nog geen (geldige) combinatie van maat en materiaal gekozen.</li>
+          <li>
+            Voor de gekozen combinatie van maat en materiaal staat nog geen prijs in de{' '}
+            <DocLink anchor="prijsmatrix">prijsmatrix</DocLink> (&quot;prijs op aanvraag&quot;) — bij een
+            kunstwerk met vaste maten blokkeert dat het toevoegen; kiest de klant zelf een afwijkende maat,
+            dan mag dat wél in het mandje, met prijs op aanvraag.
+          </li>
+          <li>
+            Bij een kunstwerk zonder vaste maten (prijs per m², bijvoorbeeld akoestische stof): er is geen
+            geldige eigen maat ingevuld, of er staat geen prijs per m² bij dat kunstwerk.
+          </li>
+          <li>
+            Bij een zelf ingevulde maat: breedte of hoogte is leeg of nul, of groter dan het maximum dat
+            voor dat materiaal is toegestaan.
+          </li>
+          <li>
+            Het aantal is leeg, geen geheel getal, of lager dan de minimale afname (zie{' '}
+            <DocLink anchor="instellingen">Instellingen</DocLink>).
+          </li>
+          <li>
+            Het kunstwerk is exclusief voorbehouden aan een andere klant — zie{' '}
+            <DocLink anchor="kunstenaars-exclusiviteit">Exclusiviteit</DocLink>.
+          </li>
+          <li>
+            De kunstenaargegevens zijn nog niet geladen, of het kunstwerk verwijst naar een kunstenaar die
+            niet meer bestaat — dan kan het kunstwerk tijdelijk helemaal niet besteld worden.
+          </li>
+        </UL>
+        <P>
+          Let op: alleen ingelogd zijn is op zichzelf geen reden om niet te kunnen toevoegen — ook een
+          bezoeker zonder account kan een kunstwerk in zijn mandje leggen. Inloggen (en goedgekeurd zijn)
+          is pas nodig om de bestelling af te ronden, zie hieronder.
+        </P>
+      </SubSection>
+      <SubSection id="klant-website-mandje" title="Het winkelmandje">
+        <P>
+          Het winkelmandje-icoon rechtsboven laat in een badge zien hoeveel artikelen erin zitten. Een
+          klik erop toont een overzicht: per regel de foto, het materiaal, de maat, het aantal en de
+          prijs (of &quot;prijs op aanvraag&quot; bij een zelf ingevulde maat), met het totaalbedrag
+          onderaan. Een regel is met één klik te verwijderen.
+        </P>
+        <P>
+          Het mandje wordt niet in beheer bewaard, maar lokaal in de browser van de klant, per klant
+          apart — zo bestelt niemand per ongeluk tegen de prijzen van een andere klant.
+        </P>
+        <P>
+          Om de bestelling af te ronden moet de klant ingelogd én goedgekeurd zijn; is dat niet zo, dan
+          ziet hij in plaats van een afrond-knop alleen een link om in te loggen. Vlak vóór het afronden
+          wordt nog een laatste keer gecontroleerd of alle artikelen nog wel besteld mogen worden — is
+          een kunstwerk intussen bijvoorbeeld exclusief geworden, dan kan de klant niet afronden en moet
+          hij dat artikel eerst uit het mandje verwijderen.
+        </P>
+      </SubSection>
+      <SubSection id="klant-website-taalkeuze" title="Taalkeuze">
+        <P>
+          Rechtsboven kan een klant wisselen tussen Nederlands, Engels, Duits en Frans. Dit vertaalt
+          dezelfde pagina naar de gekozen taal — via de vertalingen die je bij kunstwerken, materialen en
+          kunstenaars invult — en heeft verder geen invloed op het winkelmandje of de inlogstatus.
+        </P>
+      </SubSection>
       <P>
         <strong>Contact</strong> — adres, e-mailadres, contactpersonen, WhatsApp-nummer en openingstijden,
         plus een contactformulier. Alle gegevens hierop komen uit{' '}
@@ -31,8 +100,11 @@ export function KlantWebsiteChapter() {
         <DocLink anchor="klant-registratie">Klant registreren en goedkeuren</DocLink>.
       </P>
       <P>
-        <strong>Inloggen</strong> — hier loggen bestaande klanten in met hun e-mailadres en wachtwoord. Nog
-        geen wachtwoord? Dat geef jij als beheerder uit — zie{' '}
+        <strong>Inloggen</strong> — hier loggen bestaande klanten in met hun e-mailadres en het wachtwoord
+        dat ze zelf bij hun registratie hebben ingesteld. Is een klant dat wachtwoord kwijt, dan zet hij
+        via de link &quot;Wachtwoord vergeten?&quot; zelf een nieuw wachtwoord. Jij als beheerder hoeft
+        daar niets voor te doen — alleen als een klant hierover contact met jullie opneemt (telefonisch,
+        WhatsApp of e-mail) omdat inloggen niet lukt, geef je zelf een wachtwoord uit — zie{' '}
         <DocLink anchor="klant-registratie-wachtwoord">Wachtwoord uitgeven</DocLink>.
       </P>
       <P>

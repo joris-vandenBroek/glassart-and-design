@@ -49,19 +49,27 @@ export function KlantRegistratieChapter() {
           voor deze klant, en er staat een btw-tarief ingesteld voor het land van deze klant.
         </P>
         <P>
-          Wil je deze klant ook koppelen aan een kunstenaar — bijvoorbeeld omdat de klant zelf de
-          kunstenaar is, of exclusief voor een kunstenaar mag verkopen? Kies die dan in hetzelfde scherm.
+          Is de klant de kunstenaar zelf, bijvoorbeeld omdat hij zijn eigen kunstwerken moet kunnen
+          bestellen? Koppel dan hier, in hetzelfde scherm, de kunstenaar aan dit klantaccount.
           Prijsafspraken en een eventuele opslag voor die kunstenaar stel je niet hier in, maar bij de
-          kunstenaar zelf — zie <DocLink anchor="kunstenaars">Een kunstenaar aanmaken</DocLink>.
+          kunstenaar zelf — zie <DocLink anchor="kunstenaars">Een kunstenaar aanmaken</DocLink>. Mag deze
+          klant juist exclusief verkopen voor een kunstenaar? Dat regel je ook niet hier, maar bij die
+          kunstenaar — zie <DocLink anchor="kunstenaars-exclusiviteit">Exclusiviteit</DocLink>.
         </P>
         <P>
-          Wijs je de aanvraag af, dan vraagt beheer om een reden; die reden zie je terug in de
-          klantgeschiedenis.
+          Wijs je de aanvraag af, dan moet je een reden invullen — het systeem staat afwijzen zonder
+          reden niet toe. Die reden zie je terug in de klantgeschiedenis.
         </P>
       </SubSection>
       <SubSection id="klant-registratie-wachtwoord" title="Wachtwoord uitgeven">
         <P>
-          Een net goedgekeurde klant heeft nog geen wachtwoord. Klik in het klantscherm op &quot;Wachtwoord
+          Een klant stelt zijn eigen wachtwoord in bij de registratie, en kan dat later ook zelf
+          herstellen via &quot;Wachtwoord vergeten?&quot; op de inlogpagina. Jij hoeft daar normaal niets
+          voor te doen.
+        </P>
+        <P>
+          Alleen als een klant contact met jullie opneemt (telefonisch, WhatsApp of e-mail) omdat inloggen
+          niet lukt, geef je zelf een nieuw wachtwoord uit: klik in het klantscherm op &quot;Wachtwoord
           uitgeven&quot; om er automatisch een aan te maken en te tonen. Geef dit meteen door aan de klant:
           zodra je het venster sluit — met de sluitknop, met Esc of door ernaast te klikken — is het
           wachtwoord weg en kun je het niet opnieuw opvragen. Zolang het venster open staat, zijn de
