@@ -33,39 +33,6 @@ function BestelprocesSchema() {
   );
 }
 
-const VOORBEELDMAIL = `Onderwerp: Z-2026-014 — Nieuwe order(s) voor de drukker – 11-8-2026
-
-== Interieurstudio De Vries (KL-00042) ==
-Afleveradres: Molenstraat 12, 3811 EX Amersfoort
-
-Bestelling B-2026-0301:
-- GLA-JAC-00007 — 6mm Glas — Blank helder, maat 60x90 cm (Staand), aantal 2
-- GLA-JAC-00012 — 6mm Glas — Blank helder, maat 40x40 cm, aantal 1
-
-== Hotel Boschoord ==
-Afleveradres: Bosweg 3, 7524 AB Enschede
-
-Bestelling B-2026-0304:
-- GLA-JAC-00007 — 6mm Glas — Blank helder, maat 90x60 cm (Liggend), aantal 4
-- GLA-JAC-00019 — 8mm Acryl — Mat wit, maat 120x80 cm (Liggend), aantal 1
-
-Bestelling B-2026-0305:
-- GLA-JAC-00012 — 6mm Glas — Blank helder, maat 40x40 cm, aantal 3
-
-== Kantoorpand Zuidas (KL-00108) ==
-Afleveradres: Zuidplein 90, 1077 XV Amsterdam
-
-Bestelling B-2026-0309:
-- GLA-JAC-00019 — 8mm Acryl — Mat wit, maat 120x80 cm (Liggend), aantal 2
-- GLA-JAC-00007 — 6mm Glas — Blank helder, maat 60x90 cm (Staand), aantal 1
-
---
-Glassart & Design
-Den Heuvel 21, 5688 EM Oirschot
-KVK-nummer: 12345678
-Btw-nummer: NL001234567B01
-E-mailadres (voor facturen): info@glassartdesign.nl`;
-
 interface VoorbeeldRegel {
   naam: string;
   materiaal: string;
@@ -255,12 +222,9 @@ export function BestelprocesChapter() {
           naar drukker&quot;. Kies de drukker — jouw standaard-drukker staat al
           geselecteerd, zie <DocLink anchor="drukkers-standaard">Standaard-drukker</DocLink> — en bekijk de
           mail voordat je &apos;m verstuurt. Alle aangevinkte bestellingen gaan in één mail, gegroepeerd
-          per klant. Bijvoorbeeld (fictief voorbeeld, met kunstwerken van kunstenaar Jack):
+          per klant. Zo ziet de mail er in de praktijk uit (fictief voorbeeld, met kunstwerken van
+          kunstenaar Jack — de fotominiatuur per regel is hier een grijs vlak, omdat dit fictief is):
         </P>
-        <pre className="overflow-x-auto rounded-md bg-silver/60 p-4 font-mono text-xs leading-relaxed text-ink">
-          {VOORBEELDMAIL}
-        </pre>
-        <P>Zo ziet diezelfde mail er in de praktijk uit — de drukker krijgt hem met deze opmaak, inclusief een fotominiatuur per regel (hieronder een grijs vlak, omdat dit een fictief voorbeeld is):</P>
         <VoorbeeldmailHtml />
         <P>
           Onderaan de mail staan altijd je bedrijfsgegevens als factuurvoetje (adres, KvK-nummer,
