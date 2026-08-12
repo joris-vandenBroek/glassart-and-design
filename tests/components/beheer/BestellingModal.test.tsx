@@ -1080,6 +1080,23 @@ describe('BestellingModal — regel verwijderen en toevoegen', () => {
     expect(screen.getByTestId(/^bestelling-modal-nieuwe-regel-kaart-/)).toBeInTheDocument();
   });
 
+  it('pre-fills the aantal field with the resolved minimale afname (global instellingen) when opening Regel toevoegen', () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal(BESTELLING, { bestelinstellingen: { minimaleAfname: 5 } });
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-toevoegen'));
+    expect(screen.getByTestId('bestelling-modal-nieuwe-regel-aantal')).toHaveValue(5);
+  });
+
+  it("pre-fills the aantal field with a klant's own minimaleAfname override", () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal(BESTELLING, {
+      bestelinstellingen: { minimaleAfname: 5 },
+      klanten: [{ ...KLANTEN[0], minimaleAfname: 2 }],
+    });
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-toevoegen'));
+    expect(screen.getByTestId('bestelling-modal-nieuwe-regel-aantal')).toHaveValue(2);
+  });
+
   it('shows a live prijsvoorbeeld once kunstwerk/materiaal/maat are complete, calling the prijsvoorbeeld endpoint', async () => {
     fetchMock.mockImplementation(async (url: string) =>
       String(url).includes('/prijsvoorbeeld')
@@ -1283,6 +1300,34 @@ describe('BestellingModal — korting bewerken', () => {
   it('has min="0" on the korting input to discourage negative values', () => {
     renderModal(BESTELLING);
     expect(screen.getByTestId('bestelling-modal-korting-input')).toHaveAttribute('min', '0');
+  });
+});
+
+describe('BestellingModal — subtotaal (regelsom vóór korting)', () => {
+  it('shows subtotaal above the korting input for an editable bestelling, even without a korting set yet', () => {
+    renderModal(BESTELLING);
+    // line-1: 150 × 3 = 450, line-2: 0 × 2 = 0 -> subtotaal 450, gelijk aan totaal zolang korting leeg is
+    expect(screen.getByTestId('bestelling-modal-subtotaal')).toHaveTextContent('€ 450,00');
+    expect(screen.getByTestId('bestelling-modal-total')).toHaveTextContent('€ 450,00');
+  });
+
+  it('keeps subtotaal fixed at the regelsom while the korting input changes the totaal', () => {
+    renderModal(BESTELLING);
+    fireEvent.change(screen.getByTestId('bestelling-modal-korting-input'), { target: { value: '50' } });
+    expect(screen.getByTestId('bestelling-modal-subtotaal')).toHaveTextContent('€ 450,00');
+    expect(screen.getByTestId('bestelling-modal-total')).toHaveTextContent('€ 400,00');
+  });
+
+  it('shows subtotaal alongside the read-only korting row for an Afgewezen bestelling with a saved korting', () => {
+    renderModal({ ...BESTELLING, status: 'Afgewezen', korting: 50 });
+    expect(screen.getByTestId('bestelling-modal-subtotaal')).toHaveTextContent('€ 450,00');
+    expect(screen.getByTestId('bestelling-modal-korting')).toHaveTextContent('€ 50,00');
+    expect(screen.getByTestId('bestelling-modal-total')).toHaveTextContent('€ 400,00');
+  });
+
+  it('hides subtotaal for an Afgewezen bestelling without a korting', () => {
+    renderModal({ ...BESTELLING, status: 'Afgewezen' });
+    expect(screen.queryByTestId('bestelling-modal-subtotaal')).not.toBeInTheDocument();
   });
 });
 

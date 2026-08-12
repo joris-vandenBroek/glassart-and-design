@@ -60,6 +60,15 @@ export function AccountOrderModal({
     : totalen!.heeftOngeprijsdeRegel
       ? t('modalTotalIncomplete')
       : formatCurrency(totalen!.totaalExclBtw!);
+  // Subtotaal (vóór korting) staat alleen boven het totaal wanneer er ook een kortingregel
+  // te zien is -- anders zijn ze aan elkaar gelijk en voegt de extra regel niets toe.
+  const toontKorting = !!totalen && totalen.korting > 0;
+  const subtotaalWeergave =
+    toontKorting && heeftRegels
+      ? totalen!.heeftOngeprijsdeRegel
+        ? t('modalTotalIncomplete')
+        : formatCurrency(totalen!.regelsom!)
+      : null;
   const btwBedrag = totalen?.btwBedrag ?? null;
   const totaalInclBtw = totalen?.totaalInclBtw ?? null;
 
@@ -88,13 +97,14 @@ export function AccountOrderModal({
             </div>
             {totaalWeergave !== null && (
               <div className="grid shrink-0 grid-cols-[auto_auto] items-baseline gap-x-2 gap-y-0.5">
-                <span className="text-[0.65rem] uppercase tracking-wide text-white/40">{t('modalTotalLabel')}</span>
-                <span
-                  data-testid="account-order-modal-total"
-                  className="text-right text-sm font-semibold text-white tabular-nums"
-                >
-                  {totaalWeergave}
-                </span>
+                {subtotaalWeergave !== null && (
+                  <div data-testid="account-order-modal-subtotaal" className="contents">
+                    <span className="text-[0.65rem] uppercase tracking-wide text-white/40">
+                      {t('modalSubtotaalLabel')}
+                    </span>
+                    <span className="text-right text-sm text-white/80 tabular-nums">{subtotaalWeergave}</span>
+                  </div>
+                )}
                 {totalen && totalen.korting > 0 && (
                   <div data-testid="account-order-modal-korting" className="contents">
                     <span className="text-[0.65rem] uppercase tracking-wide text-white/40">
@@ -105,6 +115,13 @@ export function AccountOrderModal({
                     </span>
                   </div>
                 )}
+                <span className="text-[0.65rem] uppercase tracking-wide text-white/40">{t('modalTotalLabel')}</span>
+                <span
+                  data-testid="account-order-modal-total"
+                  className="text-right text-sm font-semibold text-white tabular-nums"
+                >
+                  {totaalWeergave}
+                </span>
                 {btwBedrag !== null && (
                   <div data-testid="account-order-modal-btw" className="contents">
                     <span className="text-[0.65rem] uppercase tracking-wide text-white/40">
