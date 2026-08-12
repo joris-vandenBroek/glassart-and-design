@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
+import { existsSync } from 'fs';
+import path from 'path';
 import { KlantRegistratieChapter } from '@/components/beheer/documentatie/chapters/KlantRegistratieChapter';
 import { BestelprocesChapter } from '@/components/beheer/documentatie/chapters/BestelprocesChapter';
 import { KunstwerkenChapter } from '@/components/beheer/documentatie/chapters/KunstwerkenChapter';
@@ -17,5 +19,6 @@ describe('hoofdstuk-screenshots', () => {
     expect(img).not.toBeNull();
     expect(img).toHaveAttribute('alt');
     expect(img?.getAttribute('alt')).not.toBe('');
+    expect(existsSync(path.join(process.cwd(), 'public', expectedSrc.replace(/^\//, '')))).toBe(true);
   });
 });
