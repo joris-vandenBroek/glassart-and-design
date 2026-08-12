@@ -805,6 +805,8 @@
     "drukkersZendingAfgerondBadge": "{afgerond} / {totaal} afgerond",
     "drukkersMarkeerZendingAlsAfgerond": "Markeer zending als afgerond",
     "drukkersMarkeerZendingAlsAfgerondError": "Niet alle bestellingen konden worden afgerond ({afgerond} van {totaal}).",
+    "drukkersZendingModalTitel": "Zendinggegevens",
+    "drukkersZendingModalGeenBestellingen": "Geen bestelgegevens gevonden voor deze zending.",
     "glassartDesignLoadError": "Kon de bedrijfsgegevens niet laden. Probeer de pagina te verversen.",
     "glassartDesignActionError": "Er is iets misgegaan. Probeer het opnieuw.",
     "glassartDesignLabelBezoekadres": "Bezoekadres",

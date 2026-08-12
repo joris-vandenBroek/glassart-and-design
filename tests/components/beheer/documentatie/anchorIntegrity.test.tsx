@@ -22,6 +22,7 @@ import messages from '../../../../messages/nl.json';
 // - src/components/beheer/KunstenaarsSection.tsx
 // - src/components/beheer/BestellingModal.tsx
 // - src/components/beheer/DrukkerModal.tsx
+// - src/components/beheer/ZendingBekijkenModal.tsx
 const EXTERNAL_ANCHORS = [
   // BeheerShell.tsx SECTION_ANCHORS
   'klant-registratie',
@@ -51,6 +52,8 @@ const EXTERNAL_ANCHORS = [
   'bestelproces-bewerken',
   // DrukkerModal.tsx
   'drukkers-standaard',
+  // ZendingBekijkenModal.tsx
+  'drukkers-zending-bekijken',
 ];
 
 function renderedIds() {

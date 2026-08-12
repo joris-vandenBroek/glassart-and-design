@@ -11,6 +11,15 @@ export function DrukkersChapter() {
           ), staat deze drukker daar automatisch al geselecteerd — je kunt altijd nog een andere kiezen.
         </P>
       </SubSection>
+      <SubSection id="drukkers-zending-bekijken" title="Een verzonden zending bekijken">
+        <P>
+          Bij een drukker zie je onder &quot;Verzonden mails&quot; alle zendingen die naar deze drukker zijn
+          gestuurd. Klik op &quot;Bekijken&quot; om te zien wat er precies verstuurd is: per bestelling in de
+          zending de productregels (met foto, materiaal en maat) en de bijbehorende bedragen — dezelfde
+          weergave als bij <DocLink anchor="bestelproces-bewerken">een bestelling bewerken</DocLink>, maar
+          dan alleen ter inzage, zonder wijzigingsopties.
+        </P>
+      </SubSection>
     </Chapter>
   );
 }

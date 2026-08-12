@@ -68,7 +68,14 @@ const TOC: TocItem[] = [
       { href: '#stamgegevens-activiteit', label: 'Activiteit' },
     ],
   },
-  { href: '#drukkers', label: '8. Drukkers', subs: [{ href: '#drukkers-standaard', label: 'Standaard-drukker' }] },
+  {
+    href: '#drukkers',
+    label: '8. Drukkers',
+    subs: [
+      { href: '#drukkers-standaard', label: 'Standaard-drukker' },
+      { href: '#drukkers-zending-bekijken', label: 'Een verzonden zending bekijken' },
+    ],
+  },
   { href: '#glassart-design', label: '9. Glassart and design' },
   { href: '#instellingen', label: '10. Instellingen' },
 ];
