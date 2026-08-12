@@ -21,7 +21,7 @@ export function CartPanel() {
   const [placeOrderError, setPlaceOrderError] = useState<string | null>(null);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [emailError, setEmailError] = useState(false);
-  const { items, isHydrated, totalQuantity, totalPrice, unpricedLineCount, removeItem, clear } = useCart();
+  const { items, isHydrated, totalPrice, unpricedLineCount, removeItem, clear } = useCart();
   const { user, isCustomer } = useCustomerAuth();
   // Het mandje leeft in localStorage en kan dagen oud zijn; de exclusiviteit wordt
   // daarom vlak vóór het plaatsen opnieuw uit de actuele collecties gelezen. Alleen voor
@@ -134,12 +134,12 @@ export function CartPanel() {
         className="relative flex h-8 w-8 items-center justify-center rounded-full border border-white/20 text-white/80 hover:text-white"
       >
         <span aria-hidden="true">🛒</span>
-        {isHydrated && totalQuantity > 0 && (
+        {isHydrated && items.length > 0 && (
           <span
             data-testid="cart-badge"
             className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-silver px-1 text-[0.6rem] font-semibold text-ink"
           >
-            {totalQuantity}
+            {items.length}
           </span>
         )}
       </button>

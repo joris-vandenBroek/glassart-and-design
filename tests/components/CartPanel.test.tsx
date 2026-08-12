@@ -177,10 +177,10 @@ describe('CartPanel', () => {
     expect(screen.getByTestId('cart-empty')).toBeInTheDocument();
   });
 
-  it('shows a badge with the total quantity and lists cart items with materiaal/maat/price once seeded', async () => {
+  it('shows a badge with the number of cart lines (not the summed quantity) and lists cart items with materiaal/maat/price once seeded', async () => {
     await renderCartPanel();
     fireEvent.click(screen.getByTestId('seed-cart'));
-    expect(screen.getByTestId('cart-badge')).toHaveTextContent('2');
+    expect(screen.getByTestId('cart-badge')).toHaveTextContent('1');
     fireEvent.click(screen.getByTestId('cart-icon'));
     expect(screen.queryByTestId('cart-empty')).not.toBeInTheDocument();
     expect(screen.getByText('Wellness paneel')).toBeInTheDocument();
@@ -269,7 +269,7 @@ describe('CartPanel', () => {
       'Kan de bestelling niet plaatsen: "Wellness paneel" is niet (meer) beschikbaar voor jou. Verwijder dit artikel uit je mandje en probeer opnieuw.'
     );
     expect(fetchMock).not.toHaveBeenCalledWith('/api/bestelheaders', expect.anything());
-    expect(screen.getByTestId('cart-badge')).toHaveTextContent('2');
+    expect(screen.getByTestId('cart-badge')).toHaveTextContent('1');
   });
 
   it('places the order normally when the cart item is linked to an open kunstenaar', async () => {
@@ -395,7 +395,7 @@ describe('CartPanel', () => {
       'Er ging iets mis bij het plaatsen van de bestelling. Probeer het opnieuw.'
     );
     expect(screen.getByTestId('cart-panel')).toBeInTheDocument();
-    expect(screen.getByTestId('cart-badge')).toHaveTextContent('2');
+    expect(screen.getByTestId('cart-badge')).toHaveTextContent('1');
   });
 
   it('disables the place-order button when the cart is empty', async () => {
