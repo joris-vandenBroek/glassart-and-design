@@ -26,6 +26,15 @@ export function KunstwerkenChapter() {
           regelt dit niet automatisch voor je.
         </P>
       </SubSection>
+      <SubSection id="kunstwerken-kunstenaar" title="Kunstenaar">
+        <P>
+          Bij het aanmaken van een nieuw kunstwerk is het koppelen van een kunstenaar verplicht.
+          Bewerk je een bestaand kunstwerk dat van vóór deze regel stamt en dus nog geen
+          kunstenaar heeft, dan hoef je die niet alsnog te koppelen om je wijziging op te slaan.
+          Koppel je wél een kunstenaar, dan gelden voor dit kunstwerk meteen diens
+          kunstenaarsopslag en exclusiviteitsregels — zie het hoofdstuk over kunstenaars.
+        </P>
+      </SubSection>
       <SubSection id="kunstwerken-formaat" title="Formaat en maten">
         <P>
           Zodra je een foto uploadt, bepaalt beheer automatisch het formaat: Vierkant, Liggend of Staand —

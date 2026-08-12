@@ -502,7 +502,12 @@ export function KunstwerkenSection({
   }
 
   const codeOpSlot = modalState?.mode === 'edit' && bestelCodes.has(modalState.kunstwerk.code);
-  const algemeenHeeftFout = !foto || !code.trim() || formaat === null;
+  // Alleen verplicht bij het aanmaken van een nieuw kunstwerk -- bestaande kunstwerken zonder
+  // kunstenaar (van vóór deze regel) mogen bewerkt blijven zonder dat je alsnog een kunstenaar
+  // moet koppelen.
+  const isNieuwKunstwerk = modalState?.mode === 'add';
+  const kunstenaarHeeftFout = isNieuwKunstwerk && !kunstenaarnr;
+  const algemeenHeeftFout = !foto || !code.trim() || formaat === null || kunstenaarHeeftFout;
   const kenmerkenHeeftFout = segmentIds.length === 0;
   const matenHeeftFout = isMaatloos && (!prijsPerM2 || Number(prijsPerM2) <= 0);
   const omschrijvingenHeeftFout = !omschrijvingNl;
@@ -511,6 +516,7 @@ export function KunstwerkenSection({
     formaat === null ||
     uploading ||
     !code.trim() ||
+    kunstenaarHeeftFout ||
     segmentIds.length === 0 ||
     (isMaatloos && (!prijsPerM2 || Number(prijsPerM2) <= 0)) ||
     !omschrijvingNl;
@@ -855,20 +861,32 @@ export function KunstwerkenSection({
             )}
           </label>
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('kunstwerkenLabelKunstenaar')}
+            <span>
+              {t('kunstwerkenLabelKunstenaar')}
+              {isNieuwKunstwerk && <RequiredMark />}
+            </span>
             <select
               value={kunstenaarnr}
               onChange={(event) => setKunstenaarnr(event.target.value)}
               data-testid="kunstwerk-modal-kunstenaar"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+              className={`rounded-sm border bg-black/40 px-3 py-2 text-sm text-white ${
+                kunstenaarHeeftFout ? 'border-red-500/70' : 'border-transparent'
+              }`}
             >
-              <option value="">{t('kunstwerkenKunstenaarGeen')}</option>
+              <option value="" disabled={isNieuwKunstwerk}>
+                {isNieuwKunstwerk ? t('kunstwerkenKunstenaarKies') : t('kunstwerkenKunstenaarGeen')}
+              </option>
               {(kunstenaars ?? []).map((kunstenaar) => (
                 <option key={kunstenaar.id} value={kunstenaar.kunstenaarnr}>
                   {kunstenaar.naam}
                 </option>
               ))}
             </select>
+            {kunstenaarHeeftFout && (
+              <span data-testid="kunstwerk-modal-kunstenaar-hint" className="normal-case tracking-normal text-red-400">
+                {t('kunstwerkenKunstenaarVerplicht')}
+              </span>
+            )}
           </label>
 
           <fieldset
