@@ -53,8 +53,18 @@ export function KlantWebsiteChapter() {
             <DocLink anchor="kunstenaars-exclusiviteit">Exclusiviteit</DocLink>.
           </li>
           <li>
-            De kunstenaargegevens zijn nog niet geladen, of het kunstwerk verwijst naar een kunstenaar die
-            niet meer bestaat — dan kan het kunstwerk tijdelijk helemaal niet besteld worden.
+            De kunstenaargegevens zijn nog niet geladen — puur een timing-dingetje: om te weten of een
+            kunstwerk exclusief is, moet de browser eerst de kunstenaarslijst binnenhalen. Zolang die nog
+            niet binnen is, blokkeert het systeem uit voorzorg. Dit lost vanzelf op zodra de gegevens een
+            fractie van een seconde later geladen zijn — er is niets aan te doen of te repareren.
+          </li>
+          <li>
+            Het kunstwerk verwijst naar een kunstenaar die niet meer bestaat — dit is wél een datafout: het
+            kunstwerk is nog gekoppeld aan een kunstenaar die in beheer is verwijderd. Omdat het systeem de
+            exclusiviteitsregels dan niet meer kan controleren, blokkeert het uit voorzorg volledig, en dit
+            lost zichzelf niet op. Meldt een klant dat hij een kunstwerk niet kan bestellen (en het is geen
+            exclusiviteit)? Controleer dan bij dat kunstwerk of de kunstenaar-koppeling nog naar een
+            bestaande kunstenaar wijst, en herstel of verwijder de koppeling.
           </li>
         </UL>
         <P>
