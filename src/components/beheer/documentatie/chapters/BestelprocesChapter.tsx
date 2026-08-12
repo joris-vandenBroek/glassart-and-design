@@ -138,9 +138,13 @@ export function BestelprocesChapter() {
       </SubSection>
       <SubSection id="bestelproces-afronden-zending" title="Afronden binnen een zending">
         <P>
-          Rond je een bestelling af terwijl er in dezelfde drukker-zending nog andere, nog niet afgeronde
-          bestellingen zitten? Dan vraagt beheer of je die meteen ook wilt afronden — zo vergeet je er
-          geen.
+          Een drukker-zending is één verzamelmail die bestellingen van meerdere klanten tegelijk kan
+          bevatten. Rond je een bestelling af terwijl er in dezelfde zending nog andere, nog niet
+          afgeronde bestellingen zitten? Dan toont het systeem die andere bestellingen (per zending, met
+          drukker en verzenddatum) en geef je aan wat je wilt: &quot;Ook deze afronden&quot; rondt ze
+          allemaal in één keer af, &quot;Alleen deze afronden&quot; laat de rest ongemoeid, en Annuleren
+          rondt niets af. De gedachte hierachter: bestellingen die samen naar de drukker zijn gestuurd,
+          zijn vaak ook samen klaar — zo vergeet je er geen, zonder dat het je dwingt.
         </P>
       </SubSection>
       <SubSection id="bestelproces-facturatie" title="Facturatie">
