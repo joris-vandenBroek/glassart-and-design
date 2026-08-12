@@ -9,7 +9,7 @@ export function KlantWebsiteChapter() {
       <P>
         <strong>Home</strong> — de openingspagina: een korte introductie, waarom-kies-je-ons, een paar
         uitgelichte kunstwerken en de contactgegevens onderaan. De tekst hierop staat vast in de website
-        zelf en pas je niet aan via beheer. De uitgelichte kunstwerken komen uit{' '}
+        zelf en pas je niet aan via beheer. De uitgelichte kunstwerken worden willekeurig bepaald uit{' '}
         <DocLink anchor="kunstwerken">de kunstwerken die jij aanmaakt</DocLink>, de contactgegevens uit{' '}
         <DocLink anchor="glassart-design">Glassart and design</DocLink>. Er is geen apart menu-item
         &quot;Over ons&quot; — die tekst staat als vast onderdeel op de Home-pagina.
