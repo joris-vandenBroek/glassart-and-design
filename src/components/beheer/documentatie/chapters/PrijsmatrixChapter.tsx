@@ -10,7 +10,7 @@ export function PrijsmatrixChapter() {
           materiaal, in de prijsmatrix (bedragen zijn exclusief btw).
         </li>
         <li>
-          <strong>Kunstenaarsopslag:</strong> werkt de kunstenaar van dit kunstwerk met een vaste opslag
+          <strong>Kunstenaarsopslag:</strong> is er bij de kunstenaar een prijsopslag vastgelegd
           (zie <DocLink anchor="kunstenaars-opslag">Prijsopslag</DocLink>)? Dan komt dat bedrag er
           automatisch bij. Bijvoorbeeld: €100 + €15 opslag = €115.
         </li>
