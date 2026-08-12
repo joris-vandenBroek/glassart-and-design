@@ -522,6 +522,7 @@
     "bestellingenEmpty": "Geen bestellingen gevonden.",
     "bestellingenColBestelnummer": "Bestelnr.",
     "bestellingenColZendingnummer": "Zendingnr.",
+    "bestellingenZendingnummerKopieren": "Zendingnummer kopiëren",
     "bestellingenColKlant": "Klant",
     "bestellingenColDatum": "Besteldatum",
     "bestellingenColAantal": "Aantal",

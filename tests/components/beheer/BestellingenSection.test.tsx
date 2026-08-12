@@ -208,6 +208,17 @@ describe('BestellingenSection', () => {
     expect(screen.getByTestId('data-table-row-header-1')).not.toHaveTextContent('ZD-');
   });
 
+  it('copies the zendingnummer to the clipboard without opening the bestelling, when the copy button is clicked', () => {
+    const writeText = vi.fn();
+    Object.assign(navigator, { clipboard: { writeText } });
+    renderSection({
+      bestellingen: [BESTELLINGEN[0], { ...BESTELLINGEN[1], zendingnummer: 'ZD-00007' }],
+    });
+    fireEvent.click(screen.getByTestId('bestellingen-zendingnummer-kopieren-header-2'));
+    expect(writeText).toHaveBeenCalledWith('ZD-00007');
+    expect(screen.queryByTestId('bestelling-modal')).not.toBeInTheDocument();
+  });
+
   it('shows only the "Te versturen naar drukker" bestelling after clicking that quick filter link', () => {
     const bestellingen = [
       { ...BESTELLINGEN[0], status: 'Te versturen naar drukker' as const },
