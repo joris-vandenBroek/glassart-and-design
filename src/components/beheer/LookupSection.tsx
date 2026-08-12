@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
+import { HelpLink } from '@/components/HelpLink';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { logActiviteit, type ActiviteitType } from '@/lib/logActiviteit';
 import type { Kunstwerk } from './materiaalTypes';
@@ -156,16 +157,6 @@ export function LookupSection<T extends LookupItem>({
 
   return (
     <div data-testid={`${meervoud}-section`}>
-      <div className="mb-3 flex justify-end">
-        <button
-          type="button"
-          onClick={openAdd}
-          data-testid={`${meervoud}-add`}
-          className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
-        >
-          {t(`${meervoud}Toevoegen`)}
-        </button>
-      </div>
       <DataTable<T>
         columns={columns}
         rows={items}
@@ -173,12 +164,31 @@ export function LookupSection<T extends LookupItem>({
         onRowClick={openEdit}
         emptyLabel={t(`${meervoud}Empty`)}
         searchPlaceholder={t('dataTableSearchPlaceholder')}
+        headerAction={
+          <button
+            type="button"
+            onClick={openAdd}
+            data-testid={`${meervoud}-add`}
+            className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+          >
+            {t(`${meervoud}Toevoegen`)}
+          </button>
+        }
       />
       <Modal
         isOpen={modalState !== null}
         onClose={closeModal}
         closeLabel={t('modalClose')}
-        title={t(`${meervoud}ModalTitel`)}
+        title={
+          <span className="flex w-full items-center justify-between gap-2 pr-2">
+            {t(`${meervoud}ModalTitel`)}
+            <HelpLink
+              anchor={`stamgegevens-${meervoud}`}
+              label={`Open het hoofdstuk over ${meervoud}`}
+              testId={`${enkelvoud}-modal-help`}
+            />
+          </span>
+        }
         footerActions={
           modalState?.mode === 'edit' && pendingVerwijderCount !== null ? (
             <>

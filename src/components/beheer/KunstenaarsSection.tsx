@@ -362,16 +362,6 @@ export function KunstenaarsSection({
 
   return (
     <div data-testid="kunstenaars-section">
-      <div className="mb-3 flex justify-end">
-        <button
-          type="button"
-          onClick={openAdd}
-          data-testid="kunstenaars-add"
-          className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
-        >
-          {t('kunstenaarsToevoegen')}
-        </button>
-      </div>
       <DataTable<KunstenaarRow>
         columns={columns}
         rows={rows}
@@ -379,6 +369,16 @@ export function KunstenaarsSection({
         onRowClick={(row) => void openEdit(row)}
         emptyLabel={t('kunstenaarsEmpty')}
         searchPlaceholder={t('dataTableSearchPlaceholder')}
+        headerAction={
+          <button
+            type="button"
+            onClick={openAdd}
+            data-testid="kunstenaars-add"
+            className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+          >
+            {t('kunstenaarsToevoegen')}
+          </button>
+        }
       />
       <Modal
         isOpen={modalState !== null}

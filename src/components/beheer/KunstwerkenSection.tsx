@@ -636,27 +636,6 @@ export function KunstwerkenSection({
 
   return (
     <div data-testid="kunstwerken-section">
-      <div className="mb-3 flex justify-end gap-2">
-        {kunstwerkenZonderAlleMaterialenMaten.length > 0 && (
-          <button
-            type="button"
-            onClick={handleBackfillMaterialenMaten}
-            disabled={backfillBezig}
-            data-testid="kunstwerken-backfill-materialen-maten"
-            className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
-          >
-            {t('kunstwerkenBackfillMaterialenMaten', { count: kunstwerkenZonderAlleMaterialenMaten.length })}
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={openAdd}
-          data-testid="kunstwerken-add"
-          className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
-        >
-          {t('kunstwerkenToevoegen')}
-        </button>
-      </div>
       <DataTable<KunstwerkRow>
         columns={columns}
         rows={rows}
@@ -664,6 +643,29 @@ export function KunstwerkenSection({
         onRowClick={openEdit}
         emptyLabel={t('kunstwerkenEmpty')}
         searchPlaceholder={t('dataTableSearchPlaceholder')}
+        headerAction={
+          <>
+            {kunstwerkenZonderAlleMaterialenMaten.length > 0 && (
+              <button
+                type="button"
+                onClick={handleBackfillMaterialenMaten}
+                disabled={backfillBezig}
+                data-testid="kunstwerken-backfill-materialen-maten"
+                className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
+              >
+                {t('kunstwerkenBackfillMaterialenMaten', { count: kunstwerkenZonderAlleMaterialenMaten.length })}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={openAdd}
+              data-testid="kunstwerken-add"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+            >
+              {t('kunstwerkenToevoegen')}
+            </button>
+          </>
+        }
       />
       <Modal
         isOpen={modalState !== null}
