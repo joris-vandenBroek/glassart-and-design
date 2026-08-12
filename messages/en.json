@@ -271,6 +271,7 @@
       "modalLabelMaat": "Size",
       "modalTotalLabel": "Total",
       "modalTotalIncomplete": "To be determined",
+      "modalKortingLabel": "Discount",
       "modalBtwLabel": "VAT ({percentage}%)",
       "modalTotaalInclLabel": "Total incl. VAT",
       "modalTitel": "Order {id}",

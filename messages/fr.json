@@ -268,6 +268,7 @@
       "modalLabelMaat": "Taille",
       "modalTotalLabel": "Total",
       "modalTotalIncomplete": "À déterminer",
+      "modalKortingLabel": "Remise",
       "modalBtwLabel": "TVA ({percentage}%)",
       "modalTotaalInclLabel": "Total TTC",
       "modalTitel": "Commande {id}",

@@ -8,6 +8,7 @@ import { VersturenNaarDrukkerDialog } from './VersturenNaarDrukkerDialog';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort, Drukker } from './materiaalTypes';
 import type { Klant } from './KlantenSection';
 import type { BtwTarieven } from './btwTarievenTypes';
+import type { Bestelinstellingen } from './bestelinstellingenTypes';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit } from '@/lib/logActiviteit';
 import { afrondBestellingen } from '@/lib/afrondenBestellingen';
@@ -48,6 +49,7 @@ interface BestellingenSectionProps {
   materiaalsoorten: Materiaalsoort[] | null;
   klanten: Klant[] | null;
   btwTarieven: BtwTarieven | null;
+  bestelinstellingen: Bestelinstellingen | null;
   drukkers: Drukker[] | null;
   loadError: string | null;
   onBestellingUpdated: (bestelling: Bestelling) => void;
@@ -61,6 +63,7 @@ export function BestellingenSection({
   materiaalsoorten,
   klanten,
   btwTarieven,
+  bestelinstellingen,
   drukkers,
   loadError,
   onBestellingUpdated,
@@ -433,6 +436,7 @@ export function BestellingenSection({
         materiaalsoorten={materiaalsoorten}
         klanten={klanten}
         btwTarieven={btwTarieven}
+        bestelinstellingen={bestelinstellingen}
         onClose={() => setSelectedBestelling(null)}
         onUpdated={(updated) => {
           onBestellingUpdated(updated);

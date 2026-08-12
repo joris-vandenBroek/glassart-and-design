@@ -147,6 +147,7 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Bestelling
           materiaalsoorten={MATERIAALSOORTEN}
           klanten={KLANTEN}
           btwTarieven={null}
+          bestelinstellingen={null}
           drukkers={DRUKKERS}
           loadError={null}
           onBestellingUpdated={onBestellingUpdated}

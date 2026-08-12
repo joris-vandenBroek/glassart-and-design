@@ -28,11 +28,15 @@ const MATERIALEN: Materiaal[] = [
 const MATEN: Maat[] = [{ id: 'maat-1', breedte: 40, hoogte: 60 }];
 const BTWTARIEVEN: BtwTarieven = { tarieven: [{ land: 'NL', percentage: 21 }] };
 
-function renderModal(order: DisplayOrder | null, land: string | null = 'NL', btwTarieven: BtwTarieven | null = BTWTARIEVEN) {
+function renderModal(
+  order: (Omit<DisplayOrder, 'korting'> & Partial<Pick<DisplayOrder, 'korting'>>) | null,
+  land: string | null = 'NL',
+  btwTarieven: BtwTarieven | null = BTWTARIEVEN
+) {
   return render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <AccountOrderModal
-        order={order}
+        order={order ? { korting: null, ...order } : null}
         kunstwerken={KUNSTWERKEN}
         materialen={MATERIALEN}
         maten={MATEN}
@@ -170,6 +174,38 @@ describe('AccountOrderModal', () => {
       ],
     });
     expect(screen.getByTestId('account-order-modal-total')).toHaveTextContent('€ 350,00');
+  });
+
+  it('subtracts a korting on the bestelheader from the total and btw, and shows it as its own row', () => {
+    renderModal({
+      id: 'GD-00005',
+      date: '1-7-2026',
+      time: '14:30',
+      status: 'Te beoordelen',
+      description: '',
+      lines: [
+        { id: 'line-1', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 },
+        { id: 'line-2', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 50, quantity: 1 },
+      ],
+      korting: 50,
+    });
+    // regelsom 350, korting 50 -> 300 excl. btw, btw 21% = 63, incl. btw 363
+    expect(screen.getByTestId('account-order-modal-total')).toHaveTextContent('€ 300,00');
+    expect(screen.getByTestId('account-order-modal-korting')).toHaveTextContent('€ 50,00');
+    expect(screen.getByTestId('account-order-modal-btw')).toHaveTextContent('€ 63,00');
+    expect(screen.getByTestId('account-order-modal-totaal-incl')).toHaveTextContent('€ 363,00');
+  });
+
+  it('shows no korting row when korting is null or 0', () => {
+    renderModal({
+      id: 'GD-00005',
+      date: '1-7-2026',
+      time: '14:30',
+      status: 'Te beoordelen',
+      description: '',
+      lines: [{ id: 'line-1', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
+    });
+    expect(screen.queryByTestId('account-order-modal-korting')).not.toBeInTheDocument();
   });
 
   it('shows a subtotal per line (aantal × stukprijs)', () => {

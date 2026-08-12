@@ -8,6 +8,7 @@ import { resolveKunstwerkOmschrijving } from '@/lib/resolveKunstwerkOmschrijving
 import { resolveOmschrijving } from '@/lib/resolveOmschrijving';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { resolveBtwPercentage } from '@/lib/resolveBtw';
+import { berekenBestellingTotalen } from '@/lib/bestellingTotalen';
 import {
   toKlantBestellingStatus,
   KLANT_STATUS_BADGE_CLASS,
@@ -49,21 +50,18 @@ export function AccountOrderModal({
   const klantStatus = order ? toKlantBestellingStatus(order.status) : null;
 
   const heeftRegels = !!order?.lines && order.lines.length > 0;
-  const heeftOngeprijsdeRegel = heeftRegels && order!.lines!.some((line) => line.prijs === null);
+  const btwPercentage = btwTarieven ? resolveBtwPercentage(btwTarieven.tarieven, land) : null;
+  // Gedeeld met de beheer-bestellingmodal (BestellingModal.tsx) zodat de korting die een
+  // medewerker op de bestelheader zet hier hetzelfde doorrekent, in plaats van dat deze
+  // klantweergave zijn eigen (ongekortede) totaal berekent.
+  const totalen = heeftRegels ? berekenBestellingTotalen(order!.lines!, order!.korting ?? null, btwPercentage) : null;
   const totaalWeergave = !heeftRegels
     ? null
-    : heeftOngeprijsdeRegel
+    : totalen!.heeftOngeprijsdeRegel
       ? t('modalTotalIncomplete')
-      : formatCurrency(order!.lines!.reduce((sum, line) => sum + (line.prijs ?? 0) * line.quantity, 0));
-
-  const totaalExclBtwGetal =
-    heeftRegels && !heeftOngeprijsdeRegel
-      ? order!.lines!.reduce((sum, line) => sum + (line.prijs ?? 0) * line.quantity, 0)
-      : null;
-  const btwPercentage = btwTarieven ? resolveBtwPercentage(btwTarieven.tarieven, land) : null;
-  const btwBedrag =
-    totaalExclBtwGetal !== null && btwPercentage != null ? totaalExclBtwGetal * (btwPercentage / 100) : null;
-  const totaalInclBtw = totaalExclBtwGetal !== null && btwBedrag !== null ? totaalExclBtwGetal + btwBedrag : null;
+      : formatCurrency(totalen!.totaalExclBtw!);
+  const btwBedrag = totalen?.btwBedrag ?? null;
+  const totaalInclBtw = totalen?.totaalInclBtw ?? null;
 
   return (
     <Modal
@@ -97,6 +95,16 @@ export function AccountOrderModal({
                 >
                   {totaalWeergave}
                 </span>
+                {totalen && totalen.korting > 0 && (
+                  <div data-testid="account-order-modal-korting" className="contents">
+                    <span className="text-[0.65rem] uppercase tracking-wide text-white/40">
+                      {t('modalKortingLabel')}
+                    </span>
+                    <span className="text-right text-sm text-white/80 tabular-nums">
+                      -{formatCurrency(totalen.korting)}
+                    </span>
+                  </div>
+                )}
                 {btwBedrag !== null && (
                   <div data-testid="account-order-modal-btw" className="contents">
                     <span className="text-[0.65rem] uppercase tracking-wide text-white/40">
