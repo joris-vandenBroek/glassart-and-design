@@ -8,14 +8,23 @@ import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit } from '@/lib/logActiviteit';
 import { useDrukkerZendingen, type DrukkerZending } from '@/lib/useDrukkerZendingen';
-import type { Drukker } from './materiaalTypes';
+import { ZendingBekijkenModal } from './ZendingBekijkenModal';
+import type { Drukker, Kunstwerk, Materiaal, Maat, Materiaalsoort } from './materiaalTypes';
 import type { Bestelling } from './BestellingenSection';
+import type { Klant } from './KlantenSection';
+import type { BtwTarieven } from './btwTarievenTypes';
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; drukker: Drukker } | null;
 
 interface DrukkerModalProps {
   state: ModalState;
   bestellingen: Bestelling[] | null;
+  kunstwerken: Kunstwerk[] | null;
+  materialen: Materiaal[] | null;
+  maten: Maat[] | null;
+  materiaalsoorten: Materiaalsoort[] | null;
+  klanten: Klant[] | null;
+  btwTarieven: BtwTarieven | null;
   onClose: () => void;
   // drukkernr is server-eigendom (zie POST/PATCH /api/drukkers, die het uit de body
   // weggooien) -- de modal verzamelt en verstuurt het dus niet.
@@ -40,6 +49,12 @@ const EMPTY_FIELDS: FormFields = { naam: '', adres: '', postcode: '', plaats: ''
 export function DrukkerModal({
   state,
   bestellingen,
+  kunstwerken,
+  materialen,
+  maten,
+  materiaalsoorten,
+  klanten,
+  btwTarieven,
   onClose,
   onAdd,
   onUpdate,
@@ -50,7 +65,7 @@ export function DrukkerModal({
   const { user } = useAdminAuth();
   const [fields, setFields] = useState<FormFields>(EMPTY_FIELDS);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [expandedZendingId, setExpandedZendingId] = useState<string | null>(null);
+  const [viewingZending, setViewingZending] = useState<DrukkerZending | null>(null);
   const [zendingActionError, setZendingActionError] = useState<{ zendingId: string; message: string } | null>(
     null
   );
@@ -65,7 +80,7 @@ export function DrukkerModal({
       setFields(EMPTY_FIELDS);
     }
     setActionError(null);
-    setExpandedZendingId(null);
+    setViewingZending(null);
     setZendingActionError(null);
   }, [state]);
 
@@ -161,6 +176,7 @@ export function DrukkerModal({
   }
 
   return (
+    <>
     <Modal
       isOpen={state !== null}
       onClose={onClose}
@@ -317,14 +333,10 @@ export function DrukkerModal({
                         <button
                           type="button"
                           data-testid={`drukker-zending-bekijken-${zending.id}`}
-                          onClick={() =>
-                            setExpandedZendingId((current) => (current === zending.id ? null : zending.id))
-                          }
+                          onClick={() => setViewingZending(zending)}
                           className="shrink-0 text-white/50 underline underline-offset-2 hover:text-white"
                         >
-                          {expandedZendingId === zending.id
-                            ? t('drukkersZendingenVerbergen')
-                            : t('drukkersZendingenBekijken')}
+                          {t('drukkersZendingenBekijken')}
                         </button>
                       </div>
                       <div className="mt-1.5 flex items-center justify-between gap-2">
@@ -354,9 +366,6 @@ export function DrukkerModal({
                           {zendingActionError.message}
                         </p>
                       )}
-                      {expandedZendingId === zending.id && (
-                        <pre className="mt-2 whitespace-pre-wrap text-white/70">{zending.body}</pre>
-                      )}
                     </li>
                   );
                 })}
@@ -366,5 +375,17 @@ export function DrukkerModal({
         )}
       </div>
     </Modal>
+    <ZendingBekijkenModal
+      zending={viewingZending}
+      bestellingen={bestellingen}
+      kunstwerken={kunstwerken}
+      materialen={materialen}
+      maten={maten}
+      materiaalsoorten={materiaalsoorten}
+      klanten={klanten}
+      btwTarieven={btwTarieven}
+      onClose={() => setViewingZending(null)}
+    />
+    </>
   );
 }

@@ -4,6 +4,9 @@ import { NextIntlClientProvider } from 'next-intl';
 import { DrukkerModal } from '@/components/beheer/DrukkerModal';
 import type { Drukker } from '@/components/beheer/materiaalTypes';
 import type { Bestelling } from '@/components/beheer/BestellingenSection';
+import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from '@/components/beheer/materiaalTypes';
+import type { Klant } from '@/components/beheer/KlantenSection';
+import type { BtwTarieven } from '@/components/beheer/btwTarievenTypes';
 import messages from '../../../messages/nl.json';
 
 const fetchMock = vi.fn();
@@ -32,7 +35,16 @@ const DRUKKER: Drukker = {
 
 function renderModal(
   state: { mode: 'edit'; drukker: Drukker } | { mode: 'add' } | null,
-  overrides: { bestellingen?: Bestelling[] | null; onBestellingUpdated?: (b: Bestelling) => void } = {}
+  overrides: {
+    bestellingen?: Bestelling[] | null;
+    onBestellingUpdated?: (b: Bestelling) => void;
+    kunstwerken?: Kunstwerk[] | null;
+    materialen?: Materiaal[] | null;
+    maten?: Maat[] | null;
+    materiaalsoorten?: Materiaalsoort[] | null;
+    klanten?: Klant[] | null;
+    btwTarieven?: BtwTarieven | null;
+  } = {}
 ) {
   const onClose = vi.fn();
   const onAdd = vi.fn().mockResolvedValue(true);
@@ -44,6 +56,12 @@ function renderModal(
       <DrukkerModal
         state={state}
         bestellingen={'bestellingen' in overrides ? overrides.bestellingen ?? null : []}
+        kunstwerken={overrides.kunstwerken ?? null}
+        materialen={overrides.materialen ?? null}
+        maten={overrides.maten ?? null}
+        materiaalsoorten={overrides.materiaalsoorten ?? null}
+        klanten={overrides.klanten ?? null}
+        btwTarieven={overrides.btwTarieven ?? null}
         onClose={onClose}
         onAdd={onAdd}
         onUpdate={onUpdate}
@@ -128,7 +146,7 @@ describe('DrukkerModal zendingen', () => {
     );
   });
 
-  it('lists zendingen and expands one to show the full mail body', async () => {
+  it('opens a read-only popup for the bestelling in that zending when "Bekijken" is clicked', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: async () => [
@@ -137,19 +155,32 @@ describe('DrukkerModal zendingen', () => {
           verzondenOp: '2026-07-24T10:00:00Z',
           onderwerp: 'Nieuwe order(s) voor de drukker – 24-7-2026',
           body: '== Testbedrijf BV ==\nAfleveradres: Teststraat 1, 1234 AB Teststad\n- Hotel paneel',
-          bestellingIds: ['header-1'],
+          bestellingIds: ['GD-00201'],
           aantalKlanten: 1,
           aantalRegels: 1,
           verzondDoor: 'paul@glassartanddesign.com',
         },
       ],
     });
-    renderModal({ mode: 'edit', drukker: DRUKKER });
+    const bestelling: Bestelling = {
+      id: 'header-1',
+      klantnr: 'KN-1',
+      companyName: 'Testbedrijf BV',
+      bestelnr: 'GD-00201',
+      korting: null,
+      besteldatum: '1-7-2026',
+      status: 'Verstuurd naar drukker',
+      lineCount: 0,
+      totalQuantity: 0,
+      lines: [],
+    };
+    renderModal({ mode: 'edit', drukker: DRUKKER }, { bestellingen: [bestelling] });
     const zendingRow = await screen.findByTestId('drukker-zending-zending-1');
     expect(zendingRow).toHaveTextContent('1');
-    expect(screen.queryByText(/Testbedrijf BV/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('zending-bekijken-modal')).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId('drukker-zending-bekijken-zending-1'));
-    expect(screen.getByText(/Testbedrijf BV/)).toBeInTheDocument();
+    expect(await screen.findByTestId('zending-bekijken-bestelling-header-1')).toHaveTextContent('Testbedrijf BV');
+    expect(screen.queryByText(/Afleveradres/)).not.toBeInTheDocument();
   });
 
   it('shows the zendingnummer before the datum when present', async () => {
@@ -202,6 +233,12 @@ describe('DrukkerModal zendingen', () => {
         <DrukkerModal
           state={{ mode: 'edit', drukker: DRUKKER }}
           bestellingen={[]}
+          kunstwerken={null}
+          materialen={null}
+          maten={null}
+          materiaalsoorten={null}
+          klanten={null}
+          btwTarieven={null}
           onClose={vi.fn()}
           onAdd={vi.fn()}
           onUpdate={vi.fn().mockResolvedValue(true)}
