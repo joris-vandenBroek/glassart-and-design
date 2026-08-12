@@ -5,7 +5,15 @@ interface TocItem {
 }
 
 const TOC: TocItem[] = [
-  { href: '#klant-website', label: '1. De klant-website' },
+  {
+    href: '#klant-website',
+    label: '1. De klant-website',
+    subs: [
+      { href: '#klant-website-bestellen', label: 'Een kunstwerk bestellen' },
+      { href: '#klant-website-mandje', label: 'Het winkelmandje' },
+      { href: '#klant-website-taalkeuze', label: 'Taalkeuze' },
+    ],
+  },
   {
     href: '#klant-registratie',
     label: '2. Klant registreren en goedkeuren',

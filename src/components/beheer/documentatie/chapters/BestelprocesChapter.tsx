@@ -76,8 +76,9 @@ export function BestelprocesChapter() {
       <BestelprocesSchema />
       <SubSection id="bestelproces-bewerken" title="Een bestelling bewerken">
         <P>
-          Zolang een bestelling nog &quot;Te beoordelen&quot; is, kun je alles aanpassen: regels
-          toevoegen, verwijderen of wijzigen, en een prijs vaststellen als die nog ontbreekt (&quot;op
+          Zolang een bestelling nog niet naar de drukker is verstuurd — dus in status &quot;Te
+          beoordelen&quot; of &quot;Te versturen naar drukker&quot; — kun je regels toevoegen, verwijderen
+          of wijzigen: materiaal, maat, aantal, en een prijs vaststellen als die nog ontbreekt (&quot;op
           aanvraag&quot;).
         </P>
         <P>
@@ -89,15 +90,19 @@ export function BestelprocesChapter() {
           volledige berekening.
         </P>
         <P>
-          Zodra een bestelling naar de drukker is verstuurd (of verder), kun je de regels zelf niet meer
-          aanpassen — dan kun je alleen nog een ontbrekende prijs vaststellen. Is de bestelling afgewezen,
-          dan zit hij helemaal op slot.
+          Zodra een bestelling naar de drukker is verstuurd, kun je de regels zelf niet meer aanpassen —
+          geen regels meer toevoegen, verwijderen, of materiaal/maat/aantal wijzigen. De prijs per regel
+          en de korting op de hele bestelling blijf je wél kunnen aanpassen, in elke status. Is de
+          bestelling afgewezen, dan zit hij helemaal op slot — dan kan zelfs de prijs of de korting niet
+          meer gewijzigd worden.
         </P>
       </SubSection>
       <SubSection id="bestelproces-drukker" title="Naar de drukker sturen">
         <P>
-          Vink een of meer bestellingen met status &quot;Te versturen naar drukker&quot; aan en klik op
-          &quot;Versturen naar drukker&quot;. Kies de drukker — jouw standaard-drukker staat al
+          Klik boven de bestellingenlijst op het filter &quot;Te versturen naar drukker&quot; — dat toont
+          in één keer alle bestellingen in die status, en maakt ze meteen selecteerbaar, zodat je ze niet
+          één voor één hoeft aan te vinken. Vink de gewenste bestellingen aan en klik op &quot;Versturen
+          naar drukker&quot;. Kies de drukker — jouw standaard-drukker staat al
           geselecteerd, zie <DocLink anchor="drukkers-standaard">Standaard-drukker</DocLink> — en bekijk de
           mail voordat je &apos;m verstuurt. Alle aangevinkte bestellingen gaan in één mail, gegroepeerd
           per klant. Bijvoorbeeld (fictief voorbeeld, met kunstwerken van kunstenaar Jack):
