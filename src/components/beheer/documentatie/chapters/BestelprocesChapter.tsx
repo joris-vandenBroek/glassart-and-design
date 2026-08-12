@@ -135,6 +135,11 @@ export function BestelprocesChapter() {
           bestellingen die in die zending zaten. Zijn ze bij de drukker klaar? Vink ze allemaal aan en zet
           de status in één keer op &quot;Te factureren&quot;.
         </P>
+        <P>
+          Je hoeft een zendingnummer niet over te typen: in de kolom Zendingnummer van de bestellingenlijst
+          staat naast elk nummer een kopieer-icoon (⧉). Eén klik erop zet het zendingnummer op je
+          klembord, klaar om in het zoekveld te plakken.
+        </P>
       </SubSection>
       <SubSection id="bestelproces-afronden-zending" title="Afronden binnen een zending">
         <P>
