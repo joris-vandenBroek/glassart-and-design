@@ -46,7 +46,9 @@ export function KlantRegistratieChapter() {
       <SubSection id="klant-registratie-goedkeuren" title="Voordat je kunt goedkeuren">
         <P>
           De knop &quot;Goedkeuren&quot; blijft grijs tot twee dingen kloppen: er is een prijsgroep gekozen
-          voor deze klant, en er staat een btw-tarief ingesteld voor het land van deze klant.
+          voor deze klant, en er staat een{' '}
+          <DocLink anchor="instellingen-btw-tarieven">btw-tarief ingesteld voor het land</DocLink> van
+          deze klant.
         </P>
         <P>
           Is de klant de kunstenaar zelf, bijvoorbeeld omdat hij zijn eigen kunstwerken moet kunnen

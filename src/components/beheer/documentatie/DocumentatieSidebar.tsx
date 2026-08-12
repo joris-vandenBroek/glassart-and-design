@@ -70,7 +70,11 @@ const TOC: TocItem[] = [
   },
   { href: '#drukkers', label: '8. Drukkers', subs: [{ href: '#drukkers-standaard', label: 'Standaard-drukker' }] },
   { href: '#glassart-design', label: '9. Glassart and design' },
-  { href: '#instellingen', label: '10. Instellingen' },
+  {
+    href: '#instellingen',
+    label: '10. Instellingen',
+    subs: [{ href: '#instellingen-btw-tarieven', label: 'Btw-tarieven per land' }],
+  },
 ];
 
 export function DocumentatieSidebar() {
