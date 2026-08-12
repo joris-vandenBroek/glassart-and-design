@@ -9,7 +9,8 @@ import messages from '../../../../messages/nl.json';
  * Regression guard: every anchor that links into the gebruikershandleiding — the sidebar's
  * own #hrefs, and every `anchor="..."` / SECTION_ANCHORS value scattered across the beheer
  * UI (BeheerShell, KlantModal, KunstwerkenSection, KunstenaarsSection, BestellingModal,
- * DrukkerModal) — must point at an id that actually exists in the rendered manual. A future
+ * DrukkerModal, ZendingBekijkenModal) — must point at an id that actually exists in the
+ * rendered manual. A future
  * chapter rename would otherwise silently break these deep links.
  */
 
@@ -22,6 +23,7 @@ import messages from '../../../../messages/nl.json';
 // - src/components/beheer/KunstenaarsSection.tsx
 // - src/components/beheer/BestellingModal.tsx
 // - src/components/beheer/DrukkerModal.tsx
+// - src/components/beheer/ZendingBekijkenModal.tsx
 const EXTERNAL_ANCHORS = [
   // BeheerShell.tsx SECTION_ANCHORS
   'klant-registratie',
@@ -51,6 +53,8 @@ const EXTERNAL_ANCHORS = [
   'bestelproces-bewerken',
   // DrukkerModal.tsx
   'drukkers-standaard',
+  // ZendingBekijkenModal.tsx
+  'drukkers-zending-bekijken',
 ];
 
 function renderedIds() {
