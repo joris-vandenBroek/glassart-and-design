@@ -4,12 +4,20 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { DrukkerModal } from './DrukkerModal';
-import type { Drukker } from './materiaalTypes';
+import type { Drukker, Kunstwerk, Materiaal, Maat, Materiaalsoort } from './materiaalTypes';
 import type { Bestelling } from './BestellingenSection';
+import type { Klant } from './KlantenSection';
+import type { BtwTarieven } from './btwTarievenTypes';
 
 interface DrukkersSectionProps {
   drukkers: Drukker[] | null;
   bestellingen: Bestelling[] | null;
+  kunstwerken: Kunstwerk[] | null;
+  materialen: Materiaal[] | null;
+  maten: Maat[] | null;
+  materiaalsoorten: Materiaalsoort[] | null;
+  klanten: Klant[] | null;
+  btwTarieven: BtwTarieven | null;
   loadError: string | null;
   // drukkernr is server-eigendom (zie POST/PATCH /api/drukkers, die het uit de body
   // weggooien) -- deze sectie verzamelt en verstuurt het dus niet.
@@ -24,6 +32,12 @@ type ModalState = { mode: 'add' } | { mode: 'edit'; drukker: Drukker } | null;
 export function DrukkersSection({
   drukkers,
   bestellingen,
+  kunstwerken,
+  materialen,
+  maten,
+  materiaalsoorten,
+  klanten,
+  btwTarieven,
   loadError,
   onAdd,
   onUpdate,
@@ -91,6 +105,12 @@ export function DrukkersSection({
       <DrukkerModal
         state={modalState}
         bestellingen={bestellingen}
+        kunstwerken={kunstwerken}
+        materialen={materialen}
+        maten={maten}
+        materiaalsoorten={materiaalsoorten}
+        klanten={klanten}
+        btwTarieven={btwTarieven}
         onClose={() => setModalState(null)}
         onAdd={onAdd}
         onUpdate={onUpdate}
