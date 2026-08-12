@@ -158,7 +158,17 @@ export function BestellingModal({
       setToonNieuweRegel(false);
       setToonMailVraag(false);
       setConceptKorting(bestelling.korting != null ? String(bestelling.korting) : '');
-      setNieuweRegelDraft({ kunstwerkId: '', materiaalId: '', maatId: '', breedte: '', hoogte: '', quantity: '1' });
+      // effectiveMinimaleAfname (afgeleid van klanten/bestelinstellingen) bewust buiten de
+      // dependency-array: die resolven al ruim voordat een medewerker deze modal opent, en
+      // opnieuw resetten zodra ze wijzigen zou een net ingevulde nieuwe-regel-draft overschrijven.
+      setNieuweRegelDraft({
+        kunstwerkId: '',
+        materiaalId: '',
+        maatId: '',
+        breedte: '',
+        hoogte: '',
+        quantity: String(effectiveMinimaleAfname),
+      });
       setNieuweRegelPrijsvoorbeeld(null);
       setNieuweRegelError(null);
       bevestigingAfwijzen.annuleer();
@@ -255,6 +265,15 @@ export function BestellingModal({
       ? heeftOngeprijsdeRegel
         ? t('bestellingenModalTotalIncomplete')
         : formatCurrency(totalen!.totaalExclBtw!)
+      : null;
+  // Subtotaal (vóór korting) staat alleen boven het totaal wanneer er ook een kortingregel
+  // te zien is -- anders zijn ze aan elkaar gelijk en voegt de extra regel niets toe.
+  const toontKortingRij = bestelling ? bestelling.status !== 'Afgewezen' || (totalen != null && totalen.korting > 0) : false;
+  const subtotaalWeergave =
+    toontKortingRij && bestelling && bestelling.lines.length > 0
+      ? heeftOngeprijsdeRegel
+        ? t('bestellingenModalTotalIncomplete')
+        : formatCurrency(totalen!.regelsom!)
       : null;
   const btwPercentage = totalen?.btwPercentage ?? null;
   const btwBedrag = totalen?.btwBedrag ?? null;
@@ -466,7 +485,14 @@ export function BestellingModal({
         },
       ]);
     }
-    setNieuweRegelDraft({ kunstwerkId: '', materiaalId: '', maatId: '', breedte: '', hoogte: '', quantity: '1' });
+    setNieuweRegelDraft({
+      kunstwerkId: '',
+      materiaalId: '',
+      maatId: '',
+      breedte: '',
+      hoogte: '',
+      quantity: String(effectiveMinimaleAfname),
+    });
     setNieuweRegelPrijsvoorbeeld(null);
     setToonNieuweRegel(false);
   }
@@ -564,15 +590,14 @@ export function BestellingModal({
             </div>
             {totaalWeergave !== null && (
               <div className="grid shrink-0 grid-cols-[auto_auto] items-baseline gap-x-2 gap-y-0.5">
-                <span className="text-[0.65rem] uppercase tracking-wide text-white/40">
-                  {t('bestellingenModalTotalLabel')}
-                </span>
-                <span
-                  data-testid="bestelling-modal-total"
-                  className="text-right text-sm font-semibold text-white tabular-nums"
-                >
-                  {totaalWeergave}
-                </span>
+                {subtotaalWeergave !== null && (
+                  <div data-testid="bestelling-modal-subtotaal" className="contents">
+                    <span className="text-[0.65rem] uppercase tracking-wide text-white/40">
+                      {t('bestellingenModalSubtotaalLabel')}
+                    </span>
+                    <span className="text-right text-sm text-white/80 tabular-nums">{subtotaalWeergave}</span>
+                  </div>
+                )}
                 {bestelling.status === 'Afgewezen' ? (
                   totalen && totalen.korting > 0 && (
                     <div data-testid="bestelling-modal-korting" className="contents">
@@ -602,6 +627,15 @@ export function BestellingModal({
                     </div>
                   </div>
                 )}
+                <span className="text-[0.65rem] uppercase tracking-wide text-white/40">
+                  {t('bestellingenModalTotalLabel')}
+                </span>
+                <span
+                  data-testid="bestelling-modal-total"
+                  className="text-right text-sm font-semibold text-white tabular-nums"
+                >
+                  {totaalWeergave}
+                </span>
                 {btwBedrag !== null && (
                   <div data-testid="bestelling-modal-btw" className="contents">
                     <span className="text-[0.65rem] uppercase tracking-wide text-white/40">

@@ -190,13 +190,14 @@ describe('AccountOrderModal', () => {
       korting: 50,
     });
     // regelsom 350, korting 50 -> 300 excl. btw, btw 21% = 63, incl. btw 363
+    expect(screen.getByTestId('account-order-modal-subtotaal')).toHaveTextContent('€ 350,00');
     expect(screen.getByTestId('account-order-modal-total')).toHaveTextContent('€ 300,00');
     expect(screen.getByTestId('account-order-modal-korting')).toHaveTextContent('€ 50,00');
     expect(screen.getByTestId('account-order-modal-btw')).toHaveTextContent('€ 63,00');
     expect(screen.getByTestId('account-order-modal-totaal-incl')).toHaveTextContent('€ 363,00');
   });
 
-  it('shows no korting row when korting is null or 0', () => {
+  it('shows no korting row or subtotaal when korting is null or 0', () => {
     renderModal({
       id: 'GD-00005',
       date: '1-7-2026',
@@ -206,6 +207,7 @@ describe('AccountOrderModal', () => {
       lines: [{ id: 'line-1', code: 'Hotel paneel', maatId: 'maat-1', materiaalId: 'mat-1', prijs: 150, quantity: 2 }],
     });
     expect(screen.queryByTestId('account-order-modal-korting')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('account-order-modal-subtotaal')).not.toBeInTheDocument();
   });
 
   it('shows a subtotal per line (aantal × stukprijs)', () => {
