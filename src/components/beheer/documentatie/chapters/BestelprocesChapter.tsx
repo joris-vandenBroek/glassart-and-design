@@ -82,7 +82,7 @@ export function BestelprocesChapter() {
           aanvraag&quot;).
         </P>
         <P>
-          Bij het toevoegen van een regel bewaakt beheer ook de minimale afname van de klant (zie{' '}
+          Bij het toevoegen van een regel wordt ook de minimale afname van de klant bewaakt (zie{' '}
           <DocLink anchor="instellingen">Instellingen</DocLink>): vul je een aantal in dat daaronder zit,
           dan krijg je een foutmelding en wordt de regel niet toegevoegd.
         </P>
