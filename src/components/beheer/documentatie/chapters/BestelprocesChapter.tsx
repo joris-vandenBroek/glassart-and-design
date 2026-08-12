@@ -1,4 +1,4 @@
-import { Chapter, SubSection, P, UL, DocLink } from '../DocumentatieBlocks';
+import { Chapter, SubSection, P, UL, DocLink, Screenshot } from '../DocumentatieBlocks';
 
 function BestelprocesSchema() {
   const stappen = [
@@ -186,6 +186,11 @@ export function BestelprocesChapter() {
         het verdere verloop, van controleren tot en met versturen naar de drukker.
       </P>
       <BestelprocesSchema />
+      <Screenshot
+        src="/documentatie/bestelproces.png"
+        alt="De bestelmodal met regels, totalen en de knoppen Goedkeuren en Afwijzen"
+        caption="Een bestelling in bewerking"
+      />
       <SubSection id="bestelproces-bewerken" title="Een bestelling bewerken">
         <P>
           Zolang een bestelling nog niet naar de drukker is verstuurd — dus in status &quot;Te

@@ -1,4 +1,4 @@
-import { Chapter, SubSection, P, DocLink } from '../DocumentatieBlocks';
+import { Chapter, SubSection, P, DocLink, Screenshot } from '../DocumentatieBlocks';
 
 function RegistratieSchema() {
   const stappen = [
@@ -43,6 +43,11 @@ export function KlantRegistratieChapter() {
         aanvraag en keurt hem goed of af.
       </P>
       <RegistratieSchema />
+      <Screenshot
+        src="/documentatie/klant-registratie.png"
+        alt="De klantmodal tijdens het beoordelen van een aanvraag, met de knoppen Goedkeuren en Afwijzen"
+        caption="Het klantscherm tijdens het beoordelen van een aanvraag"
+      />
       <SubSection id="klant-registratie-goedkeuren" title="Voordat je kunt goedkeuren">
         <P>
           De knop &quot;Goedkeuren&quot; blijft grijs tot twee dingen kloppen: er is een prijsgroep gekozen

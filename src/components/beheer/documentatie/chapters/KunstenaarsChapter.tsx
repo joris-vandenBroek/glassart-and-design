@@ -1,4 +1,4 @@
-import { Chapter, SubSection, P } from '../DocumentatieBlocks';
+import { Chapter, SubSection, P, Screenshot } from '../DocumentatieBlocks';
 
 export function KunstenaarsChapter() {
   return (
@@ -7,6 +7,11 @@ export function KunstenaarsChapter() {
         Werkt een kunstenaar exclusief met jullie samen, of maak je afspraken over een vaste opslag op de
         prijs? Leg dat vast bij Kunstenaars.
       </P>
+      <Screenshot
+        src="/documentatie/kunstenaars.png"
+        alt="Het kunstenaar-formulier met naam, portretfoto, prijsopslag en exclusief verkooprecht"
+        caption="Het kunstenaar-formulier"
+      />
       <SubSection id="kunstenaars-koppeling" title="Klant koppelen">
         <P>
           Een kunstenaar koppel je aan klanten op twee manieren, en die staan los van elkaar:

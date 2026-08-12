@@ -1,9 +1,14 @@
-import { Chapter, SubSection, P } from '../DocumentatieBlocks';
+import { Chapter, SubSection, P, Screenshot } from '../DocumentatieBlocks';
 
 export function KunstwerkenChapter() {
   return (
     <Chapter id="kunstwerken" title="4. Een kunstwerk aanmaken">
       <P>Elk product dat een klant kan bestellen, is een &quot;kunstwerk&quot; in beheer.</P>
+      <Screenshot
+        src="/documentatie/kunstwerken.png"
+        alt="Het kunstwerk-formulier met foto, code, kunstenaar en formaat, met live voorbeeld van de collectiepagina ernaast"
+        caption="Het kunstwerk-formulier, tabblad Algemeen"
+      />
       <SubSection id="kunstwerken-foto" title="Foto">
         <P>Upload een foto van het kunstwerk. Die mag maximaal 8 MB groot zijn.</P>
       </SubSection>
