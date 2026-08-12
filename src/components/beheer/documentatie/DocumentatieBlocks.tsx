@@ -33,3 +33,16 @@ export function DocLink({ anchor, children }: { anchor: string; children: ReactN
     </a>
   );
 }
+
+export function Screenshot({ src, alt, caption }: { src: string; alt: string; caption?: string }) {
+  return (
+    <figure className="overflow-hidden rounded-lg border border-gold/40 shadow-sm">
+      <img src={src} alt={alt} className="w-full" />
+      {caption && (
+        <figcaption className="border-t border-gold/40 bg-silver/40 px-3 py-2 text-sm text-charcoal/70">
+          {caption}
+        </figcaption>
+      )}
+    </figure>
+  );
+}
