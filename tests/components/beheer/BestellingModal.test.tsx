@@ -880,7 +880,9 @@ describe('BestellingModal — regel verwijderen en toevoegen', () => {
     expect(screen.queryByTestId('bestelling-modal-regel-materiaal-line-6')).not.toBeInTheDocument();
     expect(screen.queryByTestId('bestelling-modal-regel-maat-line-6')).not.toBeInTheDocument();
     expect(screen.queryByTestId('bestelling-modal-regel-aantal-line-6')).not.toBeInTheDocument();
-    expect(screen.getByTestId('bestelling-modal-regel-structuur-op-slot-line-6')).toHaveTextContent('40×60 cm');
+    const readOnlyBlock = screen.getByTestId('bestelling-modal-regel-structuur-op-slot-line-6');
+    expect(readOnlyBlock).toHaveTextContent('40×60 cm');
+    expect(readOnlyBlock).toHaveTextContent('1'); // BESTELLING_VERSTUURD.lines[0].quantity, getoond als platte tekst
     expect(screen.getByTestId('bestelling-modal-regel-prijs-line-6')).toBeInTheDocument();
   });
 

@@ -973,6 +973,8 @@ export function BestellingModal({
                               </span>
                               <span className="text-white/35">{t('bestellingenModalLabelMaat')}</span>
                               <span>{maatWeergave}</span>
+                              <span className="text-white/35">{t('bestellingenModalLabelAantal')}</span>
+                              <span>{weergaveLine.quantity}</span>
                             </div>
                           )}
 
