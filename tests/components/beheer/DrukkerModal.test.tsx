@@ -140,6 +140,8 @@ describe('DrukkerModal tabs', () => {
     renderModal({ mode: 'edit', drukker: DRUKKER });
     expect(await screen.findByTestId('drukker-modal-tab-gegevens')).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByTestId('drukker-modal-tab-zendingen')).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByTestId('drukker-modal-tab-panel-gegevens')).not.toHaveClass('hidden');
+    expect(screen.getByTestId('drukker-modal-tab-panel-zendingen')).toHaveClass('hidden');
   });
 
   it('switches to the Zendingen tab on click', async () => {
@@ -149,6 +151,8 @@ describe('DrukkerModal tabs', () => {
     fireEvent.click(screen.getByTestId('drukker-modal-tab-zendingen'));
     expect(screen.getByTestId('drukker-modal-tab-zendingen')).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByTestId('drukker-modal-tab-gegevens')).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByTestId('drukker-modal-tab-panel-gegevens')).toHaveClass('hidden');
+    expect(screen.getByTestId('drukker-modal-tab-panel-zendingen')).not.toHaveClass('hidden');
   });
 
   it('shows no tabs when adding a new drukker', () => {

@@ -239,7 +239,10 @@ export function DrukkerModal({
           </div>
         )}
 
-        <div className={activeTab === 'gegevens' ? 'flex flex-col gap-2' : 'hidden'}>
+        <div
+          data-testid="drukker-modal-tab-panel-gegevens"
+          className={activeTab === 'gegevens' ? 'flex flex-col gap-2' : 'hidden'}
+        >
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
             <span>
               {t('drukkersLabelNaam')}
@@ -328,7 +331,10 @@ export function DrukkerModal({
         )}
 
         {state?.mode === 'edit' && (
-          <div className={activeTab === 'zendingen' ? 'flex flex-col gap-2' : 'hidden'}>
+          <div
+            data-testid="drukker-modal-tab-panel-zendingen"
+            className={activeTab === 'zendingen' ? 'flex flex-col gap-2' : 'hidden'}
+          >
             {zendingenError ? (
               <p data-testid="drukker-modal-zendingen-error" className="text-xs text-red-400">
                 {t('drukkersActionError')}
