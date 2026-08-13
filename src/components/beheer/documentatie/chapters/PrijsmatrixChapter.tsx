@@ -1,9 +1,14 @@
-import { Chapter, P, UL, DocLink } from '../DocumentatieBlocks';
+import { Chapter, P, UL, DocLink, Screenshot } from '../DocumentatieBlocks';
 
 export function PrijsmatrixChapter() {
   return (
     <Chapter id="prijsmatrix" title="6. Prijzen: de prijsmatrix en het prijsmodel">
       <P>De uiteindelijke prijs van een bestelregel wordt in stappen opgebouwd:</P>
+      <Screenshot
+        src="/documentatie/prijsmatrix.png"
+        alt="De prijsmatrix met de basisprijs per combinatie van maat en materiaal"
+        caption="De prijsmatrix: de basisprijs per combinatie van maat en materiaal"
+      />
       <UL>
         <li>
           <strong>Basisprijs:</strong> beheer zoekt de prijs op die hoort bij de combinatie van maat en

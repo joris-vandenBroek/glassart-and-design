@@ -20,6 +20,18 @@ export function KunstwerkenChapter() {
           kunstwerk uit de collectie &quot;Afrika&quot;. Kies je een prefix die al bestaat, dan stelt
           beheer automatisch het eerstvolgende nummer voor.
         </P>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Screenshot
+            src="/documentatie/kunstwerken-code-voor.png"
+            alt="Het veld Prefix en Code, nog leeg"
+            caption="1. Nog geen prefix gekozen — de code is nog leeg"
+          />
+          <Screenshot
+            src="/documentatie/kunstwerken-code-na.png"
+            alt="Het veld Prefix met een gekozen prefix, en de code met het automatisch voorgestelde volgnummer"
+            caption="2. Prefix gekozen — de code met volgnummer wordt automatisch voorgesteld"
+          />
+        </div>
         <P>
           Zodra een kunstwerk in een bestelling zit, ligt de code vast — dan kun je &apos;m niet meer
           wijzigen, en kun je het kunstwerk ook niet meer verwijderen.

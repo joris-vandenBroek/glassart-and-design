@@ -1,9 +1,14 @@
-import { Chapter, SubSection, P, DocLink } from '../DocumentatieBlocks';
+import { Chapter, SubSection, P, DocLink, Screenshot } from '../DocumentatieBlocks';
 
 export function DrukkersChapter() {
   return (
     <Chapter id="drukkers" title="8. Drukkers">
       <P>Hier beheer je de drukkers waar je bestellingen naartoe stuurt.</P>
+      <Screenshot
+        src="/documentatie/drukkers.png"
+        alt="Het drukkerscherm met naam, adres, prijsafspraken, de optie Standaard drukker en de verzonden mails"
+        caption="Het drukkerscherm, met de optie Standaard drukker en de verzonden mails"
+      />
       <SubSection id="drukkers-standaard" title="Standaard-drukker">
         <P>
           Vink &quot;Standaard&quot; aan bij de drukker die je het vaakst gebruikt. Zodra je een bestelling

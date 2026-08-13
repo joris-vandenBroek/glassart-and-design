@@ -1,4 +1,4 @@
-import { Chapter, SubSection, P, DocLink } from '../DocumentatieBlocks';
+import { Chapter, SubSection, P, DocLink, Screenshot } from '../DocumentatieBlocks';
 
 export function StamgegevensChapter() {
   return (
@@ -7,6 +7,11 @@ export function StamgegevensChapter() {
         Deze schermen vul je één keer in en gebruik je daarna overal terug — bij het aanmaken van
         kunstwerken, het filteren op de website, en de prijsopbouw.
       </P>
+      <Screenshot
+        src="/documentatie/stamgegevens.png"
+        alt="Het scherm Materialen als voorbeeld van de stamgegevens-schermen, met het uitgeklapte Stamgegevens-menu ernaast"
+        caption="Het scherm Materialen als voorbeeld — alle stamgegevens-schermen werken op dezelfde manier"
+      />
       <SubSection id="stamgegevens-materiaalsoorten" title="Materiaalsoorten">
         <P>
           De hoofdcategorie van een materiaal, bijvoorbeeld Glas of Acryl. Voeg toe met de knop

@@ -1,4 +1,4 @@
-import { Chapter, DocLink, P, SubSection, UL } from '../DocumentatieBlocks';
+import { Chapter, DocLink, P, SubSection, UL, Screenshot } from '../DocumentatieBlocks';
 
 export function KlantWebsiteChapter() {
   return (
@@ -6,6 +6,11 @@ export function KlantWebsiteChapter() {
       <P>
         Dit is een kort overzicht van wat een klant op de website ziet, en waar jij dat in beheer aanpast.
       </P>
+      <Screenshot
+        src="/documentatie/klant-website.png"
+        alt="De Collecties-pagina van de klant-website, met de navigatiebalk, het winkelmandje en de taalkeuze"
+        caption="De Collecties-pagina, met de navigatiebalk, het winkelmandje en de taalkeuze rechtsboven"
+      />
       <P>
         <strong>Home</strong> — de openingspagina: een korte introductie, waarom-kies-je-ons, een paar
         uitgelichte kunstwerken en de contactgegevens onderaan. De tekst hierop staat vast in de website

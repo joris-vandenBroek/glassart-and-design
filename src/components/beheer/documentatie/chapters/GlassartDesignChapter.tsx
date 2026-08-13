@@ -1,9 +1,14 @@
-import { Chapter, P, UL, DocLink } from '../DocumentatieBlocks';
+import { Chapter, P, UL, DocLink, Screenshot } from '../DocumentatieBlocks';
 
 export function GlassartDesignChapter() {
   return (
     <Chapter id="glassart-design" title="9. Glassart and design">
       <P>Hier staan de gegevens van je eigen bedrijf. Ze worden op twee plekken automatisch gebruikt:</P>
+      <Screenshot
+        src="/documentatie/glassart-design.png"
+        alt="Het scherm Glassart and design met bezoekadres en contactpersonen"
+        caption="Het scherm Glassart and design, met bezoekadres en contactpersonen"
+      />
       <UL>
         <li>
           Op de Contact-pagina van de website: bezoekadres, e-mailadres, WhatsApp-nummer, openingstijden,

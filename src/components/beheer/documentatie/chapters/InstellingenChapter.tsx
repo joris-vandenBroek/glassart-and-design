@@ -1,9 +1,14 @@
-import { Chapter, SubSection, P } from '../DocumentatieBlocks';
+import { Chapter, SubSection, P, Screenshot } from '../DocumentatieBlocks';
 
 export function InstellingenChapter() {
   return (
     <Chapter id="instellingen" title="10. Instellingen">
       <P>Algemene instellingen die voor de hele webshop gelden.</P>
+      <Screenshot
+        src="/documentatie/instellingen.png"
+        alt="Het instellingenscherm met minimale afname en de btw-tarieven per land"
+        caption="Het instellingenscherm, met minimale afname en de btw-tarieven per land"
+      />
       <P>
         <strong>Minimale afname</strong> — het aantal stuks dat een klant minimaal van één kunstwerk moet
         bestellen. Dit geldt standaard voor alle klanten. Wil je voor één specifieke klant een andere
