@@ -90,7 +90,7 @@ function renderModal(
 ) {
   const onClose = vi.fn();
   const onUpdated = vi.fn();
-  render(
+  const { rerender } = render(
     <NextIntlClientProvider locale="nl" messages={messages}>
       <KlantModal
         klant={klant}
@@ -104,7 +104,7 @@ function renderModal(
       />
     </NextIntlClientProvider>
   );
-  return { onClose, onUpdated };
+  return { onClose, onUpdated, rerender };
 }
 
 function patchCall() {
@@ -770,17 +770,56 @@ describe('KlantModal', () => {
     expect(screen.getByTestId('modal-header').parentElement).toHaveClass('max-w-4xl');
   });
 
-  it('groups fields into Bedrijfsgegevens, Adressen and Koppelingen columns', () => {
+  it('starts on the Gegevens tab and switches tab content when a tab is clicked', () => {
+    renderModal(KLANT);
+    expect(screen.getByTestId('klant-modal-tab-gegevens')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('klant-modal-tab-adressen')).toHaveAttribute('aria-selected', 'false');
+    fireEvent.click(screen.getByTestId('klant-modal-tab-adressen'));
+    expect(screen.getByTestId('klant-modal-tab-adressen')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('klant-modal-tab-gegevens')).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('resets to the Gegevens tab each time a different klant is opened', () => {
+    const { rerender } = renderModal(KLANT);
+    fireEvent.click(screen.getByTestId('klant-modal-tab-adressen'));
+    expect(screen.getByTestId('klant-modal-tab-adressen')).toHaveAttribute('aria-selected', 'true');
+    rerender(
+      <NextIntlClientProvider locale="nl" messages={messages}>
+        <KlantModal
+          klant={ANDERE_KLANT}
+          prijsgroepen={PRIJSGROEPEN}
+          kunstenaars={KUNSTENAARS}
+          klanten={[KLANT, ANDERE_KLANT]}
+          btwTarieven={BTWTARIEVEN}
+          btwLoadError={false}
+          onClose={vi.fn()}
+          onUpdated={vi.fn()}
+        />
+      </NextIntlClientProvider>
+    );
+    expect(screen.getByTestId('klant-modal-tab-gegevens')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('groups fields into Bedrijfsgegevens and Koppelingen columns within the Gegevens tab', () => {
     renderModal(KLANT);
     fireEvent.click(screen.getByTestId('klant-modal-bewerken'));
     expect(screen.getByTestId('klant-modal-kolom-bedrijfsgegevens')).toContainElement(
       screen.getByTestId('klant-modal-companyName')
     );
-    expect(screen.getByTestId('klant-modal-kolom-adressen')).toContainElement(
-      screen.getByTestId('klant-modal-deliveryAddress')
-    );
     expect(screen.getByTestId('klant-modal-kolom-koppelingen')).toContainElement(
       screen.getByTestId('klant-modal-prijsgroep')
     );
+  });
+
+  it('shows the address fields once the Adressen tab is active', () => {
+    renderModal(KLANT);
+    fireEvent.click(screen.getByTestId('klant-modal-bewerken'));
+    fireEvent.click(screen.getByTestId('klant-modal-tab-adressen'));
+    expect(screen.getByTestId('klant-modal-deliveryAddress')).toBeInTheDocument();
+  });
+
+  it('does not require switching tabs to reach the prijsgroep field (it lives in Gegevens, the default tab)', () => {
+    renderModal(KLANT);
+    expect(screen.getByTestId('klant-modal-prijsgroep')).toBeInTheDocument();
   });
 });

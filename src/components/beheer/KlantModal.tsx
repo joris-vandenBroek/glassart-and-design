@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Modal } from '@/components/Modal';
+import { ModalTabs } from '@/components/ModalTabs';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { Combobox } from '@/components/Combobox';
 import { HelpLink } from '@/components/HelpLink';
@@ -101,6 +102,8 @@ export function KlantModal({
   // allemaal onUpdated aan, en dat sluit het venster -- met het wachtwoord erin, dat
   // de beheerder op dat moment aan de telefoon aan het voorlezen is.
   const [wachtwoordZichtbaar, setWachtwoordZichtbaar] = useState(false);
+  type TabId = 'gegevens' | 'adressen';
+  const [activeTab, setActiveTab] = useState<TabId>('gegevens');
   const { user } = useAdminAuth();
   const bevestigingAfwijzen = useAfwijzenBevestiging();
 
@@ -114,6 +117,7 @@ export function KlantModal({
 
   useEffect(() => {
     if (klant) {
+      setActiveTab('gegevens');
       setPrijsgroepId(klant.prijsgroepId ?? '');
       setKunstenaarnr(klant.kunstenaarnr);
       setMinimaleAfname(klant.minimaleAfname != null ? String(klant.minimaleAfname) : '');
@@ -383,7 +387,17 @@ export function KlantModal({
               </p>
             )}
 
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <ModalTabs
+              tabs={[
+                { id: 'gegevens', label: t('klantenTabGegevens') },
+                { id: 'adressen', label: t('klantenTabAdressen') },
+              ]}
+              activeTabId={activeTab}
+              onTabChange={(id) => setActiveTab(id)}
+              testIdPrefix="klant-modal"
+            />
+
+            <div className={activeTab === 'gegevens' ? 'grid grid-cols-1 gap-6 sm:grid-cols-2' : 'hidden'}>
               <div data-testid="klant-modal-kolom-bedrijfsgegevens" className="flex flex-col gap-3">
                 <span className="text-xs uppercase tracking-wide text-white/70">
                   {t('klantenSectieBedrijfsgegevens')}
@@ -449,132 +463,6 @@ export function KlantModal({
                   testId="klant-modal-phone"
                   onChange={(value) => setField('phone', value)}
                 />
-              </div>
-
-              <div data-testid="klant-modal-kolom-adressen" className="flex flex-col gap-3">
-                <span className="text-xs uppercase tracking-wide text-white/70">
-                  {t('klantenSectieAdressen')}
-                </span>
-                <Veld
-                  label={t('klantenLabelAdres')}
-                  value={fields.address}
-                  editing={isEditing}
-                  testId="klant-modal-address"
-                  onChange={(value) => setField('address', value)}
-                />
-                <Veld
-                  label={t('klantenLabelPostcode')}
-                  value={fields.postcode}
-                  editing={isEditing}
-                  testId="klant-modal-postcode"
-                  onChange={(value) => setField('postcode', value)}
-                />
-                <Veld
-                  label={t('klantenLabelPlaats')}
-                  value={fields.city}
-                  editing={isEditing}
-                  testId="klant-modal-city"
-                  onChange={(value) => setField('city', value)}
-                />
-                {isEditing ? (
-                  <label className="flex flex-col gap-1">
-                    <span className="text-xs uppercase tracking-wide text-white/60">{t('klantenLabelLand')}</span>
-                    <Combobox
-                      options={LAND_OPTIONS}
-                      value={fields.land || null}
-                      onChange={(value) => setField('land', value ?? '')}
-                      placeholder={t('klantenLabelLand')}
-                      noResultsLabel={t('klantenLabelLand')}
-                      testId="klant-modal-land"
-                    />
-                  </label>
-                ) : (
-                  <Veld label={t('klantenLabelLand')} value={landNaam(fields.land)} editing={false} />
-                )}
-
-                <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
-                  <span className="text-xs uppercase tracking-wide text-white/60">{t('klantenLabelAfleveradres')}</span>
-                  {!isEditing && fields.deliveryAddress === '' ? (
-                    <p data-testid="klant-modal-afleveradres-leeg" className="text-white/50">
-                      {t('klantenLabelGebruiktStandaardadres')}
-                    </p>
-                  ) : (
-                    <div className="flex flex-col gap-3">
-                      <Veld
-                        label={t('klantenLabelAdres')}
-                        value={fields.deliveryAddress}
-                        editing={isEditing}
-                        testId="klant-modal-deliveryAddress"
-                        onChange={(value) => setField('deliveryAddress', value)}
-                      />
-                      <Veld
-                        label={t('klantenLabelPostcode')}
-                        value={fields.deliveryPostcode}
-                        editing={isEditing}
-                        testId="klant-modal-deliveryPostcode"
-                        onChange={(value) => setField('deliveryPostcode', value)}
-                      />
-                      <Veld
-                        label={t('klantenLabelPlaats')}
-                        value={fields.deliveryCity}
-                        editing={isEditing}
-                        testId="klant-modal-deliveryCity"
-                        onChange={(value) => setField('deliveryCity', value)}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
-                  <span className="text-xs uppercase tracking-wide text-white/60">{t('klantenLabelFactuuradres')}</span>
-                  {!isEditing && fields.invoiceAddress === '' ? (
-                    <p data-testid="klant-modal-factuuradres-leeg" className="text-white/50">
-                      {t('klantenLabelGebruiktStandaardadres')}
-                    </p>
-                  ) : (
-                    <div className="flex flex-col gap-3">
-                      <Veld
-                        label={t('klantenLabelAdres')}
-                        value={fields.invoiceAddress}
-                        editing={isEditing}
-                        testId="klant-modal-invoiceAddress"
-                        onChange={(value) => setField('invoiceAddress', value)}
-                      />
-                      <Veld
-                        label={t('klantenLabelPostcode')}
-                        value={fields.invoicePostcode}
-                        editing={isEditing}
-                        testId="klant-modal-invoicePostcode"
-                        onChange={(value) => setField('invoicePostcode', value)}
-                      />
-                      <Veld
-                        label={t('klantenLabelPlaats')}
-                        value={fields.invoiceCity}
-                        editing={isEditing}
-                        testId="klant-modal-invoiceCity"
-                        onChange={(value) => setField('invoiceCity', value)}
-                      />
-                      {isEditing ? (
-                        <label className="flex flex-col gap-1">
-                          <span className="text-xs uppercase tracking-wide text-white/60">
-                            {t('klantenLabelLand')}
-                          </span>
-                          <Combobox
-                            options={LAND_OPTIONS}
-                            value={fields.invoiceLand || null}
-                            onChange={(value) => setField('invoiceLand', value ?? '')}
-                            placeholder={t('klantenLabelLand')}
-                            noResultsLabel={t('klantenLabelLand')}
-                            clearLabel={t('klantenLabelGebruiktStandaardadres')}
-                            testId="klant-modal-invoiceLand"
-                          />
-                        </label>
-                      ) : (
-                        <Veld label={t('klantenLabelLand')} value={landNaam(fields.invoiceLand)} editing={false} />
-                      )}
-                    </div>
-                  )}
-                </div>
               </div>
 
               <div data-testid="klant-modal-kolom-koppelingen" className="flex flex-col gap-3">
@@ -655,6 +543,129 @@ export function KlantModal({
                   klantEmail={klant.email}
                   onWachtwoordZichtbaar={setWachtwoordZichtbaar}
                 />
+              </div>
+            </div>
+
+            <div className={activeTab === 'adressen' ? 'flex flex-col gap-3' : 'hidden'}>
+              <Veld
+                label={t('klantenLabelAdres')}
+                value={fields.address}
+                editing={isEditing}
+                testId="klant-modal-address"
+                onChange={(value) => setField('address', value)}
+              />
+              <Veld
+                label={t('klantenLabelPostcode')}
+                value={fields.postcode}
+                editing={isEditing}
+                testId="klant-modal-postcode"
+                onChange={(value) => setField('postcode', value)}
+              />
+              <Veld
+                label={t('klantenLabelPlaats')}
+                value={fields.city}
+                editing={isEditing}
+                testId="klant-modal-city"
+                onChange={(value) => setField('city', value)}
+              />
+              {isEditing ? (
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs uppercase tracking-wide text-white/60">{t('klantenLabelLand')}</span>
+                  <Combobox
+                    options={LAND_OPTIONS}
+                    value={fields.land || null}
+                    onChange={(value) => setField('land', value ?? '')}
+                    placeholder={t('klantenLabelLand')}
+                    noResultsLabel={t('klantenLabelLand')}
+                    testId="klant-modal-land"
+                  />
+                </label>
+              ) : (
+                <Veld label={t('klantenLabelLand')} value={landNaam(fields.land)} editing={false} />
+              )}
+
+              <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
+                <span className="text-xs uppercase tracking-wide text-white/60">{t('klantenLabelAfleveradres')}</span>
+                {!isEditing && fields.deliveryAddress === '' ? (
+                  <p data-testid="klant-modal-afleveradres-leeg" className="text-white/50">
+                    {t('klantenLabelGebruiktStandaardadres')}
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <Veld
+                      label={t('klantenLabelAdres')}
+                      value={fields.deliveryAddress}
+                      editing={isEditing}
+                      testId="klant-modal-deliveryAddress"
+                      onChange={(value) => setField('deliveryAddress', value)}
+                    />
+                    <Veld
+                      label={t('klantenLabelPostcode')}
+                      value={fields.deliveryPostcode}
+                      editing={isEditing}
+                      testId="klant-modal-deliveryPostcode"
+                      onChange={(value) => setField('deliveryPostcode', value)}
+                    />
+                    <Veld
+                      label={t('klantenLabelPlaats')}
+                      value={fields.deliveryCity}
+                      editing={isEditing}
+                      testId="klant-modal-deliveryCity"
+                      onChange={(value) => setField('deliveryCity', value)}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
+                <span className="text-xs uppercase tracking-wide text-white/60">{t('klantenLabelFactuuradres')}</span>
+                {!isEditing && fields.invoiceAddress === '' ? (
+                  <p data-testid="klant-modal-factuuradres-leeg" className="text-white/50">
+                    {t('klantenLabelGebruiktStandaardadres')}
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <Veld
+                      label={t('klantenLabelAdres')}
+                      value={fields.invoiceAddress}
+                      editing={isEditing}
+                      testId="klant-modal-invoiceAddress"
+                      onChange={(value) => setField('invoiceAddress', value)}
+                    />
+                    <Veld
+                      label={t('klantenLabelPostcode')}
+                      value={fields.invoicePostcode}
+                      editing={isEditing}
+                      testId="klant-modal-invoicePostcode"
+                      onChange={(value) => setField('invoicePostcode', value)}
+                    />
+                    <Veld
+                      label={t('klantenLabelPlaats')}
+                      value={fields.invoiceCity}
+                      editing={isEditing}
+                      testId="klant-modal-invoiceCity"
+                      onChange={(value) => setField('invoiceCity', value)}
+                    />
+                    {isEditing ? (
+                      <label className="flex flex-col gap-1">
+                        <span className="text-xs uppercase tracking-wide text-white/60">
+                          {t('klantenLabelLand')}
+                        </span>
+                        <Combobox
+                          options={LAND_OPTIONS}
+                          value={fields.invoiceLand || null}
+                          onChange={(value) => setField('invoiceLand', value ?? '')}
+                          placeholder={t('klantenLabelLand')}
+                          noResultsLabel={t('klantenLabelLand')}
+                          clearLabel={t('klantenLabelGebruiktStandaardadres')}
+                          testId="klant-modal-invoiceLand"
+                        />
+                      </label>
+                    ) : (
+                      <Veld label={t('klantenLabelLand')} value={landNaam(fields.invoiceLand)} editing={false} />
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
