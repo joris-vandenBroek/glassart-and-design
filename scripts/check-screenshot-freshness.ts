@@ -1,7 +1,9 @@
+import { execFileSync } from 'node:child_process';
+
 export const SCREENSHOT_BRONNEN: Record<string, string[]> = {
   'public/documentatie/klant-registratie.png': ['src/components/beheer/KlantModal.tsx'],
   'public/documentatie/bestelproces.png': ['src/components/beheer/BestellingModal.tsx'],
-  'public/documentatie/kunstwerken.png': ['src/components/beheer/KunstwerkenSection.tsx'],
+  'public/documentatie/kunstwerken.png': ['src/components/beheer/KunstwerkenSection.tsx', 'src/components/ProductModal.tsx'],
   'public/documentatie/kunstwerken-code-voor.png': ['src/components/beheer/KunstwerkenSection.tsx'],
   'public/documentatie/kunstwerken-code-na.png': ['src/components/beheer/KunstwerkenSection.tsx'],
   'public/documentatie/kunstenaars.png': ['src/components/beheer/KunstenaarsSection.tsx'],
@@ -9,7 +11,7 @@ export const SCREENSHOT_BRONNEN: Record<string, string[]> = {
   'public/documentatie/glassart-design.png': ['src/components/beheer/GlassartDesignSection.tsx'],
   'public/documentatie/instellingen.png': ['src/components/beheer/InstellingenSection.tsx'],
   'public/documentatie/prijsmatrix.png': ['src/components/beheer/PrijsmatrixSection.tsx'],
-  'public/documentatie/stamgegevens.png': ['src/components/beheer/MaterialenSection.tsx'],
+  'public/documentatie/stamgegevens.png': ['src/components/beheer/MaterialenSection.tsx', 'src/components/beheer/BeheerNav.tsx'],
   'public/documentatie/klant-website.png': ['src/components/ProductsGrid.tsx'],
 };
 
@@ -29,8 +31,6 @@ export function vindMogelijkVerouderdeScreenshots(
   return resultaat;
 }
 
-import { execSync } from 'node:child_process';
-
 function main(): void {
   const vorigeTag = process.argv[2];
   if (!vorigeTag) {
@@ -38,8 +38,18 @@ function main(): void {
     process.exit(2);
   }
 
-  const output = execSync(`git diff --name-only ${vorigeTag}..HEAD`, { encoding: 'utf8' });
-  const gewijzigdeBestanden = output.split('\n').filter((regel) => regel.trim() !== '');
+  let gewijzigdeBestanden: string[];
+  try {
+    const output = execFileSync('git', ['diff', '--name-only', `${vorigeTag}..HEAD`], { encoding: 'utf8' });
+    gewijzigdeBestanden = output.split('\n').filter((regel) => regel.trim() !== '');
+  } catch (error) {
+    // Dit script is een geheugensteun, geen correctheidscontrole -- het mag de deploy nooit
+    // laten falen (zie CLAUDE.md). Een onbekende/ongeldige ref of een andere git-hik geeft
+    // hier dus alleen een waarschuwing, geen non-zero exit.
+    const message = error instanceof Error ? error.message : String(error);
+    console.log(`::warning::Kon de screenshot-versheidscontrole niet uitvoeren: ${message}`);
+    return;
+  }
 
   const verouderd = vindMogelijkVerouderdeScreenshots(gewijzigdeBestanden);
   if (verouderd.length === 0) {
