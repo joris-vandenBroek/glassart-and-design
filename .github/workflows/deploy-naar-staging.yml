@@ -148,62 +148,53 @@ jobs:
         # if it's still unreachable after a minute, the actual upload step gets a chance
         # to try anyway rather than failing the job here on a possibly-too-strict check.
 
-      - name: Upload build to staging Node.js app via SFTP
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
-        with:
-          server: ${{ vars.STAGING_FTP_HOST }}
-          port: 22
-          username: ${{ secrets.STAGING_FTP_USERNAME }}
-          password: ${{ secrets.STAGING_FTP_PASSWORD }}
-          sftp_only: true
-          # Plain FTP/FTPS to this host fails after tens of minutes with "425 Unable to
-          # build data connection" -- reproduced identically from a local session and
-          # from GitHub Actions, so it's a server-side passive-mode/data-channel problem,
-          # not fixable client-side. SFTP tunnels everything over the one already-open
-          # connection (confirmed listening: `h64.mijn.host:22` answers with
-          # "SSH-2.0-mod_sftp") and has no separate data-channel step to fail.
-          #
-          # The Node.js app's real "Application root" (confirmed directly in DirectAdmin's
-          # Node.js app screen) is a standalone top-level folder, staging.glassartanddesign.
-          # com/, a SIBLING of domains/ itself -- not nested inside domains/ at all. Earlier
-          # attempts pointed at domains/staging.glassartanddesign.com/glassartanddesign.com/,
-          # a real but unrelated, never-executed folder that kept accumulating extra
-          # nesting from path experiments. The staging-deploy FTP account's custom
-          # directory is now set directly to the true top-level folder, so remote_path
-          # here is just "/".
-          #
-          # local_path uses "*" (not ".*") deliberately: this only matches non-hidden
-          # entries (messages/public/src), which is fine here because .next is uploaded
-          # separately below -- shell globbing here doesn't expand dotfiles/dotdirs, so a
-          # bare "*" would otherwise silently skip .next with no error.
-          local_path: './deploy_payload/*'
-          remote_path: '/'
-          # Retries the underlying sftp client's own connection attempt a few times
-          # before giving up, so a one-off "Network unreachable" blip (seen once already)
-          # doesn't fail the whole run and require a manual re-dispatch.
-          sftpArgs: '-o ConnectionAttempts=5 -o ConnectTimeout=15'
-        # sftp_only skips remote directory auto-creation for remote_path itself (must
-        # already exist, which it does), but nested folders inside an uploaded directory
-        # are still created via SFTP's own MKDIR, no shell needed -- as long as the
-        # top-level target folder already exists (confirmed for messages/public/src from
-        # the original manual deploy). No delete_remote_files: this only PUTs files that
-        # exist locally, it never removes anything not in deploy_payload/ -- tmp/ and
-        # stderr.log (Node.js Selector-managed) are left alone by construction.
-
-      - name: Upload .next build via SFTP
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
-        with:
-          server: ${{ vars.STAGING_FTP_HOST }}
-          port: 22
-          username: ${{ secrets.STAGING_FTP_USERNAME }}
-          password: ${{ secrets.STAGING_FTP_PASSWORD }}
-          sftp_only: true
-          local_path: './deploy_payload/.next/*'
-          remote_path: '/.next'
-          sftpArgs: '-o ConnectionAttempts=5 -o ConnectTimeout=15'
-        # Separate step because .next is a dotdir the main step's "*" glob can't see (see
-        # comment above). remote_path /.next already exists (from the original manual
-        # deploy), so this only needs to write/overwrite files inside it, not create it.
+      - name: Upload build + .next via SFTP (parallel)
+        env:
+          SFTP_HOST: ${{ vars.STAGING_FTP_HOST }}
+          SFTP_USER: ${{ secrets.STAGING_FTP_USERNAME }}
+          SFTP_PASSWORD: ${{ secrets.STAGING_FTP_PASSWORD }}
+        run: |
+          sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no -o ConnectTimeout=15 -o ConnectionAttempts=5 "$SFTP_USER@$SFTP_HOST" <<< $'put -r ./deploy_payload/* /' &
+          payload_pid=$!
+          sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no -o ConnectTimeout=15 -o ConnectionAttempts=5 "$SFTP_USER@$SFTP_HOST" <<< $'put -r ./deploy_payload/.next/* /.next' &
+          next_pid=$!
+          wait "$payload_pid"
+          wait "$next_pid"
+        # Was two sequential wlixcc/SFTP-Deploy-Action steps -- that action's own logs
+        # (confirmed by inspecting a real run) show it does nothing more than exactly
+        # this: `sftp ... <<< 'put -r <local> <remote>'` via sshpass. Running both as
+        # backgrounded shell jobs over two separate SFTP connections instead of two
+        # sequential action invocations was the biggest lever for total deploy time --
+        # the .next upload alone (thousands of small chunk files) took ~2 minutes on its
+        # own, stacked after the ~1-2 minutes for the main payload. `wait "$pid"` (not a
+        # bare `wait`) for each captured PID individually so a failure in either upload
+        # still fails the step under this shell's default `set -e` instead of being
+        # masked by `wait`'s all-jobs form, which only reports the last job's exit code.
+        #
+        # Plain FTP/FTPS to this host fails after tens of minutes with "425 Unable to
+        # build data connection" -- reproduced identically from a local session and from
+        # GitHub Actions, so it's a server-side passive-mode/data-channel problem, not
+        # fixable client-side. SFTP tunnels everything over the one already-open
+        # connection (confirmed listening: `h64.mijn.host:22` answers with
+        # "SSH-2.0-mod_sftp") and has no separate data-channel step to fail. Confirmed via
+        # a throwaway diagnostic run that this account is SFTP-only (an `ssh ... "echo
+        # hi"` exec request is rejected with "exec request failed on channel 0"), so a
+        # single-archive-then-remote-extract strategy isn't available here either.
+        #
+        # The Node.js app's real "Application root" (confirmed directly in DirectAdmin's
+        # Node.js app screen) is a standalone top-level folder, staging.glassartanddesign.
+        # com/, a SIBLING of domains/ itself -- not nested inside domains/ at all. Earlier
+        # attempts pointed at domains/staging.glassartanddesign.com/glassartanddesign.com/,
+        # a real but unrelated, never-executed folder that kept accumulating extra nesting
+        # from path experiments. remote_path here is just "/" for that reason.
+        #
+        # `put -r ./deploy_payload/*` only matches non-hidden entries (messages/public/src
+        # /app.js/etc) -- shell globbing doesn't expand dotdirs, so .next needs its own
+        # `put -r` targeting /.next explicitly (both remote paths already exist from the
+        # original manual deploy, so neither needs an explicit mkdir first). No delete of
+        # remote files: this only PUTs what exists locally, never removes anything not in
+        # deploy_payload/ -- tmp/ and stderr.log (Node.js Selector-managed) are left alone
+        # by construction.
 
       - name: Runtime-env voor de mail-/uploadrelay uploaden
         env:

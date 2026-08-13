@@ -169,29 +169,40 @@ jobs:
         # "Network unreachable" from the runner itself has hit this workflow repeatedly,
         # and sftpArgs' ConnectionAttempts=5 only retries within a single ssh invocation.
 
-      - name: Upload build to production Node.js app via SFTP
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
-        with:
-          server: ${{ vars.PRODUCTION_SFTP_HOST }}
-          port: 22
-          username: ${{ secrets.PRODUCTION_SFTP_USERNAME }}
-          password: ${{ secrets.PRODUCTION_SFTP_PASSWORD }}
-          sftp_only: true
-          local_path: './deploy_payload/*'
-          remote_path: '/'
-          sftpArgs: '-o ConnectionAttempts=5 -o ConnectTimeout=15'
+      - name: Upload build + .next via SFTP (parallel)
+        env:
+          SFTP_HOST: ${{ vars.PRODUCTION_SFTP_HOST }}
+          SFTP_USER: ${{ secrets.PRODUCTION_SFTP_USERNAME }}
+          SFTP_PASSWORD: ${{ secrets.PRODUCTION_SFTP_PASSWORD }}
+        run: |
+          sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no -o ConnectTimeout=15 -o ConnectionAttempts=5 "$SFTP_USER@$SFTP_HOST" <<< $'put -r ./deploy_payload/* /' &
+          payload_pid=$!
+          sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no -o ConnectTimeout=15 -o ConnectionAttempts=5 "$SFTP_USER@$SFTP_HOST" <<< $'put -r ./deploy_payload/.next/* /.next' &
+          next_pid=$!
+          wait "$payload_pid"
+          wait "$next_pid"
+        # Was two sequential wlixcc/SFTP-Deploy-Action steps -- see the equivalent step in
+        # deploy-naar-staging.yml for the full reasoning (confirmed via that action's own
+        # logs that it does nothing more than `sftp ... <<< 'put -r <local> <remote>'` via
+        # sshpass, and confirmed via a throwaway diagnostic run that this account is
+        # SFTP-only, so an archive-then-remote-extract strategy isn't available). Running
+        # both as backgrounded shell jobs over two separate SFTP connections instead of two
+        # sequential action invocations was the biggest lever for total deploy time. `wait
+        # "$pid"` (not a bare `wait`) for each captured PID individually so a failure in
+        # either upload still fails the step under this shell's default `set -e`.
+        #
         # KNOWN UNKNOWN: PRODUCTION_SFTP_HOST/USERNAME/PASSWORD are intentionally NEW
         # secret/variable names, not yet created -- deliberately distinct from the OLD
         # PRODUCTION_FTP_HOST/USERNAME/PASSWORD ones, which belong to the old
         # static-export FTP account (uploads straight into public_html/, alongside
         # mail-server/ and upload-server/) and are left untouched/unused here in case
         # anything else still needs them. The production Node.js app has its own
-        # separate, isolated "Application root" folder -- same shape as staging's, see
-        # above -- with no overlap with public_html or the PHP endpoints, so reusing the
-        # old FTP account's credentials here (if it happens to also have SFTP access)
-        # would risk silently uploading to the wrong directory while still reporting a
-        # green run. Using brand-new names means the SFTP steps fail loudly with a
-        # missing/empty credential error on the first dispatch instead -- create
+        # separate, isolated "Application root" folder -- same shape as staging's -- with
+        # no overlap with public_html or the PHP endpoints, so reusing the old FTP
+        # account's credentials here (if it happens to also have SFTP access) would risk
+        # silently uploading to the wrong directory while still reporting a green run.
+        # Using brand-new names means this step fails loudly with a missing/empty
+        # credential error on the first dispatch instead -- create
         # PRODUCTION_SFTP_HOST/USERNAME/PASSWORD (`gh variable set` / `gh secret set`)
         # pointing at a dedicated SFTP-capable DirectAdmin account for the production
         # Node.js app's actual Application root -- mirroring how staging needed its own
@@ -199,19 +210,10 @@ jobs:
         # old workflow, no `exclude` for mail-server/upload-server is needed here: the
         # Node.js app root is entirely separate from public_html by construction, there's
         # nothing to accidentally wipe.
-
-      - name: Upload .next build via SFTP
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
-        with:
-          server: ${{ vars.PRODUCTION_SFTP_HOST }}
-          port: 22
-          username: ${{ secrets.PRODUCTION_SFTP_USERNAME }}
-          password: ${{ secrets.PRODUCTION_SFTP_PASSWORD }}
-          sftp_only: true
-          local_path: './deploy_payload/.next/*'
-          remote_path: '/.next'
-          sftpArgs: '-o ConnectionAttempts=5 -o ConnectTimeout=15'
-        # Separate step because .next is a dotdir the main step's "*" glob can't see.
+        #
+        # `put -r ./deploy_payload/*` only matches non-hidden entries -- shell globbing
+        # doesn't expand dotdirs, so .next needs its own `put -r` targeting /.next
+        # explicitly (both remote paths already exist from the original manual deploy).
 
       - name: Runtime-env voor de mail-/uploadrelay uploaden
         env:
