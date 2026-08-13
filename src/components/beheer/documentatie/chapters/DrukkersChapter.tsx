@@ -26,6 +26,11 @@ export function DrukkersChapter() {
           naar de drukker bevat die ook niet — voor de prijzen van een bestelling ga je naar{' '}
           <DocLink anchor="bestelproces-bewerken">een bestelling bewerken</DocLink>.
         </P>
+        <Screenshot
+          src="/documentatie/drukkers-zending-bekijken.png"
+          alt="De zendinggegevens van zending ZD-00031, met per bestelling een eigen tabblad, het afleveradres en de productregels"
+          caption="Zending ZD-00031 bekijken, met het afleveradres en de productregels per bestelling"
+        />
       </SubSection>
     </Chapter>
   );

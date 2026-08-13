@@ -43,4 +43,9 @@ describe('hoofdstuk-screenshots', () => {
     expectImageOnDisk(container, '/documentatie/kunstwerken-code-voor.png');
     expectImageOnDisk(container, '/documentatie/kunstwerken-code-na.png');
   });
+
+  it('DrukkersChapter toont een screenshot van een bekeken zending', () => {
+    const { container } = render(<DrukkersChapter />);
+    expectImageOnDisk(container, '/documentatie/drukkers-zending-bekijken.png');
+  });
 });
