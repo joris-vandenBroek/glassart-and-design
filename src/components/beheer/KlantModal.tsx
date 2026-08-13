@@ -383,9 +383,9 @@ export function KlantModal({
               </p>
             )}
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div data-testid="klant-modal-kolom-bedrijfsgegevens" className="flex flex-col gap-3">
-                <span className="text-xs uppercase tracking-wide text-white/50">
+                <span className="text-xs uppercase tracking-wide text-white/70">
                   {t('klantenSectieBedrijfsgegevens')}
                 </span>
                 <Veld
@@ -452,7 +452,7 @@ export function KlantModal({
               </div>
 
               <div data-testid="klant-modal-kolom-adressen" className="flex flex-col gap-3">
-                <span className="text-xs uppercase tracking-wide text-white/50">
+                <span className="text-xs uppercase tracking-wide text-white/70">
                   {t('klantenSectieAdressen')}
                 </span>
                 <Veld
@@ -578,7 +578,7 @@ export function KlantModal({
               </div>
 
               <div data-testid="klant-modal-kolom-koppelingen" className="flex flex-col gap-3">
-                <span className="text-xs uppercase tracking-wide text-white/50">
+                <span className="text-xs uppercase tracking-wide text-white/70">
                   {t('klantenSectieKoppelingen')}
                 </span>
                 <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
