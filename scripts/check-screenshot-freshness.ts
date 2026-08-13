@@ -8,6 +8,7 @@ export const SCREENSHOT_BRONNEN: Record<string, string[]> = {
   'public/documentatie/kunstwerken-code-na.png': ['src/components/beheer/KunstwerkenSection.tsx'],
   'public/documentatie/kunstenaars.png': ['src/components/beheer/KunstenaarsSection.tsx'],
   'public/documentatie/drukkers.png': ['src/components/beheer/DrukkerModal.tsx'],
+  'public/documentatie/drukkers-zending-bekijken.png': ['src/components/beheer/ZendingBekijkenModal.tsx'],
   'public/documentatie/glassart-design.png': ['src/components/beheer/GlassartDesignSection.tsx'],
   'public/documentatie/instellingen.png': ['src/components/beheer/InstellingenSection.tsx'],
   'public/documentatie/prijsmatrix.png': ['src/components/beheer/PrijsmatrixSection.tsx'],
