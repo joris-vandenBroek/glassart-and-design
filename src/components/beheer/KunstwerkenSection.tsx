@@ -508,7 +508,6 @@ export function KunstwerkenSection({
   const isNieuwKunstwerk = modalState?.mode === 'add';
   const kunstenaarHeeftFout = isNieuwKunstwerk && !kunstenaarnr;
   const algemeenHeeftFout = !foto || !code.trim() || formaat === null || kunstenaarHeeftFout;
-  const kenmerkenHeeftFout = segmentIds.length === 0;
   const matenHeeftFout = isMaatloos && (!prijsPerM2 || Number(prijsPerM2) <= 0);
   const omschrijvingenHeeftFout = !omschrijvingNl;
   const opslaanDisabled =
@@ -517,7 +516,6 @@ export function KunstwerkenSection({
     uploading ||
     !code.trim() ||
     kunstenaarHeeftFout ||
-    segmentIds.length === 0 ||
     (isMaatloos && (!prijsPerM2 || Number(prijsPerM2) <= 0)) ||
     !omschrijvingNl;
 
@@ -747,7 +745,7 @@ export function KunstwerkenSection({
             <ModalTabs
               tabs={[
                 { id: 'algemeen', label: t('kunstwerkenTabAlgemeen'), hasError: algemeenHeeftFout },
-                { id: 'kenmerken', label: t('kunstwerkenTabKenmerken'), hasError: kenmerkenHeeftFout },
+                { id: 'kenmerken', label: t('kunstwerkenTabKenmerken') },
                 { id: 'materialen', label: t('kunstwerkenTabMaterialen') },
                 { id: 'maten', label: t('kunstwerkenTabMaten'), hasError: matenHeeftFout },
                 { id: 'omschrijvingen', label: t('kunstwerkenTabOmschrijvingen'), hasError: omschrijvingenHeeftFout },
@@ -923,14 +921,9 @@ export function KunstwerkenSection({
               </div>
 
               <div className={activeTab === 'kenmerken' ? 'flex flex-col gap-3' : 'hidden'}>
-          <fieldset
-            className={`flex flex-col gap-1 rounded-sm border px-2 py-1.5 ${
-              segmentIds.length === 0 ? 'border-red-500/70' : 'border-transparent'
-            }`}
-          >
+          <fieldset className="flex flex-col gap-1 rounded-sm border border-transparent px-2 py-1.5">
             <legend className="text-xs uppercase tracking-wide text-white/60">
               {t('kunstwerkenLabelSegmenten')}
-              <RequiredMark />
             </legend>
             {(segmenten ?? []).map((segment) => (
               <label key={segment.id} className="flex items-center gap-2 text-sm text-white/80">
@@ -965,11 +958,6 @@ export function KunstwerkenSection({
             {segmentToevoegenError && (
               <span data-testid="kunstwerk-modal-nieuwe-segment-error" className="text-xs text-red-400">
                 {segmentToevoegenError}
-              </span>
-            )}
-            {segmentIds.length === 0 && (
-              <span data-testid="kunstwerk-modal-segmenten-hint" className="text-xs text-red-400">
-                {t('kunstwerkenSegmentenVerplicht')}
               </span>
             )}
           </fieldset>
