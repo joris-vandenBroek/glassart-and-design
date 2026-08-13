@@ -154,9 +154,9 @@ describe('Modal', () => {
     );
   });
 
-  it('uses a wider max width when wide is set', () => {
+  it('uses the 1400px max width when size is "wide"', () => {
     renderWithIntl(
-      <Modal isOpen onClose={vi.fn()} closeLabel="Sluiten" title="Testmodal" wide>
+      <Modal isOpen onClose={vi.fn()} closeLabel="Sluiten" title="Testmodal" size="wide">
         <p>Inhoud</p>
       </Modal>
     );
@@ -164,7 +164,17 @@ describe('Modal', () => {
     expect(panel.className).toMatch(/max-w-\[1400px\]/);
   });
 
-  it('uses the default (narrower) max width when wide is not set', () => {
+  it('uses the 896px max width when size is "medium"', () => {
+    renderWithIntl(
+      <Modal isOpen onClose={vi.fn()} closeLabel="Sluiten" title="Testmodal" size="medium">
+        <p>Inhoud</p>
+      </Modal>
+    );
+    const panel = screen.getByTestId('modal-backdrop').nextElementSibling as HTMLElement;
+    expect(panel.className).toMatch(/max-w-4xl/);
+  });
+
+  it('uses the default (narrowest) max width when size is not set', () => {
     renderWithIntl(
       <Modal isOpen onClose={vi.fn()} closeLabel="Sluiten" title="Testmodal">
         <p>Inhoud</p>

@@ -12,7 +12,7 @@ interface ModalProps {
   closeButtonAriaLabel?: string;
   title: ReactNode;
   children: ReactNode;
-  wide?: boolean;
+  size?: 'default' | 'medium' | 'wide';
   subtitle?: ReactNode;
   footerActions?: ReactNode;
 }
@@ -24,7 +24,7 @@ export function Modal({
   closeButtonAriaLabel,
   title,
   children,
-  wide = false,
+  size = 'default',
   subtitle,
   footerActions,
 }: ModalProps) {
@@ -58,7 +58,7 @@ export function Modal({
       />
       <div
         className={`relative z-10 flex max-h-[90vh] w-full flex-col rounded-lg border border-white/10 bg-charcoal ${
-          wide ? 'max-w-[1400px]' : 'max-w-lg'
+          size === 'wide' ? 'max-w-[1400px]' : size === 'medium' ? 'max-w-4xl' : 'max-w-lg'
         }`}
       >
         <button
