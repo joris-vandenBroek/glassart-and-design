@@ -6,8 +6,8 @@ export function DrukkersChapter() {
       <P>Hier beheer je de drukkers waar je bestellingen naartoe stuurt.</P>
       <Screenshot
         src="/documentatie/drukkers.png"
-        alt="Het drukkerscherm met naam, adres, prijsafspraken, de optie Standaard drukker en de verzonden mails"
-        caption="Het drukkerscherm, met de optie Standaard drukker en de verzonden mails"
+        alt="Het drukkerscherm met de tabbladen Gegevens en Zendingen, op het Gegevens-tabblad naam, adres, prijsafspraken en de optie Standaard drukker"
+        caption="Het drukkerscherm, tabblad Gegevens"
       />
       <SubSection id="drukkers-standaard" title="Standaard-drukker">
         <P>
@@ -18,13 +18,13 @@ export function DrukkersChapter() {
       </SubSection>
       <SubSection id="drukkers-zending-bekijken" title="Een verzonden zending bekijken">
         <P>
-          Bij een drukker zie je onder &quot;Verzonden mails&quot; alle zendingen die naar deze drukker zijn
-          gestuurd. Klik op &quot;Bekijken&quot; om te zien wat er precies naar de drukker is gestuurd — bij
-          meerdere bestellingen in één zending staat elke bestelling in een eigen tabblad, met het afleveradres
-          en de productregels (foto, code, materiaal, maat en aantal) exact zoals die in de verzonden mail
-          stonden. Er staan bewust geen prijzen bij: de mail naar de drukker bevat die ook niet — voor de
-          prijzen van een bestelling ga je naar <DocLink anchor="bestelproces-bewerken">een bestelling
-          bewerken</DocLink>.
+          Bij een drukker staat naast het tabblad &quot;Gegevens&quot; het tabblad &quot;Zendingen&quot;, met
+          alle zendingen die naar deze drukker zijn gestuurd. Klik op &quot;Bekijken&quot; om te zien wat er
+          precies naar de drukker is gestuurd — bij meerdere bestellingen in één zending staat elke bestelling
+          in een eigen tabblad, met het afleveradres en de productregels (foto, code, materiaal, maat en
+          aantal) exact zoals die in de verzonden mail stonden. Er staan bewust geen prijzen bij: de mail
+          naar de drukker bevat die ook niet — voor de prijzen van een bestelling ga je naar{' '}
+          <DocLink anchor="bestelproces-bewerken">een bestelling bewerken</DocLink>.
         </P>
       </SubSection>
     </Chapter>

@@ -134,12 +134,41 @@ describe('DrukkerModal standaard', () => {
   });
 });
 
+describe('DrukkerModal tabs', () => {
+  it('shows Gegevens and Zendingen tabs when editing, with Gegevens active by default', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal({ mode: 'edit', drukker: DRUKKER });
+    expect(await screen.findByTestId('drukker-modal-tab-gegevens')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('drukker-modal-tab-zendingen')).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByTestId('drukker-modal-tab-panel-gegevens')).not.toHaveClass('hidden');
+    expect(screen.getByTestId('drukker-modal-tab-panel-zendingen')).toHaveClass('hidden');
+  });
+
+  it('switches to the Zendingen tab on click', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal({ mode: 'edit', drukker: DRUKKER });
+    await screen.findByTestId('drukker-modal-tab-gegevens');
+    fireEvent.click(screen.getByTestId('drukker-modal-tab-zendingen'));
+    expect(screen.getByTestId('drukker-modal-tab-zendingen')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('drukker-modal-tab-gegevens')).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByTestId('drukker-modal-tab-panel-gegevens')).toHaveClass('hidden');
+    expect(screen.getByTestId('drukker-modal-tab-panel-zendingen')).not.toHaveClass('hidden');
+  });
+
+  it('shows no tabs when adding a new drukker', () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    renderModal({ mode: 'add' });
+    expect(screen.queryByTestId('drukker-modal-tab-gegevens')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('drukker-modal-tab-zendingen')).not.toBeInTheDocument();
+  });
+});
+
 describe('DrukkerModal zendingen', () => {
-  it('shows "nog geen mails verzonden" once loaded empty', async () => {
+  it('shows "nog geen zendingen" once loaded empty', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     renderModal({ mode: 'edit', drukker: DRUKKER });
     expect(await screen.findByTestId('drukker-modal-zendingen-leeg')).toHaveTextContent(
-      'Nog geen mails verzonden.'
+      'Nog geen zendingen.'
     );
   });
 
