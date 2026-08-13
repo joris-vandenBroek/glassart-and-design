@@ -76,6 +76,7 @@
   },
   "cart": {
     "title": "Warenkorb",
+    "hoverTooltip": "Warenkorb ansehen",
     "addToCart": "In den Warenkorb",
     "size": "Größe",
     "material": "Material",
