@@ -364,6 +364,7 @@ describe('ProductsGrid', () => {
   it('filters by stijl (OR within the facet) combined with segment via AND', async () => {
     renderProductsGrid();
     await screen.findAllByTestId('product-card');
+    fireEvent.click(screen.getByTestId('filter-section-stijl-toggle')); // Stijl is collapsed by default
 
     expect(screen.getByTestId('facet-stijl-option-stijl-abstract')).toHaveTextContent('2'); // kw-1, kw-3
     expect(screen.getByTestId('facet-stijl-option-stijl-minimalistisch')).toHaveTextContent('2'); // kw-2, kw-3
@@ -378,6 +379,7 @@ describe('ProductsGrid', () => {
   it('filters by onderwerp (OR within the facet) combined with segment via AND', async () => {
     renderProductsGrid();
     await screen.findAllByTestId('product-card');
+    fireEvent.click(screen.getByTestId('filter-section-onderwerp-toggle')); // Onderwerp is collapsed by default
 
     expect(screen.getByTestId('facet-onderwerp-option-onderwerp-bloemen')).toHaveTextContent('1'); // kw-1
     expect(screen.getByTestId('facet-onderwerp-option-onderwerp-dieren')).toHaveTextContent('1'); // kw-2
@@ -407,7 +409,9 @@ describe('ProductsGrid', () => {
     fireEvent.focus(screen.getByTestId('kunstenaar-filter'));
     fireEvent.click(screen.getByTestId('kunstenaar-filter-option-KU-00001'));
     fireEvent.click(screen.getByTestId('facet-formaat-option-staand'));
+    fireEvent.click(screen.getByTestId('filter-section-stijl-toggle')); // Stijl is collapsed by default
     fireEvent.click(screen.getByTestId('facet-stijl-option-stijl-abstract'));
+    fireEvent.click(screen.getByTestId('filter-section-onderwerp-toggle')); // Onderwerp is collapsed by default
     fireEvent.click(screen.getByTestId('facet-onderwerp-option-onderwerp-bloemen'));
     fireEvent.click(screen.getByTestId('facet-ai-gegenereerd'));
 
