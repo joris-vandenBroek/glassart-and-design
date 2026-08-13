@@ -133,7 +133,7 @@ export function FiltersPanelContent({
         })}
       </FilterSection>
 
-      <FilterSection title={t('stijlFacetTitle')} testId="stijl">
+      <FilterSection title={t('stijlFacetTitle')} testId="stijl" defaultOpen={false}>
         {(stijlen ?? []).map((stijl) => {
           const isChecked = stijlFilters.has(stijl.id);
           const count = stijlCountBase.filter((kunstwerk) => (kunstwerk.stijlIds ?? []).includes(stijl.id)).length;
@@ -156,7 +156,7 @@ export function FiltersPanelContent({
         })}
       </FilterSection>
 
-      <FilterSection title={t('onderwerpFacetTitle')} testId="onderwerp">
+      <FilterSection title={t('onderwerpFacetTitle')} testId="onderwerp" defaultOpen={false}>
         {(onderwerpen ?? []).map((onderwerp) => {
           const isChecked = onderwerpFilters.has(onderwerp.id);
           const count = onderwerpCountBase.filter((kunstwerk) => (kunstwerk.onderwerpIds ?? []).includes(onderwerp.id)).length;
