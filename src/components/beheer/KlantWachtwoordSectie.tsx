@@ -121,7 +121,7 @@ export function KlantWachtwoordSectie({
 
       {fase === 'getoond' && wachtwoord && (
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <code
               data-testid="klant-wachtwoord-waarde"
               className="rounded-sm bg-black/40 px-3 py-2 font-mono text-lg tracking-[0.2em] text-white"

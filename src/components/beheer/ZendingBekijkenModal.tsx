@@ -54,7 +54,7 @@ export function ZendingBekijkenModal({
       isOpen={zending !== null}
       onClose={onClose}
       closeLabel={t('modalClose')}
-      wide
+      size="wide"
       title={
         <span className="flex w-full items-center justify-between gap-2 pr-2">
           {t('drukkersZendingModalTitel')}
