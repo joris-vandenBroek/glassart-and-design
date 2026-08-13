@@ -77,6 +77,9 @@ const KUNSTWERKEN: Kunstwerk[] = [
   {
     id: 'kw-1',
     foto: 'https://storage.example.com/kw-1.jpg',
+    // Deliberately non-standard-pattern code, so the 'slaat zonder bevestiging op als de code
+    // niet gewijzigd is' test can verify the confirmation popup stays silent for an unchanged,
+    // already-deviating code — must not be "cleaned up" to a standard pattern.
     code: 'Hotel paneel 1',
     kunstenaarnr: null,
     formaat: 'staand',
@@ -275,7 +278,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
-    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Vibrant Spirit' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'GLA-VIB-00001' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'KU-00001' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Nieuw kunstwerk' } });
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
@@ -283,7 +286,7 @@ describe('KunstwerkenSection', () => {
     await waitFor(() =>
       expect(onAdd).toHaveBeenCalledWith({
         foto: 'https://storage.example.com/nieuw.jpg',
-        code: 'Vibrant Spirit',
+        code: 'GLA-VIB-00001',
         kunstenaarnr: 'KU-00001',
         formaat: 'staand',
         segmentIds: ['seg-1'],
@@ -451,7 +454,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
-    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Nieuw kunstwerk' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'GLA-NKW-00001' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'KU-00001' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Nieuw kunstwerk' } });
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
@@ -459,7 +462,7 @@ describe('KunstwerkenSection', () => {
     await waitFor(() =>
       expect(logActiviteitMock).toHaveBeenCalledWith(
         'kunstwerk_toegevoegd',
-        'Nieuw kunstwerk'
+        'GLA-NKW-00001'
       )
     );
   });
@@ -502,7 +505,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
-    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Nieuw kunstwerk' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'GLA-NKF-00001' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'KU-00001' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Nieuw kunstwerk' } });
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
@@ -572,7 +575,7 @@ describe('KunstwerkenSection', () => {
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-vierkant'));
-    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Akoestisch paneel' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'GLA-AKO-00001' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'KU-00001' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Verbetert de akoestiek.' } });
     expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled();
@@ -584,7 +587,7 @@ describe('KunstwerkenSection', () => {
     await waitFor(() =>
       expect(onAdd).toHaveBeenCalledWith({
         foto: 'https://storage.example.com/nieuw.jpg',
-        code: 'Akoestisch paneel',
+        code: 'GLA-AKO-00001',
         kunstenaarnr: 'KU-00001',
         formaat: 'vierkant',
         segmentIds: ['seg-1'],
@@ -618,7 +621,7 @@ describe('KunstwerkenSection', () => {
     const file = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
-    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: '4mm veiligheidsglas per m2' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'GLA-VEI-00001' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'KU-00001' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Op maat gezaagd.' } });
     expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled();
@@ -894,7 +897,7 @@ describe('KunstwerkenSection', () => {
     const file = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
-    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Test' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'GLA-TES-00001' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'KU-00001' } });
     fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
     // Pick the formaat first, then narrow down to just mat-1 + maat-1: choosing a formaat
@@ -1186,6 +1189,71 @@ describe('KunstwerkenSection', () => {
 
     expect(screen.getByTestId('kunstwerk-modal-error')).toHaveTextContent('Deze code bestaat al.');
     expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it('toont een bevestigingspopup als de code van een nieuw kunstwerk niet aan het standaardformaat voldoet', async () => {
+    uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
+    const { onAdd } = renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    const file = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Akoestische stof' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'KU-00001' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Akoestisch paneel' } });
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
+
+    expect(screen.getByTestId('kunstwerk-modal-code-bevestiging')).toHaveTextContent(
+      'Kunstwerkcodes volgen meestal het formaat AAA-BBB-00001'
+    );
+    expect(screen.getByTestId('kunstwerk-modal-code-bevestigen')).toHaveTextContent('Toch opslaan');
+    expect(onAdd).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-code-bevestigen'));
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ code: 'Akoestische stof' }))
+    );
+  });
+
+  it('slaat een nieuw kunstwerk met een standaardcode direct op, zonder bevestigingspopup', async () => {
+    uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
+    const { onAdd } = renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    const file = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'GLA-TES-00001' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'KU-00001' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Testwerk' } });
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
+
+    expect(screen.queryByTestId('kunstwerk-modal-code-bevestiging')).toBeNull();
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ code: 'GLA-TES-00001' }))
+    );
+  });
+
+  it('toont een gecombineerde bevestigingstekst als een bestaande code gewijzigd wordt naar een afwijkende waarde', async () => {
+    const { onUpdate } = renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Akoestische stof' } });
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
+
+    const popup = screen.getByTestId('kunstwerk-modal-code-bevestiging');
+    expect(popup).toHaveTextContent('Als er al een masterbestand is, dan moet dit ook aangepast worden!');
+    expect(popup).toHaveTextContent('Kunstwerkcodes volgen meestal het formaat AAA-BBB-00001');
+    expect(screen.getByTestId('kunstwerk-modal-code-bevestigen')).toHaveTextContent('Code wijzigen');
+
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-code-bevestigen'));
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith('kw-1', expect.objectContaining({ code: 'Akoestische stof' }))
+    );
   });
 
   it('toont het prefixveld bij het aanmaken van een nieuw kunstwerk', () => {
