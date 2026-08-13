@@ -94,6 +94,7 @@ export function KunstwerkenSection({
   const { uploading, error: fotoUploadError, upload } = useKunstwerkFotoUpload();
   const { user } = useAdminAuth();
   const [modalState, setModalState] = useState<ModalState>(null);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [foto, setFoto] = useState(LEGE_FORM.foto);
   const [code, setCode] = useState(LEGE_FORM.code);
   const [prefix, setPrefix] = useState(LEGE_FORM.prefix);
@@ -645,7 +646,32 @@ export function KunstwerkenSection({
       sortable: false,
       render: (row) => <img src={row.foto} alt="" className="h-10 w-10 rounded object-cover" />,
     },
-    { key: 'code', label: t('kunstwerkenColCode') },
+    {
+      key: 'code',
+      label: t('kunstwerkenColCode'),
+      render: (row) => (
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+          {row.code}
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              void navigator.clipboard?.writeText(row.code);
+              setCopiedCode(row.code);
+              window.setTimeout(() => {
+                setCopiedCode((current) => (current === row.code ? null : current));
+              }, 1500);
+            }}
+            title={t('kunstwerkenCodeKopieren')}
+            aria-label={t('kunstwerkenCodeKopieren')}
+            data-testid={`kunstwerken-code-kopieren-${row.id}`}
+            className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-white/20 text-[10px] leading-none text-white/60 transition hover:border-gold hover:text-gold"
+          >
+            {copiedCode === row.code ? '✓' : '⧉'}
+          </button>
+        </span>
+      ),
+    },
     { key: 'kunstenaarNaam', label: t('kunstwerkenColKunstenaar') },
     { key: 'segmentNamen', label: t('kunstwerkenColSegmenten') },
     { key: 'omschrijvingNl', label: t('kunstwerkenColOmschrijving') },
