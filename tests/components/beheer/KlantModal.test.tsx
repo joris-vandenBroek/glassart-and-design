@@ -811,15 +811,12 @@ describe('KlantModal', () => {
     );
   });
 
-  it('shows the address fields once the Adressen tab is active', () => {
+  it('hides the Adressen tab content until that tab is active, and vice versa for Gegevens', () => {
     renderModal(KLANT);
-    fireEvent.click(screen.getByTestId('klant-modal-bewerken'));
+    expect(screen.getByTestId('klant-modal-tab-content-gegevens').className).not.toContain('hidden');
+    expect(screen.getByTestId('klant-modal-tab-content-adressen').className).toContain('hidden');
     fireEvent.click(screen.getByTestId('klant-modal-tab-adressen'));
-    expect(screen.getByTestId('klant-modal-deliveryAddress')).toBeInTheDocument();
-  });
-
-  it('does not require switching tabs to reach the prijsgroep field (it lives in Gegevens, the default tab)', () => {
-    renderModal(KLANT);
-    expect(screen.getByTestId('klant-modal-prijsgroep')).toBeInTheDocument();
+    expect(screen.getByTestId('klant-modal-tab-content-adressen').className).not.toContain('hidden');
+    expect(screen.getByTestId('klant-modal-tab-content-gegevens').className).toContain('hidden');
   });
 });

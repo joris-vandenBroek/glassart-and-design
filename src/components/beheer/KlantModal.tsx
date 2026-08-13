@@ -397,7 +397,10 @@ export function KlantModal({
               testIdPrefix="klant-modal"
             />
 
-            <div className={activeTab === 'gegevens' ? 'grid grid-cols-1 gap-6 sm:grid-cols-2' : 'hidden'}>
+            <div
+              data-testid="klant-modal-tab-content-gegevens"
+              className={activeTab === 'gegevens' ? 'grid grid-cols-1 gap-6 sm:grid-cols-2' : 'hidden'}
+            >
               <div data-testid="klant-modal-kolom-bedrijfsgegevens" className="flex flex-col gap-3">
                 <span className="text-xs uppercase tracking-wide text-white/70">
                   {t('klantenSectieBedrijfsgegevens')}
@@ -546,7 +549,10 @@ export function KlantModal({
               </div>
             </div>
 
-            <div className={activeTab === 'adressen' ? 'flex flex-col gap-3' : 'hidden'}>
+            <div
+              data-testid="klant-modal-tab-content-adressen"
+              className={activeTab === 'adressen' ? 'flex flex-col gap-3' : 'hidden'}
+            >
               <Veld
                 label={t('klantenLabelAdres')}
                 value={fields.address}
