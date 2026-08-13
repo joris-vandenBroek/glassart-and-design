@@ -8,8 +8,8 @@ export function KlantWebsiteChapter() {
       </P>
       <Screenshot
         src="/documentatie/klant-website.png"
-        alt="De Collecties-pagina van de klant-website, met de navigatiebalk, het winkelmandje en de taalkeuze"
-        caption="De Collecties-pagina, met de navigatiebalk, het winkelmandje en de taalkeuze rechtsboven"
+        alt="De Collecties-pagina, gefilterd op kunstenaar Jack Liemburg, met zijn kunstenaarsprofiel en kunstwerken"
+        caption="De Collecties-pagina, hier gefilterd op kunstenaar &quot;Jack Liemburg&quot;"
       />
       <P>
         <strong>Home</strong> — de openingspagina: een korte introductie, waarom-kies-je-ons, een paar

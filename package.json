@@ -12,6 +12,7 @@
     "db:status": "tsx scripts/db-migrate.ts status",
     "db:migrate": "tsx scripts/db-migrate.ts apply",
     "db:diff": "tsx scripts/db-diff.ts",
+    "cleanup:test-data": "tsx scripts/cleanup-orphaned-test-data.ts",
     "import:kunstwerken": "tsx scripts/import-kunstwerken-cli.ts"
   },
   "dependencies": {

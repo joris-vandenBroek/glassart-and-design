@@ -6,8 +6,8 @@ export function KunstwerkenChapter() {
       <P>Elk product dat een klant kan bestellen, is een &quot;kunstwerk&quot; in beheer.</P>
       <Screenshot
         src="/documentatie/kunstwerken.png"
-        alt="Het kunstwerk-formulier met foto, code, kunstenaar en formaat, met live voorbeeld van de collectiepagina ernaast"
-        caption="Het kunstwerk-formulier, tabblad Algemeen"
+        alt="Het kunstwerk-formulier van 'Fresh Catch' van kunstenaar Jack Liemburg, met foto, vastgelegde code, kunstenaar en formaat, met live voorbeeld van de collectiepagina ernaast"
+        caption="Het kunstwerk-formulier, tabblad Algemeen (hier: &quot;Fresh Catch&quot; van kunstenaar Jack)"
       />
       <SubSection id="kunstwerken-foto" title="Foto">
         <P>Upload een foto van het kunstwerk. Die mag maximaal 8 MB groot zijn.</P>
@@ -28,8 +28,8 @@ export function KunstwerkenChapter() {
           />
           <Screenshot
             src="/documentatie/kunstwerken-code-na.png"
-            alt="Het veld Prefix met een gekozen prefix, en de code met het automatisch voorgestelde volgnummer"
-            caption="2. Prefix gekozen — de code met volgnummer wordt automatisch voorgesteld"
+            alt="Het veld Prefix met GLA-JAC gekozen, en de code GLA-JAC-00001 automatisch voorgesteld"
+            caption="2. Prefix &quot;GLA-JAC&quot; gekozen — de code GLA-JAC-00001 wordt automatisch voorgesteld"
           />
         </div>
         <P>
