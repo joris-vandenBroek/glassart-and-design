@@ -16,6 +16,7 @@ import { isVierkanteMaat } from './materiaalTypes';
 import type { Kunstenaar } from './kunstenaarTypes';
 import { detectFormaatFromFile, detectFormaatFromImageUrl } from '@/lib/detectKunstwerkFormaat';
 import { stelVolgendeCodeVoor, vindBekendePrefixen } from '@/lib/kunstwerkCodeVoorstel';
+import { voldoetAanStandaardKunstwerkCode } from '@/lib/kunstwerkCodePatroon';
 
 interface KunstwerkenSectionProps {
   kunstwerken: Kunstwerk[] | null;
@@ -129,7 +130,7 @@ export function KunstwerkenSection({
   const [mutationFailed, setMutationFailed] = useState(false);
   const [isDraggingFoto, setIsDraggingFoto] = useState(false);
   const [backfillBezig, setBackfillBezig] = useState(false);
-  const [pendingCodeWijziging, setPendingCodeWijziging] = useState<string | null>(null);
+  const [pendingCodeBevestiging, setPendingCodeBevestiging] = useState<string | null>(null);
   const formaatSessionRef = useRef(0);
 
   const [activeTab, setActiveTab] = useState<TabId>('algemeen');
@@ -409,7 +410,7 @@ export function KunstwerkenSection({
     setOmschrijvingEn(LEGE_FORM.omschrijvingEn);
     setActionError(null);
     setMutationFailed(false);
-    setPendingCodeWijziging(null);
+    setPendingCodeBevestiging(null);
   }
 
   function openAdd() {
@@ -439,7 +440,7 @@ export function KunstwerkenSection({
     setOmschrijvingEn(kunstwerk.omschrijvingEn);
     setActionError(null);
     setMutationFailed(false);
-    setPendingCodeWijziging(null);
+    setPendingCodeBevestiging(null);
     const bestaandFormaat = kunstwerk.formaat ?? null;
     setFormaatState(bestaandFormaat);
     if (!bestaandFormaat && kunstwerk.foto) {
@@ -460,7 +461,7 @@ export function KunstwerkenSection({
 
   function closeModal() {
     formaatSessionRef.current += 1;
-    setPendingCodeWijziging(null);
+    setPendingCodeBevestiging(null);
     setMutationFailed(false);
     setModalState(null);
   }
@@ -519,6 +520,14 @@ export function KunstwerkenSection({
     (isMaatloos && (!prijsPerM2 || Number(prijsPerM2) <= 0)) ||
     !omschrijvingNl;
 
+  const pendingCodeIsGewijzigd =
+    pendingCodeBevestiging !== null &&
+    modalState !== null &&
+    modalState.mode === 'edit' &&
+    pendingCodeBevestiging !== modalState.kunstwerk.code;
+  const pendingCodeWijktAfVanPatroon =
+    pendingCodeBevestiging !== null && !voldoetAanStandaardKunstwerkCode(pendingCodeBevestiging);
+
   async function bewaarKunstwerk() {
     if (!modalState) return;
     setMutationFailed(false);
@@ -531,7 +540,7 @@ export function KunstwerkenSection({
       );
       closeModal();
     } else {
-      setPendingCodeWijziging(null);
+      setPendingCodeBevestiging(null);
       setActionError(null);
       setMutationFailed(true);
     }
@@ -559,17 +568,25 @@ export function KunstwerkenSection({
     // Exacte vergelijking: ook een wijziging van alleen de schrijfwijze is een
     // codewijziging, want de code belandt zo in bestellines en mogelijk in een
     // masterbestand buiten dit systeem.
-    if (modalState.mode === 'edit' && schoneCode !== modalState.kunstwerk.code) {
+    const codeIsGewijzigd = modalState.mode === 'edit' && schoneCode !== modalState.kunstwerk.code;
+    // Bij een nieuw kunstwerk is elke code "nieuw ingesteld"; bij een bestaand kunstwerk
+    // geldt de patrooncontrole alleen als de code ook echt verandert -- een ongewijzigde,
+    // al langer bestaande afwijkende code (zoals "Akoestische stof") mag zonder popup
+    // opgeslagen blijven worden.
+    const codeWordtNieuwIngesteld = modalState.mode === 'add' || codeIsGewijzigd;
+    const wijktAfVanPatroon = codeWordtNieuwIngesteld && !voldoetAanStandaardKunstwerkCode(schoneCode);
+
+    if (codeIsGewijzigd || wijktAfVanPatroon) {
       setActionError(null);
-      setPendingCodeWijziging(schoneCode);
+      setPendingCodeBevestiging(schoneCode);
       return;
     }
 
     await bewaarKunstwerk();
   }
 
-  function handleAnnulerenCodeWijziging() {
-    setPendingCodeWijziging(null);
+  function handleAnnulerenCodeBevestiging() {
+    setPendingCodeBevestiging(null);
   }
 
   async function handleRemove() {
@@ -677,7 +694,7 @@ export function KunstwerkenSection({
         }
         wide
         footerActions={
-          pendingCodeWijziging !== null ? (
+          pendingCodeBevestiging !== null ? (
             <>
               <button
                 type="button"
@@ -685,11 +702,11 @@ export function KunstwerkenSection({
                 data-testid="kunstwerk-modal-code-bevestigen"
                 className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
               >
-                {t('kunstwerkenCodeWijzigenBevestig')}
+                {pendingCodeIsGewijzigd ? t('kunstwerkenCodeWijzigenBevestig') : t('kunstwerkenCodePatroonBevestig')}
               </button>
               <button
                 type="button"
-                onClick={handleAnnulerenCodeWijziging}
+                onClick={handleAnnulerenCodeBevestiging}
                 data-testid="kunstwerk-modal-code-annuleren"
                 className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
               >
@@ -724,19 +741,22 @@ export function KunstwerkenSection({
         }
       >
         <>
-          {pendingCodeWijziging !== null && (
+          {pendingCodeBevestiging !== null && (
             <div
               data-testid="kunstwerk-modal-code-bevestiging"
               className="flex flex-col gap-3 text-sm text-white/80"
             >
-              <p className="font-semibold text-white">{t('kunstwerkenCodeWijzigenTitel')}</p>
-              <p>{t('kunstwerkenCodeWijzigenTekst')}</p>
+              <p className="font-semibold text-white">
+                {pendingCodeIsGewijzigd ? t('kunstwerkenCodeWijzigenTitel') : t('kunstwerkenCodePatroonTitel')}
+              </p>
+              {pendingCodeIsGewijzigd && <p>{t('kunstwerkenCodeWijzigenTekst')}</p>}
+              {pendingCodeWijktAfVanPatroon && <p>{t('kunstwerkenCodePatroonTekst')}</p>}
             </div>
           )}
           <div
             data-testid="kunstwerk-modal"
             className={
-              pendingCodeWijziging !== null
+              pendingCodeBevestiging !== null
                 ? 'hidden'
                 : 'grid grid-cols-1 gap-6 text-sm text-white/80 lg:grid-cols-[minmax(0,1fr)_320px] min-[1432px]:grid-cols-[minmax(0,1fr)_560px]'
             }
