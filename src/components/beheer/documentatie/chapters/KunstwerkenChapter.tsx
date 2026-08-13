@@ -33,6 +33,13 @@ export function KunstwerkenChapter() {
           />
         </div>
         <P>
+          Wijkt de code die je intypt af van dit formaat (drie letters, streepje, drie
+          letters, streepje, vijf cijfers) — bijvoorbeeld omdat het product geen los
+          artikelnummer heeft, zoals &quot;Akoestische stof&quot; — dan vraagt beheer bij het
+          opslaan om een bevestiging. Je kunt gewoon doorgaan; het is alleen een controle
+          tegen typefouten, geen harde eis.
+        </P>
+        <P>
           Zodra een kunstwerk in een bestelling zit, ligt de code vast — dan kun je &apos;m niet meer
           wijzigen, en kun je het kunstwerk ook niet meer verwijderen.
         </P>
