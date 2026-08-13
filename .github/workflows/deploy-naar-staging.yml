@@ -78,12 +78,17 @@ jobs:
       - name: Compute next version number
         id: version
         run: |
+          latest=$(git tag -l 'v[0-9]*' | sed 's/^v//' | sort -n | tail -1)
+          if [ -z "$latest" ]; then
+            echo "previous=" >> "$GITHUB_OUTPUT"
+          else
+            echo "previous=v$latest" >> "$GITHUB_OUTPUT"
+          fi
           if [ "${{ github.ref }}" != "refs/heads/master" ]; then
             echo "tag=" >> "$GITHUB_OUTPUT"
             echo "Not master -- feature-branch staging deploys aren't versioned (no promotable vN, no beheer version label)."
             exit 0
           fi
-          latest=$(git tag -l 'v[0-9]*' | sed 's/^v//' | sort -n | tail -1)
           if [ -z "$latest" ]; then
             next=1
           else
@@ -97,6 +102,29 @@ jobs:
         # Non-master runs deliberately get an empty tag: NEXT_PUBLIC_APP_VERSION ends up
         # unset, so AppVersionLabel shows nothing (same as local dev) instead of a version
         # number that could collide with -- or be confused for -- a real promotable build.
+
+      - name: Controleer screenshot-versheid
+        continue-on-error: true
+        env:
+          PREVIOUS_TAG: ${{ steps.version.outputs.previous }}
+        run: |
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "::notice::Nog geen vN-tag gevonden -- screenshot-versheidscontrole overgeslagen (eerste deploy)."
+            exit 0
+          fi
+          npx tsx scripts/check-screenshot-freshness.ts "$PREVIOUS_TAG"
+        # Niet-blokkerend (het script zelf faalt nooit): dit is een geheugensteun voor de
+        # gebruikershandleiding-screenshots, geen correctheidscontrole zoals de
+        # migratiecheck hierboven. Vergelijkt met de vorige geplaatste vN-tag, dus dit
+        # werkt ook op een feature-branch staging-deploy (waar steps.version.outputs.tag
+        # zelf leeg is): "sinds wat er nu live staat" is ongeacht de brontak de juiste
+        # vergelijkingsbasis. `continue-on-error: true` is defense in depth bovenop de
+        # try/catch in het script zelf, zodat een onverwachte fout hier de deploy nooit kan
+        # laten falen. PREVIOUS_TAG komt binnen via env in plaats van rechtstreeks
+        # geïnterpoleerd in dit run-script, om een waarde niet door de shell te hoeven
+        # laten interpreteren. Een waarschuwing verschijnt maar één keer: bij de deploy die
+        # de wijziging introduceert -- de volgende deploy schuift de vergelijkingsbasis op
+        # naar de nieuwe vN-tag, dus een genegeerde waarschuwing keert niet terug.
 
       - name: Build (server mode)
         run: npm run build
