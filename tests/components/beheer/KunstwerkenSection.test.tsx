@@ -77,6 +77,9 @@ const KUNSTWERKEN: Kunstwerk[] = [
   {
     id: 'kw-1',
     foto: 'https://storage.example.com/kw-1.jpg',
+    // Deliberately non-standard-pattern code, so the 'slaat zonder bevestiging op als de code
+    // niet gewijzigd is' test can verify the confirmation popup stays silent for an unchanged,
+    // already-deviating code — must not be "cleaned up" to a standard pattern.
     code: 'Hotel paneel 1',
     kunstenaarnr: null,
     formaat: 'staand',

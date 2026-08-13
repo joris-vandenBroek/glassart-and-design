@@ -525,6 +525,8 @@ export function KunstwerkenSection({
     modalState !== null &&
     modalState.mode === 'edit' &&
     pendingCodeBevestiging !== modalState.kunstwerk.code;
+  // Geen aparte codeWordtNieuwIngesteld-gate nodig: pendingCodeBevestiging wordt in handleSave
+  // alleen gezet nadat die gate al is gepasseerd, dus dit kan hier niet voorkomen voor een ongewijzigde code.
   const pendingCodeWijktAfVanPatroon =
     pendingCodeBevestiging !== null && !voldoetAanStandaardKunstwerkCode(pendingCodeBevestiging);
 

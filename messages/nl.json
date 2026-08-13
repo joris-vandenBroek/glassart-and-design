@@ -677,7 +677,7 @@
     "kunstwerkenCodeWijzigenTekst": "Als er al een masterbestand is, dan moet dit ook aangepast worden!",
     "kunstwerkenCodeWijzigenBevestig": "Code wijzigen",
     "kunstwerkenCodePatroonTitel": "Deze code wijkt af van het gebruikelijke formaat.",
-    "kunstwerkenCodePatroonTekst": "Kunstwerkcodes volgen meestal het formaat AAA-BBB-00001 (drie letters, drie letters, vijf cijfers). Weet je zeker dat je met deze code wilt doorgaan?",
+    "kunstwerkenCodePatroonTekst": "Kunstwerkcodes volgen meestal het formaat AAA-BBB-00001 (drie letters, streepje, drie letters, streepje, vijf cijfers). Weet je zeker dat je met deze code wilt doorgaan?",
     "kunstwerkenCodePatroonBevestig": "Toch opslaan",
     "kunstwerkenLabelKunstenaar": "Kunstenaar",
     "kunstwerkenKunstenaarGeen": "Geen kunstenaar gekoppeld",
