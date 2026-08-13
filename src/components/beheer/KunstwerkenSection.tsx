@@ -675,7 +675,7 @@ export function KunstwerkenSection({
             <HelpLink anchor="kunstwerken-code" label="Open het hoofdstuk over kunstwerken" testId="kunstwerk-modal-help" />
           </span>
         }
-        wide
+        size="wide"
         footerActions={
           pendingCodeWijziging !== null ? (
             <>
