@@ -76,6 +76,7 @@
   },
   "cart": {
     "title": "Cart",
+    "hoverTooltip": "View your cart",
     "addToCart": "Add to cart",
     "size": "Size",
     "material": "Material",

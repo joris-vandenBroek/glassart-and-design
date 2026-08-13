@@ -76,6 +76,7 @@
   },
   "cart": {
     "title": "Panier",
+    "hoverTooltip": "Voir votre panier",
     "addToCart": "Ajouter au panier",
     "size": "Taille",
     "material": "Matériau",

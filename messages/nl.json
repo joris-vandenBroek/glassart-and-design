@@ -76,6 +76,7 @@
   },
   "cart": {
     "title": "Mandje",
+    "hoverTooltip": "Bekijk uw winkelwagen",
     "addToCart": "Toevoegen aan mandje",
     "size": "Maat",
     "material": "Materiaal",

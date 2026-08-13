@@ -130,6 +130,7 @@ export function CartPanel() {
         type="button"
         data-testid="cart-icon"
         aria-label={t('title')}
+        title={t('hoverTooltip')}
         onClick={() => setIsOpen((open) => !open)}
         className="relative flex h-8 w-8 items-center justify-center rounded-full border border-white/20 text-white/80 hover:text-white"
       >
