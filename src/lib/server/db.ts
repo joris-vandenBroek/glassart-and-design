@@ -19,6 +19,18 @@ export function getPool(): mysql.Pool {
       // strings, silently breaking every `=== <number>` comparison against them even
       // though every DECIMAL column is typed as `number` in materiaalTypes.ts.
       decimalNumbers: true,
+      // Same class of bug as decimalNumbers above, but for BOOLEAN columns (aiGegenereerd,
+      // standaard, staatEigenMaatToe): mysql2 returns TINYINT(1) as a JS number (0/1), not a
+      // boolean, silently breaking every `=== true` comparison even though those columns are
+      // typed as `boolean` in materiaalTypes.ts. Concretely broke the "Alleen AI-gegenereerd"
+      // collectiefilter, which compared `kunstwerk.aiGegenereerd === true` against a `1`.
+      typeCast(field, next) {
+        if (field.type === 'TINY' && field.length === 1) {
+          const value = field.string();
+          return value === null ? null : value === '1';
+        }
+        return next();
+      },
       waitForConnections: true,
       // Overridable per environment (DB_CONNECTION_LIMIT) since staging/production get
       // different max_user_connections grants from the host and may need different tuning
