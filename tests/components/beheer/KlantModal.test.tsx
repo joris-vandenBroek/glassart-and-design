@@ -764,4 +764,23 @@ describe('KlantModal', () => {
       expect(onUpdated).not.toHaveBeenCalled();
     });
   });
+
+  it('uses the medium modal width, not the narrow default or the 1400px wide variant', () => {
+    renderModal(KLANT);
+    expect(screen.getByTestId('modal-header').parentElement).toHaveClass('max-w-4xl');
+  });
+
+  it('groups fields into Bedrijfsgegevens, Adressen and Koppelingen columns', () => {
+    renderModal(KLANT);
+    fireEvent.click(screen.getByTestId('klant-modal-bewerken'));
+    expect(screen.getByTestId('klant-modal-kolom-bedrijfsgegevens')).toContainElement(
+      screen.getByTestId('klant-modal-companyName')
+    );
+    expect(screen.getByTestId('klant-modal-kolom-adressen')).toContainElement(
+      screen.getByTestId('klant-modal-deliveryAddress')
+    );
+    expect(screen.getByTestId('klant-modal-kolom-koppelingen')).toContainElement(
+      screen.getByTestId('klant-modal-prijsgroep')
+    );
+  });
 });
