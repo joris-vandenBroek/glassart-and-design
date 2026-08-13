@@ -233,6 +233,25 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-opslaan')).not.toBeDisabled();
   });
 
+  it('allows saving a kunstwerk with zero segments selected -- segment is not a required field', async () => {
+    uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+
+    const file = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-foto-preview')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-staand'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-2'));
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'Test' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Test' } });
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'KU-00001' } });
+
+    expect(screen.getByTestId('kunstwerk-modal-opslaan')).not.toBeDisabled();
+    expect(screen.queryByTestId('kunstwerk-modal-segmenten-hint')).not.toBeInTheDocument();
+  });
+
   it('uploads a dropped photo via the drop zone', async () => {
     uploadMock.mockResolvedValue('https://storage.example.com/gedropt.jpg');
     renderSection();
