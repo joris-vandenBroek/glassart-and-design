@@ -49,7 +49,7 @@ describe('CustomerLoginForm', () => {
     expect(replaceMock).not.toHaveBeenCalled();
   });
 
-  it('grants access, refreshes the auth context and redirects to /account when the klant is "Goedgekeurd"', async () => {
+  it('grants access, refreshes the auth context and redirects to /collecties when the klant is "Goedgekeurd"', async () => {
     fetchMock
       .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'Goedgekeurd' }) })
       .mockResolvedValueOnce({
@@ -59,7 +59,7 @@ describe('CustomerLoginForm', () => {
     renderForm();
     submitWith('klant@example.com', 'geheim123');
 
-    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith('/account'));
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith('/collecties'));
     // login() must refetch /api/auth/me itself -- router.replace() is a client-side
     // navigation and does not remount CustomerAuthProvider to pick this up on its own.
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/me?type=klant');

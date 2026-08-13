@@ -30,7 +30,7 @@ export function CustomerLoginForm() {
     try {
       const status = await login(completeerTestKlantEmail(email), password);
       if (status === 'Goedgekeurd') {
-        router.replace('/account');
+        router.replace('/collecties');
       } else if (status === 'Beoordelen') {
         setError(t('pendingMessage'));
       } else if (status === 'Afgewezen') {
