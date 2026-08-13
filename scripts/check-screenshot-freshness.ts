@@ -28,3 +28,34 @@ export function vindMogelijkVerouderdeScreenshots(
   }
   return resultaat;
 }
+
+import { execSync } from 'node:child_process';
+
+function main(): void {
+  const vorigeTag = process.argv[2];
+  if (!vorigeTag) {
+    console.error('Gebruik: tsx scripts/check-screenshot-freshness.ts <vorige-tag>');
+    process.exit(2);
+  }
+
+  const output = execSync(`git diff --name-only ${vorigeTag}..HEAD`, { encoding: 'utf8' });
+  const gewijzigdeBestanden = output.split('\n').filter((regel) => regel.trim() !== '');
+
+  const verouderd = vindMogelijkVerouderdeScreenshots(gewijzigdeBestanden);
+  if (verouderd.length === 0) {
+    console.log('Geen screenshots lijken verouderd.');
+    return;
+  }
+
+  for (const { screenshot, bronnen } of verouderd) {
+    console.log(
+      `::warning::${screenshot} is mogelijk verouderd -- ${bronnen.join(', ')} gewijzigd sinds ${vorigeTag}, maar de screenshot zelf niet. Zie CLAUDE.md's gebruikershandleiding-sectie.`
+    );
+  }
+}
+
+// Only run the CLI when executed directly, so the test can import the pure function
+// (same pattern as scripts/check-migrations.ts).
+if (process.argv[1]?.endsWith('check-screenshot-freshness.ts')) {
+  main();
+}
