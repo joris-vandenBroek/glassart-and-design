@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Modal } from '@/components/Modal';
+import { ModalTabs } from '@/components/ModalTabs';
 import { HelpLink } from '@/components/HelpLink';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
@@ -14,6 +15,7 @@ import type { Bestelling } from './BestellingenSection';
 import type { Klant } from './KlantenSection';
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; drukker: Drukker } | null;
+type TabId = 'gegevens' | 'zendingen';
 
 interface DrukkerModalProps {
   state: ModalState;
@@ -61,6 +63,7 @@ export function DrukkerModal({
   const t = useTranslations('beheer');
   const { user } = useAdminAuth();
   const [fields, setFields] = useState<FormFields>(EMPTY_FIELDS);
+  const [activeTab, setActiveTab] = useState<TabId>('gegevens');
   const [actionError, setActionError] = useState<string | null>(null);
   const [viewingZending, setViewingZending] = useState<DrukkerZending | null>(null);
   const [zendingActionError, setZendingActionError] = useState<{ zendingId: string; message: string } | null>(
@@ -79,6 +82,7 @@ export function DrukkerModal({
     setActionError(null);
     setViewingZending(null);
     setZendingActionError(null);
+    setActiveTab('gegevens');
   }, [state]);
 
   function afgerondCounts(zending: DrukkerZending): { afgerond: number; totaal: number } | null {
@@ -221,85 +225,101 @@ export function DrukkerModal({
       }
     >
       <div data-testid="drukker-modal" className="flex flex-col gap-2 text-sm text-white/80">
-        <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-          <span>
-            {t('drukkersLabelNaam')}
-            <RequiredMark />
-          </span>
-          <input
-            type="text"
-            value={fields.naam}
-            onChange={(event) => setField('naam', event.target.value)}
-            data-testid="drukker-modal-naam"
-            className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-          {t('drukkersLabelAdres')}
-          <input
-            type="text"
-            value={fields.adres}
-            onChange={(event) => setField('adres', event.target.value)}
-            data-testid="drukker-modal-adres"
-            className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-          />
-        </label>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('drukkersLabelPostcode')}
-            <input
-              type="text"
-              value={fields.postcode}
-              onChange={(event) => setField('postcode', event.target.value)}
-              data-testid="drukker-modal-postcode"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+        {state?.mode === 'edit' && (
+          <div className="sticky top-0 z-10 bg-charcoal pb-2">
+            <ModalTabs
+              tabs={[
+                { id: 'gegevens', label: t('drukkersTabGegevens') },
+                { id: 'zendingen', label: t('drukkersTabZendingen') },
+              ]}
+              activeTabId={activeTab}
+              onTabChange={setActiveTab}
+              testIdPrefix="drukker-modal"
             />
-          </label>
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-            {t('drukkersLabelPlaats')}
-            <input
-              type="text"
-              value={fields.plaats}
-              onChange={(event) => setField('plaats', event.target.value)}
-              data-testid="drukker-modal-plaats"
-              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-            />
-          </label>
-        </div>
-        <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-          <span>
-            {t('drukkersLabelEmail')}
-            <RequiredMark />
-          </span>
-          <input
-            type="email"
-            value={fields.email}
-            onChange={(event) => setField('email', event.target.value)}
-            data-testid="drukker-modal-email"
-            className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
-          {t('drukkersLabelPrijsafspraken')}
-          <textarea
-            value={fields.prijsafspraken}
-            onChange={(event) => setField('prijsafspraken', event.target.value)}
-            data-testid="drukker-modal-prijsafspraken"
-            rows={4}
-            className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
-          />
-        </label>
-        <label className="flex items-center gap-2 text-xs uppercase tracking-wide text-white/60">
-          <input
-            type="checkbox"
-            checked={fields.standaard}
-            onChange={(event) => setField('standaard', event.target.checked)}
-            data-testid="drukker-modal-standaard"
-          />
-          {t('drukkersLabelStandaard')}
-        </label>
+          </div>
+        )}
 
-        <RequiredLegend testId="drukker-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
+        <div className={activeTab === 'gegevens' ? 'flex flex-col gap-2' : 'hidden'}>
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+            <span>
+              {t('drukkersLabelNaam')}
+              <RequiredMark />
+            </span>
+            <input
+              type="text"
+              value={fields.naam}
+              onChange={(event) => setField('naam', event.target.value)}
+              data-testid="drukker-modal-naam"
+              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+            {t('drukkersLabelAdres')}
+            <input
+              type="text"
+              value={fields.adres}
+              onChange={(event) => setField('adres', event.target.value)}
+              data-testid="drukker-modal-adres"
+              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+            />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+              {t('drukkersLabelPostcode')}
+              <input
+                type="text"
+                value={fields.postcode}
+                onChange={(event) => setField('postcode', event.target.value)}
+                data-testid="drukker-modal-postcode"
+                className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+              {t('drukkersLabelPlaats')}
+              <input
+                type="text"
+                value={fields.plaats}
+                onChange={(event) => setField('plaats', event.target.value)}
+                data-testid="drukker-modal-plaats"
+                className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+              />
+            </label>
+          </div>
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+            <span>
+              {t('drukkersLabelEmail')}
+              <RequiredMark />
+            </span>
+            <input
+              type="email"
+              value={fields.email}
+              onChange={(event) => setField('email', event.target.value)}
+              data-testid="drukker-modal-email"
+              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+            {t('drukkersLabelPrijsafspraken')}
+            <textarea
+              value={fields.prijsafspraken}
+              onChange={(event) => setField('prijsafspraken', event.target.value)}
+              data-testid="drukker-modal-prijsafspraken"
+              rows={4}
+              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-xs uppercase tracking-wide text-white/60">
+            <input
+              type="checkbox"
+              checked={fields.standaard}
+              onChange={(event) => setField('standaard', event.target.checked)}
+              data-testid="drukker-modal-standaard"
+            />
+            {t('drukkersLabelStandaard')}
+          </label>
+
+          <RequiredLegend testId="drukker-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
+        </div>
 
         {actionError && (
           <p data-testid="drukker-modal-error" className="text-xs text-red-400">
@@ -308,8 +328,7 @@ export function DrukkerModal({
         )}
 
         {state?.mode === 'edit' && (
-          <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
-            <span className="text-xs uppercase tracking-wide text-white/60">{t('drukkersZendingenTitel')}</span>
+          <div className={activeTab === 'zendingen' ? 'flex flex-col gap-2' : 'hidden'}>
             {zendingenError ? (
               <p data-testid="drukker-modal-zendingen-error" className="text-xs text-red-400">
                 {t('drukkersActionError')}
