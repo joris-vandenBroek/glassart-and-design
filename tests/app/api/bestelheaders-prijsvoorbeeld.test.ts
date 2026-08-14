@@ -184,6 +184,7 @@ describe('GET /api/bestelheaders/[id]/prijsvoorbeeld', () => {
     const klant = await maakKlant('prijsvoorbeeld-eigenmaat@example.com');
     const header = await maakBestelling(klant.klantnr);
     const materiaalId = await maakMateriaal();
+    await getPool().query('UPDATE materialen SET prijsPerM2 = ? WHERE id = ?', [200, materiaalId]);
     const kunstwerk = await maakKunstwerk('AUTOTEST-pv-eigenmaat', materiaalId, '', null, 200);
 
     const url = new URL(
@@ -194,6 +195,25 @@ describe('GET /api/bestelheaders/[id]/prijsvoorbeeld', () => {
     expect(response.status).toBe(200);
     // 1m x 0.5m x 200/m2 = 100
     expect(await response.json()).toEqual({ status: 'vast', code: 'AUTOTEST-pv-eigenmaat', prijs: 100 });
+  });
+
+  it('gebruikt de prijsPerM2 van het materiaal, niet van het kunstwerk, zodra het kunstwerk materialen heeft', async () => {
+    const klant = await maakKlant('prijsvoorbeeld-materiaal-prijs@example.com');
+    const header = await maakBestelling(klant.klantnr);
+    const materiaalId = await maakMateriaal();
+    await getPool().query('UPDATE materialen SET prijsPerM2 = ? WHERE id = ?', [150, materiaalId]);
+    // kunstwerk.prijsPerM2 zelf blijft ingevuld (bv. nog niet opgeruimde oude data) -- moet
+    // genegeerd worden zodra er een materiaal gekoppeld is.
+    const kunstwerk = await maakKunstwerk('AUTOTEST-pv-materiaalprijs', materiaalId, '', null, 999);
+
+    const url = new URL(
+      `http://localhost/api?kunstwerkId=${kunstwerk.id}&materiaalId=${materiaalId}&maatId=&breedte=100&hoogte=50`
+    );
+    const cookie = await medewerkerCookie();
+    const response = await prijsvoorbeeld(new Request(url, { headers: { cookie } }), { params: { id: header.id } });
+    expect(response.status).toBe(200);
+    // 1m x 0.5m x 150/m2 = 75 -- van het materiaal, niet de 999 van het kunstwerk.
+    expect(await response.json()).toEqual({ status: 'vast', code: 'AUTOTEST-pv-materiaalprijs', prijs: 75 });
   });
 
   it('geeft 400 afmeting-vereist voor eigen maat zonder breedte/hoogte', async () => {

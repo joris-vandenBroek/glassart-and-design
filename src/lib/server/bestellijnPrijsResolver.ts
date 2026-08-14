@@ -56,6 +56,16 @@ export async function resolveerBestellijnPrijs(
   if (materiaalIds.length > 0 && !materiaalIds.includes(input.materiaalId)) {
     return { status: 'fout', error: 'materiaal-niet-beschikbaar' };
   }
+
+  let effectievePrijsPerM2 = kunstwerk.prijsPerM2;
+  if (materiaalIds.length > 0) {
+    const [materiaalRows] = await connection.query('SELECT prijsPerM2 FROM materialen WHERE id = ?', [
+      input.materiaalId,
+    ]);
+    const materiaalRow = (materiaalRows as Array<{ prijsPerM2: string | null }>)[0];
+    effectievePrijsPerM2 = materiaalRow?.prijsPerM2 != null ? Number(materiaalRow.prijsPerM2) : null;
+  }
+
   if (input.maatId === '') {
     if (
       !Number.isInteger(input.breedte) ||
@@ -71,7 +81,7 @@ export async function resolveerBestellijnPrijs(
 
   const resultaat = await berekenBestellijnPrijs(
     connection,
-    { kunstenaarnr: kunstwerk.kunstenaarnr, maatIds, prijsPerM2: kunstwerk.prijsPerM2 },
+    { kunstenaarnr: kunstwerk.kunstenaarnr, maatIds, prijsPerM2: effectievePrijsPerM2 },
     input,
     klantId
   );
