@@ -312,7 +312,7 @@ export function KunstwerkenSection({
       omschrijvingDe,
       omschrijvingEn,
     };
-    return isMaatloos ? { ...basis, prijsPerM2: Number(prijsPerM2) } : basis;
+    return isMateriaalloos ? { ...basis, prijsPerM2: Number(prijsPerM2) } : basis;
   }
 
   const previewKunstwerk: Kunstwerk = useMemo(
@@ -514,7 +514,7 @@ export function KunstwerkenSection({
   const isNieuwKunstwerk = modalState?.mode === 'add';
   const kunstenaarHeeftFout = isNieuwKunstwerk && !kunstenaarnr;
   const algemeenHeeftFout = !foto || !code.trim() || formaat === null || kunstenaarHeeftFout;
-  const matenHeeftFout = isMaatloos && (!prijsPerM2 || Number(prijsPerM2) <= 0);
+  const matenHeeftFout = isMateriaalloos && (!prijsPerM2 || Number(prijsPerM2) <= 0);
   const omschrijvingenHeeftFout = !omschrijvingNl;
   const opslaanDisabled =
     !foto ||
@@ -522,7 +522,7 @@ export function KunstwerkenSection({
     uploading ||
     !code.trim() ||
     kunstenaarHeeftFout ||
-    (isMaatloos && (!prijsPerM2 || Number(prijsPerM2) <= 0)) ||
+    (isMateriaalloos && (!prijsPerM2 || Number(prijsPerM2) <= 0)) ||
     !omschrijvingNl;
 
   const pendingCodeIsGewijzigd =
@@ -1193,7 +1193,7 @@ export function KunstwerkenSection({
             })()}
           </fieldset>
 
-          {isMaatloos && (
+          {isMateriaalloos && (
             <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
               <span>
                 {t('kunstwerkenLabelPrijsPerM2')}

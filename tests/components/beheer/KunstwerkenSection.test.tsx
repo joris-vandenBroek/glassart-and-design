@@ -605,18 +605,18 @@ describe('KunstwerkenSection', () => {
     );
   });
 
-  it('shows a "Prijs per m²" field and allows opslaan when a materiaal is chosen but every maat is unchecked, regardless of formaat', async () => {
+  it('does not show the "Prijs per m²" field when a materiaal is chosen but every maat is unchecked (price now lives on the materiaal)', async () => {
     uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
     const { onAdd } = renderSection();
     fireEvent.click(screen.getByTestId('kunstwerken-add'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-vierkant'));
     // 'vierkant' auto-selects only the square maat (maat-3); unchecking it leaves 0 maten
-    // while mat-1/mat-2 stay checked, so this is "materiaal wel, maat niet" — not materiaalloos.
+    // while mat-1/mat-2 stay checked -- "materiaal wel, maat niet" -- not materiaalloos.
     fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-3'));
 
     expect(screen.queryByTestId('kunstwerk-modal-prijzen')).not.toBeInTheDocument();
-    expect(screen.getByTestId('kunstwerk-modal-prijs-per-m2')).toBeInTheDocument();
+    expect(screen.queryByTestId('kunstwerk-modal-prijs-per-m2')).not.toBeInTheDocument();
 
     const file = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
@@ -624,9 +624,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'GLA-VEI-00001' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-kunstenaar'), { target: { value: 'KU-00001' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Op maat gezaagd.' } });
-    expect(screen.getByTestId('kunstwerk-modal-opslaan')).toBeDisabled();
-
-    fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-per-m2'), { target: { value: '65' } });
+    // No prijs-per-m2 filled in -- save should still be enabled, price comes from the materiaal now.
     expect(screen.getByTestId('kunstwerk-modal-opslaan')).not.toBeDisabled();
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
 
@@ -636,10 +634,11 @@ describe('KunstwerkenSection', () => {
           formaat: 'vierkant',
           materiaalIds: ['mat-1', 'mat-2'],
           maatIds: [],
-          prijsPerM2: 65,
         })
       )
     );
+    const laatsteAdd = onAdd.mock.calls[onAdd.mock.calls.length - 1][0];
+    expect(laatsteAdd).not.toHaveProperty('prijsPerM2');
   });
 
   it('does not show the "kies minimaal één maat" hint once a materiaal is chosen but every maat is unchecked', async () => {
@@ -857,7 +856,9 @@ describe('KunstwerkenSection', () => {
     renderSection({ kunstwerken: [...KUNSTWERKEN, maatloosKunstwerk] });
 
     fireEvent.click(screen.getByTestId('data-table-row-kw-maatloos'));
-    expect(screen.getByTestId('kunstwerk-modal-prijs-per-m2')).toBeInTheDocument();
+    // materiaal is chosen (mat-1), so this is no longer materiaalloos -- price now lives on
+    // the materiaal, not the kunstwerk.
+    expect(screen.queryByTestId('kunstwerk-modal-prijs-per-m2')).not.toBeInTheDocument();
 
     const file = new File(['x'], 'nieuwe-foto.jpg', { type: 'image/jpeg' });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-foto-input'), { target: { files: [file] } });
@@ -866,7 +867,7 @@ describe('KunstwerkenSection', () => {
 
     expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).not.toBeChecked();
     expect(screen.getByTestId('kunstwerk-modal-maat-maat-2')).not.toBeChecked();
-    expect(screen.getByTestId('kunstwerk-modal-prijs-per-m2')).toBeInTheDocument();
+    expect(screen.queryByTestId('kunstwerk-modal-prijs-per-m2')).not.toBeInTheDocument();
     expect(screen.getByTestId('kunstwerk-modal-opslaan')).not.toBeDisabled();
   });
 
@@ -917,7 +918,9 @@ describe('KunstwerkenSection', () => {
 
     expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).not.toBeChecked();
     expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).not.toBeChecked();
-    expect(screen.getByTestId('kunstwerk-modal-prijs-per-m2')).toBeInTheDocument();
+    // materiaal is chosen (mat-1), so this is no longer materiaalloos -- price now lives on
+    // the materiaal, not the kunstwerk.
+    expect(screen.queryByTestId('kunstwerk-modal-prijs-per-m2')).not.toBeInTheDocument();
     expect(screen.getByTestId('kunstwerk-modal-opslaan')).not.toBeDisabled();
   });
 
