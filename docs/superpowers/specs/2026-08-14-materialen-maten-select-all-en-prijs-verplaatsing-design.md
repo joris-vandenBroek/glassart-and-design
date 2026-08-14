@@ -14,7 +14,9 @@ spec:
    behalve één").
 2. "Prijs per m²" hoort bij het materiaal, niet bij het kunstwerk — glas van hetzelfde type
    en dezelfde dikte kost overal hetzelfde per m², ongeacht welk kunstwerk erop gedrukt
-   wordt. Dat veld verhuist van Kunstwerk naar Materiaal.
+   wordt. Dat veld verhuist van Kunstwerk naar Materiaal voor elk kunstwerk dat materialen
+   heeft; voor materiaalloze kunstwerken (producten zonder glas/materiaal, zie Deel B) blijft
+   het op het kunstwerk staan, bij gebrek aan een materiaal om het aan te hangen.
 
 Deze twee wijzigingen raken deels dezelfde tab (`materialen`) maar zijn onafhankelijk van
 elkaar te implementeren en te reviewen.
@@ -94,21 +96,37 @@ Prijsberekening kent twee onafhankelijke paden (`berekenBestellijnPrijs`,
 - **Maatloos kunstwerk** (`kunstwerk.maatIds.length === 0`, klant/medewerker voert zelf
   breedte/hoogte in): prijs = `(breedte/100) × (hoogte/100) × kunstwerk.prijsPerM2`.
 
-Deze spec verandert **alleen** waar `prijsPerM2` in het tweede pad vandaan komt. De
-prijsmatrix en het eerste pad blijven ongewijzigd (expliciet besproken en bevestigd tijdens
-brainstorm — de matrix blijft nodig omdat prijs per vaste maat niet altijd zuiver
-lineair is).
+Deze spec verandert **alleen** waar `prijsPerM2` in het tweede pad vandaan komt, en alleen
+voor kunstwerken die minstens één materiaal hebben. De prijsmatrix en het eerste pad blijven
+ongewijzigd (expliciet besproken en bevestigd tijdens brainstorm — de matrix blijft nodig
+omdat prijs per vaste maat niet altijd zuiver lineair is).
+
+**Correctie op het eerste ontwerp (tijdens uitwerking ontdekt):** er bestaat een derde,
+onafhankelijke categorie — een "materiaalloos" kunstwerk (`materiaalIds.length === 0`, zie
+`src/lib/kunstwerkMateriaal.ts`, `MATERIAALLOOS_LABEL = 'Akoestische stof'`) — een kunstwerk
+zonder één gekoppeld materiaal, voor niet-glasproducten. Zo'n kunstwerk heeft geen materiaal
+om een prijs per m² aan te hangen. Daarom blijft `kunstwerken.prijsPerM2` bestaan en wordt
+alleen genegeerd zodra een kunstwerk wél materialen heeft:
+
+- **Materiaalloos** (`materiaalIds.length === 0`) → prijs blijft komen van
+  `kunstwerken.prijsPerM2`, exact zoals vandaag.
+- **Heeft materialen, maar geen vaste maten** ("maatloos-met-materiaal", bv. "4mm
+  veiligheidsglas per m²") → prijs komt voortaan van het bij de bestelling gekozen
+  materiaal zijn prijs per m², niet meer van het kunstwerk.
+- **Heeft materialen én vaste maten** → ongewijzigd, matrixprijs.
+
+Bestaande kunstwerken die vandaag `prijsPerM2` gebruiken terwijl ze wél materialen hebben,
+verliezen daarmee hun werkende prijsbron totdat jij de prijs op het/de betreffende
+materia(a)l(en) invult — die kunstwerk-rijen zelf hoeven niet aangepast te worden, hun
+bestaande `prijsPerM2`-waarde wordt gewoon niet meer gelezen.
 
 ### Datamodel
 
-Nieuwe migratie `db/migrations/2026-08-14-prijs-per-m2-naar-materiaal.sql`, in één bestand
-(zelfde geaccepteerde patroon als `2026-08-11-06-kunstwerk-oude-relatiekolommen-weg.sql` —
-kort venster tussen migratie en deploy waarin nog draaiende oude code een kolom mist, wordt
-bewust geaccepteerd):
+Nieuwe migratie `db/migrations/2026-08-14-prijs-per-m2-materiaal.sql` — alleen een toevoeging,
+geen drop, dus geen risicovol venster tussen migratie en deploy nodig:
 
 ```sql
 ALTER TABLE materialen ADD COLUMN prijsPerM2 DECIMAL(10,2);
-ALTER TABLE kunstwerken DROP COLUMN prijsPerM2;
 ```
 
 `materialen.prijsPerM2` is nullable op databaseniveau — bestaande materialen krijgen geen
@@ -117,16 +135,16 @@ mapping mogelijk omdat een kunstwerk aan meerdere materialen gekoppeld kan zijn 
 kunstwerk nu een eigen prijs had). Jij vult de juiste prijs per materiaal handmatig in via
 het beheerscherm ná deze migratie. De UI maakt het veld wel verplicht bij aanmaken/bewerken
 van een materiaal (zie hieronder) — alleen de kolom zelf staat leeg toe, voor bestaande rijen
-die nog niet bijgewerkt zijn.
+die nog niet bijgewerkt zijn. `kunstwerken.prijsPerM2` blijft ongewijzigd bestaan.
 
-`db/schema.sql` wordt bijgewerkt: `prijsPerM2 DECIMAL(10,2)` verhuist van de `kunstwerken`- naar
-de `materialen`-tabeldefinitie.
+`db/schema.sql` wordt bijgewerkt: `prijsPerM2 DECIMAL(10,2)` toegevoegd aan de
+`materialen`-tabeldefinitie; de kolom op `kunstwerken` blijft staan.
 
-`src/lib/server/tableColumns.ts`: `prijsPerM2` verhuist van de `kunstwerken`-allow-list naar
-de `materialen`-allow-list.
+`src/lib/server/tableColumns.ts`: `prijsPerM2` toegevoegd aan de `materialen`-allow-list; blijft
+ook op de `kunstwerken`-allow-list staan.
 
-`src/components/beheer/materiaalTypes.ts`: `prijsPerM2?: number` verhuist van de `Kunstwerk`-
-naar de `Materiaal`-interface.
+`src/components/beheer/materiaalTypes.ts`: `prijsPerM2?: number` toegevoegd aan de `Materiaal`-
+interface; blijft ook op de `Kunstwerk`-interface staan.
 
 ### UI — Materiaal-formulier
 
@@ -139,54 +157,52 @@ disabled-knop afdwingt — geen precedent in dit bestand voor inline foutteksten
 
 ### UI — Kunstwerk-formulier
 
-`src/components/beheer/KunstwerkenSection.tsx`: het prijsveld en alle bijbehorende code
-verdwijnen volledig:
+`src/components/beheer/KunstwerkenSection.tsx`: het bestaande prijsveld blijft bestaan maar
+wisselt van conditie: nu gekoppeld aan `isMaatloos` (regel 256: materiaalloos ÓF geen maten),
+straks gekoppeld aan `isMateriaalloos` (regel 253: alleen "geen enkel materiaal gekoppeld").
+Concreet, overal waar de bestaande code `isMaatloos` gebruikt voor dit veld, wordt dat
+`isMateriaalloos`:
 
-- `LEGE_FORM.prijsPerM2` (regel 67), de `useState` (regel 118).
-- De conditionele toevoeging in `buildKunstwerkData()` (regel 311: `isMaatloos ? { ...basis,
-  prijsPerM2: Number(prijsPerM2) } : basis` wordt gewoon `basis`).
-- `resetForm`'s `setPrijsPerM2` (regel 407) en `openEdit`'s `setPrijsPerM2` (regel 437).
-- De prijs-termen in `matenHeeftFout` (regel 513) en `opslaanDisabled` (regel 521) — beide
-  verliezen hun `(!prijsPerM2 || Number(prijsPerM2) <= 0)`-clausule; `matenHeeftFout` wordt
-  daarmee altijd `false` zolang er geen andere maten-gerelateerde fout bestaat. *(Als
-  `matenHeeftFout` na deze wijziging nergens anders dan in `opslaanDisabled` gebruikt wordt,
-  mag hij samen met het prijsveld helemaal weg — controleren bij implementatie.)*
-- Het hele `{isMaatloos && (...)}`-blok met het invoerveld (regel 1151-1175).
+- Het invoerveld-blok, huidige conditie `{isMaatloos && (...)}` (regel 1151), wordt
+  `{isMateriaalloos && (...)}`.
+- `matenHeeftFout` (regel 513) en de prijs-clausule in `opslaanDisabled` (regel 521):
+  `isMaatloos && (!prijsPerM2 || ...)` wordt `isMateriaalloos && (!prijsPerM2 || ...)`.
+- `buildKunstwerkData()` (regel 311): `isMaatloos ? { ...basis, prijsPerM2: ... } : basis`
+  wordt `isMateriaalloos ? { ...basis, prijsPerM2: ... } : basis`.
 
-Het `isMaatloos`-concept zelf (regel 253-256) blijft ongewijzigd bestaan — het bepaalt nog
-steeds welk prijspad geldt (matrix vs. formule) en stuurt de bestaande matrix-prijsvoorbeeld-
-fetch (regel 260-292) aan, die dit ontwerp niet aanraakt.
+`LEGE_FORM.prijsPerM2`, de `useState` (regel 118), `resetForm`'s en `openEdit`'s
+`setPrijsPerM2` (regel 407, 437) blijven ongewijzigd — alleen de zichtbaarheids-/
+verplichtingsconditie verandert. Een kunstwerk met materialen maar zonder vaste maten
+("maatloos-met-materiaal", bv. "4mm veiligheidsglas per m²") toont dit veld dus niet meer —
+de prijs komt voortaan van het gekozen materiaal, zie hieronder.
+
+Het `isMaatloos`-concept (regel 256) blijft ongewijzigd bestaan voor zijn andere rol: bepalen
+welk prijspad geldt (matrix vs. formule) en de bestaande matrix-prijsvoorbeeld-fetch (regel
+260-292) aansturen, die dit ontwerp niet aanraakt.
 
 ### Prijsberekening
 
-`berekenBestellijnPrijs` (`src/lib/server/prijsmodule.ts` regel 126-159) krijgt de prijs per
-m² als los argument in plaats van via het `kunstwerk`-object:
+`berekenBestellijnPrijs` (`src/lib/server/prijsmodule.ts` regel 126-159) blijft **ongewijzigd**
+qua signatuur — hij neemt nog steeds één `prijsPerM2: number | null` mee in het
+`kunstwerk`-object. Wat verandert is welke waarde de aanroeper daar invult: bij een
+materiaalloos kunstwerk blijft dat `kunstwerken.prijsPerM2`; zodra het kunstwerk materialen
+heeft, wordt het de `prijsPerM2` van het bij de bestelling gekozen materiaal (via
+`materiaalId`, die overal al verplicht aanwezig is zodra `materiaalIds.length > 0`).
 
-```ts
-export async function berekenBestellijnPrijs(
-  db: Queryable,
-  kunstwerk: { kunstenaarnr: string | null; maatIds: string[] },
-  materiaalPrijsPerM2: number | null,
-  line: { maatId: string; materiaalId: string; breedte?: number; hoogte?: number },
-  klantId: string | null = null
-): Promise<LijnPrijsResultaat>
-```
+Drie aanroeppunten passen hun prijs-lookup aan met dezelfde precedentieregel:
 
-De maatloos-tak (regel 132-142) gebruikt `materiaalPrijsPerM2` in plaats van
-`kunstwerk.prijsPerM2`; de rest van de functie (matrix-tak) is ongewijzigd.
-
-Drie aanroeppunten passen hun query aan om de prijs bij het materiaal op te halen (via
-`line.materiaalId`, die overal al verplicht aanwezig is) in plaats van bij het kunstwerk:
-
-- `src/lib/server/bestellijnPrijsResolver.ts` (regel 32-38, 72-77): kunstwerk-query verliest
-  `prijsPerM2`; nieuwe query `SELECT prijsPerM2 FROM materialen WHERE id = ?` met
-  `input.materiaalId`.
-- `src/app/api/bestelheaders/route.ts` (regel 87-96, 130-136): zelfde aanpassing, binnen de
-  bestaande transactie/loop over `lines`.
+- `src/lib/server/bestellijnPrijsResolver.ts` (regel 32-38, 72-77): na het ophalen van
+  `materiaalIds` (regel 54), als die niet leeg is, een extra query
+  `SELECT prijsPerM2 FROM materialen WHERE id = ?` met `input.materiaalId` en die waarde
+  gebruiken in plaats van `kunstwerk.prijsPerM2`; blijft leeg (`materiaalIds.length === 0`),
+  dan ongewijzigd de kunstwerk-kolom gebruiken.
+- `src/app/api/bestelheaders/route.ts` (regel 87-96, 130-136): zelfde precedentieregel, binnen
+  de bestaande transactie/loop over `lines`, ná de bestaande `haalRelatiesOpVoorEen`-call
+  (regel 102) die `materiaalIds` al ophaalt.
 - `src/components/ProductModal.tsx` (regel 192-198, 213-218): client-side prijsvoorbeeld
-  gebruikt straks `beschikbareMaterialen.find((m) => m.id === materiaalId)?.prijsPerM2` in
-  plaats van `kunstwerk.prijsPerM2` (de component heeft `beschikbareMaterialen` en de
-  geselecteerde `materiaalId` al in scope).
+  gebruikt `isMateriaalloos ? kunstwerk.prijsPerM2 : geselecteerdMateriaal?.prijsPerM2` (de
+  component heeft `geselecteerdMateriaal` — regel 153, `beschikbareMaterialen.find(...)` — en
+  `isMateriaalloos` — regel 158 — al in scope).
 
 ### Gebruikershandleiding
 
@@ -202,15 +218,27 @@ moeten opnieuw gemaakt worden.
 - `tests/components/beheer/MaterialenSection.test.tsx`: nieuw veld toevoegen/bewerken,
   opslaanknop disabled bij leeg/`0`/negatief, waarde persisteert bij bewerken.
 - `tests/components/beheer/KunstwerkenSection.test.tsx`: bestaande tests voor het
-  kunstwerk-prijsveld (`data-testid="kunstwerk-modal-prijs-per-m2"` en gerelateerde
-  validatie-tests) verwijderen.
-- `tests/lib/server/prijsmodule.test.ts` (of gelijkwaardig): `berekenBestellijnPrijs`-tests
-  voor de maatloos-tak aanpassen aan de nieuwe signatuur.
-- `tests/lib/server/bestellijnPrijsResolver.test.ts`,
-  `tests/app/api/bestelheaders.test.ts`: prijsberekening-tests aanpassen zodat de testdata
-  `prijsPerM2` op een materiaal zet in plaats van op een kunstwerk.
-- `tests/components/ProductModal.test.tsx`: prijsvoorbeeld-test voor maatloze kunstwerken
-  aanpassen aan de nieuwe databron.
+  kunstwerk-prijsveld (`data-testid="kunstwerk-modal-prijs-per-m2"`) blijven grotendeels
+  bestaan maar testen voortaan de materiaalloze situatie (0 materialen); een test toevoegen
+  die bevestigt dat het veld **niet** verschijnt zodra er wél een materiaal gekoppeld is (ook
+  als er geen maten gekozen zijn).
+- `tests/lib/server/prijsmodule.test.ts`: geen wijziging nodig — `berekenBestellijnPrijs`
+  blijft ongewijzigd, dus deze tests blijven ongewijzigd.
+- `tests/app/api/bestelheaders-prijsvoorbeeld.test.ts`, `tests/app/api/bestelheaders.test.ts`:
+  bestaande materiaalloze prijs-tests (`prijsPerM2` op de kunstwerk-fixture, bv.
+  `maakKunstwerk(..., prijsPerM2)` resp. `insertRow('kunstwerken', {..., prijsPerM2: 100})`)
+  blijven ongewijzigd correct. Nieuwe tests toevoegen voor een kunstwerk mét materiaal en
+  zonder maten waarbij de prijs van het materiaal komt (materiaal aangemaakt met een
+  `prijsPerM2`, kunstwerk gekoppeld zonder maten) — en dat een `prijsPerM2` op het kunstwerk
+  zelf in die situatie genegeerd wordt.
+- `tests/components/ProductModal.test.tsx`: de fixture `MAATLOOS_MET_MATERIAAL_KUNSTWERK`
+  (regel 70-83, `materiaalIds: ['mat-1']`, `prijsPerM2: 65` op het kunstwerk) verliest zijn
+  kunstwerk-`prijsPerM2`; in plaats daarvan krijgt `MATERIALEN[0]` (`mat-1`, regel 42) een
+  `prijsPerM2: 65`. De bestaande tests rond deze fixture (regel 895-919, prijsberekening en
+  toevoegen-aan-winkelwagen) blijven verder ongewijzigd — ze verwachten dezelfde bedragen,
+  nu via de andere databron. `MATERIAALLOOS_KUNSTWERK` (regel 56-69, `prijsPerM2: 180` op het
+  kunstwerk zelf) blijft ongewijzigd, want dat is precies het pad dat kunstwerk-niveau
+  behoudt.
 
 Alle bovenstaande testbestanden zijn gebaseerd op de huidige structuur en moeten bij
 implementatie geverifieerd worden op exacte paden/namen — dit is geen uitputtende grep,
@@ -224,3 +252,6 @@ alleen de bekende call sites uit de verkenning.
   voor handmatige herinvoer omdat er geen eenduidige 1-op-1 mapping bestaat.
 - Geen wijziging aan het bestelproces zelf — `materiaalId` is al onderdeel van elke
   bestellijn, dus de klant/medewerker koos het materiaal al vóór deze wijziging.
+- Geen verwijdering van `kunstwerken.prijsPerM2` — die blijft nodig voor materiaalloze
+  kunstwerken (zie hierboven), dus geen migratie-drop en geen wijziging aan
+  `berekenBestellijnPrijs`'s signatuur.
