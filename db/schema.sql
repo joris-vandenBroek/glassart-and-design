@@ -96,6 +96,7 @@ CREATE TABLE materialen (
   id CHAR(36) PRIMARY KEY,
   materiaalsoortId CHAR(36) NOT NULL,
   materiaaldikte DECIMAL(5,1) NOT NULL,
+  prijsPerM2 DECIMAL(10,2),
   omschrijvingNl VARCHAR(255) NOT NULL,
   omschrijvingFr VARCHAR(255),
   omschrijvingDe VARCHAR(255),

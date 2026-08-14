@@ -14,6 +14,7 @@ export interface Materiaal {
   id: string;
   materiaalsoortId: string;
   materiaaldikte: number;
+  prijsPerM2?: number;
   omschrijvingNl: string;
   omschrijvingFr: string;
   omschrijvingDe: string;

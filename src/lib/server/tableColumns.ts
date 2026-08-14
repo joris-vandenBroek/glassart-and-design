@@ -63,6 +63,7 @@ export const TABLE_COLUMNS: Record<string, readonly string[]> = {
     'id',
     'materiaalsoortId',
     'materiaaldikte',
+    'prijsPerM2',
     'omschrijvingNl',
     'omschrijvingFr',
     'omschrijvingDe',
