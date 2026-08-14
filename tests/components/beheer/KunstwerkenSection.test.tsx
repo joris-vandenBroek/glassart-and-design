@@ -792,6 +792,28 @@ describe('KunstwerkenSection', () => {
     );
   });
 
+  it('toggles only the compatible maten on and off with the select-all link', async () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-vierkant'));
+    // 'vierkant' makes only maat-3 (square) selectable; maat-1/maat-2 stay disabled.
+    await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).toBeChecked());
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-maat-maat-3')); // uncheck it first
+
+    expect(screen.getByTestId('kunstwerk-modal-maten-allesToggle')).toHaveTextContent(
+      'Alles selecteren'
+    );
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-maten-allesToggle'));
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).not.toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maten-allesToggle')).toHaveTextContent(
+      'Alles deselecteren'
+    );
+
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-maten-allesToggle'));
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-3')).not.toBeChecked();
+  });
+
   it('pre-selects the detected formaat when a new photo is uploaded, overridable by the admin', async () => {
     uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
     detectFormaatFromFileMock.mockResolvedValue('liggend');

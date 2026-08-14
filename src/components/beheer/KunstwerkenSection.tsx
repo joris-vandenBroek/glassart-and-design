@@ -1145,27 +1145,52 @@ export function KunstwerkenSection({
               <div className={activeTab === 'maten' ? 'flex flex-col gap-3' : 'hidden'}>
           <fieldset className="flex flex-col gap-1">
             <legend className="text-xs uppercase tracking-wide text-white/60">{t('kunstwerkenLabelMaten')}</legend>
-            {(maten ?? []).map((maat) => {
-              const incompatibel =
-                formaat !== null &&
-                formaat !== 'alle' &&
-                (formaat === 'vierkant' ? !isVierkanteMaat(maat) : isVierkanteMaat(maat));
+            {(() => {
+              const compatibeleMaatIds = (maten ?? [])
+                .filter((maat) => {
+                  if (formaat === null || formaat === 'alle') return true;
+                  return formaat === 'vierkant' ? isVierkanteMaat(maat) : !isVierkanteMaat(maat);
+                })
+                .map((maat) => maat.id);
+
               return (
-                <label
-                  key={maat.id}
-                  className={`flex items-center gap-2 text-sm text-white/80 ${incompatibel ? 'opacity-40' : ''}`}
-                >
-                  <input
-                    type="checkbox"
-                    disabled={incompatibel}
-                    checked={maatIds.includes(maat.id)}
-                    onChange={() => setMaatIds((current) => toggle(current, maat.id))}
-                    data-testid={`kunstwerk-modal-maat-${maat.id}`}
-                  />
-                  {`${maat.breedte}×${maat.hoogte} cm`}
-                </label>
+                <>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setMaatIds(alleGeselecteerd(compatibeleMaatIds, maatIds) ? [] : compatibeleMaatIds)
+                    }
+                    data-testid="kunstwerk-modal-maten-allesToggle"
+                    className="text-xs text-white/60 underline hover:text-white"
+                  >
+                    {alleGeselecteerd(compatibeleMaatIds, maatIds)
+                      ? t('kunstwerkenAllesDeselecteren')
+                      : t('kunstwerkenAllesSelecteren')}
+                  </button>
+                  {(maten ?? []).map((maat) => {
+                    const incompatibel =
+                      formaat !== null &&
+                      formaat !== 'alle' &&
+                      (formaat === 'vierkant' ? !isVierkanteMaat(maat) : isVierkanteMaat(maat));
+                    return (
+                      <label
+                        key={maat.id}
+                        className={`flex items-center gap-2 text-sm text-white/80 ${incompatibel ? 'opacity-40' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          disabled={incompatibel}
+                          checked={maatIds.includes(maat.id)}
+                          onChange={() => setMaatIds((current) => toggle(current, maat.id))}
+                          data-testid={`kunstwerk-modal-maat-${maat.id}`}
+                        />
+                        {`${maat.breedte}×${maat.hoogte} cm`}
+                      </label>
+                    );
+                  })}
+                </>
               );
-            })}
+            })()}
           </fieldset>
 
           {isMaatloos && (
