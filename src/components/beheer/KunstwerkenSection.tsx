@@ -52,6 +52,10 @@ function toggle(list: string[], id: string): string[] {
   return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
 }
 
+function alleGeselecteerd(alleIds: string[], huidigeIds: string[]): boolean {
+  return alleIds.length > 0 && alleIds.every((id) => huidigeIds.includes(id));
+}
+
 const LEGE_FORM = {
   foto: '',
   code: '',
@@ -1108,6 +1112,22 @@ export function KunstwerkenSection({
             <legend className="text-xs uppercase tracking-wide text-white/60">
               {t('kunstwerkenLabelMaterialen')}
             </legend>
+            <button
+              type="button"
+              onClick={() => {
+                const alleIds = (materialen ?? []).map((materiaal) => materiaal.id);
+                setMateriaalIds(alleGeselecteerd(alleIds, materiaalIds) ? [] : alleIds);
+              }}
+              data-testid="kunstwerk-modal-materialen-allesToggle"
+              className="text-xs text-white/60 underline hover:text-white"
+            >
+              {alleGeselecteerd(
+                (materialen ?? []).map((materiaal) => materiaal.id),
+                materiaalIds
+              )
+                ? t('kunstwerkenAllesDeselecteren')
+                : t('kunstwerkenAllesSelecteren')}
+            </button>
             {(materialen ?? []).map((materiaal) => (
               <label key={materiaal.id} className="flex items-center gap-2 text-sm text-white/80">
                 <input

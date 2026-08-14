@@ -700,6 +700,8 @@
     "kunstwerkenNieuweSegmentToevoegen": "Toevoegen",
     "kunstwerkenNieuweSegmentError": "Kon het segment niet toevoegen. Probeer het opnieuw.",
     "kunstwerkenLabelMaterialen": "Materialen",
+    "kunstwerkenAllesSelecteren": "Alles selecteren",
+    "kunstwerkenAllesDeselecteren": "Alles deselecteren",
     "kunstwerkenLabelMaten": "Maten",
     "kunstwerkenMatenVerplicht": "Kies minimaal één maat.",
     "kunstwerkenPrijsPerM2Verplicht": "Vul een geldige prijs per m² in.",

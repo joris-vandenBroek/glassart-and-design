@@ -755,6 +755,43 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-prijs-per-m2')).toBeInTheDocument();
   });
 
+  it('toggles all materialen on and off with the select-all link', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    // All materialen are pre-selected when adding a new kunstwerk
+    expect(screen.getByTestId('kunstwerk-modal-materialen-allesToggle')).toHaveTextContent(
+      'Alles deselecteren'
+    );
+
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materialen-allesToggle'));
+    expect(screen.getByTestId('kunstwerk-modal-materiaal-mat-1')).not.toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-materiaal-mat-2')).not.toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-materialen-allesToggle')).toHaveTextContent(
+      'Alles selecteren'
+    );
+
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materialen-allesToggle'));
+    expect(screen.getByTestId('kunstwerk-modal-materiaal-mat-1')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-materiaal-mat-2')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-materialen-allesToggle')).toHaveTextContent(
+      'Alles deselecteren'
+    );
+  });
+
+  it('shows "Alles deselecteren" once every materiaal is already checked individually', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    // All materialen are pre-selected when adding, so toggle them all off first
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
+    // Now they're all unchecked, toggle them all back on individually to show "Alles deselecteren"
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
+    expect(screen.getByTestId('kunstwerk-modal-materialen-allesToggle')).toHaveTextContent(
+      'Alles deselecteren'
+    );
+  });
+
   it('pre-selects the detected formaat when a new photo is uploaded, overridable by the admin', async () => {
     uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
     detectFormaatFromFileMock.mockResolvedValue('liggend');
