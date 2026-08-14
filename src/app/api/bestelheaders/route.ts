@@ -106,6 +106,16 @@ export const POST = withApiErrorHandling('POST /api/bestelheaders', async (reque
         return NextResponse.json({ error: 'materiaal-niet-beschikbaar' }, { status: 400 });
       }
 
+      let effectievePrijsPerM2 =
+        kunstwerkRow.prijsPerM2 != null ? Number(kunstwerkRow.prijsPerM2) : null;
+      if (materiaalIds.length > 0) {
+        const [materiaalRows] = await connection.query('SELECT prijsPerM2 FROM materialen WHERE id = ?', [
+          line.materiaalId,
+        ]);
+        const materiaalRow = (materiaalRows as Array<{ prijsPerM2: string | null }>)[0];
+        effectievePrijsPerM2 = materiaalRow?.prijsPerM2 != null ? Number(materiaalRow.prijsPerM2) : null;
+      }
+
       // An empty maatId is the genuine custom-size ("eigen maat") path -- it always requires
       // real afmetingen, since prijsmodule.ts's berekenBestellijnPrijs uses breedte/hoogte
       // (via prijsPerM2) to price it, or leaves it null for staff to price later. Any other
@@ -132,7 +142,7 @@ export const POST = withApiErrorHandling('POST /api/bestelheaders', async (reque
         {
           kunstenaarnr: kunstwerkRow.kunstenaarnr,
           maatIds,
-          prijsPerM2: kunstwerkRow.prijsPerM2 != null ? Number(kunstwerkRow.prijsPerM2) : null,
+          prijsPerM2: effectievePrijsPerM2,
         },
         line,
         klantId
