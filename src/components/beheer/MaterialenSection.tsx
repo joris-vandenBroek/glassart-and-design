@@ -37,6 +37,7 @@ export function MaterialenSection({
   const [modalState, setModalState] = useState<ModalState>(null);
   const [materiaalsoortId, setMateriaalsoortId] = useState('');
   const [materiaaldikte, setMateriaaldikte] = useState('');
+  const [prijsPerM2, setPrijsPerM2] = useState('');
   const [omschrijvingNl, setOmschrijvingNl] = useState('');
   const [omschrijvingFr, setOmschrijvingFr] = useState('');
   const [omschrijvingDe, setOmschrijvingDe] = useState('');
@@ -69,6 +70,7 @@ export function MaterialenSection({
   function openAdd() {
     setMateriaalsoortId((materiaalsoorten ?? [])[0]?.id ?? '');
     setMateriaaldikte('');
+    setPrijsPerM2('');
     setOmschrijvingNl('');
     setOmschrijvingFr('');
     setOmschrijvingDe('');
@@ -80,6 +82,7 @@ export function MaterialenSection({
   function openEdit(materiaal: Materiaal) {
     setMateriaalsoortId(materiaal.materiaalsoortId);
     setMateriaaldikte(String(materiaal.materiaaldikte));
+    setPrijsPerM2(materiaal.prijsPerM2 != null ? String(materiaal.prijsPerM2) : '');
     setOmschrijvingNl(materiaal.omschrijvingNl ?? '');
     setOmschrijvingFr(materiaal.omschrijvingFr ?? '');
     setOmschrijvingDe(materiaal.omschrijvingDe ?? '');
@@ -97,6 +100,7 @@ export function MaterialenSection({
     const data = {
       materiaalsoortId,
       materiaaldikte: Number(materiaaldikte),
+      prijsPerM2: Number(prijsPerM2),
       omschrijvingNl,
       omschrijvingFr,
       omschrijvingDe,
@@ -178,7 +182,7 @@ export function MaterialenSection({
             <button
               type="button"
               onClick={handleSave}
-              disabled={!materiaalsoortId || materiaaldikte === '' || !omschrijvingNl}
+              disabled={!materiaalsoortId || materiaaldikte === '' || !prijsPerM2 || Number(prijsPerM2) <= 0 || !omschrijvingNl}
               data-testid="materiaal-modal-opslaan"
               className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
             >
@@ -226,6 +230,19 @@ export function MaterialenSection({
               value={materiaaldikte}
               onChange={(event) => setMateriaaldikte(event.target.value)}
               data-testid="materiaal-modal-dikte"
+              className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
+            <span>
+              {t('materialenLabelPrijsPerM2')}
+              <RequiredMark />
+            </span>
+            <input
+              type="number"
+              value={prijsPerM2}
+              onChange={(event) => setPrijsPerM2(event.target.value)}
+              data-testid="materiaal-modal-prijs-per-m2"
               className="rounded-sm bg-black/40 px-3 py-2 text-sm text-white"
             />
           </label>

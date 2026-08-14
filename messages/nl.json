@@ -505,6 +505,7 @@
     "materialenColOmschrijving": "Omschrijving",
     "materialenLabelMateriaalsoort": "Materiaalsoort",
     "materialenLabelDikte": "Dikte (mm)",
+    "materialenLabelPrijsPerM2": "Prijs per m² (€)",
     "materialenLabelOmschrijvingNl": "Omschrijving (NL)",
     "materialenLabelOmschrijvingFr": "Omschrijving (FR)",
     "materialenLabelOmschrijvingDe": "Omschrijving (DE)",

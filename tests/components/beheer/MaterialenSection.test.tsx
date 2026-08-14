@@ -40,6 +40,7 @@ const MATERIALEN: Materiaal[] = [
     id: 'mat-1',
     materiaalsoortId: 'soort-1',
     materiaaldikte: 4,
+    prijsPerM2: 65,
     omschrijvingNl: 'Kristalhelder',
     omschrijvingFr: '',
     omschrijvingDe: '',
@@ -49,6 +50,7 @@ const MATERIALEN: Materiaal[] = [
     id: 'mat-2',
     materiaalsoortId: 'soort-2',
     materiaaldikte: 3,
+    prijsPerM2: 40,
     omschrijvingNl: 'Licht en helder',
     omschrijvingFr: '',
     omschrijvingDe: '',
@@ -106,11 +108,12 @@ describe('MaterialenSection', () => {
     expect(screen.getByTestId('data-table-row-mat-2')).toBeInTheDocument();
   });
 
-  it('adds a new materiaal with the selected materiaalsoort, dikte and omschrijving', async () => {
+  it('adds a new materiaal with the selected materiaalsoort, dikte, prijs per m2 and omschrijving', async () => {
     const { onAdd } = renderSection();
     fireEvent.click(screen.getByTestId('materialen-add'));
     fireEvent.change(screen.getByTestId('materiaal-modal-materiaalsoort'), { target: { value: 'soort-2' } });
     fireEvent.change(screen.getByTestId('materiaal-modal-dikte'), { target: { value: '5' } });
+    fireEvent.change(screen.getByTestId('materiaal-modal-prijs-per-m2'), { target: { value: '80' } });
     fireEvent.change(screen.getByTestId('materiaal-modal-omschrijving'), {
       target: { value: 'Extra diepte' },
     });
@@ -119,6 +122,7 @@ describe('MaterialenSection', () => {
       expect(onAdd).toHaveBeenCalledWith({
         materiaalsoortId: 'soort-2',
         materiaaldikte: 5,
+        prijsPerM2: 80,
         omschrijvingNl: 'Extra diepte',
         omschrijvingFr: '',
         omschrijvingDe: '',
@@ -132,12 +136,15 @@ describe('MaterialenSection', () => {
     fireEvent.click(screen.getByTestId('data-table-row-mat-1'));
     expect(screen.getByTestId('materiaal-modal-materiaalsoort')).toHaveValue('soort-1');
     expect(screen.getByTestId('materiaal-modal-dikte')).toHaveValue(4);
+    expect(screen.getByTestId('materiaal-modal-prijs-per-m2')).toHaveValue(65);
     fireEvent.change(screen.getByTestId('materiaal-modal-dikte'), { target: { value: '6' } });
+    fireEvent.change(screen.getByTestId('materiaal-modal-prijs-per-m2'), { target: { value: '70' } });
     fireEvent.click(screen.getByTestId('materiaal-modal-opslaan'));
     await waitFor(() =>
       expect(onUpdate).toHaveBeenCalledWith('mat-1', {
         materiaalsoortId: 'soort-1',
         materiaaldikte: 6,
+        prijsPerM2: 70,
         omschrijvingNl: 'Kristalhelder',
         omschrijvingFr: '',
         omschrijvingDe: '',
@@ -150,10 +157,30 @@ describe('MaterialenSection', () => {
     const { onAdd } = renderSection();
     fireEvent.click(screen.getByTestId('materialen-add'));
     fireEvent.change(screen.getByTestId('materiaal-modal-dikte'), { target: { value: '0' } });
+    fireEvent.change(screen.getByTestId('materiaal-modal-prijs-per-m2'), { target: { value: '50' } });
     fireEvent.change(screen.getByTestId('materiaal-modal-omschrijving'), { target: { value: 'Stof' } });
     expect(screen.getByTestId('materiaal-modal-opslaan')).not.toBeDisabled();
     fireEvent.click(screen.getByTestId('materiaal-modal-opslaan'));
     await waitFor(() => expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ materiaaldikte: 0 })));
+  });
+
+  it('disables opslaan while prijs per m2 is empty', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('materialen-add'));
+    fireEvent.change(screen.getByTestId('materiaal-modal-dikte'), { target: { value: '4' } });
+    fireEvent.change(screen.getByTestId('materiaal-modal-omschrijving'), { target: { value: 'Stof' } });
+    expect(screen.getByTestId('materiaal-modal-opslaan')).toBeDisabled();
+  });
+
+  it('disables opslaan when prijs per m2 is 0 or negative', () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('materialen-add'));
+    fireEvent.change(screen.getByTestId('materiaal-modal-dikte'), { target: { value: '4' } });
+    fireEvent.change(screen.getByTestId('materiaal-modal-omschrijving'), { target: { value: 'Stof' } });
+    fireEvent.change(screen.getByTestId('materiaal-modal-prijs-per-m2'), { target: { value: '0' } });
+    expect(screen.getByTestId('materiaal-modal-opslaan')).toBeDisabled();
+    fireEvent.change(screen.getByTestId('materiaal-modal-prijs-per-m2'), { target: { value: '-5' } });
+    expect(screen.getByTestId('materiaal-modal-opslaan')).toBeDisabled();
   });
 
   it('deletes a materiaal', async () => {
@@ -195,6 +222,7 @@ describe('MaterialenSection', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('materialen-add'));
     fireEvent.change(screen.getByTestId('materiaal-modal-dikte'), { target: { value: '5' } });
+    fireEvent.change(screen.getByTestId('materiaal-modal-prijs-per-m2'), { target: { value: '50' } });
     fireEvent.change(screen.getByTestId('materiaal-modal-omschrijving'), { target: { value: 'Nieuw' } });
     fireEvent.click(screen.getByTestId('materiaal-modal-opslaan'));
     await waitFor(() =>
