@@ -1270,7 +1270,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
 
     expect(screen.getByTestId('kunstwerk-modal-code-bevestiging')).toHaveTextContent(
-      'Kunstwerkcodes volgen meestal het formaat AAA-BBB-00001'
+      'Kunstwerkcodes volgen meestal het formaat AAA-BBB-0001'
     );
     expect(screen.getByTestId('kunstwerk-modal-code-bevestigen')).toHaveTextContent('Toch opslaan');
     expect(onAdd).not.toHaveBeenCalled();
@@ -1310,7 +1310,7 @@ describe('KunstwerkenSection', () => {
 
     const popup = screen.getByTestId('kunstwerk-modal-code-bevestiging');
     expect(popup).toHaveTextContent('Als er al een masterbestand is, dan moet dit ook aangepast worden!');
-    expect(popup).toHaveTextContent('Kunstwerkcodes volgen meestal het formaat AAA-BBB-00001');
+    expect(popup).toHaveTextContent('Kunstwerkcodes volgen meestal het formaat AAA-BBB-0001');
     expect(screen.getByTestId('kunstwerk-modal-code-bevestigen')).toHaveTextContent('Code wijzigen');
 
     fireEvent.click(screen.getByTestId('kunstwerk-modal-code-bevestigen'));
@@ -1368,5 +1368,38 @@ describe('KunstwerkenSection', () => {
     fireEvent.change(screen.getByTestId('kunstwerk-modal-prefix'), { target: { value: 'GLA-AFR' } });
     fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'GLA-AFR-eigen' } });
     expect(screen.getByTestId('kunstwerk-modal-code')).toHaveValue('GLA-AFR-eigen');
+  });
+
+  describe('opsomming waarom opslaan nog niet kan', () => {
+    it('noemt elk ontbrekend veld bij een leeg nieuw kunstwerk', () => {
+      renderSection();
+      fireEvent.click(screen.getByTestId('kunstwerken-add'));
+
+      const blok = screen.getByTestId('kunstwerk-modal-ontbrekend');
+      expect(blok).toHaveTextContent('Foto ontbreekt');
+      expect(blok).toHaveTextContent('Code ontbreekt');
+      expect(blok).toHaveTextContent('Formaat niet gekozen');
+      expect(blok).toHaveTextContent('Kunstenaar niet gekozen');
+      expect(blok).toHaveTextContent('Nederlandse omschrijving ontbreekt');
+    });
+
+    it('laat een reden verdwijnen zodra het veld ingevuld is', () => {
+      renderSection();
+      fireEvent.click(screen.getByTestId('kunstwerken-add'));
+      expect(screen.getByTestId('kunstwerk-modal-ontbrekend')).toHaveTextContent('Code ontbreekt');
+
+      fireEvent.change(screen.getByTestId('kunstwerk-modal-code'), { target: { value: 'GLA-JAC-0001' } });
+
+      expect(screen.getByTestId('kunstwerk-modal-ontbrekend')).not.toHaveTextContent('Code ontbreekt');
+      expect(screen.getByTestId('kunstwerk-modal-ontbrekend')).toHaveTextContent('Foto ontbreekt');
+    });
+
+    it('toont geen opsomming bij een bestaand, compleet kunstwerk', () => {
+      renderSection();
+      fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+
+      expect(screen.queryByTestId('kunstwerk-modal-ontbrekend')).toBeNull();
+      expect(screen.getByTestId('kunstwerk-modal-opslaan')).not.toBeDisabled();
+    });
   });
 });

@@ -514,16 +514,23 @@ export function KunstwerkenSection({
   const isNieuwKunstwerk = modalState?.mode === 'add';
   const kunstenaarHeeftFout = isNieuwKunstwerk && !kunstenaarnr;
   const algemeenHeeftFout = !foto || !code.trim() || formaat === null || kunstenaarHeeftFout;
-  const matenHeeftFout = isMateriaalloos && (!prijsPerM2 || Number(prijsPerM2) <= 0);
+  const prijsPerM2HeeftFout = isMateriaalloos && (!prijsPerM2 || Number(prijsPerM2) <= 0);
+  const matenHeeftFout = prijsPerM2HeeftFout;
   const omschrijvingenHeeftFout = !omschrijvingNl;
-  const opslaanDisabled =
-    !foto ||
-    formaat === null ||
-    uploading ||
-    !code.trim() ||
-    kunstenaarHeeftFout ||
-    (isMateriaalloos && (!prijsPerM2 || Number(prijsPerM2) <= 0)) ||
-    !omschrijvingNl;
+
+  // Eén lijst die zowel de knop uitschakelt als vertelt waarom. Ze uit elkaar houden was
+  // precies het probleem: de knop werd grijs zonder dat ergens stond wat eraan mankeerde,
+  // en wie op een ander tabblad stond zag alleen een rood bolletje.
+  const redenenGeenOpslaan: string[] = [];
+  if (uploading) redenenGeenOpslaan.push(t('kunstwerkenOntbreektUploadBezig'));
+  if (!foto) redenenGeenOpslaan.push(t('kunstwerkenOntbreektFoto'));
+  if (!code.trim()) redenenGeenOpslaan.push(t('kunstwerkenOntbreektCode'));
+  if (formaat === null) redenenGeenOpslaan.push(t('kunstwerkenOntbreektFormaat'));
+  if (kunstenaarHeeftFout) redenenGeenOpslaan.push(t('kunstwerkenOntbreektKunstenaar'));
+  if (prijsPerM2HeeftFout) redenenGeenOpslaan.push(t('kunstwerkenOntbreektPrijsPerM2'));
+  if (!omschrijvingNl) redenenGeenOpslaan.push(t('kunstwerkenOntbreektOmschrijvingNl'));
+
+  const opslaanDisabled = redenenGeenOpslaan.length > 0;
 
   const pendingCodeIsGewijzigd =
     pendingCodeBevestiging !== null &&
@@ -1266,6 +1273,17 @@ export function KunstwerkenSection({
               </div>
 
               <RequiredLegend testId="kunstwerk-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
+
+              {redenenGeenOpslaan.length > 0 && (
+                <div data-testid="kunstwerk-modal-ontbrekend" className="text-xs text-amber-300/90">
+                  <p className="font-semibold">{t('kunstwerkenOpslaanKanNiet')}</p>
+                  <ul className="mt-1 list-disc pl-4">
+                    {redenenGeenOpslaan.map((reden) => (
+                      <li key={reden}>{reden}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {(actionError || mutationFailed) && (
                 <p data-testid="kunstwerk-modal-error" className="text-xs text-red-400">
