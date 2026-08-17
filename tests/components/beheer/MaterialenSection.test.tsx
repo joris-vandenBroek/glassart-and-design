@@ -35,6 +35,19 @@ const SOORTEN: Materiaalsoort[] = [
   { id: 'soort-2', omschrijvingNl: 'Acryl', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 
+// Basisfixture voor de actief-tests: elke test overschrijft alleen wat hij nodig heeft.
+const MATERIAAL: Materiaal = {
+  id: 'mat-basis',
+  materiaalsoortId: 'soort-1',
+  materiaaldikte: 4,
+  prijsPerM2: 65,
+  omschrijvingNl: 'Basis',
+  omschrijvingFr: '',
+  omschrijvingDe: '',
+  omschrijvingEn: '',
+  actief: true,
+};
+
 const MATERIALEN: Materiaal[] = [
   {
     id: 'mat-1',
@@ -58,25 +71,42 @@ const MATERIALEN: Materiaal[] = [
   },
 ];
 
-function renderSection(overrides: Partial<React.ComponentProps<typeof MaterialenSection>> = {}) {
-  const onAdd = vi.fn().mockResolvedValue(true);
-  const onUpdate = vi.fn().mockResolvedValue(true);
-  const onRemove = vi.fn().mockResolvedValue(true);
-  render(
+type SectionProps = React.ComponentProps<typeof MaterialenSection>;
+
+function sectionTree(overrides: Partial<SectionProps>) {
+  return (
     <NextIntlClientProvider locale="nl" messages={messages}>
       <MaterialenSection
         materialen={MATERIALEN}
         materiaalsoorten={SOORTEN}
         kunstwerken={KUNSTWERKEN}
         loadError={null}
-        onAdd={onAdd}
-        onUpdate={onUpdate}
-        onRemove={onRemove}
+        actionErrorCode={null}
+        onAdd={vi.fn().mockResolvedValue(true)}
+        onUpdate={vi.fn().mockResolvedValue(true)}
+        onRemove={vi.fn().mockResolvedValue(true)}
+        onKunstwerkenChanged={() => {}}
         {...overrides}
       />
     </NextIntlClientProvider>
   );
-  return { onAdd, onUpdate, onRemove };
+}
+
+function renderSection(overrides: Partial<SectionProps> = {}) {
+  const onAdd = overrides.onAdd ?? vi.fn().mockResolvedValue(true);
+  const onUpdate = overrides.onUpdate ?? vi.fn().mockResolvedValue(true);
+  const onRemove = overrides.onRemove ?? vi.fn().mockResolvedValue(true);
+  const { rerender } = render(sectionTree({ ...overrides, onAdd, onUpdate, onRemove }));
+  return { onAdd, onUpdate, onRemove, rerender };
+}
+
+// Rendert dezelfde providerboom opnieuw met nieuwe props; nodig om de verversing van de
+// materialenlijst na te bootsen die useApiCollection in het echt doet.
+function rerenderSection(
+  rerender: ReturnType<typeof render>['rerender'],
+  overrides: Partial<SectionProps> = {}
+) {
+  rerender(sectionTree(overrides));
 }
 
 describe('MaterialenSection', () => {
@@ -127,6 +157,7 @@ describe('MaterialenSection', () => {
         omschrijvingFr: '',
         omschrijvingDe: '',
         omschrijvingEn: '',
+        actief: true,
       })
     );
   });
@@ -149,6 +180,7 @@ describe('MaterialenSection', () => {
         omschrijvingFr: '',
         omschrijvingDe: '',
         omschrijvingEn: '',
+        actief: true,
       })
     );
   });
@@ -279,5 +311,102 @@ describe('MaterialenSection', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('materialen-add'));
     expect(screen.getByTestId('materiaal-modal-verplicht-legende')).toHaveTextContent('* verplicht veld');
+  });
+
+  it('toont de actief-kolom', () => {
+    renderSection({
+      materialen: [
+        { ...MATERIAAL, id: 'mat-a', omschrijvingNl: 'Glas', actief: true },
+        { ...MATERIAAL, id: 'mat-b', omschrijvingNl: 'Acryl', actief: false },
+      ],
+    });
+    expect(screen.getByText('Glas').closest('tr')).toHaveTextContent('Ja');
+    expect(screen.getByText('Acryl').closest('tr')).toHaveTextContent('Nee');
+  });
+
+  it('toont de blokkademelding bij foutcode in-use-open-bestelling', async () => {
+    const onUpdate = vi.fn().mockResolvedValue(false);
+    renderSection({
+      materialen: [{ ...MATERIAAL, id: 'mat-a', omschrijvingNl: 'Glas', actief: true }],
+      onUpdate,
+      actionErrorCode: 'in-use-open-bestelling',
+    });
+    fireEvent.click(screen.getByText('Glas'));
+    fireEvent.click(screen.getByTestId('materiaal-modal-actief'));
+    fireEvent.click(screen.getByTestId('materiaal-modal-opslaan'));
+    expect(
+      await screen.findByText(
+        'Dit materiaal kan niet op inactief gezet worden zolang er openstaande bestellingen met dit materiaal zijn.'
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('vraagt bij activeren of alle kunstwerken gekoppeld moeten worden', async () => {
+    const onUpdate = vi.fn().mockResolvedValue(true);
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ gekoppeld: 3 }) });
+    vi.stubGlobal('fetch', fetchMock);
+    renderSection({
+      materialen: [{ ...MATERIAAL, id: 'mat-a', omschrijvingNl: 'Glas', actief: false }],
+      onUpdate,
+    });
+    fireEvent.click(screen.getByText('Glas'));
+    fireEvent.click(screen.getByTestId('materiaal-modal-actief'));
+    fireEvent.click(screen.getByTestId('materiaal-modal-opslaan'));
+
+    expect(await screen.findByTestId('materialen-activeren-dialog')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('materialen-activeren-alle'));
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith('/api/materialen/mat-a/koppel-kunstwerken', { method: 'POST' })
+    );
+    vi.unstubAllGlobals();
+  });
+
+  it('koppelt niets als de beheerder "alleen activeren" kiest', async () => {
+    const onUpdate = vi.fn().mockResolvedValue(true);
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    renderSection({
+      materialen: [{ ...MATERIAAL, id: 'mat-a', omschrijvingNl: 'Glas', actief: false }],
+      onUpdate,
+    });
+    fireEvent.click(screen.getByText('Glas'));
+    fireEvent.click(screen.getByTestId('materiaal-modal-actief'));
+    fireEvent.click(screen.getByTestId('materiaal-modal-opslaan'));
+
+    fireEvent.click(await screen.findByTestId('materialen-activeren-alleen'));
+    expect(fetchMock).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('vraagt de koppeling ook bij een nieuw actief materiaal', async () => {
+    // onAdd geeft geen id terug; de dialoog verschijnt pas als het materiaal in de
+    // ververste lijst opduikt. Die verversing bootsen we na met een rerender.
+    const onAdd = vi.fn().mockResolvedValue(true);
+    const { rerender } = renderSection({ materialen: [], onAdd });
+    fireEvent.click(screen.getByTestId('materialen-add'));
+    fireEvent.change(screen.getByTestId('materiaal-modal-dikte'), { target: { value: '6' } });
+    fireEvent.change(screen.getByTestId('materiaal-modal-prijs-per-m2'), { target: { value: '100' } });
+    fireEvent.change(screen.getByTestId('materiaal-modal-omschrijving'), { target: { value: 'Nieuw glas' } });
+    fireEvent.click(screen.getByTestId('materiaal-modal-opslaan'));
+    await waitFor(() => expect(onAdd).toHaveBeenCalled());
+
+    rerenderSection(rerender, {
+      materialen: [{ ...MATERIAAL, id: 'mat-nieuw', omschrijvingNl: 'Nieuw glas', materiaaldikte: 6, actief: true }],
+      onAdd,
+    });
+    expect(await screen.findByTestId('materialen-activeren-dialog')).toBeInTheDocument();
+  });
+
+  it('vraagt niets bij het deactiveren van een materiaal', async () => {
+    const onUpdate = vi.fn().mockResolvedValue(true);
+    renderSection({
+      materialen: [{ ...MATERIAAL, id: 'mat-a', omschrijvingNl: 'Glas', actief: true }],
+      onUpdate,
+    });
+    fireEvent.click(screen.getByText('Glas'));
+    fireEvent.click(screen.getByTestId('materiaal-modal-actief'));
+    fireEvent.click(screen.getByTestId('materiaal-modal-opslaan'));
+    await waitFor(() => expect(onUpdate).toHaveBeenCalled());
+    expect(screen.queryByTestId('materialen-activeren-dialog')).not.toBeInTheDocument();
   });
 });

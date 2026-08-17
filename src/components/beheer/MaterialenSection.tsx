@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
@@ -8,16 +8,21 @@ import { HelpLink } from '@/components/HelpLink';
 import { RequiredMark, RequiredLegend } from '@/components/RequiredFieldHint';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit } from '@/lib/logActiviteit';
-import type { Materiaal, Materiaalsoort, Kunstwerk } from './materiaalTypes';
+import { isMateriaalActief, type Materiaal, type Materiaalsoort, type Kunstwerk } from './materiaalTypes';
 
 interface MaterialenSectionProps {
   materialen: Materiaal[] | null;
   materiaalsoorten: Materiaalsoort[] | null;
   kunstwerken: Kunstwerk[] | null;
   loadError: string | null;
+  // De foutcode uit useApiCollection's lastMutationErrorCode, zodat een geblokkeerde
+  // deactivering een eigen melding krijgt in plaats van de generieke actiefout.
+  actionErrorCode: string | null;
   onAdd: (data: Omit<Materiaal, 'id'>) => Promise<boolean>;
   onUpdate: (id: string, data: Omit<Materiaal, 'id'>) => Promise<boolean>;
   onRemove: (id: string) => Promise<boolean>;
+  // Na het bulk-koppelen kloppen de materiaalIds van elk kunstwerk niet meer.
+  onKunstwerkenChanged: () => void;
 }
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; materiaal: Materiaal } | null;
@@ -28,9 +33,11 @@ export function MaterialenSection({
   materiaalsoorten,
   kunstwerken,
   loadError,
+  actionErrorCode,
   onAdd,
   onUpdate,
   onRemove,
+  onKunstwerkenChanged,
 }: MaterialenSectionProps) {
   const t = useTranslations('beheer');
   const { user } = useAdminAuth();
@@ -42,13 +49,44 @@ export function MaterialenSection({
   const [omschrijvingFr, setOmschrijvingFr] = useState('');
   const [omschrijvingDe, setOmschrijvingDe] = useState('');
   const [omschrijvingEn, setOmschrijvingEn] = useState('');
+  const [actief, setActief] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
+  // Zet aan zodra een add/update van de server false teruggeeft. De getoonde tekst wordt
+  // bij elke render opnieuw berekend uit `actionErrorCode` (zie mutatieFoutmelding) in
+  // plaats van eenmalig na de await: `actionErrorCode` komt uit React-state een render
+  // later binnen dan de boolean uit add/update, dus een closure die hem meteen na de
+  // await leest, ving nog de oude waarde. Zelfde patroon als KunstwerkenSection.
+  const [mutationFailed, setMutationFailed] = useState(false);
+  const [activerenVoorId, setActiverenVoorId] = useState<string | null>(null);
+  // Een net toegevoegd materiaal heeft nog geen id in dit component: onAdd geeft alleen
+  // slagen/falen terug. We onthouden waarop we het straks herkennen en pakken het id op
+  // zodra useApiCollection de lijst heeft ververst.
+  const [nieuwActiefMateriaal, setNieuwActiefMateriaal] = useState<{
+    materiaalsoortId: string;
+    materiaaldikte: number;
+    omschrijvingNl: string;
+  } | null>(null);
 
   const soortNameById = useMemo(() => {
     const map = new Map<string, string>();
     (materiaalsoorten ?? []).forEach((soort) => map.set(soort.id, soort.omschrijvingNl));
     return map;
   }, [materiaalsoorten]);
+
+  // Boven de vroege returns, anders draait de hook niet op elke render.
+  useEffect(() => {
+    if (!nieuwActiefMateriaal || !materialen) return;
+    const gevonden = materialen.find(
+      (materiaal) =>
+        materiaal.omschrijvingNl === nieuwActiefMateriaal.omschrijvingNl &&
+        materiaal.materiaalsoortId === nieuwActiefMateriaal.materiaalsoortId &&
+        Number(materiaal.materiaaldikte) === nieuwActiefMateriaal.materiaaldikte
+    );
+    if (gevonden) {
+      setActiverenVoorId(gevonden.id);
+      setNieuwActiefMateriaal(null);
+    }
+  }, [materialen, nieuwActiefMateriaal]);
 
   if (loadError) {
     return (
@@ -75,7 +113,9 @@ export function MaterialenSection({
     setOmschrijvingFr('');
     setOmschrijvingDe('');
     setOmschrijvingEn('');
+    setActief(true);
     setActionError(null);
+    setMutationFailed(false);
     setModalState({ mode: 'add' });
   }
 
@@ -87,7 +127,9 @@ export function MaterialenSection({
     setOmschrijvingFr(materiaal.omschrijvingFr ?? '');
     setOmschrijvingDe(materiaal.omschrijvingDe ?? '');
     setOmschrijvingEn(materiaal.omschrijvingEn ?? '');
+    setActief(isMateriaalActief(materiaal));
     setActionError(null);
+    setMutationFailed(false);
     setModalState({ mode: 'edit', materiaal });
   }
 
@@ -97,6 +139,9 @@ export function MaterialenSection({
 
   async function handleSave() {
     if (!modalState) return;
+    // Een nieuw materiaal telt als "was uit": ook daar is de vraag zinnig, want het is
+    // nog aan geen enkel kunstwerk gekoppeld.
+    const wasActief = modalState.mode === 'edit' ? isMateriaalActief(modalState.materiaal) : false;
     const data = {
       materiaalsoortId,
       materiaaldikte: Number(materiaaldikte),
@@ -105,18 +150,54 @@ export function MaterialenSection({
       omschrijvingFr,
       omschrijvingDe,
       omschrijvingEn,
+      actief,
     };
-    const success =
+    const geslaagd =
       modalState.mode === 'add' ? await onAdd(data) : await onUpdate(modalState.materiaal.id, data);
-    if (success) {
-      void logActiviteit(
-        modalState.mode === 'add' ? 'materiaal_toegevoegd' : 'materiaal_gewijzigd',
-        omschrijvingNl
-      );
-      closeModal();
+    if (!geslaagd) {
+      setActionError(null);
+      setMutationFailed(true);
+      return;
+    }
+    void logActiviteit(
+      modalState.mode === 'add' ? 'materiaal_toegevoegd' : 'materiaal_gewijzigd',
+      omschrijvingNl
+    );
+    const wordtGeactiveerd = actief && !wasActief;
+    const bewerktId = modalState.mode === 'edit' ? modalState.materiaal.id : null;
+    closeModal();
+    if (!wordtGeactiveerd) return;
+    if (bewerktId) {
+      setActiverenVoorId(bewerktId);
+    } else {
+      // Het id volgt zodra de lijst ververst is; zie het useEffect hierboven.
+      setNieuwActiefMateriaal({
+        materiaalsoortId,
+        materiaaldikte: Number(materiaaldikte),
+        omschrijvingNl,
+      });
+    }
+  }
+
+  async function koppelAlleKunstwerken() {
+    if (!activerenVoorId) return;
+    const response = await fetch(`/api/materialen/${activerenVoorId}/koppel-kunstwerken`, {
+      method: 'POST',
+    });
+    setActiverenVoorId(null);
+    if (response.ok) {
+      onKunstwerkenChanged();
     } else {
       setActionError(t('materialenActionError'));
     }
+  }
+
+  // Vertaalt de servercode van de laatste mislukte mutatie naar de bijpassende
+  // beheertekst. Berekend bij elke render (niet eenmalig na de mutatie) zodat de juiste
+  // tekst verschijnt zodra `actionErrorCode` binnenkomt.
+  function mutatieFoutmelding(): string {
+    if (actionErrorCode === 'in-use-open-bestelling') return t('materialenDeactiverenGeblokkeerd');
+    return t('materialenActionError');
   }
 
   async function handleRemove() {
@@ -141,6 +222,7 @@ export function MaterialenSection({
     { key: 'materiaalsoortNaam', label: t('materialenColMateriaalsoort') },
     { key: 'materiaaldikte', label: t('materialenColDikte') },
     { key: 'omschrijvingNl', label: t('materialenColOmschrijving') },
+    { key: 'actief', label: t('materialenColActief'), render: (row) => (isMateriaalActief(row) ? 'Ja' : 'Nee') },
   ];
 
   return (
@@ -290,14 +372,54 @@ export function MaterialenSection({
             />
           </label>
 
+          <label className="flex items-center gap-2 text-xs uppercase tracking-wide text-white/60">
+            <input
+              type="checkbox"
+              checked={actief}
+              onChange={(event) => setActief(event.target.checked)}
+              data-testid="materiaal-modal-actief"
+            />
+            {t('materialenLabelActief')}
+          </label>
+
           <RequiredLegend testId="materiaal-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
 
-          {actionError && (
+          {(actionError !== null || mutationFailed) && (
             <p data-testid="materiaal-modal-error" className="text-xs text-red-400">
-              {actionError}
+              {actionError ?? mutatieFoutmelding()}
             </p>
           )}
         </div>
+      </Modal>
+      <Modal
+        isOpen={activerenVoorId !== null}
+        onClose={() => setActiverenVoorId(null)}
+        closeLabel={t('modalClose')}
+        title={t('materialenActiverenTitel')}
+        footerActions={
+          <>
+            <button
+              type="button"
+              onClick={koppelAlleKunstwerken}
+              data-testid="materialen-activeren-alle"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+            >
+              {t('materialenActiverenAlleKunstwerken')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiverenVoorId(null)}
+              data-testid="materialen-activeren-alleen"
+              className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+            >
+              {t('materialenActiverenAlleenVlag')}
+            </button>
+          </>
+        }
+      >
+        <p data-testid="materialen-activeren-dialog" className="text-sm text-white/80">
+          {t('materialenActiverenVraag')}
+        </p>
       </Modal>
     </div>
   );

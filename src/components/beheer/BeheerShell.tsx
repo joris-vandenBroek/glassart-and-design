@@ -360,9 +360,11 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
               materiaalsoorten={materiaalsoorten.items}
               kunstwerken={kunstwerken.items}
               loadError={materialen.error === 'load' ? t('materialenLoadError') : null}
+              actionErrorCode={materialen.lastMutationErrorCode}
               onAdd={materialen.add}
               onUpdate={materialen.update}
               onRemove={materialen.remove}
+              onKunstwerkenChanged={() => void kunstwerken.refetch()}
             />
           ) : activeSection === 'maten' ? (
             <MatenSection
