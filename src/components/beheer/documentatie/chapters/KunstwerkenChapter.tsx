@@ -6,8 +6,8 @@ export function KunstwerkenChapter() {
       <P>Elk product dat een klant kan bestellen, is een &quot;kunstwerk&quot; in beheer.</P>
       <Screenshot
         src="/documentatie/kunstwerken.png"
-        alt="Het kunstwerk-formulier, tabblad Algemeen, van kunstwerk GLA-ANI-018 (&quot;Cheetah Gala&quot;) van kunstenaar Glassart&amp;Design, met foto, code, kunstenaar en formaat, met live voorbeeld van de collectiepagina ernaast met artiest, code, collectie, stijl, categorie, materiaal, maat, prijs en aantal"
-        caption="Het kunstwerk-formulier, tabblad Algemeen (hier: kunstwerk GLA-ANI-018, &quot;Cheetah Gala&quot;)"
+        alt="Het kunstwerk-formulier, tabblad Algemeen, van kunstwerk GLA-ANI-0018 (&quot;Cheetah Gala&quot;) van kunstenaar Glassart&amp;Design, met foto, code, kunstenaar en formaat, met live voorbeeld van de collectiepagina ernaast met artiest, code, collectie, stijl, categorie, materiaal, maat, prijs en aantal"
+        caption="Het kunstwerk-formulier, tabblad Algemeen (hier: kunstwerk GLA-ANI-0018, &quot;Cheetah Gala&quot;)"
       />
       <SubSection id="kunstwerken-foto" title="Foto">
         <P>Upload een foto van het kunstwerk. Die mag maximaal 8 MB groot zijn.</P>
@@ -16,7 +16,7 @@ export function KunstwerkenChapter() {
         <P>
           Elk kunstwerk krijgt een unieke code — het artikelnummer waar ook de drukker mee werkt (die heeft
           het originele bestand onder diezelfde code). Een code bestaat uit een prefix en een volgnummer,
-          bijvoorbeeld GLA-JAC-00001 voor een kunstwerk van kunstenaar Jack, of GLA-AFR-00007 voor een
+          bijvoorbeeld GLA-JAC-0001 voor een kunstwerk van kunstenaar Jack, of GLA-AFR-0007 voor een
           kunstwerk uit de collectie &quot;Afrika&quot;. Kies je een prefix die al bestaat, dan stelt
           beheer automatisch het eerstvolgende nummer voor.
         </P>
@@ -28,13 +28,13 @@ export function KunstwerkenChapter() {
           />
           <Screenshot
             src="/documentatie/kunstwerken-code-na.png"
-            alt="Het veld Prefix met GLA-JAC gekozen, en de code GLA-JAC-00001 automatisch voorgesteld"
-            caption="2. Prefix &quot;GLA-JAC&quot; gekozen — de code GLA-JAC-00001 wordt automatisch voorgesteld"
+            alt="Het veld Prefix met GLA-JAC gekozen, en de code GLA-JAC-0001 automatisch voorgesteld"
+            caption="2. Prefix &quot;GLA-JAC&quot; gekozen — de code GLA-JAC-0001 wordt automatisch voorgesteld"
           />
         </div>
         <P>
           Wijkt de code die je intypt af van dit formaat (drie letters, streepje, drie
-          letters, streepje, vijf cijfers) — bijvoorbeeld omdat het product geen los
+          letters, streepje, vier cijfers) — bijvoorbeeld omdat het product geen los
           artikelnummer heeft, zoals &quot;Akoestische stof&quot; — dan vraagt beheer bij het
           opslaan om een bevestiging. Je kunt gewoon doorgaan; het is alleen een controle
           tegen typefouten, geen harde eis.
@@ -85,6 +85,21 @@ export function KunstwerkenChapter() {
           Rechts in het scherm zie je meteen een live voorbeeld van hoe het kunstwerk er op de website
           uitziet, met de prijs die een klant op dat moment zou zien — inclusief eventuele
           kunstenaarsopslag en prijsgroep. Zo controleer je meteen of alles klopt voordat je opslaat.
+        </P>
+      </SubSection>
+      <SubSection id="kunstwerken-opslaan" title="Als opslaan niet lukt">
+        <P>
+          De knop Opslaan blijft grijs zolang er nog iets verplichts ontbreekt. Wat er precies
+          ontbreekt staat er dan bij, boven de knop, met het tabblad erachter waar dat veld te
+          vinden is — bijvoorbeeld &quot;Foto ontbreekt (tabblad Algemeen)&quot;. Zodra je het
+          invult verdwijnt die regel; is de lijst leeg, dan kun je opslaan.
+        </P>
+        <P>
+          Gaat het bij het opslaan zelf mis, dan verschijnt er een melding met de reden: de code
+          bestaat al, de code ligt vast omdat er al besteld is, het kunstwerk is intussen door
+          iemand anders verwijderd, of je sessie is verlopen. Staat er een melding met een
+          foutcode tussen haakjes, geef die code dan door — daarmee is na te zoeken wat er
+          gebeurd is.
         </P>
       </SubSection>
     </Chapter>

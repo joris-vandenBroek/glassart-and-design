@@ -62,8 +62,8 @@ const VOORBEELDMAIL_SECTIES: VoorbeeldSectie[] = [
       {
         nr: 'B-2026-0301',
         regels: [
-          { naam: 'GLA-JAC-00007', materiaal: '6mm Glas — Blank helder', maat: '60×90 cm (Staand)', aantal: 2 },
-          { naam: 'GLA-JAC-00012', materiaal: '6mm Glas — Blank helder', maat: '40×40 cm', aantal: 1 },
+          { naam: 'GLA-JAC-0007', materiaal: '6mm Glas — Blank helder', maat: '60×90 cm (Staand)', aantal: 2 },
+          { naam: 'GLA-JAC-0012', materiaal: '6mm Glas — Blank helder', maat: '40×40 cm', aantal: 1 },
         ],
       },
     ],
@@ -75,13 +75,13 @@ const VOORBEELDMAIL_SECTIES: VoorbeeldSectie[] = [
       {
         nr: 'B-2026-0304',
         regels: [
-          { naam: 'GLA-JAC-00007', materiaal: '6mm Glas — Blank helder', maat: '90×60 cm (Liggend)', aantal: 4 },
-          { naam: 'GLA-JAC-00019', materiaal: '8mm Acryl — Mat wit', maat: '120×80 cm (Liggend)', aantal: 1 },
+          { naam: 'GLA-JAC-0007', materiaal: '6mm Glas — Blank helder', maat: '90×60 cm (Liggend)', aantal: 4 },
+          { naam: 'GLA-JAC-0019', materiaal: '8mm Acryl — Mat wit', maat: '120×80 cm (Liggend)', aantal: 1 },
         ],
       },
       {
         nr: 'B-2026-0305',
-        regels: [{ naam: 'GLA-JAC-00012', materiaal: '6mm Glas — Blank helder', maat: '40×40 cm', aantal: 3 }],
+        regels: [{ naam: 'GLA-JAC-0012', materiaal: '6mm Glas — Blank helder', maat: '40×40 cm', aantal: 3 }],
       },
     ],
   },
@@ -92,8 +92,8 @@ const VOORBEELDMAIL_SECTIES: VoorbeeldSectie[] = [
       {
         nr: 'B-2026-0309',
         regels: [
-          { naam: 'GLA-JAC-00019', materiaal: '8mm Acryl — Mat wit', maat: '120×80 cm (Liggend)', aantal: 2 },
-          { naam: 'GLA-JAC-00007', materiaal: '6mm Glas — Blank helder', maat: '60×90 cm (Staand)', aantal: 1 },
+          { naam: 'GLA-JAC-0019', materiaal: '8mm Acryl — Mat wit', maat: '120×80 cm (Liggend)', aantal: 2 },
+          { naam: 'GLA-JAC-0007', materiaal: '6mm Glas — Blank helder', maat: '60×90 cm (Staand)', aantal: 1 },
         ],
       },
     ],
