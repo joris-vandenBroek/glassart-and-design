@@ -19,6 +19,16 @@ export interface Materiaal {
   omschrijvingFr: string;
   omschrijvingDe: string;
   omschrijvingEn: string;
+  actief?: boolean;
+}
+
+/**
+ * `mysql2` geeft een BOOLEAN-kolom terug als 0/1, dus nooit `=== true` vergelijken.
+ * Een ontbrekende waarde telt als actief: de kolom is NOT NULL DEFAULT TRUE, dus dat
+ * kan alleen bij een testfixture van vóór deze vlag.
+ */
+export function isMateriaalActief(materiaal: Pick<Materiaal, 'actief'>): boolean {
+  return materiaal.actief === undefined ? true : Boolean(materiaal.actief);
 }
 
 export interface Maat {
