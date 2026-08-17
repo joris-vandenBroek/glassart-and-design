@@ -282,14 +282,18 @@ van het materialen-scherm opnieuw maken (het scherm krijgt een zichtbare kolom e
 3. Na akkoord: toestemming vragen, migratie op productie, promoten, en daar dezelfde vier materialen
    deactiveren. Productie is nog leeg (geen kunstwerken, geen bestellingen), dus daar blokkeert niets.
 
-## Samenhang met het openstaande plan van 2026-08-14
+## Samenhang met eerder werk (bijgewerkt 2026-08-17)
 
-`docs/superpowers/plans/2026-08-14-materialen-maten-select-all-en-prijs-verplaatsing.md` is nog niet
-uitgevoerd en voegt óók een kolom toe aan `materialen` (`prijsPerM2`) plus een veld in
-`MaterialenSection.tsx`, en een select-all-toggle in `KunstwerkenSection.tsx`. Losse migraties botsen
-niet, maar beide plannen raken dezelfde drie bestanden. Voer ze achter elkaar uit, niet door elkaar.
-Wordt dit plan als eerste uitgevoerd, dan moet het andere plan er rekening mee houden dat `materialen`
-inmiddels een eigen API-route heeft en dat "Alles selecteren" ook inactieve materialen meeneemt.
+Twee dingen die tijdens het opstellen van dit ontwerp nog openstonden, zijn inmiddels gemerged en
+zitten in de code waar dit plan op voortbouwt:
+
+- `docs/superpowers/plans/2026-08-14-materialen-maten-select-all-en-prijs-verplaatsing.md`:
+  `materialen.prijsPerM2` bestaat, `MaterialenSection` heeft een verplicht "Prijs per m²"-veld, en
+  `KunstwerkenSection` heeft een "Alles selecteren"-toggle bij Materialen en Maten. Die toggle blijft
+  bewust op *alle* materialen werken, ook de inactieve — anders zou hij bestaande koppelingen wissen.
+- De rename van `onderwerpen` naar `categorieen` (`db/migrations/2026-08-17-onderwerpen-naar-categorieen.sql`).
+  Raakt dit ontwerp niet inhoudelijk, maar wel de namen in `ProductsGrid` (`matchesCategorie`) en
+  `ProductModal` (`categorieLabels`).
 
 ## Wat dit bewust niet doet
 

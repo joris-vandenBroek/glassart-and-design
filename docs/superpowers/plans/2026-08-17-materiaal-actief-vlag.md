@@ -27,9 +27,9 @@
 
 **Files:**
 - Create: `db/migrations/2026-08-17-materiaal-actief.sql`
-- Modify: `db/schema.sql` (tabel `materialen`, regel 95-104)
-- Modify: `src/lib/server/tableColumns.ts:62-71`
-- Modify: `src/components/beheer/materiaalTypes.ts:13-21`
+- Modify: `db/schema.sql` (tabel `materialen`)
+- Modify: `src/lib/server/tableColumns.ts` (de `materialen`-array)
+- Modify: `src/components/beheer/materiaalTypes.ts` (de `Materiaal`-interface)
 - Test: `tests/lib/materiaalTypes.test.ts`
 
 **Interfaces:**
@@ -144,8 +144,8 @@ Verhuist `materialen` van de generieke `[resource]`-route naar eigen routebestan
 **Files:**
 - Create: `src/app/api/materialen/route.ts`
 - Create: `src/app/api/materialen/[id]/route.ts`
-- Modify: `src/lib/server/lookupResources.ts:14` (regel `materialen` weghalen)
-- Modify: `src/app/api/[resource]/[id]/route.ts:8-11` (`materialen` uit `BESTELLING_REFERENCE_COLUMN`)
+- Modify: `src/lib/server/lookupResources.ts` (regel `materialen` weghalen)
+- Modify: `src/app/api/[resource]/[id]/route.ts` (`materialen` uit `BESTELLING_REFERENCE_COLUMN`)
 - Modify: `tests/app/api/lookup-resources.test.ts`
 - Test: `tests/app/api/materialen.test.ts`
 
@@ -856,7 +856,7 @@ git commit -m "feat: endpoint om een materiaal aan alle kunstwerken te koppelen"
 
 **Files:**
 - Modify: `src/components/beheer/MaterialenSection.tsx`
-- Modify: `src/components/beheer/BeheerShell.tsx:358-366`
+- Modify: `src/components/beheer/BeheerShell.tsx` (het `<MaterialenSection ... />`-blok)
 - Modify: `messages/nl.json` (beheer-blok)
 - Test: `tests/components/beheer/MaterialenSection.test.tsx`
 
@@ -956,6 +956,7 @@ Voeg toe aan `tests/components/beheer/MaterialenSection.test.tsx`. Gebruik het r
     const { rerender } = renderSection({ materialen: [], onAdd });
     fireEvent.click(screen.getByTestId('materialen-add'));
     fireEvent.change(screen.getByTestId('materiaal-modal-dikte'), { target: { value: '6' } });
+    fireEvent.change(screen.getByTestId('materiaal-modal-prijs-per-m2'), { target: { value: '100' } });
     fireEvent.change(screen.getByTestId('materiaal-modal-omschrijving'), { target: { value: 'Nieuw glas' } });
     fireEvent.click(screen.getByTestId('materiaal-modal-opslaan'));
     await waitFor(() => expect(onAdd).toHaveBeenCalled());
@@ -1057,7 +1058,7 @@ Kolom erbij:
     { key: 'actief', label: t('materialenColActief'), render: (row) => (isMateriaalActief(row) ? 'Ja' : 'Nee') },
 ```
 
-Checkbox in de modal, na het laatste omschrijvingsveld:
+Checkbox in de modal, na het laatste omschrijvingsveld (het formulier heeft inmiddels ook een verplicht "Prijs per m²"-veld; laat dat ongemoeid):
 
 ```tsx
           <label className="flex items-center gap-2 text-xs uppercase tracking-wide text-white/60">
@@ -1084,6 +1085,7 @@ Checkbox in de modal, na het laatste omschrijvingsveld:
     const data = {
       materiaalsoortId,
       materiaaldikte: Number(materiaaldikte),
+      prijsPerM2: Number(prijsPerM2),
       omschrijvingNl,
       omschrijvingFr,
       omschrijvingDe,
@@ -1197,7 +1199,7 @@ git commit -m "feat: actief-veld in het materialenscherm met koppelvraag bij act
 ### Task 6: ProductModal — filteren en tekstweergave bij één materiaal
 
 **Files:**
-- Modify: `src/components/ProductModal.tsx:95-115` (default-keuze), `:143-145` (filter), `:395-418` (weergave)
+- Modify: `src/components/ProductModal.tsx` — het `useEffect` met `defaultMateriaalId` (~regel 95-105), `beschikbareMaterialen` (~regel 143), en het `{!isMateriaalloos && (...)}`-blok met de materiaal-`<select>` (~regel 396-419)
 - Test: `tests/components/ProductModal.test.tsx`
 
 **Interfaces:**
@@ -1337,7 +1339,7 @@ git commit -m "feat: ProductModal toont alleen actieve materialen, als tekst bij
 ### Task 7: ProductsGrid — onbestelbare kunstwerken verbergen
 
 **Files:**
-- Modify: `src/components/ProductsGrid.tsx:82-118`
+- Modify: `src/components/ProductsGrid.tsx` — naast de bestaande `matches*`-functies (`matchesSegment`/`matchesFormaat`/`matchesStijl`/`matchesCategorie`/`matchesAiGegenereerd`/`matchesKunstenaar`), plus `visibleKunstwerken` en de vijf `*CountBase`-filters
 - Test: `tests/components/ProductsGrid.test.tsx`
 
 **Interfaces:**
@@ -1424,8 +1426,8 @@ git commit -m "feat: verberg kunstwerken zonder actief materiaal in de collectie
 ### Task 8: BestellingModal en KunstwerkenSection
 
 **Files:**
-- Modify: `src/components/beheer/BestellingModal.tsx:772-774` (bestaande regel), `:1134-1136` (nieuwe regel)
-- Modify: `src/components/beheer/KunstwerkenSection.tsx:1110-1121`
+- Modify: `src/components/beheer/BestellingModal.tsx` — `kunstwerkMaterialen` (~regel 772), het optielabel in de bewerk-`<select>` (~regel 902) en `beschikbareMaterialen` voor de nieuwe regel (~regel 1134)
+- Modify: `src/components/beheer/KunstwerkenSection.tsx` — de `.map()` over `materialen` in de materialen-tab (~regel 1127-1138)
 - Test: `tests/components/beheer/BestellingModal.test.tsx`, `tests/components/beheer/KunstwerkenSection.test.tsx`
 
 **Interfaces:**
@@ -1495,7 +1497,7 @@ Expected: FAIL.
 
 Importeer `isMateriaalActief` uit `./materiaalTypes`.
 
-Nieuwe regel (regel 1134-1136):
+Nieuwe regel (~regel 1134):
 
 ```tsx
                       const beschikbareMaterialen = (materialen ?? []).filter(
@@ -1503,7 +1505,7 @@ Nieuwe regel (regel 1134-1136):
                       );
 ```
 
-Bestaande regel (regel 772-774) — de al gekozen waarde moet in de lijst blijven staan, anders zet het openen van een oude bestelling de keuze stil op leeg:
+Bestaande regel (~regel 772) — de al gekozen waarde moet in de lijst blijven staan, anders zet het openen van een oude bestelling de keuze stil op leeg:
 
 ```tsx
                 const kunstwerkMaterialen = kunstwerk
@@ -1515,7 +1517,7 @@ Bestaande regel (regel 772-774) — de al gekozen waarde moet in de lijst blijve
                   : [];
 ```
 
-En het optielabel in de bewerk-`<select>` (regel ~908):
+En het optielabel in de bewerk-`<select>` (~regel 902):
 
 ```tsx
                                 {kunstwerkMaterialen.map((m) => (
@@ -1529,7 +1531,7 @@ En het optielabel in de bewerk-`<select>` (regel ~908):
 
 - [ ] **Step 4: Pas KunstwerkenSection aan**
 
-Importeer `isMateriaalActief` uit `./materiaalTypes`. De lijst blijft ongefilterd — een verborgen materiaal zou uit de formulierstate vallen en bij opslaan stilzwijgend een bestaande koppeling wissen. Alleen het label verandert:
+Importeer `isMateriaalActief` uit `./materiaalTypes`. De lijst blijft ongefilterd — een verborgen materiaal zou uit de formulierstate vallen en bij opslaan stilzwijgend een bestaande koppeling wissen. Om dezelfde reden blijft `alleMateriaalIds` (de bron van de "Alles selecteren"-toggle) ongefilterd: "alles" betekent hier alle materialen, ook de inactieve. Alleen het label verandert:
 
 ```tsx
             {(materialen ?? []).map((materiaal) => (
