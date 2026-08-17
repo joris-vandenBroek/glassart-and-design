@@ -7,7 +7,6 @@ import { withApiErrorHandling } from '@/lib/server/apiRoute';
 
 const BESTELLING_REFERENCE_COLUMN: Record<string, string> = {
   maten: 'maatId',
-  materialen: 'materiaalId',
 };
 
 // Same "still in use" principle as BESTELLING_REFERENCE_COLUMN above, but against another
