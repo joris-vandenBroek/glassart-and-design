@@ -128,9 +128,11 @@ describe('import-kunstwerken-cli argumentvalidatie', () => {
 
 describe('import-kunstwerken-cli netwerkloze subcommando\'s', () => {
   it('volgende-code print de eerstvolgende code', () => {
+    // Vier cijfers, ook al is de bestaande code driecijferig: de breedte is vast en wordt
+    // niet meer van de bestaande codes overgenomen. Zie stelVolgendeCodeVoor.
     const result = runCli(['volgende-code', '--prefix', 'GLA-PRO', '--bestaande-codes-json', '["GLA-PRO-001"]']);
     expect(result.status).toBe(0);
-    expect(result.stdout.trim()).toBe('GLA-PRO-002');
+    expect(result.stdout.trim()).toBe('GLA-PRO-0002');
   });
 
   it('analyseer-foto print breedte, hoogte en formaat van een echt bestand', () => {
