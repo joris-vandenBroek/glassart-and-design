@@ -34,16 +34,20 @@ ander begrip en blijft ongewijzigd:
 
 Één migratie: `db/migrations/2026-08-17-onderwerpen-naar-categorieen.sql`
 
-1. `RENAME TABLE onderwerpen TO categorieen, kunstwerkOnderwerpen TO kunstwerkCategorieen`
-2. De foreign key op `kunstwerkCategorieen.onderwerpId` droppen, de kolom hernoemen naar
-   `categorieId`, en de foreign key opnieuw aanleggen naar `categorieen(id) ON DELETE CASCADE`.
-   Expliciet droppen en herbouwen, zodat MariaDB niet aan de oude kolomnaam blijft hangen.
+1. `RENAME TABLE onderwerpen TO categorieen` — de foreign key vanuit de koppeltabel volgt
+   automatisch mee.
+2. De koppeltabel opnieuw opbouwen: `CREATE TABLE kunstwerkCategorieen` met kolom
+   `categorieId`, de rijen overkopiëren uit `kunstwerkOnderwerpen`, en die tabel daarna
+   droppen. Niet kolom-hernoemen: `RENAME TABLE` laat de automatisch gegenereerde
+   foreign-keynaam op `onderwerpId` staan, en die naam moet niet gaan afwijken van wat een
+   verse installatie uit `db/schema.sql` oplevert. Overkopiëren is deterministisch en de
+   tabel is klein.
 3. `UPDATE activiteitenlog SET type = REPLACE(type, 'onderwerp_', 'categorie_')
    WHERE type LIKE 'onderwerp\_%'` — de historie gaat mee, zodat het log geen twee
    namen naast elkaar toont.
 
-`RENAME TABLE` behoudt alle rijen en alle ids; er wordt geen data gecopieerd. Op staging
-gaat het om 16 categorieën, 78 kunstwerkkoppelingen en 2 logregels.
+De ids van de categorieën zelf veranderen niet, en de koppelingen houden hun `volgorde`.
+Op staging gaat het om 16 categorieën, 78 kunstwerkkoppelingen en 2 logregels.
 
 `db/schema.sql` en `src/lib/server/tableColumns.ts` worden in dezelfde wijziging
 bijgewerkt — die twee moeten de echte schema-toestand spiegelen.
