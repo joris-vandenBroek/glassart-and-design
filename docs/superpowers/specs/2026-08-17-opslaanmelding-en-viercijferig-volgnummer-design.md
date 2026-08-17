@@ -138,8 +138,13 @@ toont. Daarom gaat die bestelling mee: BE-01554 wordt met haar bestelregels en
 statushistorie verwijderd. Dat is testdata en productie is leeg, dus er gaat geen echte
 klantbestelling verloren.
 
+Daar hangt nog één ding aan: BE-01554 is de énige bestelling in drukkerzending ZD-00090,
+de mail die op 08-08-2026 naar drukker DR-00004 ging. Die zending gaat mee weg, want een
+verzending zonder bestelling erin is geen bruikbaar historisch spoor meer.
+
 De migratie doet, in één transactie en in deze volgorde:
 
+0. Drukkerzending ZD-00090 verwijderen (de koppeltabel cascadeert mee).
 1. Bestelling BE-01554 verwijderen (statushistorie, bestelregels, header).
 2. Kunstenaar Marieke Hoffmann (`KU-00007`) en haar 16 kunstwerken verwijderen.
 3. `GLA-ABS-0028-00001` verwijderen.
