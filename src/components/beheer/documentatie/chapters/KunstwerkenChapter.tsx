@@ -67,10 +67,12 @@ export function KunstwerkenChapter() {
         </P>
         <P>
           Het formaat bepaalt welke maten je kunt aanvinken: bij Vierkant zijn alleen vierkante maten te
-          kiezen, bij Liggend en Staand alleen niet-vierkante maten, en bij Alle kun je alles kiezen.
+          kiezen, bij Liggend en Staand alleen niet-vierkante maten, en bij Alle kun je alles kiezen. Boven
+          de lijsten met materialen en maten staat een link &quot;Alles selecteren&quot; of &quot;Alles
+          deselecteren&quot; waarmee je in één klik alle beschikbare opties voor die lijst aan- of uitvinkt.
         </P>
         <P>
-          Vink geen enkel materiaal aan, dan verschijnt in plaats daarvan een veld &quot;prijs per
+          Vink je geen enkel materiaal aan, dan verschijnt in plaats daarvan een veld &quot;prijs per
           m²&quot; op dit scherm — dat gebruiken we voor producten zonder materiaal, zoals akoestische
           stof. Heb je wél een materiaal gekozen maar geen vaste maat (bijvoorbeeld voor een product
           waarbij de klant zelf zijn breedte en hoogte opgeeft), dan komt de prijs per m² niet van dit
