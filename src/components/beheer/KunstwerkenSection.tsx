@@ -12,7 +12,7 @@ import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit } from '@/lib/logActiviteit';
 import type { Kunstwerk, Segment, Materiaal, Materiaalsoort, Maat, KunstwerkFormaat, Stijl, Categorie } from './materiaalTypes';
-import { isVierkanteMaat } from './materiaalTypes';
+import { isVierkanteMaat, isMateriaalActief } from './materiaalTypes';
 import type { Kunstenaar } from './kunstenaarTypes';
 import { detectFormaatFromFile, detectFormaatFromImageUrl } from '@/lib/detectKunstwerkFormaat';
 import { stelVolgendeCodeVoor, vindBekendePrefixen } from '@/lib/kunstwerkCodeVoorstel';
@@ -1133,6 +1133,9 @@ export function KunstwerkenSection({
                   data-testid={`kunstwerk-modal-materiaal-${materiaal.id}`}
                 />
                 {materiaalLabel(materiaal)}
+                {!isMateriaalActief(materiaal) && (
+                  <span className="text-white/40">{t('materiaalInactiefSuffix')}</span>
+                )}
               </label>
             ))}
           </fieldset>
