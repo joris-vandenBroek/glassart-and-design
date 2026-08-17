@@ -607,7 +607,8 @@ describe('KunstwerkenSection', () => {
 
   it('does not show the "Prijs per m²" field when a materiaal is chosen but every maat is unchecked (price now lives on the materiaal)', async () => {
     uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
-    const { onAdd } = renderSection();
+    const onAdd = vi.fn().mockResolvedValue(true);
+    renderSection({ onAdd });
     fireEvent.click(screen.getByTestId('kunstwerken-add'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-segment-seg-1'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-formaat-vierkant'));
