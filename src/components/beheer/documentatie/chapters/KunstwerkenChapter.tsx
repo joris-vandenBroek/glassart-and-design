@@ -89,17 +89,19 @@ export function KunstwerkenChapter() {
       </SubSection>
       <SubSection id="kunstwerken-opslaan" title="Als opslaan niet lukt">
         <P>
-          De knop Opslaan blijft grijs zolang er nog iets verplichts ontbreekt. Wat er precies
-          ontbreekt staat er dan bij, boven de knop, met het tabblad erachter waar dat veld te
-          vinden is — bijvoorbeeld &quot;Foto ontbreekt (tabblad Algemeen)&quot;. Zodra je het
-          invult verdwijnt die regel; is de lijst leeg, dan kun je opslaan.
+          De knop Opslaan blijft grijs zolang er nog iets ontbreekt of nog bezig is. Wat er aan de
+          hand is staat er dan bij, boven de knop. Gaat het om een ontbrekend veld, dan staat het
+          tabblad erachter waar je het vindt — bijvoorbeeld &quot;Foto ontbreekt (tabblad
+          Algemeen)&quot;. Is de foto nog aan het uploaden, dan staat er alleen &quot;De foto
+          wordt nog geüpload&quot;, zonder tabblad — even wachten dus. Zodra het probleem is
+          opgelost verdwijnt die regel; is de lijst leeg, dan kun je opslaan.
         </P>
         <P>
-          Gaat het bij het opslaan zelf mis, dan verschijnt er een melding met de reden: de code
-          bestaat al, de code ligt vast omdat er al besteld is, het kunstwerk is intussen door
-          iemand anders verwijderd, of je sessie is verlopen. Staat er een melding met een
-          foutcode tussen haakjes, geef die code dan door — daarmee is na te zoeken wat er
-          gebeurd is.
+          Gaat het bij het opslaan zelf mis, dan verschijnt er een melding die de reden zelf
+          noemt — bijvoorbeeld dat de code al bestaat, dat de code vastligt omdat er al besteld
+          is, of dat je sessie is verlopen. Staat er bij die melding een foutcode tussen haakjes,
+          dan is dat een geval dat beheer zelf niet nader kan omschrijven; geef die code dan door,
+          want daarmee is na te zoeken wat er gebeurd is.
         </P>
       </SubSection>
     </Chapter>
