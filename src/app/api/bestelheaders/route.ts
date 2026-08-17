@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { getPool } from '@/lib/server/db';
 import { requireKlant, requireMedewerker } from '@/lib/server/requireAuth';
-import { berekenBestellijnPrijs } from '@/lib/server/prijsmodule';
+import { bepaalEffectievePrijsPerM2, berekenBestellijnPrijs } from '@/lib/server/prijsmodule';
 import { volgendNummer } from '@/lib/server/counters';
 import { parseJsonKolom } from '@/lib/server/crud';
 import { withApiErrorHandling } from '@/lib/server/apiRoute';
@@ -106,15 +106,13 @@ export const POST = withApiErrorHandling('POST /api/bestelheaders', async (reque
         return NextResponse.json({ error: 'materiaal-niet-beschikbaar' }, { status: 400 });
       }
 
-      let effectievePrijsPerM2 =
-        kunstwerkRow.prijsPerM2 != null ? Number(kunstwerkRow.prijsPerM2) : null;
-      if (materiaalIds.length > 0) {
-        const [materiaalRows] = await connection.query('SELECT prijsPerM2 FROM materialen WHERE id = ?', [
-          line.materiaalId,
-        ]);
-        const materiaalRow = (materiaalRows as Array<{ prijsPerM2: string | null }>)[0];
-        effectievePrijsPerM2 = materiaalRow?.prijsPerM2 != null ? Number(materiaalRow.prijsPerM2) : null;
-      }
+      const effectievePrijsPerM2 = await bepaalEffectievePrijsPerM2(
+        connection,
+        materiaalIds,
+        maatIds,
+        line.materiaalId,
+        kunstwerkRow.prijsPerM2 != null ? Number(kunstwerkRow.prijsPerM2) : null
+      );
 
       // An empty maatId is the genuine custom-size ("eigen maat") path -- it always requires
       // real afmetingen, since prijsmodule.ts's berekenBestellijnPrijs uses breedte/hoogte

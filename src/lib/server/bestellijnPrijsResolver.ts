@@ -1,4 +1,4 @@
-import { berekenBestellijnPrijs, type Queryable } from '@/lib/server/prijsmodule';
+import { bepaalEffectievePrijsPerM2, berekenBestellijnPrijs, type Queryable } from '@/lib/server/prijsmodule';
 import { checkOrderRight } from '@/lib/server/orderRight';
 
 export interface BestellijnAdditionInput {
@@ -57,14 +57,13 @@ export async function resolveerBestellijnPrijs(
     return { status: 'fout', error: 'materiaal-niet-beschikbaar' };
   }
 
-  let effectievePrijsPerM2 = kunstwerk.prijsPerM2;
-  if (materiaalIds.length > 0) {
-    const [materiaalRows] = await connection.query('SELECT prijsPerM2 FROM materialen WHERE id = ?', [
-      input.materiaalId,
-    ]);
-    const materiaalRow = (materiaalRows as Array<{ prijsPerM2: string | null }>)[0];
-    effectievePrijsPerM2 = materiaalRow?.prijsPerM2 != null ? Number(materiaalRow.prijsPerM2) : null;
-  }
+  const effectievePrijsPerM2 = await bepaalEffectievePrijsPerM2(
+    connection,
+    materiaalIds,
+    maatIds,
+    input.materiaalId,
+    kunstwerk.prijsPerM2
+  );
 
   if (input.maatId === '') {
     if (

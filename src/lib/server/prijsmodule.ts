@@ -123,6 +123,32 @@ export async function berekenPrijzenVoorAlleKunstwerken(
   return result;
 }
 
+/**
+ * Bepaalt de prijs per m2 die voor een bestellijn moet worden gebruikt: zolang het
+ * kunstwerk geen materialen heeft, blijft dat de eigen prijsPerM2 van het kunstwerk
+ * (materiaalloos-kunstwerk-pad); zodra er materialen zijn, geldt de prijsPerM2 van het
+ * gekozen materiaal. Gedeeld tussen bestellijnPrijsResolver.ts (prijsvoorbeeld) en
+ * bestelheaders/route.ts (echte bestelling), die hier altijd exact hetzelfde antwoord
+ * moeten krijgen. Als het kunstwerk ook maten heeft, wordt berekenBestellijnPrijs()
+ * hierboven geprijsd via de prijsmatrix en is deze waarde nooit relevant -- de lookup
+ * wordt dan overgeslagen.
+ */
+export async function bepaalEffectievePrijsPerM2(
+  db: Queryable,
+  materiaalIds: string[],
+  maatIds: string[],
+  materiaalId: string,
+  kunstwerkPrijsPerM2: number | null
+): Promise<number | null> {
+  if (materiaalIds.length === 0) return kunstwerkPrijsPerM2;
+  if (maatIds.length > 0) return null;
+  const [materiaalPrijsRows] = await db.query('SELECT prijsPerM2 FROM materialen WHERE id = ?', [
+    materiaalId,
+  ]);
+  const row = (materiaalPrijsRows as Array<{ prijsPerM2: number | null }>)[0];
+  return row?.prijsPerM2 != null ? Number(row.prijsPerM2) : null;
+}
+
 export async function berekenBestellijnPrijs(
   db: Queryable,
   kunstwerk: { kunstenaarnr: string | null; maatIds: string[]; prijsPerM2: number | null },
