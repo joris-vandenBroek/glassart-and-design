@@ -80,6 +80,14 @@ const MAATLOOS_MET_MATERIAAL_KUNSTWERK: Kunstwerk = {
   omschrijvingDe: '',
   omschrijvingEn: '',
 };
+// Same shape as MAATLOOS_MET_MATERIAAL_KUNSTWERK, but linked to mat-2 -- which has no
+// prijsPerM2 set in the MATERIALEN fixture above. This is the realistic post-migration
+// state for every existing materiaal until an admin fills in its prijs per m2.
+const MAATLOOS_MET_MATERIAAL_ZONDER_PRIJS_KUNSTWERK: Kunstwerk = {
+  ...MAATLOOS_MET_MATERIAAL_KUNSTWERK,
+  id: 'kw-materiaal-zonder-prijs',
+  materiaalIds: ['mat-2'],
+};
 // Bad-data fixture: materiaalIds empty (materiaalloos) but maatIds non-empty, which the admin
 // form itself never writes (buildKunstwerkData in KunstwerkenSection.tsx always force-clears
 // maatIds to [] whenever isMateriaalloos). isMaatloos must still treat this as maatloos so a
@@ -904,6 +912,15 @@ describe('ProductModal', () => {
     fireEvent.change(screen.getByTestId('product-modal-maat-custom-breedte'), { target: { value: '100' } });
     fireEvent.change(screen.getByTestId('product-modal-maat-custom-hoogte'), { target: { value: '200' } });
     expect(screen.getByTestId('product-modal-prijs')).toHaveTextContent('€ 130,00');
+  });
+
+  it('shows no live price and keeps confirm disabled for a maatloos-met-materiaal kunstwerk whose materiaal has no prijsPerM2 yet', () => {
+    renderModal(() => {}, MAATLOOS_MET_MATERIAAL_ZONDER_PRIJS_KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, ONDERWERPEN, 'dialog', []);
+    expect(screen.queryByTestId('product-modal-prijs')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('product-modal-maat-custom-breedte'), { target: { value: '100' } });
+    fireEvent.change(screen.getByTestId('product-modal-maat-custom-hoogte'), { target: { value: '200' } });
+    expect(screen.queryByTestId('product-modal-prijs')).not.toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-confirm')).toBeDisabled();
   });
 
   it('still treats a materiaalloos kunstwerk as maatloos even if maatIds is unexpectedly non-empty (bad/legacy data), showing free-size inputs and a price', () => {

@@ -376,6 +376,39 @@ describe('bestelheaders routes', () => {
     expect(Number((lineRows as Array<{ prijs: string }>)[0].prijs)).toBe(75);
   });
 
+  it('rejects a maatloos-met-materiaal line when the linked materiaal has no prijsPerM2 set yet', async () => {
+    const { cookie } = await klant('materiaal-geen-prijs@example.com');
+    const materiaalId = await maakMateriaal(); // no prijsPerM2 set -- realistic pre-data-entry state
+    const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+      code: 'test-bestelheaders-materiaal-geen-prijs',
+      prijsPerM2: 999,
+    } as never);
+    createdKunstwerkIds.push(kunstwerk.id);
+    await vervangRelaties(getPool(), kunstwerk.id, { materiaalIds: [materiaalId], maatIds: [] });
+
+    const response = await createHeader(
+      postRequest(
+        {
+          lines: [
+            {
+              kunstwerkId: kunstwerk.id,
+              maatId: '',
+              materiaalId,
+              prijs: 1,
+              quantity: 1,
+              breedte: 100,
+              hoogte: 50,
+            },
+          ],
+        },
+        cookie
+      )
+    );
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe('prijs-onbekend');
+  });
+
   it('stores a null prijs for an eigen-maat line on a kunstwerk that is not maatloos (priced later by staff)', async () => {
     const { cookie } = await klant('eigenmaat@example.com');
     const maatId = await maakMaat(45, 65);
