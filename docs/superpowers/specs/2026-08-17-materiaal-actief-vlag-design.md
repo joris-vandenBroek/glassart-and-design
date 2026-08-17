@@ -44,11 +44,25 @@ Meeliftende aanpassingen:
 
 - `db/schema.sql`: `actief BOOLEAN NOT NULL DEFAULT TRUE` toegevoegd aan de `materialen`-definitie.
 - `src/lib/server/tableColumns.ts`: `'actief'` toegevoegd aan de `materialen`-allow-list.
-- `src/components/beheer/materiaalTypes.ts`: `actief: boolean` op de `Materiaal`-interface
-  (niet optioneel — de kolom is `NOT NULL` en de API geeft hem altijd terug).
+- `src/components/beheer/materiaalTypes.ts`: `actief?: boolean` op de `Materiaal`-interface, plus
+  één helper in datzelfde bestand:
 
-`mysql2` geeft een `BOOLEAN`-kolom terug als `0`/`1`. Alle vergelijkingen in clientcode moeten dus
-`Boolean(materiaal.actief)` of `!!materiaal.actief` gebruiken, niet `=== true`.
+```ts
+/**
+ * `mysql2` geeft een BOOLEAN-kolom terug als 0/1, dus nooit `=== true` vergelijken.
+ * Een ontbrekende waarde telt als actief: de kolom is NOT NULL DEFAULT TRUE, dus dat kan
+ * alleen bij een testfixture van vóór deze vlag.
+ */
+export function isMateriaalActief(materiaal: Pick<Materiaal, 'actief'>): boolean {
+  return materiaal.actief === undefined ? true : Boolean(materiaal.actief);
+}
+```
+
+Optioneel in plaats van verplicht, in lijn met `Materiaalsoort.staatEigenMaatToe?` en
+`Drukker.standaard?`, die om dezelfde reden optioneel staan. Dat scheelt bovendien het aanpassen van
+ruim veertig materiaal-fixtures verspreid over 22 testbestanden, die allemaal een actief materiaal
+voorstellen. Alle code die op de vlag filtert gebruikt `isMateriaalActief`, nooit een losse
+waarheidstest op `materiaal.actief`.
 
 ## API: `materialen` krijgt een eigen route
 
@@ -125,8 +139,8 @@ zodat de actie herhaalbaar is.
 
 `src/components/beheer/MaterialenSection.tsx`:
 
-- Extra kolom "Actief" in de `DataTable`, met "Ja"/"Nee" als tekst (de tabel rendert strings; een
-  checkbox in een klikbare rij zou de rij-klik-naar-bewerken in de weg zitten).
+- Extra kolom "Actief" in de `DataTable`, via de bestaande `render`-optie van `Column<T>`, met
+  "Ja"/"Nee" als tekst. Geen checkbox in de rij: die zou de rij-klik-naar-bewerken in de weg zitten.
 - Checkbox "Actief" in de modal; `openAdd` zet hem standaard aan, `openEdit` neemt de huidige waarde
   over, `handleSave` neemt `actief` mee in het `data`-object.
 - Bij een 409 `in-use-open-bestelling` toont het scherm `materialenDeactiverenGeblokkeerd` in plaats
@@ -243,8 +257,11 @@ Aan klantzijde geen nieuwe sleutels.
   bestaande regel met inactief materiaal behoudt en toont het met "(inactief)".
 - `tests/components/beheer/KunstwerkenSection.test.tsx`: inactief materiaal staat in de lijst met
   "(inactief)" en blijft na opslaan gekoppeld.
-- `tests/lib/kunstwerkMateriaal.test.ts` en overige fixtures: `Materiaal` is niet-optioneel uitgebreid,
-  dus alle materiaal-fixtures in de suite hebben `actief` nodig.
+- `tests/components/beheer/materiaalTypes.test.ts` of een bestaande lib-test: `isMateriaalActief`
+  geeft `true` bij `undefined` en bij `1`, en `false` bij `0` en `false`.
+
+Bestaande materiaal-fixtures hoeven **niet** aangepast te worden: zonder `actief` gelden ze als
+actief. Alleen tests die inactief gedrag aantonen zetten `actief: false` expliciet.
 
 ## Handleiding
 
