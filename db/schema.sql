@@ -101,6 +101,7 @@ CREATE TABLE materialen (
   omschrijvingFr VARCHAR(255),
   omschrijvingDe VARCHAR(255),
   omschrijvingEn VARCHAR(255),
+  actief BOOLEAN NOT NULL DEFAULT TRUE,
   FOREIGN KEY (materiaalsoortId) REFERENCES materiaalsoorten(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

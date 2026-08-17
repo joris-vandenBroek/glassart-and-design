@@ -16,6 +16,7 @@ import { pasPrijsgroepToe } from '@/lib/prijsgroep';
 import { HelpHint } from '@/components/HelpHint';
 import { ProductImage } from './ProductImage';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort, Segment, Stijl, Categorie } from './beheer/materiaalTypes';
+import { isMateriaalActief } from './beheer/materiaalTypes';
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
 import type { Bestelinstellingen } from './beheer/bestelinstellingenTypes';
 
@@ -95,11 +96,16 @@ export function ProductModal({
     if (!kunstwerk) {
       return;
     }
+    const actieveVoorKunstwerk = (materialen ?? []).filter(
+      (materiaal) => kunstwerk.materiaalIds.includes(materiaal.id) && isMateriaalActief(materiaal)
+    );
     const veiligheidsglasId = findVeiligheidsglasMateriaalId(materialen ?? [], materiaalsoorten ?? []);
+    // De oude fallback pakte kunstwerk.materiaalIds[0], en dat kan sinds de actief-vlag
+    // een materiaal zijn dat helemaal niet meer in de keuzelijst staat.
     const defaultMateriaalId =
-      veiligheidsglasId && kunstwerk.materiaalIds.includes(veiligheidsglasId)
+      veiligheidsglasId && actieveVoorKunstwerk.some((materiaal) => materiaal.id === veiligheidsglasId)
         ? veiligheidsglasId
-        : kunstwerk.materiaalIds[0] ?? '';
+        : actieveVoorKunstwerk[0]?.id ?? '';
     setMateriaalId(defaultMateriaalId);
     setMaatId(kunstwerk.maatIds[0] ?? '');
     setCustomBreedte('');
@@ -140,8 +146,8 @@ export function ProductModal({
   // UI-blokkade niet uit de pas kan lopen met de controle vlak vóór het wegschrijven.
   const { canOrder, blockedReason } = resolveOrderRight(kunstwerk.kunstenaarnr, kunstenaars, user?.uid);
 
-  const beschikbareMaterialen = (materialen ?? []).filter((materiaal) =>
-    kunstwerk.materiaalIds.includes(materiaal.id)
+  const beschikbareMaterialen = (materialen ?? []).filter(
+    (materiaal) => kunstwerk.materiaalIds.includes(materiaal.id) && isMateriaalActief(materiaal)
   );
   const beschikbareMaten = (maten ?? []).filter((maat) => kunstwerk.maatIds.includes(maat.id));
   const materiaalsoortNaamById = new Map(
@@ -396,18 +402,24 @@ export function ProductModal({
         {!isMateriaalloos && (
           <label className="flex flex-col gap-1 text-[0.65rem] uppercase tracking-wide text-white/60">
             {t('material')}
-            <select
-              data-testid="product-modal-materiaal"
-              value={materiaalId}
-              onChange={(event) => handleMateriaalChange(event.target.value)}
-              className="rounded-sm bg-black/40 px-2 py-1.5 text-sm text-white"
-            >
-              {beschikbareMaterialen.map((materiaal) => (
-                <option key={materiaal.id} value={materiaal.id}>
-                  {resolvedMateriaalLabel(materiaal)}
-                </option>
-              ))}
-            </select>
+            {beschikbareMaterialen.length === 1 ? (
+              <span data-testid="product-modal-materiaal-tekst" className="text-sm normal-case tracking-normal text-white">
+                {resolvedMateriaalLabel(beschikbareMaterialen[0])}
+              </span>
+            ) : (
+              <select
+                data-testid="product-modal-materiaal"
+                value={materiaalId}
+                onChange={(event) => handleMateriaalChange(event.target.value)}
+                className="rounded-sm bg-black/40 px-2 py-1.5 text-sm text-white"
+              >
+                {beschikbareMaterialen.map((materiaal) => (
+                  <option key={materiaal.id} value={materiaal.id}>
+                    {resolvedMateriaalLabel(materiaal)}
+                  </option>
+                ))}
+              </select>
+            )}
             {geselecteerdMateriaal && (
               <span
                 data-testid="product-modal-materiaal-omschrijving"

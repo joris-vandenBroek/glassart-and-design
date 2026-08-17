@@ -193,6 +193,25 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-maat-maat-2')).toBeChecked();
   });
 
+  it('toont een inactief materiaal met een markering en houdt het aanvinkbaar', () => {
+    renderSection({
+      materialen: [
+        { ...MATERIALEN[0], id: 'mat-1', actief: true },
+        { ...MATERIALEN[1], id: 'mat-2', actief: false },
+      ],
+    });
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    const checkbox = screen.getByTestId('kunstwerk-modal-materiaal-mat-2');
+    expect(checkbox.closest('label')).toHaveTextContent('(inactief)');
+    expect(screen.getByTestId('kunstwerk-modal-materiaal-mat-1').closest('label')).not.toHaveTextContent(
+      '(inactief)'
+    );
+    fireEvent.click(checkbox);
+    expect(checkbox).not.toBeChecked();
+    fireEvent.click(checkbox);
+    expect(checkbox).toBeChecked();
+  });
+
   it('shows the required-field legend when the modal is open', () => {
     renderSection();
     fireEvent.click(screen.getByTestId('kunstwerken-add'));

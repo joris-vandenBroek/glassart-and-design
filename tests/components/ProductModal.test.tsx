@@ -38,10 +38,38 @@ const KUNSTWERK_PRIJZEN = [
   { materiaalId: 'mat-2', maatId: 'maat-1', prijs: 175 },
   { materiaalId: 'mat-2', maatId: 'maat-2', prijs: 225 },
 ];
-const MATERIALEN: Materiaal[] = [
-  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, prijsPerM2: 65, omschrijvingNl: 'Extra diepte en stevigheid voor een indrukwekkend effect.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
-  { id: 'mat-2', materiaalsoortId: 'soort-2', materiaaldikte: 3, omschrijvingNl: 'Lichtgewicht en flexibel voor grote oppervlaktes.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
-];
+const MATERIAAL_1: Materiaal = {
+  id: 'mat-1',
+  materiaalsoortId: 'soort-1',
+  materiaaldikte: 4,
+  prijsPerM2: 65,
+  omschrijvingNl: 'Extra diepte en stevigheid voor een indrukwekkend effect.',
+  omschrijvingFr: '',
+  omschrijvingDe: '',
+  omschrijvingEn: '',
+};
+const MATERIAAL_2: Materiaal = {
+  id: 'mat-2',
+  materiaalsoortId: 'soort-2',
+  materiaaldikte: 3,
+  omschrijvingNl: 'Lichtgewicht en flexibel voor grote oppervlaktes.',
+  omschrijvingFr: '',
+  omschrijvingDe: '',
+  omschrijvingEn: '',
+};
+const MATERIALEN: Materiaal[] = [MATERIAAL_1, MATERIAAL_2];
+// Alleen gebruikt om te testen dat filteren op actief de <select> laat staan zolang er
+// nog twee of meer actieve materialen overblijven (in tegenstelling tot MATERIAAL_2, dat
+// in diezelfde scenario's als het enige inactieve materiaal fungeert).
+const MATERIAAL_3: Materiaal = {
+  id: 'mat-3',
+  materiaalsoortId: 'soort-2',
+  materiaaldikte: 5,
+  omschrijvingNl: 'Extra dik voor extra bescherming.',
+  omschrijvingFr: '',
+  omschrijvingDe: '',
+  omschrijvingEn: '',
+};
 const MATEN: Maat[] = [
   { id: 'maat-1', breedte: 40, hoogte: 60 },
   { id: 'maat-2', breedte: 60, hoogte: 90 },
@@ -145,7 +173,8 @@ function renderModal(
   stijlen: Stijl[] | null = STIJLEN,
   categorieen: Categorie[] | null = CATEGORIEEN,
   variant: 'dialog' | 'preview' = 'dialog',
-  prijzen: { materiaalId: string; maatId: string; prijs: number }[] = KUNSTWERK_PRIJZEN
+  prijzen: { materiaalId: string; maatId: string; prijs: number }[] = KUNSTWERK_PRIJZEN,
+  materialen: Materiaal[] | null = MATERIALEN
 ) {
   return render(
     <NextIntlClientProvider locale="nl" messages={messages}>
@@ -155,7 +184,7 @@ function renderModal(
             variant={variant}
             kunstwerk={kunstwerk}
             prijzen={prijzen}
-            materialen={MATERIALEN}
+            materialen={materialen}
             maten={MATEN}
             materiaalsoorten={MATERIAALSOORTEN}
             kunstenaars={kunstenaars}
@@ -333,6 +362,109 @@ describe('ProductModal', () => {
     expect(options).toHaveLength(2);
   });
 
+  it('toont een inactief materiaal niet in de keuzelijst', () => {
+    // Met drie materialen waarvan er twee actief blijven, blijft de <select> bestaan
+    // (bij nog maar één actief materiaal verdwijnt de select zelf, zie de volgende test).
+    renderModal(
+      () => {},
+      { ...KUNSTWERK, materiaalIds: ['mat-1', 'mat-2', 'mat-3'] },
+      KUNSTENAARS,
+      SEGMENTEN,
+      STIJLEN,
+      CATEGORIEEN,
+      'dialog',
+      KUNSTWERK_PRIJZEN,
+      [
+        { ...MATERIAAL_1, actief: true },
+        { ...MATERIAAL_2, actief: false },
+        MATERIAAL_3,
+      ]
+    );
+    const options = screen.getByTestId('product-modal-materiaal').querySelectorAll('option');
+    expect(options).toHaveLength(2);
+    expect(Array.from(options).map((option) => option.getAttribute('value'))).toEqual(['mat-1', 'mat-3']);
+  });
+
+  it('vervangt de keuzelijst door tekst als er nog één actief materiaal is', () => {
+    renderModal(
+      () => {},
+      { ...KUNSTWERK, materiaalIds: ['mat-1', 'mat-2'] },
+      KUNSTENAARS,
+      SEGMENTEN,
+      STIJLEN,
+      CATEGORIEEN,
+      'dialog',
+      KUNSTWERK_PRIJZEN,
+      [
+        { ...MATERIAAL_1, actief: true },
+        { ...MATERIAAL_2, actief: false },
+      ]
+    );
+    expect(screen.queryByTestId('product-modal-materiaal')).not.toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-materiaal-tekst')).toHaveTextContent('4mm Veiligheidsglas');
+    expect(screen.getByTestId('product-modal-materiaal-omschrijving')).toBeInTheDocument();
+  });
+
+  it('kiest geen inactief materiaal als standaard', () => {
+    renderModal(
+      () => {},
+      { ...KUNSTWERK, materiaalIds: ['mat-2', 'mat-1'] },
+      KUNSTENAARS,
+      SEGMENTEN,
+      STIJLEN,
+      CATEGORIEEN,
+      'dialog',
+      KUNSTWERK_PRIJZEN,
+      [
+        { ...MATERIAAL_1, actief: true },
+        { ...MATERIAAL_2, actief: false },
+      ]
+    );
+    expect(screen.getByTestId('product-modal-materiaal-tekst')).toHaveTextContent('4mm Veiligheidsglas');
+    // De tekst-tak rendert beschikbareMaterialen[0] ongeacht materiaalId, dus onderscheidt
+    // hij niet of de state stiekem nog op het inactieve materiaal staat. De omschrijving
+    // hangt wél af van geselecteerdMateriaal (dus van materiaalId zelf) en trekt de oude en
+    // nieuwe standaardkeuze-berekening daadwerkelijk uit elkaar.
+    expect(screen.getByTestId('product-modal-materiaal-omschrijving')).toHaveTextContent(
+      'Extra diepte en stevigheid voor een indrukwekkend effect.'
+    );
+  });
+
+  it('valt terug op het eerste actieve materiaal als het veiligheidsglasmateriaal zelf inactief is', () => {
+    // Dekt de tak die de vorige test niet raakt: hier is het veiligheidsglasmateriaal
+    // (mat-1) zelf inactief, dus de voorrangsregel voor veiligheidsglas kan niet gelden en
+    // de nieuwe fallback (actieveVoorKunstwerk[0]?.id) moet het eerste ACTIEVE materiaal
+    // kiezen -- niet kunstwerk.materiaalIds[0], dat still op het inactieve mat-1 zou wijzen.
+    renderModal(
+      () => {},
+      { ...KUNSTWERK, materiaalIds: ['mat-1', 'mat-2', 'mat-3'] },
+      KUNSTENAARS,
+      SEGMENTEN,
+      STIJLEN,
+      CATEGORIEEN,
+      'dialog',
+      KUNSTWERK_PRIJZEN,
+      [
+        { ...MATERIAAL_1, actief: false },
+        { ...MATERIAAL_2, actief: true },
+        MATERIAAL_3,
+      ]
+    );
+    const select = screen.getByTestId('product-modal-materiaal');
+    expect(select).toHaveValue('mat-2');
+    const options = select.querySelectorAll('option');
+    expect(Array.from(options).map((option) => option.getAttribute('value'))).toEqual(['mat-2', 'mat-3']);
+    // De select zelf valt in jsdom terug op de eerste optie zodra de gezette waarde niet bij
+    // een <option> hoort, dus die alleen checken zou ook slagen als de state stiekem nog op
+    // het inactieve mat-1 staat. De omschrijving hangt wél af van de echte React-state
+    // (geselecteerdMateriaal = beschikbareMaterialen.find(m => m.id === materiaalId)), en
+    // verdwijnt zodra materiaalId niet meer voorkomt in beschikbareMaterialen -- dat maakt dit
+    // de assertion die de oude en nieuwe implementatie daadwerkelijk uit elkaar trekt.
+    expect(screen.getByTestId('product-modal-materiaal-omschrijving')).toHaveTextContent(
+      'Lichtgewicht en flexibel voor grote oppervlaktes.'
+    );
+  });
+
   it('includes the materiaalsoort name alongside the dikte in each materiaal option', () => {
     renderModal();
     const options = screen.getByTestId('product-modal-materiaal').querySelectorAll('option');
@@ -444,6 +576,64 @@ describe('ProductModal', () => {
       vi.advanceTimersByTime(600);
     });
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('adds the active materiaal to the cart when the materiaalkeuze is replaced by tekst', async () => {
+    // Dekt het bestelpad in de tak waar nog maar één materiaal actief is (de <select>
+    // maakt dan plaats voor tekst, zie 'vervangt de keuzelijst door tekst...' hierboven) --
+    // niets in de bestaande mandjetests toont dat het juiste materiaalId (van het actieve
+    // materiaal, niet het inactieve) daadwerkelijk in het mandje belandt.
+    const onClose = vi.fn();
+
+    function Probe() {
+      const { items, isHydrated } = useCart();
+      return isHydrated ? <div data-testid="probe">{JSON.stringify(items)}</div> : null;
+    }
+
+    const kunstwerkMetEenActiefMateriaal: Kunstwerk = { ...KUNSTWERK, materiaalIds: ['mat-2', 'mat-1'] };
+    const materialenMetEenInactief: Materiaal[] = [
+      { ...MATERIAAL_1, actief: true },
+      { ...MATERIAAL_2, actief: false },
+    ];
+
+    render(
+      <NextIntlClientProvider locale="nl" messages={messages}>
+        <CustomerAuthProvider>
+          <CartProvider>
+            <ProductModal
+              kunstwerk={kunstwerkMetEenActiefMateriaal}
+              prijzen={KUNSTWERK_PRIJZEN}
+              materialen={materialenMetEenInactief}
+              maten={MATEN}
+              materiaalsoorten={MATERIAALSOORTEN}
+              kunstenaars={KUNSTENAARS}
+              segmenten={SEGMENTEN}
+              stijlen={STIJLEN}
+              categorieen={CATEGORIEEN}
+              onClose={onClose}
+            />
+            <Probe />
+          </CartProvider>
+        </CustomerAuthProvider>
+      </NextIntlClientProvider>
+    );
+
+    vi.useRealTimers();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    vi.useFakeTimers();
+    expect(screen.getByTestId('probe')).toBeInTheDocument();
+
+    // Geen <select> meer beschikbaar in deze tak -- alleen bevestigen.
+    expect(screen.queryByTestId('product-modal-materiaal')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('product-modal-confirm'));
+
+    const items = JSON.parse(screen.getByTestId('probe').textContent ?? '[]');
+    expect(items).toHaveLength(1);
+    expect(items[0].materiaalId).toBe('mat-1');
+    expect(items[0].materiaalId).not.toBe('mat-2');
+    expect(items[0].materiaalId).not.toBe('');
   });
 
   it('does not let a stale close-timer from a previous kunstwerk affect the newly shown modal', () => {
@@ -898,9 +1088,10 @@ describe('ProductModal', () => {
     expect(logActiviteitMock).toHaveBeenCalledWith('mandje_toegevoegd');
   });
 
-  it('shows the materiaal select but hides the maat select for a maatloos kunstwerk that still has a materiaal, showing free-size inputs', () => {
+  it('shows the materiaal as text (its only materiaal) but hides the maat select for a maatloos kunstwerk that still has a materiaal, showing free-size inputs', () => {
     renderModal(() => {}, MAATLOOS_MET_MATERIAAL_KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, CATEGORIEEN, 'dialog', []);
-    expect(screen.getByTestId('product-modal-materiaal')).toBeInTheDocument();
+    expect(screen.queryByTestId('product-modal-materiaal')).not.toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-materiaal-tekst')).toHaveTextContent('4mm Veiligheidsglas');
     expect(screen.queryByTestId('product-modal-maat')).not.toBeInTheDocument();
     expect(screen.getByTestId('product-modal-maat-custom-breedte')).toBeInTheDocument();
     expect(screen.getByTestId('product-modal-maat-custom-hoogte')).toBeInTheDocument();

@@ -68,6 +68,7 @@ export const TABLE_COLUMNS: Record<string, readonly string[]> = {
     'omschrijvingFr',
     'omschrijvingDe',
     'omschrijvingEn',
+    'actief',
   ],
   maten: ['id', 'breedte', 'hoogte'],
   prijsgroepen: ['id', 'naam', 'kortingspercentage', 'opslagpercentage'],

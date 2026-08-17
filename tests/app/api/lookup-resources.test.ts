@@ -295,11 +295,18 @@ describe('generic lookup-resource routes', () => {
     );
     const soort = await soortResponse.json();
     createdLookupGuardMateriaalsoortIds.push(soort.id);
-    const materiaalResponse = await createResource(
-      jsonRequest('POST', { materiaalsoortId: soort.id, materiaaldikte: 4, omschrijvingNl: 'Guard materiaal', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }, cookie),
-      { params: { resource: 'materialen' } }
-    );
-    const materiaal = await materiaalResponse.json();
+    // materialen verhuisde naar zijn eigen route (@/app/api/materialen) en zit niet meer in
+    // LOOKUP_RESOURCES -- de fixture hier gaat rechtstreeks via insertRow, net als
+    // tests/app/api/materialen.test.ts doet. Deze test dekt de materiaalsoorten-guard in
+    // LOOKUP_REFERENCE, niet de materialen-route zelf.
+    const materiaal = await insertRow<{ id: string }>('materialen', {
+      materiaalsoortId: soort.id,
+      materiaaldikte: 4,
+      omschrijvingNl: 'Guard materiaal',
+      omschrijvingFr: '',
+      omschrijvingDe: '',
+      omschrijvingEn: '',
+    } as never);
     createdLookupGuardMateriaalIds.push(materiaal.id);
 
     const blocked = await deleteResource(jsonRequest('DELETE', undefined, cookie), {

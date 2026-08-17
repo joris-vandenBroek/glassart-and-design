@@ -25,6 +25,32 @@ export function StamgegevensChapter() {
           prijs gebruiken we voor elk kunstwerk met dit materiaal dat geen vaste maten heeft, bijvoorbeeld
           &quot;4mm veiligheidsglas, eigen maat&quot;.
         </P>
+        <P>
+          Met <strong>Actief</strong> bepaal je of klanten dit materiaal kunnen kiezen. Een inactief
+          materiaal blijft gewoon bestaan — het verdwijnt alleen uit de materiaalkeuze in de winkel.
+          Blijft er voor een kunstwerk nog één actief materiaal over, dan verdwijnt de keuzelijst
+          helemaal en staat het materiaal er als tekst. Heeft een kunstwerk uitsluitend inactieve
+          materialen, dan is het niet meer bestelbaar en wordt het niet meer getoond.
+        </P>
+        <P>
+          Een materiaal op inactief zetten kan niet zolang er nog openstaande bestellingen met dat
+          materiaal zijn. Rond die bestellingen eerst af of wijs ze af.
+        </P>
+        <P>
+          Zet je een materiaal weer op actief, dan vraagt het scherm of het bij alle kunstwerken
+          aangevinkt moet worden. Kies je ja, dan wordt het materiaal gekoppeld aan elk kunstwerk dat
+          al materialen heeft; kunstwerken zonder materialen (zoals Akoestische stof) blijven
+          ongemoeid.
+        </P>
+        <P>
+          In beheer zelf blijft een inactief materiaal gewoon in beeld — dat is bewust zo. In het
+          kunstwerkformulier staat het nog steeds in de materiaallijst, aanvinkbaar, met
+          &quot;(inactief)&quot; erachter, en &quot;Alles selecteren&quot; vinkt het gewoon mee aan; zo blijven
+          bestaande koppelingen bewaard. Bij een bestelregel geldt hetzelfde voor een materiaal dat al
+          op die regel gekozen was: het blijft een geldige optie, met &quot;(inactief)&quot; erachter, zodat
+          een oude bestelling openen die keuze niet stilzwijgend leegmaakt. Voeg je een nieuwe
+          bestelregel toe, dan is een inactief materiaal wél verdwenen uit de keuze.
+        </P>
       </SubSection>
       <SubSection id="stamgegevens-maten" title="Maten">
         <P>De vaste breedte×hoogte-combinaties die je bij een kunstwerk kunt aanvinken.</P>

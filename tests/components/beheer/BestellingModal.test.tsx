@@ -447,6 +447,23 @@ describe('BestellingModal — regel bewerken', () => {
     expect(screen.queryByTestId('bestelling-modal-regel-bewerken-line-2')).not.toBeInTheDocument();
   });
 
+  it('behoudt een inactief materiaal op een bestaande regel', async () => {
+    renderModal(
+      { ...BESTELLING, lines: [{ ...BESTELLING.lines[0], materiaalId: 'mat-2' }, BESTELLING.lines[1]] },
+      {
+        materialen: [
+          { ...MATERIALEN[0], id: 'mat-1', actief: true },
+          { ...MATERIALEN[0], id: 'mat-2', actief: false },
+        ],
+        kunstwerken: [{ ...KUNSTWERKEN[0], materiaalIds: ['mat-1', 'mat-2'] }, KUNSTWERKEN[1]],
+      }
+    );
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-bewerken-line-1'));
+    const select = await screen.findByTestId('bestelling-modal-regel-materiaal-line-1');
+    expect(select).toHaveValue('mat-2');
+    expect(select).toHaveTextContent('(inactief)');
+  });
+
   it('drafts materiaal/maat/prijs/aantal edits without patching immediately, then saves them all on Wijzigingen opslaan', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
     const { onBestellingGewijzigd } = renderModal(BESTELLING);
@@ -945,6 +962,23 @@ describe('BestellingModal — regel verwijderen en toevoegen', () => {
     fireEvent.click(screen.getByTestId('bestelling-modal-regel-verwijderen-ongedaan-line-1'));
     expect(screen.queryByTestId('bestelling-modal-regel-verwijderen-ongedaan-line-1')).not.toBeInTheDocument();
     expect(screen.queryByTestId('bestelling-modal-wijzigingen-opslaan')).not.toBeInTheDocument();
+  });
+
+  it('biedt bij een nieuwe regel geen inactief materiaal aan', async () => {
+    renderModal(BESTELLING, {
+      materialen: [
+        { ...MATERIALEN[0], id: 'mat-1', actief: true },
+        { ...MATERIALEN[0], id: 'mat-2', actief: false },
+      ],
+      kunstwerken: [{ ...KUNSTWERKEN[0], materiaalIds: ['mat-1', 'mat-2'] }, KUNSTWERKEN[1]],
+    });
+    fireEvent.click(screen.getByTestId('bestelling-modal-regel-toevoegen'));
+    fireEvent.focus(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk'));
+    fireEvent.click(screen.getByTestId('bestelling-modal-nieuwe-regel-kunstwerk-option-kw-1'));
+    const select = await screen.findByTestId('bestelling-modal-nieuwe-regel-materiaal');
+    const values = Array.from(select.querySelectorAll('option')).map((option) => option.getAttribute('value'));
+    expect(values).toContain('mat-1');
+    expect(values).not.toContain('mat-2');
   });
 
   it('adds a new line via the kunstwerk picker and saves it on Wijzigingen opslaan', async () => {

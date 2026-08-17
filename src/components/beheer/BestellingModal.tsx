@@ -15,6 +15,7 @@ import { ProductImage } from '@/components/ProductImage';
 import { Combobox } from '@/components/Combobox';
 import type { Bestelling, BestellingLine } from './BestellingenSection';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from './materiaalTypes';
+import { isMateriaalActief } from './materiaalTypes';
 import type { Klant } from './KlantenSection';
 import type { BtwTarieven } from './btwTarievenTypes';
 import type { Bestelinstellingen } from './bestelinstellingenTypes';
@@ -770,7 +771,11 @@ export function BestellingModal({
                     ? `${weergaveLine.breedte}×${weergaveLine.hoogte} cm`
                     : t('bestellingenRegelOnbekend');
                 const kunstwerkMaterialen = kunstwerk
-                  ? (materialen ?? []).filter((m) => kunstwerk.materiaalIds.includes(m.id))
+                  ? (materialen ?? []).filter(
+                      (m) =>
+                        kunstwerk.materiaalIds.includes(m.id) &&
+                        (isMateriaalActief(m) || m.id === weergaveLine.materiaalId)
+                    )
                   : [];
                 const kunstwerkMaten = kunstwerk
                   ? (maten ?? []).filter((m) => kunstwerk.maatIds.includes(m.id))
@@ -901,7 +906,9 @@ export function BestellingModal({
                               >
                                 {kunstwerkMaterialen.map((m) => (
                                   <option key={m.id} value={m.id}>
-                                    {m.materiaaldikte}mm {materiaalsoortNaamById.get(m.materiaalsoortId) ?? m.materiaalsoortId}
+                                    {m.materiaaldikte}mm{' '}
+                                    {materiaalsoortNaamById.get(m.materiaalsoortId) ?? m.materiaalsoortId}
+                                    {isMateriaalActief(m) ? '' : ` ${t('materiaalInactiefSuffix')}`}
                                   </option>
                                 ))}
                               </select>
@@ -1131,8 +1138,8 @@ export function BestellingModal({
                     {(() => {
                       const gekozenKunstwerk = (kunstwerken ?? []).find((k) => k.id === nieuweRegelDraft.kunstwerkId);
                       if (!gekozenKunstwerk) return null;
-                      const beschikbareMaterialen = (materialen ?? []).filter((m) =>
-                        gekozenKunstwerk.materiaalIds.includes(m.id)
+                      const beschikbareMaterialen = (materialen ?? []).filter(
+                        (m) => gekozenKunstwerk.materiaalIds.includes(m.id) && isMateriaalActief(m)
                       );
                       const beschikbareMaten = (maten ?? []).filter((m) => gekozenKunstwerk.maatIds.includes(m.id));
                       return (

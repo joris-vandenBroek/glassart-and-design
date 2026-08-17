@@ -52,6 +52,10 @@ const KUNSTWERKEN = [
   },
 ];
 
+const MATERIALEN = [
+  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijvingNl: 'Veiligheidsglas', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+];
+
 let collections: Record<string, unknown[]> = {};
 
 function mockDesktopMediaQuery(matches: boolean) {
@@ -87,7 +91,7 @@ beforeEach(() => {
   collections = {
     segmenten: SEGMENTEN,
     kunstwerken: KUNSTWERKEN,
-    materialen: [],
+    materialen: MATERIALEN,
     maten: [],
     materiaalsoorten: [],
     kunstenaars: [],

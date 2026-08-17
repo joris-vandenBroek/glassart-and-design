@@ -11,7 +11,6 @@ export interface LookupResourceConfig {
 export const LOOKUP_RESOURCES: Record<string, LookupResourceConfig> = {
   segmenten: { jsonColumns: [], writeAuthRequired: 'medewerker' },
   materiaalsoorten: { jsonColumns: [], writeAuthRequired: 'medewerker' },
-  materialen: { jsonColumns: [], writeAuthRequired: 'medewerker' },
   maten: { jsonColumns: [], writeAuthRequired: 'medewerker' },
   stijlen: { jsonColumns: [], writeAuthRequired: 'medewerker' },
   categorieen: { jsonColumns: [], writeAuthRequired: 'medewerker' },
