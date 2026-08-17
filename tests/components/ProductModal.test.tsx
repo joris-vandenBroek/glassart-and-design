@@ -38,10 +38,38 @@ const KUNSTWERK_PRIJZEN = [
   { materiaalId: 'mat-2', maatId: 'maat-1', prijs: 175 },
   { materiaalId: 'mat-2', maatId: 'maat-2', prijs: 225 },
 ];
-const MATERIALEN: Materiaal[] = [
-  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, prijsPerM2: 65, omschrijvingNl: 'Extra diepte en stevigheid voor een indrukwekkend effect.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
-  { id: 'mat-2', materiaalsoortId: 'soort-2', materiaaldikte: 3, omschrijvingNl: 'Lichtgewicht en flexibel voor grote oppervlaktes.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
-];
+const MATERIAAL_1: Materiaal = {
+  id: 'mat-1',
+  materiaalsoortId: 'soort-1',
+  materiaaldikte: 4,
+  prijsPerM2: 65,
+  omschrijvingNl: 'Extra diepte en stevigheid voor een indrukwekkend effect.',
+  omschrijvingFr: '',
+  omschrijvingDe: '',
+  omschrijvingEn: '',
+};
+const MATERIAAL_2: Materiaal = {
+  id: 'mat-2',
+  materiaalsoortId: 'soort-2',
+  materiaaldikte: 3,
+  omschrijvingNl: 'Lichtgewicht en flexibel voor grote oppervlaktes.',
+  omschrijvingFr: '',
+  omschrijvingDe: '',
+  omschrijvingEn: '',
+};
+const MATERIALEN: Materiaal[] = [MATERIAAL_1, MATERIAAL_2];
+// Alleen gebruikt om te testen dat filteren op actief de <select> laat staan zolang er
+// nog twee of meer actieve materialen overblijven (in tegenstelling tot MATERIAAL_2, dat
+// in diezelfde scenario's als het enige inactieve materiaal fungeert).
+const MATERIAAL_3: Materiaal = {
+  id: 'mat-3',
+  materiaalsoortId: 'soort-2',
+  materiaaldikte: 5,
+  omschrijvingNl: 'Extra dik voor extra bescherming.',
+  omschrijvingFr: '',
+  omschrijvingDe: '',
+  omschrijvingEn: '',
+};
 const MATEN: Maat[] = [
   { id: 'maat-1', breedte: 40, hoogte: 60 },
   { id: 'maat-2', breedte: 60, hoogte: 90 },
@@ -145,7 +173,8 @@ function renderModal(
   stijlen: Stijl[] | null = STIJLEN,
   categorieen: Categorie[] | null = CATEGORIEEN,
   variant: 'dialog' | 'preview' = 'dialog',
-  prijzen: { materiaalId: string; maatId: string; prijs: number }[] = KUNSTWERK_PRIJZEN
+  prijzen: { materiaalId: string; maatId: string; prijs: number }[] = KUNSTWERK_PRIJZEN,
+  materialen: Materiaal[] | null = MATERIALEN
 ) {
   return render(
     <NextIntlClientProvider locale="nl" messages={messages}>
@@ -155,7 +184,7 @@ function renderModal(
             variant={variant}
             kunstwerk={kunstwerk}
             prijzen={prijzen}
-            materialen={MATERIALEN}
+            materialen={materialen}
             maten={MATEN}
             materiaalsoorten={MATERIAALSOORTEN}
             kunstenaars={kunstenaars}
@@ -331,6 +360,67 @@ describe('ProductModal', () => {
     renderModal();
     const options = screen.getByTestId('product-modal-materiaal').querySelectorAll('option');
     expect(options).toHaveLength(2);
+  });
+
+  it('toont een inactief materiaal niet in de keuzelijst', () => {
+    // Met drie materialen waarvan er twee actief blijven, blijft de <select> bestaan
+    // (bij nog maar één actief materiaal verdwijnt de select zelf, zie de volgende test).
+    renderModal(
+      () => {},
+      { ...KUNSTWERK, materiaalIds: ['mat-1', 'mat-2', 'mat-3'] },
+      KUNSTENAARS,
+      SEGMENTEN,
+      STIJLEN,
+      CATEGORIEEN,
+      'dialog',
+      KUNSTWERK_PRIJZEN,
+      [
+        { ...MATERIAAL_1, actief: true },
+        { ...MATERIAAL_2, actief: false },
+        MATERIAAL_3,
+      ]
+    );
+    const options = screen.getByTestId('product-modal-materiaal').querySelectorAll('option');
+    expect(options).toHaveLength(2);
+    expect(Array.from(options).map((option) => option.getAttribute('value'))).toEqual(['mat-1', 'mat-3']);
+  });
+
+  it('vervangt de keuzelijst door tekst als er nog één actief materiaal is', () => {
+    renderModal(
+      () => {},
+      { ...KUNSTWERK, materiaalIds: ['mat-1', 'mat-2'] },
+      KUNSTENAARS,
+      SEGMENTEN,
+      STIJLEN,
+      CATEGORIEEN,
+      'dialog',
+      KUNSTWERK_PRIJZEN,
+      [
+        { ...MATERIAAL_1, actief: true },
+        { ...MATERIAAL_2, actief: false },
+      ]
+    );
+    expect(screen.queryByTestId('product-modal-materiaal')).not.toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-materiaal-tekst')).toHaveTextContent('4mm Veiligheidsglas');
+    expect(screen.getByTestId('product-modal-materiaal-omschrijving')).toBeInTheDocument();
+  });
+
+  it('kiest geen inactief materiaal als standaard', () => {
+    renderModal(
+      () => {},
+      { ...KUNSTWERK, materiaalIds: ['mat-2', 'mat-1'] },
+      KUNSTENAARS,
+      SEGMENTEN,
+      STIJLEN,
+      CATEGORIEEN,
+      'dialog',
+      KUNSTWERK_PRIJZEN,
+      [
+        { ...MATERIAAL_1, actief: true },
+        { ...MATERIAAL_2, actief: false },
+      ]
+    );
+    expect(screen.getByTestId('product-modal-materiaal-tekst')).toHaveTextContent('4mm Veiligheidsglas');
   });
 
   it('includes the materiaalsoort name alongside the dikte in each materiaal option', () => {
@@ -898,9 +988,10 @@ describe('ProductModal', () => {
     expect(logActiviteitMock).toHaveBeenCalledWith('mandje_toegevoegd');
   });
 
-  it('shows the materiaal select but hides the maat select for a maatloos kunstwerk that still has a materiaal, showing free-size inputs', () => {
+  it('shows the materiaal as text (its only materiaal) but hides the maat select for a maatloos kunstwerk that still has a materiaal, showing free-size inputs', () => {
     renderModal(() => {}, MAATLOOS_MET_MATERIAAL_KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, CATEGORIEEN, 'dialog', []);
-    expect(screen.getByTestId('product-modal-materiaal')).toBeInTheDocument();
+    expect(screen.queryByTestId('product-modal-materiaal')).not.toBeInTheDocument();
+    expect(screen.getByTestId('product-modal-materiaal-tekst')).toHaveTextContent('4mm Veiligheidsglas');
     expect(screen.queryByTestId('product-modal-maat')).not.toBeInTheDocument();
     expect(screen.getByTestId('product-modal-maat-custom-breedte')).toBeInTheDocument();
     expect(screen.getByTestId('product-modal-maat-custom-hoogte')).toBeInTheDocument();
