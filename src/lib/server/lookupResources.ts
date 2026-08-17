@@ -14,7 +14,7 @@ export const LOOKUP_RESOURCES: Record<string, LookupResourceConfig> = {
   materialen: { jsonColumns: [], writeAuthRequired: 'medewerker' },
   maten: { jsonColumns: [], writeAuthRequired: 'medewerker' },
   stijlen: { jsonColumns: [], writeAuthRequired: 'medewerker' },
-  onderwerpen: { jsonColumns: [], writeAuthRequired: 'medewerker' },
+  categorieen: { jsonColumns: [], writeAuthRequired: 'medewerker' },
   // Never fetched by the public storefront (only beheer's KlantModal/PrijsgroepenSection) --
   // gate reads too, same as drukkers.
   prijsgroepen: { jsonColumns: [], readAuthRequired: 'medewerker', writeAuthRequired: 'medewerker' },
