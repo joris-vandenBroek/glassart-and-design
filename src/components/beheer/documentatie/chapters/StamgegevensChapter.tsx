@@ -42,6 +42,15 @@ export function StamgegevensChapter() {
           al materialen heeft; kunstwerken zonder materialen (zoals Akoestische stof) blijven
           ongemoeid.
         </P>
+        <P>
+          In beheer zelf blijft een inactief materiaal gewoon in beeld — dat is bewust zo. In het
+          kunstwerkformulier staat het nog steeds in de materiaallijst, aanvinkbaar, met
+          &quot;(inactief)&quot; erachter, en &quot;Alles selecteren&quot; vinkt het gewoon mee aan; zo blijven
+          bestaande koppelingen bewaard. Bij een bestelregel geldt hetzelfde voor een materiaal dat al
+          op die regel gekozen was: het blijft een geldige optie, met &quot;(inactief)&quot; erachter, zodat
+          een oude bestelling openen die keuze niet stilzwijgend leegmaakt. Voeg je een nieuwe
+          bestelregel toe, dan is een inactief materiaal wél verdwenen uit de keuze.
+        </P>
       </SubSection>
       <SubSection id="stamgegevens-maten" title="Maten">
         <P>De vaste breedte×hoogte-combinaties die je bij een kunstwerk kunt aanvinken.</P>
