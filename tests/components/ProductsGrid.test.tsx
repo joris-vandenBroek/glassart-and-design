@@ -555,4 +555,20 @@ describe('ProductsGrid', () => {
     renderProductsGrid();
     expect(await screen.findByText('Akoestisch paneel')).toBeInTheDocument();
   });
+
+  // Bewust fail-closed, niet een ongeluk: een lege materialencatalogus betekent dat er
+  // niets met materialen besteld kan worden -- in tegenstelling tot de laadfase
+  // (materialen.items === null), die bewust wél fail-open is (zie hierboven).
+  it('verbergt kunstwerken met materialen wanneer de materialencatalogus succesvol geladen maar leeg is', async () => {
+    mockCollections({
+      kunstwerken: [
+        { ...KUNSTWERKEN[0], id: 'kw-1', materiaalIds: ['mat-1'], omschrijvingNl: 'Verdwenen paneel' },
+        { ...KUNSTWERKEN[0], id: 'kw-3', materiaalIds: [], omschrijvingNl: 'Akoestisch paneel bij lege catalogus' },
+      ],
+      materialen: [],
+    });
+    renderProductsGrid();
+    expect(await screen.findByText('Akoestisch paneel bij lege catalogus')).toBeInTheDocument();
+    expect(screen.queryByText('Verdwenen paneel')).not.toBeInTheDocument();
+  });
 });
