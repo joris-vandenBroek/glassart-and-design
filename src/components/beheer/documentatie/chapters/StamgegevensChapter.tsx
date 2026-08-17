@@ -21,7 +21,9 @@ export function StamgegevensChapter() {
       <SubSection id="stamgegevens-materialen" title="Materialen">
         <P>
           Een specifieke uitvoering binnen een materiaalsoort, met een dikte — bijvoorbeeld &quot;6mm Glas
-          — Blank helder&quot;. Elk materiaal hoort bij één materiaalsoort.
+          — Blank helder&quot;. Elk materiaal hoort bij één materiaalsoort. Vul ook de prijs per m² in — die
+          prijs gebruiken we voor elk kunstwerk met dit materiaal dat geen vaste maten heeft, bijvoorbeeld
+          &quot;4mm veiligheidsglas, eigen maat&quot;.
         </P>
       </SubSection>
       <SubSection id="stamgegevens-maten" title="Maten">

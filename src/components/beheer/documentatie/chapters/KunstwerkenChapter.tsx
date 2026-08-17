@@ -1,4 +1,4 @@
-import { Chapter, SubSection, P, Screenshot } from '../DocumentatieBlocks';
+import { Chapter, SubSection, P, Screenshot, DocLink } from '../DocumentatieBlocks';
 
 export function KunstwerkenChapter() {
   return (
@@ -70,9 +70,12 @@ export function KunstwerkenChapter() {
           kiezen, bij Liggend en Staand alleen niet-vierkante maten, en bij Alle kun je alles kiezen.
         </P>
         <P>
-          Vink je geen enkele maat of materiaal aan, dan verschijnt in plaats daarvan een veld &quot;prijs
-          per m²&quot; — dat gebruiken we nu voor akoestische stof, maar het werkt voor elk product waarbij
-          de klant zelf zijn eigen breedte en hoogte opgeeft.
+          Vink geen enkel materiaal aan, dan verschijnt in plaats daarvan een veld &quot;prijs per
+          m²&quot; op dit scherm — dat gebruiken we voor producten zonder materiaal, zoals akoestische
+          stof. Heb je wél een materiaal gekozen maar geen vaste maat (bijvoorbeeld voor een product
+          waarbij de klant zelf zijn breedte en hoogte opgeeft), dan komt de prijs per m² niet van dit
+          scherm maar van het gekozen materiaal — zie{' '}
+          <DocLink anchor="stamgegevens-materialen">Materialen</DocLink>.
         </P>
       </SubSection>
       <SubSection id="kunstwerken-voorbeeld" title="Live voorbeeld">
