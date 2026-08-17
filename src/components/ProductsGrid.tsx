@@ -17,7 +17,7 @@ import { useIsDesktop } from '@/lib/useIsDesktop';
 import { resolveKunstenaarOmschrijving, appendKunstenaarWebsiteZin } from '@/lib/resolveKunstenaarOmschrijving';
 import { resolveOmschrijving } from '@/lib/resolveOmschrijving';
 import { LinkifiedText } from './LinkifiedText';
-import type { Segment, Kunstwerk, Materiaal, Maat, Materiaalsoort, KunstwerkFormaat, Stijl, Onderwerp } from './beheer/materiaalTypes';
+import type { Segment, Kunstwerk, Materiaal, Maat, Materiaalsoort, KunstwerkFormaat, Stijl, Categorie } from './beheer/materiaalTypes';
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
 
 const CARD_ASPECT_CLASS: Record<Exclude<KunstwerkFormaat, 'alle'>, string> = {
@@ -52,7 +52,7 @@ export function ProductsGrid() {
   const [kunstenaarFilter, setKunstenaarFilter] = useState<string | null>(null);
   const [formaatFilters, setFormaatFilters] = useState<Set<Exclude<KunstwerkFormaat, 'alle'>>>(new Set());
   const [stijlFilters, setStijlFilters] = useState<Set<string>>(new Set());
-  const [onderwerpFilters, setOnderwerpFilters] = useState<Set<string>>(new Set());
+  const [categorieFilters, setCategorieFilters] = useState<Set<string>>(new Set());
   const [aiGegenereerdFilter, setAiGegenereerdFilter] = useState(false);
   const [selectedKunstwerk, setSelectedKunstwerk] = useState<Kunstwerk | null>(null);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -76,7 +76,7 @@ export function ProductsGrid() {
   const materiaalsoorten = useApiCollection<Materiaalsoort>('materiaalsoorten');
   const kunstenaars = useApiCollection<Kunstenaar>('kunstenaars');
   const stijlen = useApiCollection<Stijl>('stijlen');
-  const onderwerpen = useApiCollection<Onderwerp>('onderwerpen');
+  const categorieen = useApiCollection<Categorie>('categorieen');
   const { prijzenPerKunstwerk } = usePrijzenPerKunstwerk();
 
   if (segmenten.items === null || kunstwerken.items === null) {
@@ -98,8 +98,8 @@ export function ProductsGrid() {
   function matchesStijl(kunstwerk: Kunstwerk) {
     return stijlFilters.size === 0 || (kunstwerk.stijlIds ?? []).some((id) => stijlFilters.has(id));
   }
-  function matchesOnderwerp(kunstwerk: Kunstwerk) {
-    return onderwerpFilters.size === 0 || (kunstwerk.onderwerpIds ?? []).some((id) => onderwerpFilters.has(id));
+  function matchesCategorie(kunstwerk: Kunstwerk) {
+    return categorieFilters.size === 0 || (kunstwerk.categorieIds ?? []).some((id) => categorieFilters.has(id));
   }
   function matchesAiGegenereerd(kunstwerk: Kunstwerk) {
     return !aiGegenereerdFilter || kunstwerk.aiGegenereerd === true;
@@ -113,24 +113,24 @@ export function ProductsGrid() {
       matchesSegment(kunstwerk) &&
       matchesFormaat(kunstwerk) &&
       matchesStijl(kunstwerk) &&
-      matchesOnderwerp(kunstwerk) &&
+      matchesCategorie(kunstwerk) &&
       matchesAiGegenereerd(kunstwerk) &&
       matchesKunstenaar(kunstwerk)
   );
 
   const segmentCountBase = allKunstwerken.filter(
     (kunstwerk) =>
-      matchesFormaat(kunstwerk) && matchesStijl(kunstwerk) && matchesOnderwerp(kunstwerk) && matchesAiGegenereerd(kunstwerk) && matchesKunstenaar(kunstwerk)
+      matchesFormaat(kunstwerk) && matchesStijl(kunstwerk) && matchesCategorie(kunstwerk) && matchesAiGegenereerd(kunstwerk) && matchesKunstenaar(kunstwerk)
   );
   const formaatCountBase = allKunstwerken.filter(
     (kunstwerk) =>
-      matchesSegment(kunstwerk) && matchesStijl(kunstwerk) && matchesOnderwerp(kunstwerk) && matchesAiGegenereerd(kunstwerk) && matchesKunstenaar(kunstwerk)
+      matchesSegment(kunstwerk) && matchesStijl(kunstwerk) && matchesCategorie(kunstwerk) && matchesAiGegenereerd(kunstwerk) && matchesKunstenaar(kunstwerk)
   );
   const stijlCountBase = allKunstwerken.filter(
     (kunstwerk) =>
-      matchesSegment(kunstwerk) && matchesFormaat(kunstwerk) && matchesOnderwerp(kunstwerk) && matchesAiGegenereerd(kunstwerk) && matchesKunstenaar(kunstwerk)
+      matchesSegment(kunstwerk) && matchesFormaat(kunstwerk) && matchesCategorie(kunstwerk) && matchesAiGegenereerd(kunstwerk) && matchesKunstenaar(kunstwerk)
   );
-  const onderwerpCountBase = allKunstwerken.filter(
+  const categorieCountBase = allKunstwerken.filter(
     (kunstwerk) =>
       matchesSegment(kunstwerk) && matchesFormaat(kunstwerk) && matchesStijl(kunstwerk) && matchesAiGegenereerd(kunstwerk) && matchesKunstenaar(kunstwerk)
   );
@@ -170,13 +170,13 @@ export function ProductsGrid() {
     });
   }
 
-  function toggleOnderwerp(onderwerpId: string) {
-    setOnderwerpFilters((current) => {
+  function toggleCategorie(categorieId: string) {
+    setCategorieFilters((current) => {
       const next = new Set(current);
-      if (next.has(onderwerpId)) {
-        next.delete(onderwerpId);
+      if (next.has(categorieId)) {
+        next.delete(categorieId);
       } else {
-        next.add(onderwerpId);
+        next.add(categorieId);
       }
       return next;
     });
@@ -200,8 +200,8 @@ export function ProductsGrid() {
   ];
 
   const stijlNaamById = new Map((stijlen.items ?? []).map((stijl) => [stijl.id, resolveOmschrijving(stijl, locale)]));
-  const onderwerpNaamById = new Map(
-    (onderwerpen.items ?? []).map((onderwerp) => [onderwerp.id, resolveOmschrijving(onderwerp, locale)])
+  const categorieNaamById = new Map(
+    (categorieen.items ?? []).map((categorie) => [categorie.id, resolveOmschrijving(categorie, locale)])
   );
 
   const activeChips: { key: string; label: string; onRemove: () => void }[] = [
@@ -221,10 +221,10 @@ export function ProductsGrid() {
       label: stijlNaamById.get(stijlId) ?? stijlId,
       onRemove: () => toggleStijl(stijlId),
     })),
-    ...Array.from(onderwerpFilters).map((onderwerpId) => ({
-      key: `onderwerp-${onderwerpId}`,
-      label: onderwerpNaamById.get(onderwerpId) ?? onderwerpId,
-      onRemove: () => toggleOnderwerp(onderwerpId),
+    ...Array.from(categorieFilters).map((categorieId) => ({
+      key: `categorie-${categorieId}`,
+      label: categorieNaamById.get(categorieId) ?? categorieId,
+      onRemove: () => toggleCategorie(categorieId),
     })),
     ...(aiGegenereerdFilter
       ? [{ key: 'ai-gegenereerd', label: tCollections('aiGegenereerdFacetLabel'), onRemove: () => setAiGegenereerdFilter(false) }]
@@ -236,7 +236,7 @@ export function ProductsGrid() {
     setKunstenaarFilter(null);
     setFormaatFilters(new Set());
     setStijlFilters(new Set());
-    setOnderwerpFilters(new Set());
+    setCategorieFilters(new Set());
     setAiGegenereerdFilter(false);
   }
 
@@ -257,10 +257,10 @@ export function ProductsGrid() {
     stijlFilters,
     onToggleStijl: toggleStijl,
     stijlCountBase,
-    onderwerpen: onderwerpen.items,
-    onderwerpFilters,
-    onToggleOnderwerp: toggleOnderwerp,
-    onderwerpCountBase,
+    categorieen: categorieen.items,
+    categorieFilters,
+    onToggleCategorie: toggleCategorie,
+    categorieCountBase,
     aiGegenereerdFilter,
     onAiGegenereerdFilterChange: setAiGegenereerdFilter,
   };
@@ -430,7 +430,7 @@ export function ProductsGrid() {
         kunstenaars={kunstenaars.items}
         segmenten={segmenten.items}
         stijlen={stijlen.items}
-        onderwerpen={onderwerpen.items}
+        categorieen={categorieen.items}
         onClose={() => setSelectedKunstwerk(null)}
       />
     </>

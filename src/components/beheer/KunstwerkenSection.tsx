@@ -11,7 +11,7 @@ import { ProductModal } from '@/components/ProductModal';
 import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit } from '@/lib/logActiviteit';
-import type { Kunstwerk, Segment, Materiaal, Materiaalsoort, Maat, KunstwerkFormaat, Stijl, Onderwerp } from './materiaalTypes';
+import type { Kunstwerk, Segment, Materiaal, Materiaalsoort, Maat, KunstwerkFormaat, Stijl, Categorie } from './materiaalTypes';
 import { isVierkanteMaat } from './materiaalTypes';
 import type { Kunstenaar } from './kunstenaarTypes';
 import { detectFormaatFromFile, detectFormaatFromImageUrl } from '@/lib/detectKunstwerkFormaat';
@@ -25,7 +25,7 @@ interface KunstwerkenSectionProps {
   materiaalsoorten: Materiaalsoort[] | null;
   maten: Maat[] | null;
   stijlen: Stijl[] | null;
-  onderwerpen: Onderwerp[] | null;
+  categorieen: Categorie[] | null;
   kunstenaars: Kunstenaar[] | null;
   loadError: string | null;
   // De codes die in een bestelregel voorkomen. Leeg zolang de bestellingen nog laden --
@@ -41,7 +41,7 @@ interface KunstwerkenSectionProps {
   onRemove: (id: string) => Promise<boolean>;
   onAddSegment: (data: Omit<Segment, 'id'>) => Promise<boolean>;
   onAddStijl: (data: Omit<Stijl, 'id'>) => Promise<boolean>;
-  onAddOnderwerp: (data: Omit<Onderwerp, 'id'>) => Promise<boolean>;
+  onAddCategorie: (data: Omit<Categorie, 'id'>) => Promise<boolean>;
 }
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; kunstwerk: Kunstwerk } | null;
@@ -66,7 +66,7 @@ const LEGE_FORM = {
   materiaalIds: [] as string[],
   maatIds: [] as string[],
   stijlIds: [] as string[],
-  onderwerpIds: [] as string[],
+  categorieIds: [] as string[],
   aiGegenereerd: false,
   prijsPerM2: '',
   omschrijvingNl: '',
@@ -82,7 +82,7 @@ export function KunstwerkenSection({
   materiaalsoorten,
   maten,
   stijlen,
-  onderwerpen,
+  categorieen,
   kunstenaars,
   loadError,
   bestelCodes,
@@ -92,7 +92,7 @@ export function KunstwerkenSection({
   onRemove,
   onAddSegment,
   onAddStijl,
-  onAddOnderwerp,
+  onAddCategorie,
 }: KunstwerkenSectionProps) {
   const t = useTranslations('beheer');
   const { uploading, error: fotoUploadError, upload } = useKunstwerkFotoUpload();
@@ -108,17 +108,17 @@ export function KunstwerkenSection({
   const [materiaalIds, setMateriaalIds] = useState<string[]>(LEGE_FORM.materiaalIds);
   const [maatIds, setMaatIds] = useState<string[]>(LEGE_FORM.maatIds);
   const [stijlIds, setStijlIds] = useState<string[]>(LEGE_FORM.stijlIds);
-  const [onderwerpIds, setOnderwerpIds] = useState<string[]>(LEGE_FORM.onderwerpIds);
+  const [categorieIds, setCategorieIds] = useState<string[]>(LEGE_FORM.categorieIds);
   const [aiGegenereerd, setAiGegenereerd] = useState<boolean>(LEGE_FORM.aiGegenereerd);
   const [nieuweSegmentNaam, setNieuweSegmentNaam] = useState('');
   const [pendingNieuweSegmentNaam, setPendingNieuweSegmentNaam] = useState<string | null>(null);
   const [segmentToevoegenError, setSegmentToevoegenError] = useState<string | null>(null);
   const [nieuweStijlNaam, setNieuweStijlNaam] = useState('');
-  const [nieuweOnderwerpNaam, setNieuweOnderwerpNaam] = useState('');
+  const [nieuweCategorieNaam, setNieuweCategorieNaam] = useState('');
   const [pendingNieuweStijlNaam, setPendingNieuweStijlNaam] = useState<string | null>(null);
-  const [pendingNieuweOnderwerpNaam, setPendingNieuweOnderwerpNaam] = useState<string | null>(null);
+  const [pendingNieuweCategorieNaam, setPendingNieuweCategorieNaam] = useState<string | null>(null);
   const [stijlToevoegenError, setStijlToevoegenError] = useState<string | null>(null);
-  const [onderwerpToevoegenError, setOnderwerpToevoegenError] = useState<string | null>(null);
+  const [categorieToevoegenError, setCategorieToevoegenError] = useState<string | null>(null);
   const [prijsPerM2, setPrijsPerM2] = useState(LEGE_FORM.prijsPerM2);
   const [omschrijvingNl, setOmschrijvingNl] = useState(LEGE_FORM.omschrijvingNl);
   const [omschrijvingFr, setOmschrijvingFr] = useState(LEGE_FORM.omschrijvingFr);
@@ -161,14 +161,14 @@ export function KunstwerkenSection({
   }, [stijlen, pendingNieuweStijlNaam]);
 
   useEffect(() => {
-    if (!pendingNieuweOnderwerpNaam) return;
-    const gevonden = (onderwerpen ?? []).find((onderwerp) => onderwerp.omschrijvingNl === pendingNieuweOnderwerpNaam);
+    if (!pendingNieuweCategorieNaam) return;
+    const gevonden = (categorieen ?? []).find((categorie) => categorie.omschrijvingNl === pendingNieuweCategorieNaam);
     if (gevonden) {
-      setOnderwerpIds((current) => (current.includes(gevonden.id) ? current : [...current, gevonden.id]));
-      setPendingNieuweOnderwerpNaam(null);
-      setNieuweOnderwerpNaam('');
+      setCategorieIds((current) => (current.includes(gevonden.id) ? current : [...current, gevonden.id]));
+      setPendingNieuweCategorieNaam(null);
+      setNieuweCategorieNaam('');
     }
-  }, [onderwerpen, pendingNieuweOnderwerpNaam]);
+  }, [categorieen, pendingNieuweCategorieNaam]);
 
   async function handleAddNieuweSegment() {
     const naam = nieuweSegmentNaam.trim();
@@ -212,25 +212,25 @@ export function KunstwerkenSection({
     }
   }
 
-  async function handleAddNieuweOnderwerp() {
-    const naam = nieuweOnderwerpNaam.trim();
+  async function handleAddNieuweCategorie() {
+    const naam = nieuweCategorieNaam.trim();
     if (!naam) return;
-    setOnderwerpToevoegenError(null);
-    const bestaande = (onderwerpen ?? []).find(
-      (onderwerp) => onderwerp.omschrijvingNl.toLowerCase() === naam.toLowerCase()
+    setCategorieToevoegenError(null);
+    const bestaande = (categorieen ?? []).find(
+      (categorie) => categorie.omschrijvingNl.toLowerCase() === naam.toLowerCase()
     );
     if (bestaande) {
-      setOnderwerpIds((current) => (current.includes(bestaande.id) ? current : [...current, bestaande.id]));
-      setNieuweOnderwerpNaam('');
+      setCategorieIds((current) => (current.includes(bestaande.id) ? current : [...current, bestaande.id]));
+      setNieuweCategorieNaam('');
       return;
     }
-    setPendingNieuweOnderwerpNaam(naam);
-    const success = await onAddOnderwerp({ omschrijvingNl: naam, omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' });
+    setPendingNieuweCategorieNaam(naam);
+    const success = await onAddCategorie({ omschrijvingNl: naam, omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' });
     if (success) {
-      void logActiviteit('onderwerp_toegevoegd');
+      void logActiviteit('categorie_toegevoegd');
     } else {
-      setPendingNieuweOnderwerpNaam(null);
-      setOnderwerpToevoegenError(t('kunstwerkenNieuweOnderwerpError'));
+      setPendingNieuweCategorieNaam(null);
+      setCategorieToevoegenError(t('kunstwerkenNieuweCategorieError'));
     }
   }
 
@@ -305,7 +305,7 @@ export function KunstwerkenSection({
       materiaalIds,
       maatIds: isMaatloos ? [] : maatIds,
       stijlIds,
-      onderwerpIds,
+      categorieIds,
       aiGegenereerd,
       omschrijvingNl,
       omschrijvingFr,
@@ -330,7 +330,7 @@ export function KunstwerkenSection({
       materiaalIds,
       maatIds,
       stijlIds,
-      onderwerpIds,
+      categorieIds,
       aiGegenereerd,
       prijsPerM2,
       omschrijvingNl,
@@ -400,14 +400,14 @@ export function KunstwerkenSection({
     setMateriaalIds((materialen ?? []).map((materiaal) => materiaal.id));
     setMaatIds((maten ?? []).map((maat) => maat.id));
     setStijlIds(LEGE_FORM.stijlIds);
-    setOnderwerpIds(LEGE_FORM.onderwerpIds);
+    setCategorieIds(LEGE_FORM.categorieIds);
     setAiGegenereerd(LEGE_FORM.aiGegenereerd);
     setNieuweStijlNaam('');
-    setNieuweOnderwerpNaam('');
+    setNieuweCategorieNaam('');
     setPendingNieuweStijlNaam(null);
-    setPendingNieuweOnderwerpNaam(null);
+    setPendingNieuweCategorieNaam(null);
     setStijlToevoegenError(null);
-    setOnderwerpToevoegenError(null);
+    setCategorieToevoegenError(null);
     setPrijsPerM2(LEGE_FORM.prijsPerM2);
     setOmschrijvingNl(LEGE_FORM.omschrijvingNl);
     setOmschrijvingFr(LEGE_FORM.omschrijvingFr);
@@ -436,7 +436,7 @@ export function KunstwerkenSection({
     setMateriaalIds(kunstwerk.materiaalIds);
     setMaatIds(kunstwerk.maatIds);
     setStijlIds(kunstwerk.stijlIds ?? []);
-    setOnderwerpIds(kunstwerk.onderwerpIds ?? []);
+    setCategorieIds(kunstwerk.categorieIds ?? []);
     setAiGegenereerd(kunstwerk.aiGegenereerd ?? false);
     setPrijsPerM2(kunstwerk.prijsPerM2 != null ? String(kunstwerk.prijsPerM2) : '');
     setOmschrijvingNl(kunstwerk.omschrijvingNl);
@@ -1057,41 +1057,41 @@ export function KunstwerkenSection({
 
           <fieldset className="flex flex-col gap-1">
             <legend className="text-xs uppercase tracking-wide text-white/60">
-              {t('kunstwerkenLabelOnderwerpen')}
+              {t('kunstwerkenLabelCategorieen')}
             </legend>
-            {(onderwerpen ?? []).map((onderwerp) => (
-              <label key={onderwerp.id} className="flex items-center gap-2 text-sm text-white/80">
+            {(categorieen ?? []).map((categorie) => (
+              <label key={categorie.id} className="flex items-center gap-2 text-sm text-white/80">
                 <input
                   type="checkbox"
-                  checked={onderwerpIds.includes(onderwerp.id)}
-                  onChange={() => setOnderwerpIds((current) => toggle(current, onderwerp.id))}
-                  data-testid={`kunstwerk-modal-onderwerp-${onderwerp.id}`}
+                  checked={categorieIds.includes(categorie.id)}
+                  onChange={() => setCategorieIds((current) => toggle(current, categorie.id))}
+                  data-testid={`kunstwerk-modal-categorie-${categorie.id}`}
                 />
-                {onderwerp.omschrijvingNl}
+                {categorie.omschrijvingNl}
               </label>
             ))}
             <div className="mt-1 flex gap-2">
               <input
                 type="text"
-                value={nieuweOnderwerpNaam}
-                onChange={(event) => setNieuweOnderwerpNaam(event.target.value)}
-                placeholder={t('kunstwerkenNieuweOnderwerpPlaceholder')}
-                data-testid="kunstwerk-modal-nieuwe-onderwerp-naam"
+                value={nieuweCategorieNaam}
+                onChange={(event) => setNieuweCategorieNaam(event.target.value)}
+                placeholder={t('kunstwerkenNieuweCategoriePlaceholder')}
+                data-testid="kunstwerk-modal-nieuwe-categorie-naam"
                 className="flex-1 rounded-sm bg-black/40 px-3 py-1.5 text-sm text-white"
               />
               <button
                 type="button"
-                onClick={handleAddNieuweOnderwerp}
-                disabled={!nieuweOnderwerpNaam.trim()}
-                data-testid="kunstwerk-modal-nieuwe-onderwerp-toevoegen"
+                onClick={handleAddNieuweCategorie}
+                disabled={!nieuweCategorieNaam.trim()}
+                data-testid="kunstwerk-modal-nieuwe-categorie-toevoegen"
                 className="btn-beheer-secondary rounded-sm border border-white/20 px-3 py-1.5 text-xs text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
               >
-                {t('kunstwerkenNieuweOnderwerpToevoegen')}
+                {t('kunstwerkenNieuweCategorieToevoegen')}
               </button>
             </div>
-            {onderwerpToevoegenError && (
-              <span data-testid="kunstwerk-modal-nieuwe-onderwerp-error" className="text-xs text-red-400">
-                {onderwerpToevoegenError}
+            {categorieToevoegenError && (
+              <span data-testid="kunstwerk-modal-nieuwe-categorie-error" className="text-xs text-red-400">
+                {categorieToevoegenError}
               </span>
             )}
           </fieldset>
@@ -1287,7 +1287,7 @@ export function KunstwerkenSection({
                 kunstenaars={kunstenaars}
                 segmenten={segmenten}
                 stijlen={stijlen}
-                onderwerpen={onderwerpen}
+                categorieen={categorieen}
                 onClose={() => {}}
               />
             </div>

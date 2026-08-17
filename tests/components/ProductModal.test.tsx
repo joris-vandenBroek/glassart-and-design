@@ -5,7 +5,7 @@ import { ProductModal } from '@/components/ProductModal';
 import { CartProvider, useCart } from '@/lib/useCart';
 import { CustomerAuthProvider } from '@/lib/useCustomerAuth';
 import type { Kunstwerk, Materiaal, Maat, Materiaalsoort } from '@/components/beheer/materiaalTypes';
-import type { Segment, Stijl, Onderwerp } from '@/components/beheer/materiaalTypes';
+import type { Segment, Stijl, Categorie } from '@/components/beheer/materiaalTypes';
 import type { Kunstenaar } from '@/components/beheer/kunstenaarTypes';
 import messages from '../../messages/nl.json';
 
@@ -52,7 +52,7 @@ const MATERIAALSOORTEN: Materiaalsoort[] = [
 ];
 const SEGMENTEN: Segment[] = [{ id: 'seg-1', omschrijvingNl: 'Hotel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }];
 const STIJLEN: Stijl[] = [{ id: 'stijl-1', omschrijvingNl: 'Abstract', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }];
-const ONDERWERPEN: Onderwerp[] = [{ id: 'onderwerp-1', omschrijvingNl: 'Bloemen', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }];
+const CATEGORIEEN: Categorie[] = [{ id: 'categorie-1', omschrijvingNl: 'Bloemen', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }];
 const MATERIAALLOOS_KUNSTWERK: Kunstwerk = {
   id: 'kw-akoestisch',
   foto: 'https://example.com/akoestisch.jpg',
@@ -143,7 +143,7 @@ function renderModal(
   kunstenaars: Kunstenaar[] | null = KUNSTENAARS,
   segmenten: Segment[] | null = SEGMENTEN,
   stijlen: Stijl[] | null = STIJLEN,
-  onderwerpen: Onderwerp[] | null = ONDERWERPEN,
+  categorieen: Categorie[] | null = CATEGORIEEN,
   variant: 'dialog' | 'preview' = 'dialog',
   prijzen: { materiaalId: string; maatId: string; prijs: number }[] = KUNSTWERK_PRIJZEN
 ) {
@@ -161,7 +161,7 @@ function renderModal(
             kunstenaars={kunstenaars}
             segmenten={segmenten}
             stijlen={stijlen}
-            onderwerpen={onderwerpen}
+            categorieen={categorieen}
             onClose={onClose}
           />
         </CartProvider>
@@ -281,7 +281,7 @@ describe('ProductModal', () => {
               kunstenaars={KUNSTENAARS}
               segmenten={SEGMENTEN}
               stijlen={STIJLEN}
-              onderwerpen={ONDERWERPEN}
+              categorieen={CATEGORIEEN}
               onClose={() => {}}
             />
           </CartProvider>
@@ -309,7 +309,7 @@ describe('ProductModal', () => {
               kunstenaars={KUNSTENAARS}
               segmenten={SEGMENTEN}
               stijlen={STIJLEN}
-              onderwerpen={ONDERWERPEN}
+              categorieen={CATEGORIEEN}
               onClose={() => {}}
             />
           </CartProvider>
@@ -404,7 +404,7 @@ describe('ProductModal', () => {
               kunstenaars={KUNSTENAARS}
               segmenten={SEGMENTEN}
               stijlen={STIJLEN}
-              onderwerpen={ONDERWERPEN}
+              categorieen={CATEGORIEEN}
               onClose={onClose}
             />
             <Probe />
@@ -462,7 +462,7 @@ describe('ProductModal', () => {
               kunstenaars={KUNSTENAARS}
               segmenten={SEGMENTEN}
               stijlen={STIJLEN}
-              onderwerpen={ONDERWERPEN}
+              categorieen={CATEGORIEEN}
               onClose={onClose}
             />
           </CartProvider>
@@ -488,7 +488,7 @@ describe('ProductModal', () => {
               kunstenaars={KUNSTENAARS}
               segmenten={SEGMENTEN}
               stijlen={STIJLEN}
-              onderwerpen={ONDERWERPEN}
+              categorieen={CATEGORIEEN}
               onClose={onClose}
             />
           </CartProvider>
@@ -508,7 +508,7 @@ describe('ProductModal', () => {
               kunstenaars={KUNSTENAARS}
               segmenten={SEGMENTEN}
               stijlen={STIJLEN}
-              onderwerpen={ONDERWERPEN}
+              categorieen={CATEGORIEEN}
               onClose={onClose}
             />
           </CartProvider>
@@ -611,7 +611,7 @@ describe('ProductModal', () => {
               kunstenaars={KUNSTENAARS}
               segmenten={SEGMENTEN}
               stijlen={STIJLEN}
-              onderwerpen={ONDERWERPEN}
+              categorieen={CATEGORIEEN}
               onClose={() => {}}
             />
           </CartProvider>
@@ -643,7 +643,7 @@ describe('ProductModal', () => {
               kunstenaars={KUNSTENAARS}
               segmenten={SEGMENTEN}
               stijlen={STIJLEN}
-              onderwerpen={ONDERWERPEN}
+              categorieen={CATEGORIEEN}
               onClose={() => {}}
             />
           </CartProvider>
@@ -668,7 +668,7 @@ describe('ProductModal', () => {
               kunstenaars={KUNSTENAARS}
               segmenten={SEGMENTEN}
               stijlen={STIJLEN}
-              onderwerpen={ONDERWERPEN}
+              categorieen={CATEGORIEEN}
               onClose={() => {}}
             />
           </CartProvider>
@@ -686,7 +686,7 @@ describe('ProductModal', () => {
   });
 
   it('gives the custom breedte and hoogte inputs matching min-w-0 flex-1 wrappers so they split the row evenly', () => {
-    renderModal(() => {}, MATERIAALLOOS_KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, ONDERWERPEN, 'dialog', []);
+    renderModal(() => {}, MATERIAALLOOS_KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, CATEGORIEEN, 'dialog', []);
     const breedteWrapper = screen.getByTestId('product-modal-maat-custom-breedte').closest('label');
     const hoogteWrapper = screen.getByTestId('product-modal-maat-custom-hoogte').closest('label');
     expect(breedteWrapper?.className).toMatch(/(^|\s)min-w-0(\s|$)/);
@@ -709,7 +709,7 @@ describe('ProductModal', () => {
               kunstenaars={KUNSTENAARS}
               segmenten={SEGMENTEN}
               stijlen={STIJLEN}
-              onderwerpen={ONDERWERPEN}
+              categorieen={CATEGORIEEN}
               onClose={() => {}}
             />
           </CartProvider>
@@ -745,7 +745,7 @@ describe('ProductModal', () => {
               kunstenaars={KUNSTENAARS}
               segmenten={SEGMENTEN}
               stijlen={STIJLEN}
-              onderwerpen={ONDERWERPEN}
+              categorieen={CATEGORIEEN}
               onClose={() => {}}
             />
             <Probe />
@@ -797,7 +797,7 @@ describe('ProductModal', () => {
               kunstenaars={KUNSTENAARS}
               segmenten={SEGMENTEN}
               stijlen={STIJLEN}
-              onderwerpen={ONDERWERPEN}
+              categorieen={CATEGORIEEN}
               onClose={() => {}}
             />
           </CartProvider>
@@ -813,7 +813,7 @@ describe('ProductModal', () => {
   });
 
   it('hides the materiaal and maat selects for a materiaalloos kunstwerk, showing free-size inputs directly', () => {
-    renderModal(() => {}, MATERIAALLOOS_KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, ONDERWERPEN, 'dialog', []);
+    renderModal(() => {}, MATERIAALLOOS_KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, CATEGORIEEN, 'dialog', []);
     expect(screen.queryByTestId('product-modal-materiaal')).not.toBeInTheDocument();
     expect(screen.queryByTestId('product-modal-maat')).not.toBeInTheDocument();
     expect(screen.getByTestId('product-modal-maat-custom-breedte')).toBeInTheDocument();
@@ -821,7 +821,7 @@ describe('ProductModal', () => {
   });
 
   it('computes and shows a live price for a materiaalloos kunstwerk based on the entered size and prijsPerM2', () => {
-    renderModal(() => {}, MATERIAALLOOS_KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, ONDERWERPEN, 'dialog', []);
+    renderModal(() => {}, MATERIAALLOOS_KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, CATEGORIEEN, 'dialog', []);
     expect(screen.queryByTestId('product-modal-prijs')).not.toBeInTheDocument();
     fireEvent.change(screen.getByTestId('product-modal-maat-custom-breedte'), { target: { value: '100' } });
     fireEvent.change(screen.getByTestId('product-modal-maat-custom-hoogte'), { target: { value: '200' } });
@@ -837,7 +837,7 @@ describe('ProductModal', () => {
       companyName: 'Testbedrijf BV',
       prijsgroep: { kortingspercentage: 10, opslagpercentage: null },
     };
-    renderModal(() => {}, MATERIAALLOOS_KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, ONDERWERPEN, 'dialog', []);
+    renderModal(() => {}, MATERIAALLOOS_KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, CATEGORIEEN, 'dialog', []);
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
@@ -866,7 +866,7 @@ describe('ProductModal', () => {
               kunstenaars={KUNSTENAARS}
               segmenten={SEGMENTEN}
               stijlen={STIJLEN}
-              onderwerpen={ONDERWERPEN}
+              categorieen={CATEGORIEEN}
               onClose={() => {}}
             />
             <Probe />
@@ -899,7 +899,7 @@ describe('ProductModal', () => {
   });
 
   it('shows the materiaal select but hides the maat select for a maatloos kunstwerk that still has a materiaal, showing free-size inputs', () => {
-    renderModal(() => {}, MAATLOOS_MET_MATERIAAL_KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, ONDERWERPEN, 'dialog', []);
+    renderModal(() => {}, MAATLOOS_MET_MATERIAAL_KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, CATEGORIEEN, 'dialog', []);
     expect(screen.getByTestId('product-modal-materiaal')).toBeInTheDocument();
     expect(screen.queryByTestId('product-modal-maat')).not.toBeInTheDocument();
     expect(screen.getByTestId('product-modal-maat-custom-breedte')).toBeInTheDocument();
@@ -907,7 +907,7 @@ describe('ProductModal', () => {
   });
 
   it('computes and shows a live price for a maatloos-met-materiaal kunstwerk based on the entered size and prijsPerM2', () => {
-    renderModal(() => {}, MAATLOOS_MET_MATERIAAL_KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, ONDERWERPEN, 'dialog', []);
+    renderModal(() => {}, MAATLOOS_MET_MATERIAAL_KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, CATEGORIEEN, 'dialog', []);
     expect(screen.queryByTestId('product-modal-prijs')).not.toBeInTheDocument();
     fireEvent.change(screen.getByTestId('product-modal-maat-custom-breedte'), { target: { value: '100' } });
     fireEvent.change(screen.getByTestId('product-modal-maat-custom-hoogte'), { target: { value: '200' } });
@@ -915,7 +915,7 @@ describe('ProductModal', () => {
   });
 
   it('shows no live price and keeps confirm disabled for a maatloos-met-materiaal kunstwerk whose materiaal has no prijsPerM2 yet', () => {
-    renderModal(() => {}, MAATLOOS_MET_MATERIAAL_ZONDER_PRIJS_KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, ONDERWERPEN, 'dialog', []);
+    renderModal(() => {}, MAATLOOS_MET_MATERIAAL_ZONDER_PRIJS_KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, CATEGORIEEN, 'dialog', []);
     expect(screen.queryByTestId('product-modal-prijs')).not.toBeInTheDocument();
     fireEvent.change(screen.getByTestId('product-modal-maat-custom-breedte'), { target: { value: '100' } });
     fireEvent.change(screen.getByTestId('product-modal-maat-custom-hoogte'), { target: { value: '200' } });
@@ -924,7 +924,7 @@ describe('ProductModal', () => {
   });
 
   it('still treats a materiaalloos kunstwerk as maatloos even if maatIds is unexpectedly non-empty (bad/legacy data), showing free-size inputs and a price', () => {
-    renderModal(() => {}, MATERIAALLOOS_MET_ONVERWACHTE_MAATIDS_KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, ONDERWERPEN, 'dialog', []);
+    renderModal(() => {}, MATERIAALLOOS_MET_ONVERWACHTE_MAATIDS_KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, CATEGORIEEN, 'dialog', []);
     expect(screen.queryByTestId('product-modal-materiaal')).not.toBeInTheDocument();
     expect(screen.queryByTestId('product-modal-maat')).not.toBeInTheDocument();
     expect(screen.getByTestId('product-modal-maat-custom-breedte')).toBeInTheDocument();
@@ -953,7 +953,7 @@ describe('ProductModal', () => {
               kunstenaars={KUNSTENAARS}
               segmenten={SEGMENTEN}
               stijlen={STIJLEN}
-              onderwerpen={ONDERWERPEN}
+              categorieen={CATEGORIEEN}
               onClose={() => {}}
             />
             <Probe />
@@ -1003,7 +1003,7 @@ describe('ProductModal', () => {
               kunstenaars={KUNSTENAARS}
               segmenten={SEGMENTEN}
               stijlen={STIJLEN}
-              onderwerpen={ONDERWERPEN}
+              categorieen={CATEGORIEEN}
               onClose={() => {}}
             />
           </CartProvider>
@@ -1041,7 +1041,7 @@ describe('ProductModal', () => {
               kunstenaars={KUNSTENAARS}
               segmenten={SEGMENTEN}
               stijlen={STIJLEN}
-              onderwerpen={ONDERWERPEN}
+              categorieen={CATEGORIEEN}
               onClose={() => {}}
             />
           </CartProvider>
@@ -1122,43 +1122,43 @@ describe('ProductModal', () => {
     expect(screen.getByTestId('product-modal-quantity-value')).toHaveValue(3);
   });
 
-  it('shows artiest, collectie, stijl and onderwerp when the kunstwerk has them', () => {
+  it('shows artiest, collectie, stijl and categorie when the kunstwerk has them', () => {
     renderModal(() => {}, {
       ...KUNSTWERK,
       kunstenaarnr: 'KU-00001',
       segmentIds: ['seg-1'],
       stijlIds: ['stijl-1'],
-      onderwerpIds: ['onderwerp-1'],
+      categorieIds: ['categorie-1'],
     });
     expect(screen.getByTestId('product-modal-artiest')).toHaveTextContent('Open Artiest');
     expect(screen.getByTestId('product-modal-kunstwerkcode')).toHaveTextContent('Hotel paneel');
     expect(screen.getByTestId('product-modal-collecties')).toHaveTextContent('Hotel');
     expect(screen.getByTestId('product-modal-stijl')).toHaveTextContent('Abstract');
-    expect(screen.getByTestId('product-modal-onderwerp')).toHaveTextContent('Bloemen');
+    expect(screen.getByTestId('product-modal-categorie')).toHaveTextContent('Bloemen');
   });
 
-  it('omits the whole info block when the kunstwerk has no artiest, collectie, stijl or onderwerp', () => {
-    renderModal(() => {}, { ...KUNSTWERK, kunstenaarnr: null, segmentIds: [], stijlIds: [], onderwerpIds: [] });
+  it('omits the whole info block when the kunstwerk has no artiest, collectie, stijl or categorie', () => {
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarnr: null, segmentIds: [], stijlIds: [], categorieIds: [] });
     expect(screen.queryByTestId('product-modal-meta')).not.toBeInTheDocument();
   });
 
   it('only shows the fields that have data, omitting the rest', () => {
-    renderModal(() => {}, { ...KUNSTWERK, kunstenaarnr: null, segmentIds: ['seg-1'], stijlIds: [], onderwerpIds: [] });
+    renderModal(() => {}, { ...KUNSTWERK, kunstenaarnr: null, segmentIds: ['seg-1'], stijlIds: [], categorieIds: [] });
     expect(screen.getByTestId('product-modal-collecties')).toHaveTextContent('Hotel');
     expect(screen.queryByTestId('product-modal-artiest')).not.toBeInTheDocument();
     expect(screen.queryByTestId('product-modal-stijl')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('product-modal-onderwerp')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('product-modal-categorie')).not.toBeInTheDocument();
   });
 
   it('preview variant: renders inline without a backdrop, close button or dialog role', () => {
-    renderModal(() => {}, KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, ONDERWERPEN, 'preview');
+    renderModal(() => {}, KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, CATEGORIEEN, 'preview');
     expect(screen.queryByTestId('product-modal-backdrop')).not.toBeInTheDocument();
     expect(screen.queryByTestId('product-modal-close')).not.toBeInTheDocument();
     expect(screen.getByTestId('product-modal')).not.toHaveAttribute('role', 'dialog');
   });
 
   it('preview variant: never uses the viewport-based sm: breakpoint for its two-column layout (that caused the sidebar squeeze bug)', () => {
-    renderModal(() => {}, KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, ONDERWERPEN, 'preview');
+    renderModal(() => {}, KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, CATEGORIEEN, 'preview');
     expect(screen.getByTestId('product-modal').className).not.toMatch(/(^|\s)sm:grid-cols-2(\s|$)/);
   });
 
@@ -1169,7 +1169,7 @@ describe('ProductModal', () => {
   });
 
   it('preview variant: wraps the panel in a container-query frame with width-driven column markers', () => {
-    renderModal(() => {}, KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, ONDERWERPEN, 'preview');
+    renderModal(() => {}, KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, CATEGORIEEN, 'preview');
     const panel = screen.getByTestId('product-modal');
     expect(panel.parentElement).toHaveClass('pm-preview-frame');
     expect(panel.className).toMatch(/(^|\s)pm-preview-panel(\s|$)/);
@@ -1202,7 +1202,7 @@ describe('ProductModal', () => {
               kunstenaars={KUNSTENAARS}
               segmenten={SEGMENTEN}
               stijlen={STIJLEN}
-              onderwerpen={ONDERWERPEN}
+              categorieen={CATEGORIEEN}
               onClose={() => {}}
             />
             <Probe />
@@ -1219,7 +1219,7 @@ describe('ProductModal', () => {
   });
 
   it('preview variant: keeps the materiaal/maat selects interactive', () => {
-    renderModal(() => {}, KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, ONDERWERPEN, 'preview');
+    renderModal(() => {}, KUNSTWERK, KUNSTENAARS, SEGMENTEN, STIJLEN, CATEGORIEEN, 'preview');
     fireEvent.change(screen.getByTestId('product-modal-materiaal'), { target: { value: 'mat-2' } });
     expect(screen.getByTestId('product-modal-materiaal')).toHaveValue('mat-2');
   });

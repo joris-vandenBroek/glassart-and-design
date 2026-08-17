@@ -61,7 +61,7 @@ const DEFAULT_COLLECTIONS: Record<string, unknown[]> = {
   maten: [{ id: 'maat-1', breedte: 40, hoogte: 60 }],
   segmenten: [{ id: 'seg-1', omschrijvingNl: 'Hotel', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }],
   stijlen: [],
-  onderwerpen: [],
+  categorieen: [],
   prijsgroepen: [],
   drukkers: [],
   kunstwerken: [

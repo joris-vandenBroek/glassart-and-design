@@ -33,7 +33,7 @@ const EXTERNAL_ANCHORS = [
   'stamgegevens-maten',
   'stamgegevens-segmenten',
   'stamgegevens-stijlen',
-  'stamgegevens-onderwerpen',
+  'stamgegevens-categorieen',
   'kunstwerken',
   'kunstenaars',
   'stamgegevens-prijsgroepen',

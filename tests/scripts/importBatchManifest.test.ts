@@ -18,7 +18,7 @@ function geldigManifest() {
         maten: [{ breedte: 60, hoogte: 90 }],
         segmenten: ['Afrika'],
         stijlen: ['Modern'],
-        onderwerpen: ['Safari'],
+        categorieen: ['Safari'],
         omschrijvingNl: 'Een prachtig werk.',
         omschrijvingEn: 'A beautiful piece.',
         omschrijvingDe: 'Ein schönes Werk.',

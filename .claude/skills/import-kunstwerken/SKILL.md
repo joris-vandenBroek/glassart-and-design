@@ -1,6 +1,6 @@
 ---
 name: import-kunstwerken
-description: Importeer kunstwerken in bulk vanaf een lokale map afbeeldingen naar staging of productie — automatische code/formaat/maten-bepaling, segment/stijl/onderwerp-koppeling (hergebruik-eerst) en 4-talige omschrijvingen.
+description: Importeer kunstwerken in bulk vanaf een lokale map afbeeldingen naar staging of productie — automatische code/formaat/maten-bepaling, segment/stijl/categorie-koppeling (hergebruik-eerst) en 4-talige omschrijvingen.
 ---
 
 # Import-kunstwerken
@@ -63,7 +63,7 @@ Vraag dit als allereerste:
    npx tsx scripts/import-kunstwerken-cli.ts dump-referentie --omgeving <omgeving> --sessie-cookie "<cookie>"
    ```
 
-   Dit geeft `{ kunstenaars, segmenten, stijlen, onderwerpen, materialen, maten, kunstwerkCodes }`.
+   Dit geeft `{ kunstenaars, segmenten, stijlen, categorieen, materialen, maten, kunstwerkCodes }`.
 4. **Kunstenaar** — toon `referentie.kunstenaars` (kunstenaarnr + naam), laat de gebruiker
    kiezen. Staat de gewenste kunstenaar er niet bij, bied dan de optie "nieuwe kunstenaar
    toevoegen" aan. Kiest de gebruiker die optie: volg Stap 1 t/m 4 en 6 t/m 9 van
@@ -103,19 +103,19 @@ Voor elk bestand in de brondirectory-lijst, in volgorde:
    ```
 
    Geeft een JSON-array van maat-id's — dit wordt `maatIds`.
-4. Kies, op basis van de afbeelding en `referentie.segmenten`/`stijlen`/`onderwerpen`, het
-   best passende **bestaande** segment (en eventueel stijl/onderwerp — dit mogen er meerdere
+4. Kies, op basis van de afbeelding en `referentie.segmenten`/`stijlen`/`categorieen`, het
+   best passende **bestaande** segment (en eventueel stijl/categorie — dit mogen er meerdere
    zijn). De match gebeurt alléén op de Nederlandse tekst (`omschrijvingNl`). Bestaat er echt
    niets passends, bedenk dan een nieuwe, korte omschrijving — en schrijf die, net als de
    kunstwerkomschrijving in stap 8, in alle vier de talen (Nederlands, Engels, Duits, Frans).
    Voor elke gekozen waarde (bestaand of nieuw):
 
    ```
-   npx tsx scripts/import-kunstwerken-cli.ts maak-lookup-waarde --omgeving <omgeving> --sessie-cookie "<cookie>" --tabel <segmenten|stijlen|onderwerpen> --omschrijving-nl "<tekst-nl>" --omschrijving-fr "<tekst-fr>" --omschrijving-de "<tekst-de>" --omschrijving-en "<tekst-en>"
+   npx tsx scripts/import-kunstwerken-cli.ts maak-lookup-waarde --omgeving <omgeving> --sessie-cookie "<cookie>" --tabel <segmenten|stijlen|categorieen> --omschrijving-nl "<tekst-nl>" --omschrijving-fr "<tekst-fr>" --omschrijving-de "<tekst-de>" --omschrijving-en "<tekst-en>"
    ```
 
    Geeft `{"id":...,"omschrijvingNl":...,"omschrijvingFr":...,"omschrijvingDe":...,"omschrijvingEn":...,"hergebruikt":true|false}`.
-   Gebruik de teruggegeven `id` in `segmentIds`/`stijlIds`/`onderwerpIds`. Onthoud elke
+   Gebruik de teruggegeven `id` in `segmentIds`/`stijlIds`/`categorieIds`. Onthoud elke
    `hergebruikt:false`-waarde voor de eindsamenvatting.
 5. `materiaalIds` = alle `id`'s uit `referentie.materialen` (rechtstreeks, geen CLI-aanroep).
 6. `prijsPerM2` blijft weg uit het object dat je straks meestuurt (de server laat het dan op
@@ -148,20 +148,20 @@ Voor elk bestand in de brondirectory-lijst, in volgorde:
 
     Het `<kunstwerk-object>` bevat: `code`, `foto` (de url uit stap 9), `kunstenaarnr`,
     `formaat`, `omschrijvingNl`/`omschrijvingEn`/`omschrijvingDe`/`omschrijvingFr`,
-    `segmentIds`, `stijlIds`, `onderwerpIds`, `materiaalIds`, `maatIds`, `aiGegenereerd`.
+    `segmentIds`, `stijlIds`, `categorieIds`, `materiaalIds`, `maatIds`, `aiGegenereerd`.
 
     - Bij `{"status":"aangemaakt",...}`: ga verder met de statusregel hieronder.
     - Bij `{"status":"code-bestaat-al"}`: haal opnieuw `volgende-code` op (met de zojuist
       gefaalde code ook al in `toegekendeCodes`), en probeer stap 10 exact één keer opnieuw.
       Lukt het dan nog niet: sla dit kunstwerk over, meld het in de eindsamenvatting, en ga
       door met het volgende bestand.
-11. Print een statusregel: bestandsnaam, code, formaat, gekozen segment/stijl/onderwerp
+11. Print een statusregel: bestandsnaam, code, formaat, gekozen segment/stijl/categorie
     (met `(nieuw)` achter elke `hergebruikt:false`-waarde), kunstenaar.
 12. Voeg dit kunstwerk toe aan een in-memory manifest-lijst, met **waarden, geen id's**:
     `{ bestandsnaam, formaat, maten: [...breedte×hoogte-paren van de gekozen maatIds...],
     segmenten: [...gekozen Nederlandse omschrijvingsteksten (omschrijvingNl), niet de andere
-    talen...], stijlen: [...], onderwerpen: [...], omschrijvingNl, omschrijvingEn, omschrijvingDe,
-    omschrijvingFr }`. `segmenten`/`stijlen`/`onderwerpen` bewaren dus specifiek de Nederlandse
+    talen...], stijlen: [...], categorieen: [...], omschrijvingNl, omschrijvingEn, omschrijvingDe,
+    omschrijvingFr }`. `segmenten`/`stijlen`/`categorieen` bewaren dus specifiek de Nederlandse
     tekst — B2.3 matcht en maakt straks op precies die waarde aan.
 
 ## Stap B2: per kunstwerk (batch doorzetten vanuit een manifest)
@@ -186,7 +186,7 @@ opzoek/aanmaak-stappen op de nieuwe omgeving:
    meld dit in de eindsamenvatting met reden "geen enkele maat gevonden op deze omgeving", en ga
    door met het volgende item. Een gedeeltelijke misser (sommige paren matchen wel, andere niet)
    blijft normaal doorgaan met de wél gevonden `maatIds`.
-3. Voor elke tekst in `manifest-item.segmenten`/`stijlen`/`onderwerpen`: `maak-lookup-waarde`
+3. Voor elke tekst in `manifest-item.segmenten`/`stijlen`/`categorieen`: `maak-lookup-waarde`
    op de nieuwe omgeving (stap B.4 — hergebruikt-of-maakt-aan, matcht op `omschrijvingNl`). Het
    manifest bewaart alleen de Nederlandse tekst, dus geef **alleen** `--omschrijving-nl` mee
    (`--omschrijving-fr`/`-de`/`-en` zijn optioneel en laat je hier weg). Is er een treffer, dan
@@ -241,7 +241,7 @@ Stap D.
 
 Meld:
 - Aantal aangemaakte kunstwerken en hun codes.
-- Alle nieuw aangemaakte segment/stijl/onderwerp-waarden (`hergebruikt:false`).
+- Alle nieuw aangemaakte segment/stijl/categorie-waarden (`hergebruikt:false`).
 - Overgeslagen/mislukte bestanden, met reden.
 - Alleen bij een nieuwe import: het pad naar het manifest-bestand, met de aanbeveling: "
   Controleer dit resultaat in beheer op staging. Tevreden? Start deze skill opnieuw, kies
@@ -259,8 +259,8 @@ Meld:
   melden, doorgaan).
 - `409 code-bestaat-al` ondanks de lokale `toegekendeCodes`-boekhouding → exact één retry
   (zie stap B.10), daarna overslaan en melden.
-- Bij Stap B2: kunstenaar/segment/stijl/onderwerp niet gevonden op naam/tekst op de nieuwe
-  omgeving → voor segment/stijl/onderwerp automatisch aanmaken (stap B2.3 doet dit al); voor
+- Bij Stap B2: kunstenaar/segment/stijl/categorie niet gevonden op naam/tekst op de nieuwe
+  omgeving → voor segment/stijl/categorie automatisch aanmaken (stap B2.3 doet dit al); voor
   de kunstenaar zelf: overslaan en melden (zie B2.1) — de praktische vervolgstap voor een mens
   is dan de `toevoegen-kunstenaar`-skill los te starten (deze skill roept die niet automatisch
   aan).

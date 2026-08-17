@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Combobox } from './Combobox';
 import { FilterSection } from './FilterSection';
 import { resolveOmschrijving } from '@/lib/resolveOmschrijving';
-import type { Segment, Kunstwerk, KunstwerkFormaat, Stijl, Onderwerp } from './beheer/materiaalTypes';
+import type { Segment, Kunstwerk, KunstwerkFormaat, Stijl, Categorie } from './beheer/materiaalTypes';
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
 
 export const ALL_FILTER = 'all';
@@ -33,10 +33,10 @@ interface FiltersPanelContentProps {
   stijlFilters: Set<string>;
   onToggleStijl: (stijlId: string) => void;
   stijlCountBase: Kunstwerk[];
-  onderwerpen: Onderwerp[] | null;
-  onderwerpFilters: Set<string>;
-  onToggleOnderwerp: (onderwerpId: string) => void;
-  onderwerpCountBase: Kunstwerk[];
+  categorieen: Categorie[] | null;
+  categorieFilters: Set<string>;
+  onToggleCategorie: (categorieId: string) => void;
+  categorieCountBase: Kunstwerk[];
   aiGegenereerdFilter: boolean;
   onAiGegenereerdFilterChange: (checked: boolean) => void;
 }
@@ -58,10 +58,10 @@ export function FiltersPanelContent({
   stijlFilters,
   onToggleStijl,
   stijlCountBase,
-  onderwerpen,
-  onderwerpFilters,
-  onToggleOnderwerp,
-  onderwerpCountBase,
+  categorieen,
+  categorieFilters,
+  onToggleCategorie,
+  categorieCountBase,
   aiGegenereerdFilter,
   onAiGegenereerdFilterChange,
 }: FiltersPanelContentProps) {
@@ -156,23 +156,23 @@ export function FiltersPanelContent({
         })}
       </FilterSection>
 
-      <FilterSection title={t('onderwerpFacetTitle')} testId="onderwerp" defaultOpen={false}>
-        {(onderwerpen ?? []).map((onderwerp) => {
-          const isChecked = onderwerpFilters.has(onderwerp.id);
-          const count = onderwerpCountBase.filter((kunstwerk) => (kunstwerk.onderwerpIds ?? []).includes(onderwerp.id)).length;
+      <FilterSection title={t('categorieFacetTitle')} testId="categorie" defaultOpen={false}>
+        {(categorieen ?? []).map((categorie) => {
+          const isChecked = categorieFilters.has(categorie.id);
+          const count = categorieCountBase.filter((kunstwerk) => (kunstwerk.categorieIds ?? []).includes(categorie.id)).length;
           return (
             <label
-              key={onderwerp.id}
-              data-testid={`facet-onderwerp-option-${onderwerp.id}`}
+              key={categorie.id}
+              data-testid={`facet-categorie-option-${categorie.id}`}
               className="flex cursor-pointer items-center gap-2 text-xs text-white/70"
             >
               <input
                 type="checkbox"
                 checked={isChecked}
-                onChange={() => onToggleOnderwerp(onderwerp.id)}
+                onChange={() => onToggleCategorie(categorie.id)}
                 className="h-3.5 w-3.5 accent-gold"
               />
-              <span className={isChecked ? 'text-white' : ''}>{resolveOmschrijving(onderwerp, locale)}</span>
+              <span className={isChecked ? 'text-white' : ''}>{resolveOmschrijving(categorie, locale)}</span>
               <span className="ml-auto text-[11px] text-white/40">{count}</span>
             </label>
           );

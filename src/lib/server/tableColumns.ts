@@ -47,7 +47,7 @@ export const TABLE_COLUMNS: Record<string, readonly string[]> = {
   medewerkers: ['id', 'email', 'wachtwoordHash', 'naam', 'createdAt'],
   segmenten: ['id', 'omschrijvingNl', 'omschrijvingFr', 'omschrijvingDe', 'omschrijvingEn'],
   stijlen: ['id', 'omschrijvingNl', 'omschrijvingFr', 'omschrijvingDe', 'omschrijvingEn'],
-  onderwerpen: ['id', 'omschrijvingNl', 'omschrijvingFr', 'omschrijvingDe', 'omschrijvingEn'],
+  categorieen: ['id', 'omschrijvingNl', 'omschrijvingFr', 'omschrijvingDe', 'omschrijvingEn'],
   materiaalsoorten: [
     'id',
     'omschrijvingNl',

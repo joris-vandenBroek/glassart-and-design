@@ -12,7 +12,7 @@ import { MaterialenSection } from './MaterialenSection';
 import { MatenSection } from './MatenSection';
 import { SegmentenSection } from './SegmentenSection';
 import { StijlenSection } from './StijlenSection';
-import { OnderwerpenSection } from './OnderwerpenSection';
+import { CategorieenSection } from './CategorieenSection';
 import { KunstwerkenSection } from './KunstwerkenSection';
 import { PrijsgroepenSection } from './PrijsgroepenSection';
 import { KunstenaarsSection } from './KunstenaarsSection';
@@ -21,7 +21,7 @@ import { ActiviteitSection, type Activiteit } from './ActiviteitSection';
 import { GlassartDesignSection } from './GlassartDesignSection';
 import { InstellingenSection } from './InstellingenSection';
 import { PrijsmatrixSection } from './PrijsmatrixSection';
-import type { Materiaalsoort, Materiaal, Maat, Segment, Stijl, Onderwerp, Kunstwerk, Prijsgroep, Drukker } from './materiaalTypes';
+import type { Materiaalsoort, Materiaal, Maat, Segment, Stijl, Categorie, Kunstwerk, Prijsgroep, Drukker } from './materiaalTypes';
 import type { Kunstenaar } from './kunstenaarTypes';
 import type { Bedrijfsgegevens } from './bedrijfsgegevensTypes';
 import type { Bestelinstellingen } from './bestelinstellingenTypes';
@@ -51,7 +51,7 @@ const SECTION_ANCHORS: Record<BeheerSection, string> = {
   maten: 'stamgegevens-maten',
   segmenten: 'stamgegevens-segmenten',
   stijlen: 'stamgegevens-stijlen',
-  onderwerpen: 'stamgegevens-onderwerpen',
+  categorieen: 'stamgegevens-categorieen',
   kunstwerken: 'kunstwerken',
   kunstenaars: 'kunstenaars',
   prijsgroepen: 'stamgegevens-prijsgroepen',
@@ -258,7 +258,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   const maten = useApiCollection<Maat>('maten');
   const segmenten = useApiCollection<Segment>('segmenten');
   const stijlen = useApiCollection<Stijl>('stijlen');
-  const onderwerpen = useApiCollection<Onderwerp>('onderwerpen');
+  const categorieen = useApiCollection<Categorie>('categorieen');
   const kunstwerken = useApiCollection<Kunstwerk>('kunstwerken');
   const prijsgroepen = useApiCollection<Prijsgroep>('prijsgroepen');
   const kunstenaars = useApiCollection<Kunstenaar>('kunstenaars');
@@ -274,7 +274,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
   const matenCount = (maten.items ?? []).length;
   const segmentenCount = (segmenten.items ?? []).length;
   const stijlenCount = (stijlen.items ?? []).length;
-  const onderwerpenCount = (onderwerpen.items ?? []).length;
+  const categorieenCount = (categorieen.items ?? []).length;
   const kunstwerkenCount = (kunstwerken.items ?? []).length;
   const prijsgroepenCount = (prijsgroepen.items ?? []).length;
   const kunstenaarsCount = (kunstenaars.items ?? []).length;
@@ -301,7 +301,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
           matenCount={matenCount}
           segmentenCount={segmentenCount}
           stijlenCount={stijlenCount}
-          onderwerpenCount={onderwerpenCount}
+          categorieenCount={categorieenCount}
           kunstwerkenCount={kunstwerkenCount}
           kunstenaarsCount={kunstenaarsCount}
           prijsgroepenCount={prijsgroepenCount}
@@ -391,14 +391,14 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
               onUpdate={stijlen.update}
               onRemove={stijlen.remove}
             />
-          ) : activeSection === 'onderwerpen' ? (
-            <OnderwerpenSection
-              onderwerpen={onderwerpen.items}
+          ) : activeSection === 'categorieen' ? (
+            <CategorieenSection
+              categorieen={categorieen.items}
               kunstwerken={kunstwerken.items}
-              loadError={onderwerpen.error === 'load' ? t('onderwerpenLoadError') : null}
-              onAdd={onderwerpen.add}
-              onUpdate={onderwerpen.update}
-              onRemove={onderwerpen.remove}
+              loadError={categorieen.error === 'load' ? t('categorieenLoadError') : null}
+              onAdd={categorieen.add}
+              onUpdate={categorieen.update}
+              onRemove={categorieen.remove}
             />
           ) : activeSection === 'kunstwerken' ? (
             <KunstwerkenSection
@@ -408,7 +408,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
               materiaalsoorten={materiaalsoorten.items}
               maten={maten.items}
               stijlen={stijlen.items}
-              onderwerpen={onderwerpen.items}
+              categorieen={categorieen.items}
               kunstenaars={kunstenaars.items}
               loadError={kunstwerken.error === 'load' ? t('kunstwerkenLoadError') : null}
               bestelCodes={bestelCodes}
@@ -418,7 +418,7 @@ export function BeheerShell({ email, onLogout }: BeheerShellProps) {
               onRemove={kunstwerken.remove}
               onAddSegment={segmenten.add}
               onAddStijl={stijlen.add}
-              onAddOnderwerp={onderwerpen.add}
+              onAddCategorie={categorieen.add}
             />
           ) : activeSection === 'kunstenaars' ? (
             <KunstenaarsSection
