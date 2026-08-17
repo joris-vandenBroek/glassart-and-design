@@ -510,6 +510,7 @@
     "materialenActiverenVraag": "Moet dit materiaal actief gemaakt worden voor alle kunstwerken?",
     "materialenActiverenAlleKunstwerken": "Ja, bij alle kunstwerken",
     "materialenActiverenAlleenVlag": "Nee, alleen activeren",
+    "materialenKoppelenFout": "Het koppelen aan alle kunstwerken is mislukt. Probeer het opnieuw.",
     "materiaalInactiefSuffix": "(inactief)",
     "materialenLabelMateriaalsoort": "Materiaalsoort",
     "materialenLabelDikte": "Dikte (mm)",

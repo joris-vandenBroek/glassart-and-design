@@ -58,10 +58,16 @@ export function MaterialenSection({
   // await leest, ving nog de oude waarde. Zelfde patroon als KunstwerkenSection.
   const [mutationFailed, setMutationFailed] = useState(false);
   const [activerenVoorId, setActiverenVoorId] = useState<string | null>(null);
+  const [koppelFout, setKoppelFout] = useState<string | null>(null);
+  const [koppelBezig, setKoppelBezig] = useState(false);
   // Een net toegevoegd materiaal heeft nog geen id in dit component: onAdd geeft alleen
-  // slagen/falen terug. We onthouden waarop we het straks herkennen en pakken het id op
-  // zodra useApiCollection de lijst heeft ververst.
+  // slagen/falen terug. We onthouden de ids die er vlak vóór het toevoegen al waren en
+  // pakken het id op zodra useApiCollection de lijst heeft ververst. Herkennen op soort +
+  // dikte + omschrijving kan niet: `materialen` heeft geen unieke index, dus een duplicaat
+  // met exact dezelfde velden zou de eerste (oude) rij opleveren -- en dan zou de bulk-
+  // koppeling over de hele catalogus op het verkeerde materiaal landen.
   const [nieuwActiefMateriaal, setNieuwActiefMateriaal] = useState<{
+    bestaandeIds: string[];
     materiaalsoortId: string;
     materiaaldikte: number;
     omschrijvingNl: string;
@@ -76,14 +82,19 @@ export function MaterialenSection({
   // Boven de vroege returns, anders draait de hook niet op elke render.
   useEffect(() => {
     if (!nieuwActiefMateriaal || !materialen) return;
+    // Alleen ids die er vóór het toevoegen nog niet waren komen in aanmerking; de velden
+    // dienen daarbinnen nog als controle, zodat een materiaal dat intussen door iemand
+    // anders is aangemaakt niet per ongeluk gekozen wordt.
     const gevonden = materialen.find(
       (materiaal) =>
+        !nieuwActiefMateriaal.bestaandeIds.includes(materiaal.id) &&
         materiaal.omschrijvingNl === nieuwActiefMateriaal.omschrijvingNl &&
         materiaal.materiaalsoortId === nieuwActiefMateriaal.materiaalsoortId &&
         Number(materiaal.materiaaldikte) === nieuwActiefMateriaal.materiaaldikte
     );
     if (gevonden) {
       setActiverenVoorId(gevonden.id);
+      setKoppelFout(null);
       setNieuwActiefMateriaal(null);
     }
   }, [materialen, nieuwActiefMateriaal]);
@@ -139,6 +150,9 @@ export function MaterialenSection({
 
   async function handleSave() {
     if (!modalState) return;
+    // Vastleggen vóór de await: daarna is de lijst mogelijk al ververst met het nieuwe
+    // materiaal erin, en dan is het verschil niet meer te zien.
+    const bestaandeIds = (materialen ?? []).map((materiaal) => materiaal.id);
     // Een nieuw materiaal telt als "was uit": ook daar is de vraag zinnig, want het is
     // nog aan geen enkel kunstwerk gekoppeld.
     const wasActief = modalState.mode === 'edit' ? isMateriaalActief(modalState.materiaal) : false;
@@ -167,11 +181,13 @@ export function MaterialenSection({
     const bewerktId = modalState.mode === 'edit' ? modalState.materiaal.id : null;
     closeModal();
     if (!wordtGeactiveerd) return;
+    setKoppelFout(null);
     if (bewerktId) {
       setActiverenVoorId(bewerktId);
     } else {
       // Het id volgt zodra de lijst ververst is; zie het useEffect hierboven.
       setNieuwActiefMateriaal({
+        bestaandeIds,
         materiaalsoortId,
         materiaaldikte: Number(materiaaldikte),
         omschrijvingNl,
@@ -179,16 +195,29 @@ export function MaterialenSection({
     }
   }
 
-  async function koppelAlleKunstwerken() {
-    if (!activerenVoorId) return;
-    const response = await fetch(`/api/materialen/${activerenVoorId}/koppel-kunstwerken`, {
-      method: 'POST',
-    });
+  function sluitActiverenDialoog() {
     setActiverenVoorId(null);
-    if (response.ok) {
+    setKoppelFout(null);
+  }
+
+  async function koppelAlleKunstwerken() {
+    if (!activerenVoorId || koppelBezig) return;
+    setKoppelBezig(true);
+    setKoppelFout(null);
+    try {
+      const response = await fetch(`/api/materialen/${activerenVoorId}/koppel-kunstwerken`, {
+        method: 'POST',
+      });
+      if (!response.ok) throw new Error('koppelen mislukt');
+      sluitActiverenDialoog();
       onKunstwerkenChanged();
-    } else {
-      setActionError(t('materialenActionError'));
+    } catch {
+      // De dialoog blijft open met de fout erin: dit is een schrijfactie over de hele
+      // catalogus, dus stil falen is geen optie. De actiefout van de materiaalmodal kan
+      // hier niet gebruikt worden -- die modal is op dit moment al gesloten.
+      setKoppelFout(t('materialenKoppelenFout'));
+    } finally {
+      setKoppelBezig(false);
     }
   }
 
@@ -393,7 +422,7 @@ export function MaterialenSection({
       </Modal>
       <Modal
         isOpen={activerenVoorId !== null}
-        onClose={() => setActiverenVoorId(null)}
+        onClose={sluitActiverenDialoog}
         closeLabel={t('modalClose')}
         title={t('materialenActiverenTitel')}
         footerActions={
@@ -401,14 +430,15 @@ export function MaterialenSection({
             <button
               type="button"
               onClick={koppelAlleKunstwerken}
+              disabled={koppelBezig}
               data-testid="materialen-activeren-alle"
-              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
             >
               {t('materialenActiverenAlleKunstwerken')}
             </button>
             <button
               type="button"
-              onClick={() => setActiverenVoorId(null)}
+              onClick={sluitActiverenDialoog}
               data-testid="materialen-activeren-alleen"
               className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
             >
@@ -417,9 +447,16 @@ export function MaterialenSection({
           </>
         }
       >
-        <p data-testid="materialen-activeren-dialog" className="text-sm text-white/80">
-          {t('materialenActiverenVraag')}
-        </p>
+        <div className="flex flex-col gap-2">
+          <p data-testid="materialen-activeren-dialog" className="text-sm text-white/80">
+            {t('materialenActiverenVraag')}
+          </p>
+          {koppelFout && (
+            <p data-testid="materialen-activeren-fout" className="text-xs text-red-400">
+              {koppelFout}
+            </p>
+          )}
+        </div>
       </Modal>
     </div>
   );
