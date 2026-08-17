@@ -23,7 +23,9 @@ export function KlantWebsiteChapter() {
         <strong>Collecties</strong> — het overzicht van alle kunstwerken die een klant kan bestellen, met
         filters op segment, stijl, categorie en materiaal. Alles hier komt rechtstreeks uit{' '}
         <DocLink anchor="kunstwerken">de kunstwerken die jij aanmaakt</DocLink>; de filters komen uit{' '}
-        <DocLink anchor="stamgegevens">de overige stamgegevens</DocLink>.
+        <DocLink anchor="stamgegevens">de overige stamgegevens</DocLink>. Een kunstwerk waarvan geen
+        enkel materiaal meer <DocLink anchor="stamgegevens-materialen">actief</DocLink> is, verschijnt
+        hier niet meer.
       </P>
       <SubSection id="klant-website-bestellen" title="Een kunstwerk bestellen">
         <P>

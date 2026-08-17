@@ -21,7 +21,7 @@ export const PATCH = withMedewerker<Context>(
     const data = (await request.json()) as Record<string, unknown>;
     // Alleen bij het uitzetten van de vlag. Activeren en gewone veldwijzigingen
     // blijven ongehinderd -- de regel beschermt lopende bestellingen, niet de rij.
-    if ('actief' in data && data.actief === false) {
+    if ('actief' in data && !data.actief) {
       const [rows] = await getPool().query(
         `SELECT 1
          FROM bestellines bl

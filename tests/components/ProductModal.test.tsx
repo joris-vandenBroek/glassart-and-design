@@ -421,6 +421,13 @@ describe('ProductModal', () => {
       ]
     );
     expect(screen.getByTestId('product-modal-materiaal-tekst')).toHaveTextContent('4mm Veiligheidsglas');
+    // De tekst-tak rendert beschikbareMaterialen[0] ongeacht materiaalId, dus onderscheidt
+    // hij niet of de state stiekem nog op het inactieve materiaal staat. De omschrijving
+    // hangt wél af van geselecteerdMateriaal (dus van materiaalId zelf) en trekt de oude en
+    // nieuwe standaardkeuze-berekening daadwerkelijk uit elkaar.
+    expect(screen.getByTestId('product-modal-materiaal-omschrijving')).toHaveTextContent(
+      'Extra diepte en stevigheid voor een indrukwekkend effect.'
+    );
   });
 
   it('valt terug op het eerste actieve materiaal als het veiligheidsglasmateriaal zelf inactief is', () => {
@@ -569,6 +576,64 @@ describe('ProductModal', () => {
       vi.advanceTimersByTime(600);
     });
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('adds the active materiaal to the cart when the materiaalkeuze is replaced by tekst', async () => {
+    // Dekt het bestelpad in de tak waar nog maar één materiaal actief is (de <select>
+    // maakt dan plaats voor tekst, zie 'vervangt de keuzelijst door tekst...' hierboven) --
+    // niets in de bestaande mandjetests toont dat het juiste materiaalId (van het actieve
+    // materiaal, niet het inactieve) daadwerkelijk in het mandje belandt.
+    const onClose = vi.fn();
+
+    function Probe() {
+      const { items, isHydrated } = useCart();
+      return isHydrated ? <div data-testid="probe">{JSON.stringify(items)}</div> : null;
+    }
+
+    const kunstwerkMetEenActiefMateriaal: Kunstwerk = { ...KUNSTWERK, materiaalIds: ['mat-2', 'mat-1'] };
+    const materialenMetEenInactief: Materiaal[] = [
+      { ...MATERIAAL_1, actief: true },
+      { ...MATERIAAL_2, actief: false },
+    ];
+
+    render(
+      <NextIntlClientProvider locale="nl" messages={messages}>
+        <CustomerAuthProvider>
+          <CartProvider>
+            <ProductModal
+              kunstwerk={kunstwerkMetEenActiefMateriaal}
+              prijzen={KUNSTWERK_PRIJZEN}
+              materialen={materialenMetEenInactief}
+              maten={MATEN}
+              materiaalsoorten={MATERIAALSOORTEN}
+              kunstenaars={KUNSTENAARS}
+              segmenten={SEGMENTEN}
+              stijlen={STIJLEN}
+              categorieen={CATEGORIEEN}
+              onClose={onClose}
+            />
+            <Probe />
+          </CartProvider>
+        </CustomerAuthProvider>
+      </NextIntlClientProvider>
+    );
+
+    vi.useRealTimers();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    vi.useFakeTimers();
+    expect(screen.getByTestId('probe')).toBeInTheDocument();
+
+    // Geen <select> meer beschikbaar in deze tak -- alleen bevestigen.
+    expect(screen.queryByTestId('product-modal-materiaal')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('product-modal-confirm'));
+
+    const items = JSON.parse(screen.getByTestId('probe').textContent ?? '[]');
+    expect(items).toHaveLength(1);
+    expect(items[0].materiaalId).toBe('mat-1');
+    expect(items[0].materiaalId).not.toBe('mat-2');
+    expect(items[0].materiaalId).not.toBe('');
   });
 
   it('does not let a stale close-timer from a previous kunstwerk affect the newly shown modal', () => {

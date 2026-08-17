@@ -199,6 +199,21 @@ describe('/api/materialen', () => {
     expect(Boolean(gelezen.actief)).toBe(true);
   });
 
+  it('blokkeert deactiveren via actief: 0 net zo goed als via actief: false', async () => {
+    const cookie = await medewerkerCookie();
+    const materiaalId = await maakMateriaal();
+    await maakBestellijn(materiaalId, 'Te versturen naar drukker');
+
+    const response = await patchMateriaal(jsonRequest('PATCH', { actief: 0 }, cookie), {
+      params: { id: materiaalId },
+    });
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toBe('in-use-open-bestelling');
+
+    const gelezen = await (await getMateriaal(jsonRequest('GET'), { params: { id: materiaalId } })).json();
+    expect(Boolean(gelezen.actief)).toBe(true);
+  });
+
   it('staat deactiveren toe als de enige bestelling afgerond is', async () => {
     const cookie = await medewerkerCookie();
     const materiaalId = await maakMateriaal();
