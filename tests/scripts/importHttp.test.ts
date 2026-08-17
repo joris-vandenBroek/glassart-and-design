@@ -63,7 +63,7 @@ describe('haalReferentieOp', () => {
         );
       }
       if (url.endsWith('/api/stijlen')) return Promise.resolve(jsonResponse(200, []));
-      if (url.endsWith('/api/onderwerpen')) return Promise.resolve(jsonResponse(200, []));
+      if (url.endsWith('/api/categorieen')) return Promise.resolve(jsonResponse(200, []));
       if (url.endsWith('/api/materialen')) return Promise.resolve(jsonResponse(200, []));
       if (url.endsWith('/api/maten')) return Promise.resolve(jsonResponse(200, []));
       if (url.endsWith('/api/kunstwerken')) {
@@ -235,7 +235,7 @@ describe('maakKunstwerk', () => {
     omschrijvingFr: 'Fr',
     segmentIds: ['s1'],
     stijlIds: [],
-    onderwerpIds: [],
+    categorieIds: [],
     materiaalIds: [],
     maatIds: [],
     aiGegenereerd: false,

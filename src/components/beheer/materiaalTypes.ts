@@ -48,7 +48,7 @@ export interface Stijl {
   omschrijvingEn: string;
 }
 
-export interface Onderwerp {
+export interface Categorie {
   id: string;
   omschrijvingNl: string;
   omschrijvingFr: string;
@@ -66,7 +66,7 @@ export interface Kunstwerk {
   materiaalIds: string[];
   maatIds: string[];
   stijlIds?: string[];
-  onderwerpIds?: string[];
+  categorieIds?: string[];
   aiGegenereerd?: boolean;
   prijsPerM2?: number;
   omschrijvingNl: string;

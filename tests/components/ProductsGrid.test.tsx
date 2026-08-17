@@ -33,7 +33,7 @@ const KUNSTWERKEN = [
     formaat: 'staand',
     kunstenaarnr: 'KU-00001',
     stijlIds: ['stijl-abstract'],
-    onderwerpIds: ['onderwerp-bloemen'],
+    categorieIds: ['categorie-bloemen'],
     omschrijvingNl: 'Hotel paneel',
     omschrijvingFr: '',
     omschrijvingDe: '',
@@ -48,7 +48,7 @@ const KUNSTWERKEN = [
     maatIds: ['maat-1'],
     formaat: 'liggend',
     stijlIds: ['stijl-minimalistisch'],
-    onderwerpIds: ['onderwerp-dieren'],
+    categorieIds: ['categorie-dieren'],
     aiGegenereerd: true,
     omschrijvingNl: 'Wellness paneel',
     omschrijvingFr: '',
@@ -64,7 +64,7 @@ const KUNSTWERKEN = [
     maatIds: ['maat-1'],
     formaat: 'vierkant',
     stijlIds: ['stijl-abstract', 'stijl-minimalistisch'],
-    onderwerpIds: [],
+    categorieIds: [],
     omschrijvingNl: 'Kunstwerk in beide segmenten',
     omschrijvingFr: '',
     omschrijvingDe: '',
@@ -100,9 +100,9 @@ const STIJLEN = [
   { id: 'stijl-abstract', omschrijvingNl: 'Abstract', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
   { id: 'stijl-minimalistisch', omschrijvingNl: 'Minimalistisch', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
-const ONDERWERPEN = [
-  { id: 'onderwerp-bloemen', omschrijvingNl: 'Bloemen', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
-  { id: 'onderwerp-dieren', omschrijvingNl: 'Dieren', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+const CATEGORIEEN = [
+  { id: 'categorie-bloemen', omschrijvingNl: 'Bloemen', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'categorie-dieren', omschrijvingNl: 'Dieren', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 
 let collections: Record<string, unknown[]> = {};
@@ -117,7 +117,7 @@ function mockCollections(overrides: Record<string, unknown[]> = {}) {
     materiaalsoorten: MATERIAALSOORTEN,
     kunstenaars: KUNSTENAARS,
     stijlen: STIJLEN,
-    onderwerpen: ONDERWERPEN,
+    categorieen: CATEGORIEEN,
     ...overrides,
   };
 }
@@ -215,14 +215,14 @@ describe('ProductsGrid', () => {
     expect(screen.getByTestId('product-modal')).toBeInTheDocument();
   });
 
-  it('shows the artiest/collectie/stijl/onderwerp info block once the dialog is opened', async () => {
+  it('shows the artiest/collectie/stijl/categorie info block once the dialog is opened', async () => {
     renderProductsGrid();
     const cards = await screen.findAllByTestId('product-card');
-    fireEvent.click(cards[0]); // kw-1: kunstenaarnr 'KU-00001', segmentIds ['seg-hotel'], stijlIds ['stijl-abstract'], onderwerpIds ['onderwerp-bloemen']
+    fireEvent.click(cards[0]); // kw-1: kunstenaarnr 'KU-00001', segmentIds ['seg-hotel'], stijlIds ['stijl-abstract'], categorieIds ['categorie-bloemen']
     expect(screen.getByTestId('product-modal-artiest')).toHaveTextContent('Sabrina Glasser');
     expect(screen.getByTestId('product-modal-collecties')).toHaveTextContent('Hotel');
     expect(screen.getByTestId('product-modal-stijl')).toHaveTextContent('Abstract');
-    expect(screen.getByTestId('product-modal-onderwerp')).toHaveTextContent('Bloemen');
+    expect(screen.getByTestId('product-modal-categorie')).toHaveTextContent('Bloemen');
   });
 
   it('closes the product modal when its backdrop is clicked', async () => {
@@ -329,7 +329,7 @@ describe('ProductsGrid', () => {
     renderProductsGrid();
     await screen.findAllByTestId('product-card');
     fireEvent.focus(screen.getByTestId('kunstenaar-filter'));
-    fireEvent.click(screen.getByTestId('kunstenaar-filter-option-ka-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-filter-option-KU-00001'));
     const banner = screen.getByTestId('kunstenaar-banner');
     expect(banner).toHaveTextContent('Meer weten over Sabrina Glasser? Bekijk https://www.jacksart.nl/');
     expect(within(banner).getByRole('link')).toHaveAttribute('href', 'https://www.jacksart.nl/');
@@ -339,7 +339,7 @@ describe('ProductsGrid', () => {
     renderProductsGrid();
     await screen.findAllByTestId('product-card');
     fireEvent.focus(screen.getByTestId('kunstenaar-filter'));
-    fireEvent.click(screen.getByTestId('kunstenaar-filter-option-ka-1'));
+    fireEvent.click(screen.getByTestId('kunstenaar-filter-option-KU-00001'));
     expect(within(screen.getByTestId('kunstenaar-banner')).queryByRole('link')).not.toBeInTheDocument();
   });
 
@@ -376,16 +376,16 @@ describe('ProductsGrid', () => {
     expect(screen.getAllByTestId('product-card')).toHaveLength(3); // OR: any of the 2 stijlen matches all 3
   });
 
-  it('filters by onderwerp (OR within the facet) combined with segment via AND', async () => {
+  it('filters by categorie (OR within the facet) combined with segment via AND', async () => {
     renderProductsGrid();
     await screen.findAllByTestId('product-card');
-    fireEvent.click(screen.getByTestId('filter-section-onderwerp-toggle')); // Onderwerp is collapsed by default
+    fireEvent.click(screen.getByTestId('filter-section-categorie-toggle')); // Categorie is collapsed by default
 
-    expect(screen.getByTestId('facet-onderwerp-option-onderwerp-bloemen')).toHaveTextContent('1'); // kw-1
-    expect(screen.getByTestId('facet-onderwerp-option-onderwerp-dieren')).toHaveTextContent('1'); // kw-2
+    expect(screen.getByTestId('facet-categorie-option-categorie-bloemen')).toHaveTextContent('1'); // kw-1
+    expect(screen.getByTestId('facet-categorie-option-categorie-dieren')).toHaveTextContent('1'); // kw-2
 
-    fireEvent.click(screen.getByTestId('facet-onderwerp-option-onderwerp-bloemen'));
-    expect(screen.getAllByTestId('product-card')).toHaveLength(1); // only kw-1 (kw-3 has no onderwerpen)
+    fireEvent.click(screen.getByTestId('facet-categorie-option-categorie-bloemen'));
+    expect(screen.getAllByTestId('product-card')).toHaveLength(1); // only kw-1 (kw-3 has no categorieen)
   });
 
   it('filters to only AI-gegenereerd kunstwerken when that checkbox is checked', async () => {
@@ -411,15 +411,15 @@ describe('ProductsGrid', () => {
     fireEvent.click(screen.getByTestId('facet-formaat-option-staand'));
     fireEvent.click(screen.getByTestId('filter-section-stijl-toggle')); // Stijl is collapsed by default
     fireEvent.click(screen.getByTestId('facet-stijl-option-stijl-abstract'));
-    fireEvent.click(screen.getByTestId('filter-section-onderwerp-toggle')); // Onderwerp is collapsed by default
-    fireEvent.click(screen.getByTestId('facet-onderwerp-option-onderwerp-bloemen'));
+    fireEvent.click(screen.getByTestId('filter-section-categorie-toggle')); // Categorie is collapsed by default
+    fireEvent.click(screen.getByTestId('facet-categorie-option-categorie-bloemen'));
     fireEvent.click(screen.getByTestId('facet-ai-gegenereerd'));
 
     expect(screen.getByTestId('active-filter-chip-segment')).toHaveTextContent('Hotel');
     expect(screen.getByTestId('active-filter-chip-kunstenaar')).toHaveTextContent('Sabrina Glasser');
     expect(screen.getByTestId('active-filter-chip-formaat-staand')).toHaveTextContent('Staand');
     expect(screen.getByTestId('active-filter-chip-stijl-stijl-abstract')).toHaveTextContent('Abstract');
-    expect(screen.getByTestId('active-filter-chip-onderwerp-onderwerp-bloemen')).toHaveTextContent('Bloemen');
+    expect(screen.getByTestId('active-filter-chip-categorie-categorie-bloemen')).toHaveTextContent('Bloemen');
     expect(screen.getByTestId('active-filter-chip-ai-gegenereerd')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('active-filter-chip-formaat-staand-remove'));
@@ -473,7 +473,7 @@ describe('ProductsGrid', () => {
           materiaalIds: ['mat-1'],
           maatIds: ['maat-1'],
           stijlIds: [],
-          onderwerpIds: [],
+          categorieIds: [],
           omschrijvingNl: 'Kunstwerk zonder formaat',
           omschrijvingFr: '',
           omschrijvingDe: '',
@@ -502,7 +502,7 @@ describe('ProductsGrid', () => {
           formaat: 'alle',
           prijsPerM2: 65,
           stijlIds: [],
-          onderwerpIds: [],
+          categorieIds: [],
           omschrijvingNl: 'Op maat, elk formaat',
           omschrijvingFr: '',
           omschrijvingDe: '',

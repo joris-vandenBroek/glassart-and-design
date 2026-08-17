@@ -15,7 +15,7 @@ import { useApiRecord } from '@/lib/useApiRecord';
 import { pasPrijsgroepToe } from '@/lib/prijsgroep';
 import { HelpHint } from '@/components/HelpHint';
 import { ProductImage } from './ProductImage';
-import type { Kunstwerk, Materiaal, Maat, Materiaalsoort, Segment, Stijl, Onderwerp } from './beheer/materiaalTypes';
+import type { Kunstwerk, Materiaal, Maat, Materiaalsoort, Segment, Stijl, Categorie } from './beheer/materiaalTypes';
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
 import type { Bestelinstellingen } from './beheer/bestelinstellingenTypes';
 
@@ -54,7 +54,7 @@ interface ProductModalProps {
   kunstenaars: Kunstenaar[] | null;
   segmenten: Segment[] | null;
   stijlen: Stijl[] | null;
-  onderwerpen: Onderwerp[] | null;
+  categorieen: Categorie[] | null;
   onClose: () => void;
   variant?: 'dialog' | 'preview';
 }
@@ -68,7 +68,7 @@ export function ProductModal({
   kunstenaars,
   segmenten,
   stijlen,
-  onderwerpen,
+  categorieen,
   onClose,
   variant = 'dialog',
 }: ProductModalProps) {
@@ -176,12 +176,12 @@ export function ProductModal({
     const stijl = (stijlen ?? []).find((s) => s.id === stijlId);
     return stijl ? resolveOmschrijving(stijl, locale) : stijlId;
   });
-  const onderwerpLabels = (kunstwerk.onderwerpIds ?? []).map((onderwerpId) => {
-    const onderwerp = (onderwerpen ?? []).find((o) => o.id === onderwerpId);
-    return onderwerp ? resolveOmschrijving(onderwerp, locale) : onderwerpId;
+  const categorieLabels = (kunstwerk.categorieIds ?? []).map((categorieId) => {
+    const categorie = (categorieen ?? []).find((o) => o.id === categorieId);
+    return categorie ? resolveOmschrijving(categorie, locale) : categorieId;
   });
   const heeftMetaInfo =
-    Boolean(artiestNaam) || collectieLabels.length > 0 || stijlLabels.length > 0 || onderwerpLabels.length > 0;
+    Boolean(artiestNaam) || collectieLabels.length > 0 || stijlLabels.length > 0 || categorieLabels.length > 0;
 
   const customBreedteNum = Number(customBreedte);
   const customHoogteNum = Number(customHoogte);
@@ -382,11 +382,11 @@ export function ProductModal({
                 </dd>
               </>
             )}
-            {onderwerpLabels.length > 0 && (
+            {categorieLabels.length > 0 && (
               <>
-                <dt className="font-head text-[10px] uppercase tracking-wide text-gold/90">{t('onderwerpLabel')}</dt>
-                <dd data-testid="product-modal-onderwerp" className="text-white/75">
-                  {onderwerpLabels.join(', ')}
+                <dt className="font-head text-[10px] uppercase tracking-wide text-gold/90">{t('categorieLabel')}</dt>
+                <dd data-testid="product-modal-categorie" className="text-white/75">
+                  {categorieLabels.join(', ')}
                 </dd>
               </>
             )}

@@ -934,19 +934,19 @@ describe('Account verwijderen (klant, zelfbediening)', () => {
   });
 });
 
-describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
-  it('een segment/stijl/onderwerp dat vanuit het kunstwerk-formulier "erbij" wordt gemaakt, landt echt in de eigen stamtabel en wordt op het kunstwerk gekoppeld', async () => {
+describe('Kunstwerk toevoegen met een nieuw segment/stijl/categorie', () => {
+  it('een segment/stijl/categorie dat vanuit het kunstwerk-formulier "erbij" wordt gemaakt, landt echt in de eigen stamtabel en wordt op het kunstwerk gekoppeld', async () => {
     let kunstwerkId: string | null = null;
     let segmentId: string | null = null;
     let stijlId: string | null = null;
-    let onderwerpId: string | null = null;
+    let categorieId: string | null = null;
 
     try {
       const staff = await medewerkerCookie();
 
       // Zo werkt de inline "+ Toevoegen" in KunstwerkenSection ook: het nieuwe stamgegeven
       // wordt meteen als los record aangemaakt (niet pas bij het opslaan van het kunstwerk),
-      // en pas daarna gekoppeld via de id in segmentIds/stijlIds/onderwerpIds.
+      // en pas daarna gekoppeld via de id in segmentIds/stijlIds/categorieIds.
       const segmentResponse = await postResource(
         req('POST', { omschrijvingNl: 'AUTOTEST Segment Inline' }, staff),
         { params: { resource: 'segmenten' } }
@@ -960,13 +960,13 @@ describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
       expect(stijlResponse.status).toBe(201);
       stijlId = (await stijlResponse.json()).id;
 
-      const onderwerpResponse = await postResource(
-        req('POST', { omschrijvingNl: 'AUTOTEST Onderwerp Inline' }, staff),
-        { params: { resource: 'onderwerpen' } }
+      const categorieResponse = await postResource(
+        req('POST', { omschrijvingNl: 'AUTOTEST Categorie Inline' }, staff),
+        { params: { resource: 'categorieen' } }
       );
-      expect(onderwerpResponse.status).toBe(201);
-      onderwerpId = (await onderwerpResponse.json()).id;
-      stap(`Inline aangemaakt: segment=${segmentId}, stijl=${stijlId}, onderwerp=${onderwerpId}`);
+      expect(categorieResponse.status).toBe(201);
+      categorieId = (await categorieResponse.json()).id;
+      stap(`Inline aangemaakt: segment=${segmentId}, stijl=${stijlId}, categorie=${categorieId}`);
 
       // Kunstwerken had een generieke CRUD-route via /api/[resource], maar heeft sinds de
       // kunstwerkcode-migratie een eigen route (unieke code, wijzig-/verwijderslot) -- zie
@@ -978,7 +978,7 @@ describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
             code: 'AUTOTEST Kunstwerk Met Nieuwe Stamgegevens',
             segmentIds: [segmentId],
             stijlIds: [stijlId],
-            onderwerpIds: [onderwerpId],
+            categorieIds: [categorieId],
             materiaalIds: [],
             maatIds: [],
           },
@@ -995,17 +995,17 @@ describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
       expect(segmentenLijst.some((s: { id: string; omschrijvingNl: string }) => s.id === segmentId && s.omschrijvingNl === 'AUTOTEST Segment Inline')).toBe(true);
       const stijlenLijst = await (await listResource(req('GET'), { params: { resource: 'stijlen' } })).json();
       expect(stijlenLijst.some((s: { id: string; omschrijvingNl: string }) => s.id === stijlId && s.omschrijvingNl === 'AUTOTEST Stijl Inline')).toBe(true);
-      const onderwerpenLijst = await (
-        await listResource(req('GET'), { params: { resource: 'onderwerpen' } })
+      const categorieenLijst = await (
+        await listResource(req('GET'), { params: { resource: 'categorieen' } })
       ).json();
-      expect(onderwerpenLijst.some((o: { id: string; omschrijvingNl: string }) => o.id === onderwerpId && o.omschrijvingNl === 'AUTOTEST Onderwerp Inline')).toBe(true);
-      stap(`Bevestigd: alle 3 staan echt als eigen rij in hun stamtabel (${segmentenLijst.length} segmenten, ${stijlenLijst.length} stijlen, ${onderwerpenLijst.length} onderwerpen totaal)`);
+      expect(categorieenLijst.some((o: { id: string; omschrijvingNl: string }) => o.id === categorieId && o.omschrijvingNl === 'AUTOTEST Categorie Inline')).toBe(true);
+      stap(`Bevestigd: alle 3 staan echt als eigen rij in hun stamtabel (${segmentenLijst.length} segmenten, ${stijlenLijst.length} stijlen, ${categorieenLijst.length} categorieen totaal)`);
 
       // En staat de koppeling ook echt op het kunstwerk zelf?
       const relaties = await haalRelatiesOpVoorEen(getPool(), kunstwerkId as string);
       expect(relaties.segmentIds).toEqual([segmentId]);
       expect(relaties.stijlIds).toEqual([stijlId]);
-      expect(relaties.onderwerpIds).toEqual([onderwerpId]);
+      expect(relaties.categorieIds).toEqual([categorieId]);
       stap('Bevestigd: de koppeling staat ook correct op het kunstwerk zelf.');
     } finally {
       const pool = getPool();
@@ -1021,11 +1021,11 @@ describe('Kunstwerk toevoegen met een nieuw segment/stijl/onderwerp', () => {
         const id = stijlId;
         await veiligOpruimen('stijl', () => pool.query('DELETE FROM stijlen WHERE id = ?', [id]));
       }
-      if (onderwerpId) {
-        const id = onderwerpId;
-        await veiligOpruimen('onderwerp', () => pool.query('DELETE FROM onderwerpen WHERE id = ?', [id]));
+      if (categorieId) {
+        const id = categorieId;
+        await veiligOpruimen('categorie', () => pool.query('DELETE FROM categorieen WHERE id = ?', [id]));
       }
-      stap('Opgeruimd: kunstwerk, segment, stijl, onderwerp.');
+      stap('Opgeruimd: kunstwerk, segment, stijl, categorie.');
     }
   });
 });
