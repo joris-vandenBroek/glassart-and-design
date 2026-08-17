@@ -60,6 +60,7 @@ describe('SCREENSHOT_BRONNEN', () => {
     'public/documentatie/kunstwerken.png',
     'public/documentatie/kunstwerken-code-voor.png',
     'public/documentatie/kunstwerken-code-na.png',
+    'public/documentatie/kunstwerken-opslaan.png',
     'public/documentatie/kunstenaars.png',
     'public/documentatie/drukkers.png',
     'public/documentatie/drukkers-zending-bekijken.png',
@@ -70,7 +71,7 @@ describe('SCREENSHOT_BRONNEN', () => {
     'public/documentatie/klant-website.png',
   ];
 
-  it('bevat precies de 13 screenshots die op dit moment in de handleiding gebruikt worden', () => {
+  it('bevat precies de 14 screenshots die op dit moment in de handleiding gebruikt worden', () => {
     expect(Object.keys(SCREENSHOT_BRONNEN).sort()).toEqual([...VERWACHTE_SCREENSHOTS].sort());
   });
 
