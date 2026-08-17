@@ -9,24 +9,26 @@ import {
 } from '../../scripts/lib/importKunstwerken';
 
 describe('bepaalVolgendeCode', () => {
-  it('begint bij 001 als er nog geen codes voor het prefix bestaan', () => {
-    expect(bepaalVolgendeCode([], 'GLA-PRO')).toBe('GLA-PRO-001');
+  it('begint bij 0001 als er nog geen codes voor het prefix bestaan', () => {
+    expect(bepaalVolgendeCode([], 'GLA-PRO')).toBe('GLA-PRO-0001');
   });
 
   it('telt op vanaf de hoogste bestaande code', () => {
-    expect(bepaalVolgendeCode(['GLA-PRO-001', 'GLA-PRO-002'], 'GLA-PRO')).toBe('GLA-PRO-003');
+    expect(bepaalVolgendeCode(['GLA-PRO-0001', 'GLA-PRO-0002'], 'GLA-PRO')).toBe('GLA-PRO-0003');
   });
 
   it('negeert codes van een andere collectie', () => {
-    expect(bepaalVolgendeCode(['GLA-AFR-005', 'GLA-PRO-001'], 'GLA-PRO')).toBe('GLA-PRO-002');
+    expect(bepaalVolgendeCode(['GLA-AFR-0005', 'GLA-PRO-0001'], 'GLA-PRO')).toBe('GLA-PRO-0002');
   });
 
-  it('houdt de bestaande cijferbreedte aan', () => {
-    expect(bepaalVolgendeCode(['GLA-SAB-0007'], 'GLA-SAB')).toBe('GLA-SAB-0008');
+  it('gebruikt altijd een vaste breedte van vier cijfers, ook als de bestaande code smaller is', () => {
+    // Dit is precies het gedrag dat src/lib/kunstwerkCodeVoorstel.ts bewust heeft afgeschaft
+    // (zie de toelichting daar): niet de breedte van de bestaande code overnemen.
+    expect(bepaalVolgendeCode(['GLA-SAB-007'], 'GLA-SAB')).toBe('GLA-SAB-0008');
   });
 
   it('werkt met een prefix die regex-speciale tekens bevat', () => {
-    expect(bepaalVolgendeCode(['GLA-F1-001'], 'GLA-F1')).toBe('GLA-F1-002');
+    expect(bepaalVolgendeCode(['GLA-F1-0001'], 'GLA-F1')).toBe('GLA-F1-0002');
   });
 });
 

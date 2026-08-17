@@ -199,4 +199,19 @@ describe('useApiCollection', () => {
     expect(result.current.error).toBe('action');
     expect(result.current.lastMutationErrorCode).toBe('netwerkfout');
   });
+
+  it('sets lastMutationErrorCode to netwerkfout when add fails because fetch itself throws', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    const { result } = renderHook(() => useApiCollection<{ id: string }>('kunstwerken'));
+    await waitFor(() => expect(result.current.items).toEqual([]));
+
+    let success = true;
+    await act(async () => {
+      success = await result.current.add({} as never);
+    });
+    expect(success).toBe(false);
+    expect(result.current.lastMutationErrorCode).toBe('netwerkfout');
+  });
 });

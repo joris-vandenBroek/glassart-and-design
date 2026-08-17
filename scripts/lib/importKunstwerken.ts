@@ -1,26 +1,16 @@
 import { imageSizeFromFile } from 'image-size/fromFile';
 import { detectFormaatFromDimensions } from '../../src/lib/detectKunstwerkFormaat';
+import { stelVolgendeCodeVoor } from '../../src/lib/kunstwerkCodeVoorstel';
 import type { KunstwerkFormaat } from '../../src/components/beheer/materiaalTypes';
 
-function escapeRegex(tekst: string): string {
-  return tekst.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
+// Hergebruikt dezelfde breedte-4-logica als beheer (src/lib/kunstwerkCodeVoorstel.ts) in
+// plaats van die te dupliceren -- dit script kent geen @/-alias, maar een relatief pad naar
+// src/lib werkt hier net zo goed als voor detectKunstwerkFormaat hierboven.
 export function bepaalVolgendeCode(bestaandeCodes: string[], prefix: string): string {
-  const patroon = new RegExp(`^${escapeRegex(prefix)}-(\\d+)$`);
-  let hoogsteNummer = 0;
-  let cijferbreedte = 3;
-  for (const code of bestaandeCodes) {
-    const match = code.match(patroon);
-    if (!match) continue;
-    const nummer = Number(match[1]);
-    if (nummer > hoogsteNummer) {
-      hoogsteNummer = nummer;
-      cijferbreedte = match[1].length;
-    }
-  }
-  const volgendeNummer = String(hoogsteNummer + 1).padStart(cijferbreedte, '0');
-  return `${prefix}-${volgendeNummer}`;
+  return stelVolgendeCodeVoor(
+    bestaandeCodes.map((code) => ({ code })),
+    prefix
+  );
 }
 
 export function kiesMatendeMaten(

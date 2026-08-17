@@ -515,7 +515,6 @@ export function KunstwerkenSection({
   const kunstenaarHeeftFout = isNieuwKunstwerk && !kunstenaarnr;
   const algemeenHeeftFout = !foto || !code.trim() || formaat === null || kunstenaarHeeftFout;
   const prijsPerM2HeeftFout = isMateriaalloos && (!prijsPerM2 || Number(prijsPerM2) <= 0);
-  const matenHeeftFout = prijsPerM2HeeftFout;
   const omschrijvingenHeeftFout = !omschrijvingNl;
 
   // Eén lijst die zowel de knop uitschakelt als vertelt waarom. Ze uit elkaar houden was
@@ -568,7 +567,8 @@ export function KunstwerkenSection({
     // voor ASCII-codes -- bij accenten vouwt utf8mb4_general_ci meer samen dan deze
     // JS-vergelijking (bv. "Café" en "Cafe" zijn voor MySQL gelijk, hier niet). Dit is
     // de nette melding; bij dat verschil valt de 409 uit /api/kunstwerken terug als
-    // harde grens, en toont het scherm de generieke kunstwerkenActionError.
+    // harde grens, en toont het scherm via mutatieFoutmelding() dezelfde
+    // kunstwerkenCodeBestaatAl-tekst, alleen dan pas na de mislukte opslagpoging.
     const dubbel = (kunstwerken ?? []).some(
       (bestaand) =>
         bestaand.id !== (modalState.mode === 'edit' ? modalState.kunstwerk.id : '') &&
@@ -774,29 +774,44 @@ export function KunstwerkenSection({
               </button>
             </>
           ) : (
-            <>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={opslaanDisabled}
-                data-testid="kunstwerk-modal-opslaan"
-                className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
-              >
-                {t('kunstwerkenOpslaan')}
-              </button>
-              {modalState?.mode === 'edit' && (
+            <div className="flex flex-col gap-2">
+              {/* Boven de knoppen, niet onderaan de scrollende modal-body: wie boven in het
+                  formulier zit omdat bv. de foto ontbreekt, moet deze opsomming kunnen zien
+                  zonder eerst naar beneden te scrollen langs de grijze knop. */}
+              {redenenGeenOpslaan.length > 0 && (
+                <div data-testid="kunstwerk-modal-ontbrekend" className="text-xs text-amber-300/90">
+                  <p className="font-semibold">{t('kunstwerkenOpslaanKanNiet')}</p>
+                  <ul className="mt-1 list-disc pl-4">
+                    {redenenGeenOpslaan.map((reden) => (
+                      <li key={reden}>{reden}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={handleRemove}
-                  disabled={codeOpSlot}
-                  title={codeOpSlot ? t('kunstwerkenCodeVast') : undefined}
-                  data-testid="kunstwerk-modal-verwijderen"
-                  className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
+                  onClick={handleSave}
+                  disabled={opslaanDisabled}
+                  data-testid="kunstwerk-modal-opslaan"
+                  className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink disabled:opacity-40"
                 >
-                  {t('kunstwerkenVerwijderen')}
+                  {t('kunstwerkenOpslaan')}
                 </button>
-              )}
-            </>
+                {modalState?.mode === 'edit' && (
+                  <button
+                    type="button"
+                    onClick={handleRemove}
+                    disabled={codeOpSlot}
+                    title={codeOpSlot ? t('kunstwerkenCodeVast') : undefined}
+                    data-testid="kunstwerk-modal-verwijderen"
+                    className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white disabled:opacity-40"
+                  >
+                    {t('kunstwerkenVerwijderen')}
+                  </button>
+                )}
+              </div>
+            </div>
           )
         }
       >
@@ -827,7 +842,7 @@ export function KunstwerkenSection({
                 { id: 'algemeen', label: t('kunstwerkenTabAlgemeen'), hasError: algemeenHeeftFout },
                 { id: 'kenmerken', label: t('kunstwerkenTabKenmerken') },
                 { id: 'materialen', label: t('kunstwerkenTabMaterialen') },
-                { id: 'maten', label: t('kunstwerkenTabMaten'), hasError: matenHeeftFout },
+                { id: 'maten', label: t('kunstwerkenTabMaten'), hasError: prijsPerM2HeeftFout },
                 { id: 'omschrijvingen', label: t('kunstwerkenTabOmschrijvingen'), hasError: omschrijvingenHeeftFout },
               ]}
               activeTabId={activeTab}
@@ -1294,17 +1309,6 @@ export function KunstwerkenSection({
               </div>
 
               <RequiredLegend testId="kunstwerk-modal-verplicht-legende">{t('verplichtVeldLegende')}</RequiredLegend>
-
-              {redenenGeenOpslaan.length > 0 && (
-                <div data-testid="kunstwerk-modal-ontbrekend" className="text-xs text-amber-300/90">
-                  <p className="font-semibold">{t('kunstwerkenOpslaanKanNiet')}</p>
-                  <ul className="mt-1 list-disc pl-4">
-                    {redenenGeenOpslaan.map((reden) => (
-                      <li key={reden}>{reden}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
 
               {(actionError || mutationFailed) && (
                 <p data-testid="kunstwerk-modal-error" className="text-xs text-red-400">

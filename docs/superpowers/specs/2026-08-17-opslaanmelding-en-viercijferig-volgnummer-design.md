@@ -142,7 +142,8 @@ Daar hangt nog één ding aan: BE-01554 is de énige bestelling in drukkerzendin
 de mail die op 08-08-2026 naar drukker DR-00004 ging. Die zending gaat mee weg, want een
 verzending zonder bestelling erin is geen bruikbaar historisch spoor meer.
 
-De migratie doet, in één transactie en in deze volgorde:
+De migratie doet, in deze volgorde (als losse statements, niet binnen één omhullende
+transactie -- `scripts/lib/apply.ts` voert elk statement van een migratiebestand los uit):
 
 0. Drukkerzending ZD-00090 verwijderen (de koppeltabel cascadeert mee).
 1. Bestelling BE-01554 verwijderen (statushistorie, bestelregels, header).

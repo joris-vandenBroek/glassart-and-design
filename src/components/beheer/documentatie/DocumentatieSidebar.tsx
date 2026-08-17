@@ -40,8 +40,10 @@ const TOC: TocItem[] = [
     subs: [
       { href: '#kunstwerken-foto', label: 'Foto' },
       { href: '#kunstwerken-code', label: 'Code' },
+      { href: '#kunstwerken-kunstenaar', label: 'Kunstenaar' },
       { href: '#kunstwerken-formaat', label: 'Formaat en maten' },
       { href: '#kunstwerken-voorbeeld', label: 'Live voorbeeld' },
+      { href: '#kunstwerken-opslaan', label: 'Als opslaan niet lukt' },
     ],
   },
   {

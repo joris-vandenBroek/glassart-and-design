@@ -109,8 +109,7 @@ export function useApiCollection<T extends { id: string }>(
         }
         return await fetchItems();
       } catch {
-        // Alleen invullen als er nog niets staat: bij een niet-ok response is de code
-        // hierboven al gezet en gooien we zelf, en die eigen worp mag hem niet overschrijven.
+        // Zie de toelichting in add() hierboven.
         setLastMutationErrorCode((huidig) => huidig ?? 'netwerkfout');
         setError('action');
         return false;
@@ -132,8 +131,7 @@ export function useApiCollection<T extends { id: string }>(
         }
         return await fetchItems();
       } catch {
-        // Alleen invullen als er nog niets staat: bij een niet-ok response is de code
-        // hierboven al gezet en gooien we zelf, en die eigen worp mag hem niet overschrijven.
+        // Zie de toelichting in add() hierboven.
         setLastMutationErrorCode((huidig) => huidig ?? 'netwerkfout');
         setError('action');
         return false;

@@ -13,22 +13,43 @@
 -- De hernoemingen staan als expliciete regels en niet als REGEXP_REPLACE: een lijst is te
 -- lezen en te controleren voordat hij draait. Er is doorgerekend dat geen enkel doel ook
 -- een bron is, dus de volgorde van de UPDATE-regels maakt niet uit.
+--
+-- De vier DELETE's hieronder targetten kale business-keys (ZD-00090, BE-01554, KU-00007)
+-- die op staging deze specifieke testdata zijn, maar op termijn -- zeker op productie, waar
+-- diezelfde nummerreeksen nu nog op 0 staan -- weer heel andere, echte rijen kunnen
+-- aanduiden. Elke DELETE krijgt daarom een extra voorwaarde op kenmerken die deze rijen nu
+-- uniek maken (naam, prefix, klant, status, drukker), zodat de guard onschadelijk wordt
+-- zodra het niet meer om deze testdata gaat. Deze migratie is op staging al toegepast; de
+-- guards zijn achteraf toegevoegd zonder dat het resultaat daar anders zou zijn geweest
+-- (de rijen voldeden er toch al aan) -- `schema_migrations` bewaart alleen bestandsnamen,
+-- geen inhoud, dus dat achteraf aanscherpen is veilig.
 
 -- 1. Drukkerzending ZD-00090 -- bevat alleen BE-01554; de koppeltabel cascadeert mee.
-DELETE FROM drukkerZendingen WHERE zendingnummer = 'ZD-00090';
+--    Guard: deze zending ging naar drukker DR-00004.
+DELETE FROM drukkerZendingen WHERE zendingnummer = 'ZD-00090' AND drukkernr = 'DR-00004';
 
 -- 2. Bestelling BE-01554 -- bestelregels en statushistorie cascaderen mee. Deze bestelling
 --    is de enige die een kunstwerk van Marieke gebruikt (GLA-MAR-00016) en blokkeert
 --    daarmee stap 3.
-DELETE FROM bestelheaders WHERE bestelnr = 'BE-01554';
+--    Guard: deze bestelling hoort bij klant KL-00003 en staat op status "Te factureren".
+DELETE FROM bestelheaders WHERE bestelnr = 'BE-01554' AND klantnr = 'KL-00003' AND status = 'Te factureren';
 
 -- 3. De zestien kunstwerken van Marieke Hoffmann plus GLA-ABS-0028-00001 ("Color
 --    Explosion"), dat na opschonen zou botsen met het bestaande GLA-ABS-0028 ("Abstract").
 --    De koppeltabellen (segmenten, materialen, maten, stijlen, categorieen) cascaderen mee.
-DELETE FROM kunstwerken WHERE kunstenaarnr = 'KU-00007' OR code = 'GLA-ABS-0028-00001';
+--    Guard: alleen kunstwerken van kunstenaar KU-00007 wiens naam nog "Marieke Hoffmann"
+--    is, en met een code die met haar prefix GLA-MAR-000 begint.
+DELETE FROM kunstwerken
+WHERE (
+    kunstenaarnr = 'KU-00007'
+    AND code LIKE 'GLA-MAR-000%'
+    AND kunstenaarnr IN (SELECT kunstenaarnr FROM kunstenaars WHERE naam = 'Marieke Hoffmann')
+  )
+  OR code = 'GLA-ABS-0028-00001';
 
 -- 4. De kunstenaar zelf, nu geen kunstwerk meer naar haar verwijst.
-DELETE FROM kunstenaars WHERE kunstenaarnr = 'KU-00007';
+--    Guard: alleen als de naam nog steeds "Marieke Hoffmann" is.
+DELETE FROM kunstenaars WHERE kunstenaarnr = 'KU-00007' AND naam = 'Marieke Hoffmann';
 
 -- 5. De overgebleven 64 afwijkende codes naar vier cijfers, in kunstwerken en bestellines.
 --    Meegenomen: GLA_ANI_004 (underscores), Gla-MAR-001 (kleine letters), en de twee
