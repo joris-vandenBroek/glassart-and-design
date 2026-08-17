@@ -39,7 +39,7 @@ const KUNSTWERK_PRIJZEN = [
   { materiaalId: 'mat-2', maatId: 'maat-2', prijs: 225 },
 ];
 const MATERIALEN: Materiaal[] = [
-  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, omschrijvingNl: 'Extra diepte en stevigheid voor een indrukwekkend effect.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'mat-1', materiaalsoortId: 'soort-1', materiaaldikte: 4, prijsPerM2: 65, omschrijvingNl: 'Extra diepte en stevigheid voor een indrukwekkend effect.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
   { id: 'mat-2', materiaalsoortId: 'soort-2', materiaaldikte: 3, omschrijvingNl: 'Lichtgewicht en flexibel voor grote oppervlaktes.', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const MATEN: Maat[] = [
@@ -75,7 +75,6 @@ const MAATLOOS_MET_MATERIAAL_KUNSTWERK: Kunstwerk = {
   segmentIds: [],
   materiaalIds: ['mat-1'],
   maatIds: [],
-  prijsPerM2: 65,
   omschrijvingNl: 'Op maat gezaagd 4mm veiligheidsglas.',
   omschrijvingFr: '',
   omschrijvingDe: '',

@@ -189,10 +189,11 @@ export function ProductModal({
     customBreedte !== '' && customHoogte !== '' && customBreedteNum > 0 && customHoogteNum > 0;
   const customSizeExceedsMax = customSizeFilledIn && !withinMax(customBreedteNum, customHoogteNum, geselecteerdSoort);
   const customSizeValid = customSizeFilledIn && !customSizeExceedsMax;
+  const effectievePrijsPerM2 = isMateriaalloos ? kunstwerk.prijsPerM2 : geselecteerdMateriaal?.prijsPerM2;
   const prijsPerM2Prijs =
-    isMaatloos && customSizeValid && kunstwerk.prijsPerM2
+    isMaatloos && customSizeValid && effectievePrijsPerM2
       ? pasPrijsgroepToe(
-          Math.round((customBreedteNum / 100) * (customHoogteNum / 100) * kunstwerk.prijsPerM2 * 100) / 100,
+          Math.round((customBreedteNum / 100) * (customHoogteNum / 100) * effectievePrijsPerM2 * 100) / 100,
           user?.prijsgroep ?? null
         )
       : null;
@@ -212,7 +213,7 @@ export function ProductModal({
 
   const canConfirm =
     (isMaatloos
-      ? customSizeValid && Boolean(kunstwerk.prijsPerM2) && (kunstwerk.prijsPerM2 ?? 0) > 0
+      ? customSizeValid && Boolean(effectievePrijsPerM2) && (effectievePrijsPerM2 ?? 0) > 0
       : isCustomSize
         ? customSizeValid
         : Boolean(prijsRegel)) && quantityValid;
