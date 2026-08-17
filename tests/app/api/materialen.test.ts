@@ -183,4 +183,66 @@ describe('/api/materialen', () => {
     const response = await listResource(jsonRequest('GET'), { params: { resource: 'materialen' } });
     expect(response.status).toBe(404);
   });
+
+  it('blokkeert deactiveren zolang er een openstaande bestelling met dit materiaal is', async () => {
+    const cookie = await medewerkerCookie();
+    const materiaalId = await maakMateriaal();
+    await maakBestellijn(materiaalId, 'Te versturen naar drukker');
+
+    const response = await patchMateriaal(jsonRequest('PATCH', { actief: false }, cookie), {
+      params: { id: materiaalId },
+    });
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toBe('in-use-open-bestelling');
+
+    const gelezen = await (await getMateriaal(jsonRequest('GET'), { params: { id: materiaalId } })).json();
+    expect(Boolean(gelezen.actief)).toBe(true);
+  });
+
+  it('staat deactiveren toe als de enige bestelling afgerond is', async () => {
+    const cookie = await medewerkerCookie();
+    const materiaalId = await maakMateriaal();
+    await maakBestellijn(materiaalId, 'Betaald en afgerond');
+
+    const response = await patchMateriaal(jsonRequest('PATCH', { actief: false }, cookie), {
+      params: { id: materiaalId },
+    });
+    expect(response.status).toBe(200);
+
+    const gelezen = await (await getMateriaal(jsonRequest('GET'), { params: { id: materiaalId } })).json();
+    expect(Boolean(gelezen.actief)).toBe(false);
+  });
+
+  it('staat deactiveren toe als de enige bestelling afgewezen is', async () => {
+    const cookie = await medewerkerCookie();
+    const materiaalId = await maakMateriaal();
+    await maakBestellijn(materiaalId, 'Afgewezen');
+
+    const response = await patchMateriaal(jsonRequest('PATCH', { actief: false }, cookie), {
+      params: { id: materiaalId },
+    });
+    expect(response.status).toBe(200);
+  });
+
+  it('blokkeert activeren nooit, ook niet met een openstaande bestelling', async () => {
+    const cookie = await medewerkerCookie();
+    const materiaalId = await maakMateriaal({ actief: false });
+    await maakBestellijn(materiaalId, 'Te beoordelen');
+
+    const response = await patchMateriaal(jsonRequest('PATCH', { actief: true }, cookie), {
+      params: { id: materiaalId },
+    });
+    expect(response.status).toBe(200);
+  });
+
+  it('laat een naamwijziging ongemoeid bij een openstaande bestelling', async () => {
+    const cookie = await medewerkerCookie();
+    const materiaalId = await maakMateriaal();
+    await maakBestellijn(materiaalId, 'Te beoordelen');
+
+    const response = await patchMateriaal(jsonRequest('PATCH', { omschrijvingNl: 'AUTOTEST Hernoemd' }, cookie), {
+      params: { id: materiaalId },
+    });
+    expect(response.status).toBe(200);
+  });
 });
