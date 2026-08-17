@@ -530,4 +530,29 @@ describe('ProductsGrid', () => {
     await screen.findAllByTestId('product-card');
     expect(screen.queryByTestId('mobile-filters-toggle')).not.toBeInTheDocument();
   });
+
+  it('verbergt een kunstwerk waarvan geen enkel materiaal actief is', async () => {
+    mockCollections({
+      kunstwerken: [
+        { ...KUNSTWERKEN[0], id: 'kw-1', materiaalIds: ['mat-1'], omschrijvingNl: 'Zichtbaar paneel' },
+        { ...KUNSTWERKEN[1], id: 'kw-2', materiaalIds: ['mat-2'], omschrijvingNl: 'Verborgen paneel' },
+      ],
+      materialen: [
+        { ...MATERIALEN[0], id: 'mat-1', actief: true },
+        { ...MATERIALEN[0], id: 'mat-2', actief: false },
+      ],
+    });
+    renderProductsGrid();
+    expect(await screen.findByText('Zichtbaar paneel')).toBeInTheDocument();
+    expect(screen.queryByText('Verborgen paneel')).not.toBeInTheDocument();
+  });
+
+  it('blijft een materiaalloos kunstwerk tonen', async () => {
+    mockCollections({
+      kunstwerken: [{ ...KUNSTWERKEN[0], id: 'kw-3', materiaalIds: [], omschrijvingNl: 'Akoestisch paneel' }],
+      materialen: [{ ...MATERIALEN[0], id: 'mat-2', actief: false }],
+    });
+    renderProductsGrid();
+    expect(await screen.findByText('Akoestisch paneel')).toBeInTheDocument();
+  });
 });

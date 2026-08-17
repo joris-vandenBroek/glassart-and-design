@@ -18,6 +18,7 @@ import { resolveKunstenaarOmschrijving, appendKunstenaarWebsiteZin } from '@/lib
 import { resolveOmschrijving } from '@/lib/resolveOmschrijving';
 import { LinkifiedText } from './LinkifiedText';
 import type { Segment, Kunstwerk, Materiaal, Maat, Materiaalsoort, KunstwerkFormaat, Stijl, Categorie } from './beheer/materiaalTypes';
+import { isMateriaalActief } from './beheer/materiaalTypes';
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
 
 const CARD_ASPECT_CLASS: Record<Exclude<KunstwerkFormaat, 'alle'>, string> = {
@@ -108,8 +109,21 @@ export function ProductsGrid() {
     return kunstenaarFilter === null || kunstwerk.kunstenaarnr === kunstenaarFilter;
   }
 
+  // Een kunstwerk dat wél materialen heeft maar waarvan er geen enkele actief is, is
+  // niet bestelbaar: de materiaalkeuze zou leeg zijn en het bestelknopje dood. Een
+  // kunstwerk zónder materialen is iets anders -- dat is materiaalloos (Akoestische
+  // stof) en gewoon bestelbaar.
+  function isBestelbaar(kunstwerk: Kunstwerk) {
+    if (materialen.items === null) return true;
+    if (kunstwerk.materiaalIds.length === 0) return true;
+    return (materialen.items ?? []).some(
+      (materiaal) => kunstwerk.materiaalIds.includes(materiaal.id) && isMateriaalActief(materiaal)
+    );
+  }
+
   const visibleKunstwerken = allKunstwerken.filter(
     (kunstwerk) =>
+      isBestelbaar(kunstwerk) &&
       matchesSegment(kunstwerk) &&
       matchesFormaat(kunstwerk) &&
       matchesStijl(kunstwerk) &&
@@ -120,18 +134,22 @@ export function ProductsGrid() {
 
   const segmentCountBase = allKunstwerken.filter(
     (kunstwerk) =>
+      isBestelbaar(kunstwerk) &&
       matchesFormaat(kunstwerk) && matchesStijl(kunstwerk) && matchesCategorie(kunstwerk) && matchesAiGegenereerd(kunstwerk) && matchesKunstenaar(kunstwerk)
   );
   const formaatCountBase = allKunstwerken.filter(
     (kunstwerk) =>
+      isBestelbaar(kunstwerk) &&
       matchesSegment(kunstwerk) && matchesStijl(kunstwerk) && matchesCategorie(kunstwerk) && matchesAiGegenereerd(kunstwerk) && matchesKunstenaar(kunstwerk)
   );
   const stijlCountBase = allKunstwerken.filter(
     (kunstwerk) =>
+      isBestelbaar(kunstwerk) &&
       matchesSegment(kunstwerk) && matchesFormaat(kunstwerk) && matchesCategorie(kunstwerk) && matchesAiGegenereerd(kunstwerk) && matchesKunstenaar(kunstwerk)
   );
   const categorieCountBase = allKunstwerken.filter(
     (kunstwerk) =>
+      isBestelbaar(kunstwerk) &&
       matchesSegment(kunstwerk) && matchesFormaat(kunstwerk) && matchesStijl(kunstwerk) && matchesAiGegenereerd(kunstwerk) && matchesKunstenaar(kunstwerk)
   );
 
