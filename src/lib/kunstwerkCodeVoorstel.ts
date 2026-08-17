@@ -5,7 +5,6 @@ export interface KunstwerkCode {
 interface CodeOnderdelen {
   prefix: string;
   getal: number;
-  breedte: number;
 }
 
 function ontleedCode(code: string): CodeOnderdelen | null {
@@ -14,7 +13,7 @@ function ontleedCode(code: string): CodeOnderdelen | null {
   const prefix = code.slice(0, laatsteStreepje);
   const staart = code.slice(laatsteStreepje + 1);
   if (!/^\d+$/.test(staart)) return null;
-  return { prefix, getal: parseInt(staart, 10), breedte: staart.length };
+  return { prefix, getal: parseInt(staart, 10) };
 }
 
 export function vindBekendePrefixen(kunstwerken: KunstwerkCode[]): string[] {
@@ -30,20 +29,35 @@ export function vindBekendePrefixen(kunstwerken: KunstwerkCode[]): string[] {
   return [...canoniekePerSleutel.values()].sort((a, b) => a.localeCompare(b));
 }
 
-const NIEUW_PREFIX_BREEDTE = 5;
+const VOLGNUMMER_BREEDTE = 4;
+
+/**
+ * Haalt een afsluitend volgnummer van een prefix af. Het prefix-veld in beheer is vrije
+ * tekst met een keuzelijst; wie daar een héle code in plakt kreeg voorheen een volgnummer
+ * áchter die code geplakt. Zo zijn GLA-ABS-0028-00001 en GLA-ANI-015-00001 in de echte
+ * data ontstaan, en omdat de prefixlijst uit de bestaande codes wordt afgeleid, kwam die
+ * foute prefix daarna ook nog in de keuzelijst terecht.
+ */
+function schoonPrefix(prefix: string): string {
+  return prefix.trim().replace(/-\d+$/, '');
+}
 
 export function stelVolgendeCodeVoor(kunstwerken: KunstwerkCode[], prefix: string): string {
-  const getrimdePrefix = prefix.trim();
+  const getrimdePrefix = schoonPrefix(prefix);
   const sleutel = getrimdePrefix.toLowerCase();
   const treffers = kunstwerken
     .map(({ code }) => ontleedCode(code))
-    .filter((onderdelen): onderdelen is CodeOnderdelen => onderdelen !== null && onderdelen.prefix.toLowerCase() === sleutel);
+    .filter(
+      (onderdelen): onderdelen is CodeOnderdelen =>
+        onderdelen !== null && onderdelen.prefix.toLowerCase() === sleutel
+    );
 
-  if (treffers.length === 0) {
-    return `${getrimdePrefix}-${'1'.padStart(NIEUW_PREFIX_BREEDTE, '0')}`;
-  }
-
-  const hoogsteGetal = Math.max(...treffers.map((t) => t.getal));
-  const breedte = Math.max(...treffers.map((t) => t.breedte));
-  return `${getrimdePrefix}-${String(hoogsteGetal + 1).padStart(breedte, '0')}`;
+  // Vaste breedte, niet meer de breedte van de breedste bestaande code van dit prefix.
+  // Die regel bestond om een lopende reeks niet halverwege van breedte te laten wisselen,
+  // maar na de migratie van 17-08-2026 is elke reeks vier cijfers breed en zou hij een
+  // oude breedte alleen nog maar kunnen laten terugkomen. Voorbij 9999 wint het getal van
+  // de breedte -- dan wijkt de code af van het standaardpatroon en vraagt beheer bij het
+  // opslaan om een bevestiging, wat precies het bedoelde signaal is.
+  const hoogsteGetal = treffers.length === 0 ? 0 : Math.max(...treffers.map((t) => t.getal));
+  return `${getrimdePrefix}-${String(hoogsteGetal + 1).padStart(VOLGNUMMER_BREEDTE, '0')}`;
 }
