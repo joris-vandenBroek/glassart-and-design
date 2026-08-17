@@ -145,8 +145,8 @@ async function main(): Promise<void> {
       const omgeving = omgevingOptie(opts);
       const sessieCookie = verplichteOptie(opts, 'sessie-cookie');
       const tabel = verplichteOptie(opts, 'tabel');
-      if (tabel !== 'segmenten' && tabel !== 'stijlen' && tabel !== 'onderwerpen') {
-        console.error(`Weigering: --tabel moet segmenten, stijlen of onderwerpen zijn, kreeg '${tabel}'.`);
+      if (tabel !== 'segmenten' && tabel !== 'stijlen' && tabel !== 'categorieen') {
+        console.error(`Weigering: --tabel moet segmenten, stijlen of categorieen zijn, kreeg '${tabel}'.`);
         process.exit(2);
       }
       const omschrijvingNl = verplichteOptie(opts, 'omschrijving-nl');

@@ -63,7 +63,7 @@ const TOC: TocItem[] = [
       { href: '#stamgegevens-maten', label: 'Maten' },
       { href: '#stamgegevens-segmenten', label: 'Segmenten' },
       { href: '#stamgegevens-stijlen', label: 'Stijlen' },
-      { href: '#stamgegevens-onderwerpen', label: 'Onderwerpen' },
+      { href: '#stamgegevens-categorieen', label: 'Categorieën' },
       { href: '#stamgegevens-prijsgroepen', label: 'Prijsgroepen' },
       { href: '#stamgegevens-activiteit', label: 'Activiteit' },
     ],

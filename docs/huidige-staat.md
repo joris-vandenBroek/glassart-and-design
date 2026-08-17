@@ -50,7 +50,7 @@ klanten ──prijsgroepId──> prijsgroepen
               └──< bestelstatusHistorie
 
 kunstwerken ──kunstenaarId──> kunstenaars ──> kunstenaarAfspraken (prijsopslag)
-kunstwerken ──koppeltabellen──> segmenten / stijlen / onderwerpen / materialen / maten
+kunstwerken ──koppeltabellen──> segmenten / stijlen / categorieen / materialen / maten
 
 prijsmatrix (maatId × materiaalId) ──> prijs
 drukkers ──< drukkerZendingen
@@ -58,7 +58,7 @@ drukkers ──< drukkerZendingen
 
 Aandachtspunten die afwijken van wat je zou verwachten:
 
-- De N-op-N-relaties van een kunstwerk zijn vijf echte **koppeltabellen** (`kunstwerkSegmenten`, `kunstwerkMaterialen`, `kunstwerkMaten`, `kunstwerkStijlen`, `kunstwerkOnderwerpen`), elk met een samengestelde primary key `(kunstwerkId, <ding>Id)`, een `volgorde`-kolom die de weergave-/selectievolgorde bewaart, en `ON DELETE CASCADE` op beide foreign keys.
+- De N-op-N-relaties van een kunstwerk zijn vijf echte **koppeltabellen** (`kunstwerkSegmenten`, `kunstwerkMaterialen`, `kunstwerkMaten`, `kunstwerkStijlen`, `kunstwerkCategorieen`), elk met een samengestelde primary key `(kunstwerkId, <ding>Id)`, een `volgorde`-kolom die de weergave-/selectievolgorde bewaart, en `ON DELETE CASCADE` op beide foreign keys.
 - `kunstwerken.code` is de unieke, hoofdletterongevoelige identificatie van een kunstwerk (`UNIQUE KEY uniek_code`) — er is geen `naam`-kolom meer. Een bestelregel (`bestellines.code`) legt die code vast op het moment van bestellen; dat is een gekopieerde waarde, geen foreign key. Zodra een code ergens in `bestellines` voorkomt, ligt hij vast: het kunstwerk kan dan niet meer verwijderd worden en de code zelf kan niet meer wijzigen (zie API hieronder).
 - `instellingen` is één tabel met een `data JSON`-kolom en drie rijen: `bedrijfsgegevens`, `bestelinstellingen` en `btwtarieven`.
 - `counters` bevat drie losse nummerreeksen: `bestelnummer`, `zendingnummer`, `klantnummer`.
@@ -70,7 +70,7 @@ Alle routes onder `src/app/api/`.
 
 **Generieke CRUD** — `src/app/api/[resource]/route.ts` bedient alleen de resources in de allowlist `LOOKUP_RESOURCES` (`src/lib/server/lookupResources.ts`); alles daarbuiten geeft 404:
 
-`segmenten`, `stijlen`, `onderwerpen`, `materiaalsoorten`, `materialen`, `maten`, `prijsgroepen`
+`segmenten`, `stijlen`, `categorieen`, `materiaalsoorten`, `materialen`, `maten`, `prijsgroepen`
 
 Schrijven vereist altijd een medewerker-sessie. Lezen is publiek, behalve `prijsgroepen` (alleen medewerkers).
 
@@ -147,7 +147,7 @@ Een klant met openstaande bestellingen kan zijn account **niet** zelf verwijdere
 `BeheerNav` toont zestien secties, in drie blokken:
 
 - **Boven:** Klanten, Bestellingen
-- **Stamgegevens (groep):** Materiaalsoorten, Materialen, Maten, Segmenten, Stijlen, Onderwerpen, Prijsgroepen
+- **Stamgegevens (groep):** Materiaalsoorten, Materialen, Maten, Segmenten, Stijlen, Categorieën, Prijsgroepen
 - **Onder:** Kunstwerken, Kunstenaars, Prijsmatrix, Drukkers, Activiteit, Glassart & Design, Instellingen
 
 Alle beheerhandelingen die ertoe doen worden gelogd in `activiteitenlog` via `src/lib/logActiviteit.ts` — fire-and-forget vanuit de browser, dus een mislukte logregel valt geruisloos weg. Eén uitzondering: het uitgeven van een klantwachtwoord wordt server-side gelogd, in `POST /api/klanten/[id]/wachtwoord` zelf en binnen dezelfde transactie als de wachtwoordwijziging, zodat die regel niet stil kan verdwijnen.

@@ -74,7 +74,7 @@ describe('import-kunstwerken-cli argumentvalidatie', () => {
       'Africa',
     ]);
     expect(result.status).toBe(2);
-    expect(result.stderr).toContain('moet segmenten, stijlen of onderwerpen zijn');
+    expect(result.stderr).toContain('moet segmenten, stijlen of categorieen zijn');
   });
 
   it('weigert maak-lookup-waarde zonder --omschrijving-nl', () => {

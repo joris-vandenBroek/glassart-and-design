@@ -72,7 +72,7 @@ CREATE TABLE stijlen (
   omschrijvingEn VARCHAR(255)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE onderwerpen (
+CREATE TABLE categorieen (
   id CHAR(36) PRIMARY KEY,
   omschrijvingNl VARCHAR(255) NOT NULL,
   omschrijvingFr VARCHAR(255),
@@ -236,13 +236,13 @@ CREATE TABLE kunstwerkStijlen (
   FOREIGN KEY (stijlId) REFERENCES stijlen(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE kunstwerkOnderwerpen (
+CREATE TABLE kunstwerkCategorieen (
   kunstwerkId CHAR(36) NOT NULL,
-  onderwerpId CHAR(36) NOT NULL,
+  categorieId CHAR(36) NOT NULL,
   volgorde INT NOT NULL,
-  PRIMARY KEY (kunstwerkId, onderwerpId),
+  PRIMARY KEY (kunstwerkId, categorieId),
   FOREIGN KEY (kunstwerkId) REFERENCES kunstwerken(id) ON DELETE CASCADE,
-  FOREIGN KEY (onderwerpId) REFERENCES onderwerpen(id) ON DELETE CASCADE
+  FOREIGN KEY (categorieId) REFERENCES categorieen(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE instellingen (

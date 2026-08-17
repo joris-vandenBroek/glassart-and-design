@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { KunstwerkenSection } from '@/components/beheer/KunstwerkenSection';
-import type { Kunstwerk, Segment, Materiaal, Maat, Stijl, Onderwerp } from '@/components/beheer/materiaalTypes';
+import type { Kunstwerk, Segment, Materiaal, Maat, Stijl, Categorie } from '@/components/beheer/materiaalTypes';
 import type { Kunstenaar } from '@/components/beheer/kunstenaarTypes';
 import { CustomerAuthProvider } from '@/lib/useCustomerAuth';
 import { CartProvider } from '@/lib/useCart';
@@ -55,9 +55,9 @@ const STIJLEN: Stijl[] = [
   { id: 'stijl-1', omschrijvingNl: 'Abstract', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
   { id: 'stijl-2', omschrijvingNl: 'Minimalistisch', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
-const ONDERWERPEN: Onderwerp[] = [
-  { id: 'onderwerp-1', omschrijvingNl: 'Bloemen', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
-  { id: 'onderwerp-2', omschrijvingNl: 'Landschappen', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+const CATEGORIEEN: Categorie[] = [
+  { id: 'categorie-1', omschrijvingNl: 'Bloemen', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
+  { id: 'categorie-2', omschrijvingNl: 'Landschappen', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' },
 ];
 const KUNSTENAARS: Kunstenaar[] = [
   {
@@ -115,7 +115,7 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Kunstwerke
   const onUpdate = overrides.onUpdate ?? vi.fn().mockResolvedValue(true);
   const onRemove = overrides.onRemove ?? vi.fn().mockResolvedValue(true);
   const onAddStijl = overrides.onAddStijl ?? vi.fn().mockResolvedValue(true);
-  const onAddOnderwerp = overrides.onAddOnderwerp ?? vi.fn().mockResolvedValue(true);
+  const onAddCategorie = overrides.onAddCategorie ?? vi.fn().mockResolvedValue(true);
   const onAddSegment = overrides.onAddSegment ?? vi.fn().mockResolvedValue(true);
   const result = render(
     <NextIntlClientProvider locale="nl" messages={messages}>
@@ -128,7 +128,7 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Kunstwerke
             materiaalsoorten={[]}
             maten={MATEN}
             stijlen={STIJLEN}
-            onderwerpen={ONDERWERPEN}
+            categorieen={CATEGORIEEN}
             kunstenaars={KUNSTENAARS}
             loadError={null}
             bestelCodes={new Set<string>()}
@@ -138,14 +138,14 @@ function renderSection(overrides: Partial<React.ComponentProps<typeof Kunstwerke
             onRemove={onRemove}
             onAddSegment={onAddSegment}
             onAddStijl={onAddStijl}
-            onAddOnderwerp={onAddOnderwerp}
+            onAddCategorie={onAddCategorie}
             {...overrides}
           />
         </CartProvider>
       </CustomerAuthProvider>
     </NextIntlClientProvider>
   );
-  return { onAdd, onUpdate, onRemove, onAddStijl, onAddOnderwerp, onAddSegment, rerender: result.rerender };
+  return { onAdd, onUpdate, onRemove, onAddStijl, onAddCategorie, onAddSegment, rerender: result.rerender };
 }
 
 beforeEach(() => {
@@ -293,7 +293,7 @@ describe('KunstwerkenSection', () => {
         materiaalIds: ['mat-1'],
         maatIds: ['maat-1'],
         stijlIds: [],
-        onderwerpIds: [],
+        categorieIds: [],
         aiGegenereerd: false,
         omschrijvingNl: 'Nieuw kunstwerk',
         omschrijvingFr: '',
@@ -325,7 +325,7 @@ describe('KunstwerkenSection', () => {
         materiaalIds: ['mat-1'],
         maatIds: ['maat-1'],
         stijlIds: [],
-        onderwerpIds: [],
+        categorieIds: [],
         aiGegenereerd: false,
         omschrijvingNl: 'Hotel paneel 1',
         omschrijvingFr: '',
@@ -594,7 +594,7 @@ describe('KunstwerkenSection', () => {
         materiaalIds: [],
         maatIds: [],
         stijlIds: [],
-        onderwerpIds: [],
+        categorieIds: [],
         aiGegenereerd: false,
         prijsPerM2: 180,
         omschrijvingNl: 'Verbetert de akoestiek.',
@@ -890,7 +890,7 @@ describe('KunstwerkenSection', () => {
     await waitFor(() => expect(screen.getByTestId('kunstwerk-modal-formaat-staand')).toBeChecked());
   });
 
-  it('toggles an existing stijl/onderwerp checkbox and an AI-gegenereerd checkbox into the saved payload', async () => {
+  it('toggles an existing stijl/categorie checkbox and an AI-gegenereerd checkbox into the saved payload', async () => {
     uploadMock.mockResolvedValue('https://storage.example.com/nieuw.jpg');
     const { onAdd } = renderSection();
     fireEvent.click(screen.getByTestId('kunstwerken-add'));
@@ -910,7 +910,7 @@ describe('KunstwerkenSection', () => {
     fireEvent.change(screen.getByTestId('kunstwerk-modal-omschrijving-nl'), { target: { value: 'Test omschrijving' } });
 
     fireEvent.click(screen.getByTestId('kunstwerk-modal-stijl-stijl-1'));
-    fireEvent.click(screen.getByTestId('kunstwerk-modal-onderwerp-onderwerp-2'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-categorie-categorie-2'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-ai-gegenereerd'));
 
     fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
@@ -918,7 +918,7 @@ describe('KunstwerkenSection', () => {
       expect(onAdd).toHaveBeenCalledWith(
         expect.objectContaining({
           stijlIds: ['stijl-1'],
-          onderwerpIds: ['onderwerp-2'],
+          categorieIds: ['categorie-2'],
           aiGegenereerd: true,
         })
       )
@@ -954,7 +954,7 @@ describe('KunstwerkenSection', () => {
               materiaalsoorten={null}
               maten={MATEN}
               stijlen={[...STIJLEN, { id: 'stijl-3', omschrijvingNl: 'Jugendstil', omschrijvingFr: '', omschrijvingDe: '', omschrijvingEn: '' }]}
-              onderwerpen={ONDERWERPEN}
+              categorieen={CATEGORIEEN}
               kunstenaars={KUNSTENAARS}
               loadError={null}
               bestelCodes={new Set<string>()}
@@ -964,7 +964,7 @@ describe('KunstwerkenSection', () => {
               onRemove={vi.fn().mockResolvedValue(true)}
               onAddSegment={vi.fn().mockResolvedValue(true)}
               onAddStijl={onAddStijl}
-              onAddOnderwerp={vi.fn().mockResolvedValue(true)}
+              onAddCategorie={vi.fn().mockResolvedValue(true)}
             />
           </CartProvider>
         </CustomerAuthProvider>
@@ -1003,7 +1003,7 @@ describe('KunstwerkenSection', () => {
               materiaalsoorten={null}
               maten={MATEN}
               stijlen={STIJLEN}
-              onderwerpen={ONDERWERPEN}
+              categorieen={CATEGORIEEN}
               kunstenaars={KUNSTENAARS}
               loadError={null}
               bestelCodes={new Set<string>()}
@@ -1012,7 +1012,7 @@ describe('KunstwerkenSection', () => {
               onUpdate={vi.fn().mockResolvedValue(true)}
               onRemove={vi.fn().mockResolvedValue(true)}
               onAddStijl={vi.fn().mockResolvedValue(true)}
-              onAddOnderwerp={vi.fn().mockResolvedValue(true)}
+              onAddCategorie={vi.fn().mockResolvedValue(true)}
               onAddSegment={onAddSegment}
             />
           </CartProvider>

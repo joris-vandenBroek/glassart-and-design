@@ -6,7 +6,7 @@ export interface ImportBatchManifestKunstwerk {
   maten: Array<{ breedte: number; hoogte: number }>;
   segmenten: string[];
   stijlen: string[];
-  onderwerpen: string[];
+  categorieen: string[];
   omschrijvingNl: string;
   omschrijvingEn: string;
   omschrijvingDe: string;
@@ -45,7 +45,7 @@ function valideerKunstwerkItem(item: unknown, index: number): void {
       throw new Error(`kunstwerken[${index}].maten bevat een waarde zonder numerieke breedte/hoogte.`);
     }
   }
-  for (const veld of ['segmenten', 'stijlen', 'onderwerpen']) {
+  for (const veld of ['segmenten', 'stijlen', 'categorieen']) {
     if (!Array.isArray(kunstwerk[veld])) {
       throw new Error(`kunstwerken[${index}].${veld} moet een array zijn.`);
     }

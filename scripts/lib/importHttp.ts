@@ -16,7 +16,7 @@ export interface ReferentieData {
   kunstenaars: Array<{ kunstenaarnr: string; naam: string }>;
   segmenten: MeertaligeOmschrijving[];
   stijlen: MeertaligeOmschrijving[];
-  onderwerpen: MeertaligeOmschrijving[];
+  categorieen: MeertaligeOmschrijving[];
   materialen: Array<MeertaligeOmschrijving & { materiaalsoortId: string; materiaaldikte: number }>;
   maten: Array<{ id: string; breedte: number; hoogte: number }>;
   kunstwerkCodes: string[];
@@ -56,11 +56,11 @@ export async function haalReferentieOp(
     return (await response.json()) as T;
   }
 
-  const [kunstenaars, segmenten, stijlen, onderwerpen, materialen, maten, kunstwerken] = await Promise.all([
+  const [kunstenaars, segmenten, stijlen, categorieen, materialen, maten, kunstwerken] = await Promise.all([
     haalOp<Array<{ kunstenaarnr: string; naam: string }>>('/api/kunstenaars'),
     haalOp<MeertaligeOmschrijving[]>('/api/segmenten'),
     haalOp<MeertaligeOmschrijving[]>('/api/stijlen'),
-    haalOp<MeertaligeOmschrijving[]>('/api/onderwerpen'),
+    haalOp<MeertaligeOmschrijving[]>('/api/categorieen'),
     haalOp<Array<MeertaligeOmschrijving & { materiaalsoortId: string; materiaaldikte: number }>>('/api/materialen'),
     haalOp<Array<{ id: string; breedte: number; hoogte: number }>>('/api/maten'),
     haalOp<Array<{ code: string }>>('/api/kunstwerken'),
@@ -70,7 +70,7 @@ export async function haalReferentieOp(
     kunstenaars: kunstenaars.map(({ kunstenaarnr, naam }) => ({ kunstenaarnr, naam })),
     segmenten,
     stijlen,
-    onderwerpen,
+    categorieen,
     materialen,
     maten,
     kunstwerkCodes: kunstwerken.map((kunstwerk) => kunstwerk.code),
@@ -103,7 +103,7 @@ export async function uploadFoto(
 export async function maakOfHergebruikLookupWaarde(
   baseUrl: string,
   sessieCookie: string,
-  tabel: 'segmenten' | 'stijlen' | 'onderwerpen',
+  tabel: 'segmenten' | 'stijlen' | 'categorieen',
   omschrijvingNl: string,
   omschrijvingFr: string | undefined,
   omschrijvingDe: string | undefined,
@@ -152,7 +152,7 @@ export interface NieuwKunstwerk {
   omschrijvingFr: string;
   segmentIds: string[];
   stijlIds: string[];
-  onderwerpIds: string[];
+  categorieIds: string[];
   materiaalIds: string[];
   maatIds: string[];
   aiGegenereerd: boolean;

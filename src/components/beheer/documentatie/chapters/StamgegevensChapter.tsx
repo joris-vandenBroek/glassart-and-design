@@ -36,10 +36,10 @@ export function StamgegevensChapter() {
       <SubSection id="stamgegevens-stijlen" title="Stijlen">
         <P>De stijl van een kunstwerk, bijvoorbeeld &quot;Modern&quot; of &quot;Klassiek&quot;.</P>
       </SubSection>
-      <SubSection id="stamgegevens-onderwerpen" title="Onderwerpen">
+      <SubSection id="stamgegevens-categorieen" title="Categorieën">
         <P>Waar het kunstwerk over gaat, bijvoorbeeld &quot;Natuur&quot; of &quot;Abstract&quot;.</P>
         <P>
-          Segmenten, stijlen en onderwerpen kun je ook meteen aanmaken vanuit het kunstwerk-scherm zelf,
+          Segmenten, stijlen en categorieën kun je ook meteen aanmaken vanuit het kunstwerk-scherm zelf,
           terwijl je een kunstwerk invult. Let op: dat vult dan alleen de Nederlandse omschrijving. De
           vertalingen voor Engels, Duits en Frans moet je later zelf nog toevoegen, hier in dit scherm.
         </P>

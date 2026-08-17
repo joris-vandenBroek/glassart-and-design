@@ -30,7 +30,7 @@ const KUNSTWERKEN = [
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
     stijlIds: [],
-    onderwerpIds: [],
+    categorieIds: [],
     omschrijvingNl: 'Hotel paneel',
     omschrijvingFr: '',
     omschrijvingDe: '',
@@ -44,7 +44,7 @@ const KUNSTWERKEN = [
     materiaalIds: ['mat-1'],
     maatIds: ['maat-1'],
     stijlIds: [],
-    onderwerpIds: [],
+    categorieIds: [],
     omschrijvingNl: 'Wellness paneel',
     omschrijvingFr: '',
     omschrijvingDe: '',
@@ -92,7 +92,7 @@ beforeEach(() => {
     materiaalsoorten: [],
     kunstenaars: [],
     stijlen: [],
-    onderwerpen: [],
+    categorieen: [],
   };
   fetchMock.mockImplementation(async (url: string) => {
     if (url === '/api/auth/me?type=klant') {

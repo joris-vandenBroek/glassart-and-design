@@ -11,7 +11,7 @@ import type { Kunstwerk } from './materiaalTypes';
 
 /**
  * De gedeelde beheersectie voor de catalogustabellen die verder niets bevatten dan
- * de vier omschrijving-velden (Nl/Fr/De/En): segmenten, stijlen en onderwerpen.
+ * de vier omschrijving-velden (Nl/Fr/De/En): segmenten, stijlen en categorieen.
  *
  * Die drie schermen waren regel voor regel identiek op de entiteitsnaam na --
  * inclusief de bevestigingsstroom voor verwijderen en de "nog in gebruik door N
@@ -44,7 +44,7 @@ export interface LookupSectionProps<T extends LookupItem> {
   /** Meervoud, gebruikt voor de vertaalsleutels en de sectie-testids. */
   meervoud: string;
   /** De kolom in `kunstwerken` die naar deze tabel verwijst. */
-  kunstwerkIdsKey: 'segmentIds' | 'stijlIds' | 'onderwerpIds';
+  kunstwerkIdsKey: 'segmentIds' | 'stijlIds' | 'categorieIds';
   /** Expliciet, niet samengesteld: ActiviteitType is een union van letterlijke waarden. */
   activiteitTypes: {
     toegevoegd: ActiviteitType;

@@ -21,7 +21,7 @@ export function KlantWebsiteChapter() {
       </P>
       <P>
         <strong>Collecties</strong> — het overzicht van alle kunstwerken die een klant kan bestellen, met
-        filters op segment, stijl, onderwerp en materiaal. Alles hier komt rechtstreeks uit{' '}
+        filters op segment, stijl, categorie en materiaal. Alles hier komt rechtstreeks uit{' '}
         <DocLink anchor="kunstwerken">de kunstwerken die jij aanmaakt</DocLink>; de filters komen uit{' '}
         <DocLink anchor="stamgegevens">de overige stamgegevens</DocLink>.
       </P>

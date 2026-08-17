@@ -6,8 +6,8 @@ export function KunstwerkenChapter() {
       <P>Elk product dat een klant kan bestellen, is een &quot;kunstwerk&quot; in beheer.</P>
       <Screenshot
         src="/documentatie/kunstwerken.png"
-        alt="Het kunstwerk-formulier van 'Fresh Catch' van kunstenaar Jack Liemburg, met foto, vastgelegde code, kunstenaar en formaat, met live voorbeeld van de collectiepagina ernaast"
-        caption="Het kunstwerk-formulier, tabblad Algemeen (hier: &quot;Fresh Catch&quot; van kunstenaar Jack)"
+        alt="Het kunstwerk-formulier, tabblad Algemeen, van kunstwerk GLA-ANI-018 (&quot;Cheetah Gala&quot;) van kunstenaar Glassart&amp;Design, met foto, code, kunstenaar en formaat, met live voorbeeld van de collectiepagina ernaast met artiest, code, collectie, stijl, categorie, materiaal, maat, prijs en aantal"
+        caption="Het kunstwerk-formulier, tabblad Algemeen (hier: kunstwerk GLA-ANI-018, &quot;Cheetah Gala&quot;)"
       />
       <SubSection id="kunstwerken-foto" title="Foto">
         <P>Upload een foto van het kunstwerk. Die mag maximaal 8 MB groot zijn.</P>

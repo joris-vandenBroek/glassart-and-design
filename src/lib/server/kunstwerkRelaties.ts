@@ -1,13 +1,13 @@
 import type { Pool } from 'mysql2/promise';
 
-export type RelatieKolomNaam = 'segmentIds' | 'materiaalIds' | 'maatIds' | 'stijlIds' | 'onderwerpIds';
+export type RelatieKolomNaam = 'segmentIds' | 'materiaalIds' | 'maatIds' | 'stijlIds' | 'categorieIds';
 
 export interface KunstwerkRelaties {
   segmentIds: string[];
   materiaalIds: string[];
   maatIds: string[];
   stijlIds: string[];
-  onderwerpIds: string[];
+  categorieIds: string[];
 }
 
 interface RelatieConfig {
@@ -21,7 +21,7 @@ const RELATIE_KOLOMMEN: readonly RelatieConfig[] = [
   { kolom: 'materiaalIds', tabel: 'kunstwerkMaterialen', kolomId: 'materiaalId' },
   { kolom: 'maatIds', tabel: 'kunstwerkMaten', kolomId: 'maatId' },
   { kolom: 'stijlIds', tabel: 'kunstwerkStijlen', kolomId: 'stijlId' },
-  { kolom: 'onderwerpIds', tabel: 'kunstwerkOnderwerpen', kolomId: 'onderwerpId' },
+  { kolom: 'categorieIds', tabel: 'kunstwerkCategorieen', kolomId: 'categorieId' },
 ];
 
 const KOLOM_NAMEN: readonly string[] = RELATIE_KOLOMMEN.map((r) => r.kolom);
@@ -56,7 +56,7 @@ export function scheidRelaties(data: Record<string, unknown>): {
 }
 
 function legeRelaties(): KunstwerkRelaties {
-  return { segmentIds: [], materiaalIds: [], maatIds: [], stijlIds: [], onderwerpIds: [] };
+  return { segmentIds: [], materiaalIds: [], maatIds: [], stijlIds: [], categorieIds: [] };
 }
 
 /** Haalt de relaties van meerdere kunstwerken in bulk op (één query per koppeltabel, geen N+1). */

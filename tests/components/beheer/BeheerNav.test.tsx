@@ -18,7 +18,7 @@ function renderNav(
     matenCount: 2,
     segmentenCount: 6,
     stijlenCount: 5,
-    onderwerpenCount: 4,
+    categorieenCount: 4,
     kunstwerkenCount: 36,
     kunstenaarsCount: 8,
     prijsgroepenCount: 9,
@@ -39,7 +39,7 @@ function renderNav(
         matenCount={counts.matenCount}
         segmentenCount={counts.segmentenCount}
         stijlenCount={counts.stijlenCount}
-        onderwerpenCount={counts.onderwerpenCount}
+        categorieenCount={counts.categorieenCount}
         kunstwerkenCount={counts.kunstwerkenCount}
         kunstenaarsCount={counts.kunstenaarsCount}
         prijsgroepenCount={counts.prijsgroepenCount}
@@ -65,8 +65,8 @@ describe('BeheerNav', () => {
     expect(screen.getByTestId('beheer-nav-segmenten')).toHaveTextContent('6');
     expect(screen.getByTestId('beheer-nav-stijlen')).toHaveTextContent('Stijlen');
     expect(screen.getByTestId('beheer-nav-stijlen')).toHaveTextContent('5');
-    expect(screen.getByTestId('beheer-nav-onderwerpen')).toHaveTextContent('Onderwerpen');
-    expect(screen.getByTestId('beheer-nav-onderwerpen')).toHaveTextContent('4');
+    expect(screen.getByTestId('beheer-nav-categorieen')).toHaveTextContent('Categorieën');
+    expect(screen.getByTestId('beheer-nav-categorieen')).toHaveTextContent('4');
     expect(screen.getByTestId('beheer-nav-kunstwerken')).toHaveTextContent('Kunstwerken');
     expect(screen.getByTestId('beheer-nav-kunstwerken')).toHaveTextContent('36');
     expect(screen.getByTestId('beheer-nav-kunstenaars')).toHaveTextContent('Kunstenaars');
@@ -177,7 +177,7 @@ describe('BeheerNav', () => {
     expect(items).toContainElement(screen.getByTestId('beheer-nav-maten'));
     expect(items).toContainElement(screen.getByTestId('beheer-nav-segmenten'));
     expect(items).toContainElement(screen.getByTestId('beheer-nav-stijlen'));
-    expect(items).toContainElement(screen.getByTestId('beheer-nav-onderwerpen'));
+    expect(items).toContainElement(screen.getByTestId('beheer-nav-categorieen'));
     expect(items).toContainElement(screen.getByTestId('beheer-nav-prijsgroepen'));
   });
 
