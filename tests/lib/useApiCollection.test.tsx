@@ -124,11 +124,12 @@ describe('useApiCollection', () => {
     expect(result.current.lastMutationErrorCode).toBe('in-use-bestelling');
   });
 
-  it('leaves lastMutationErrorCode null when the failed response has no JSON body (e.g. a plain 500)', async () => {
+  it('falls back to the HTTP status when the failed response has no JSON body (e.g. a plain 500)', async () => {
     fetchMock
       .mockResolvedValueOnce({ ok: true, json: async () => [] })
       .mockResolvedValueOnce({
         ok: false,
+        status: 500,
         clone() {
           return this;
         },
@@ -142,7 +143,7 @@ describe('useApiCollection', () => {
     await act(async () => {
       await result.current.update('kw-1', {} as never);
     });
-    expect(result.current.lastMutationErrorCode).toBeNull();
+    expect(result.current.lastMutationErrorCode).toBe('http-500');
   });
 
   it('clears lastMutationErrorCode once a later mutation succeeds', async () => {
@@ -171,7 +172,7 @@ describe('useApiCollection', () => {
     expect(result.current.lastMutationErrorCode).toBeNull();
   });
 
-  it('clears lastMutationErrorCode when a later mutation fails before a response exists (offline, DNS, aborted)', async () => {
+  it('sets lastMutationErrorCode to netwerkfout when a later mutation fails before a response exists (offline, DNS, aborted), overwriting the previous mutation\'s code', async () => {
     fetchMock
       .mockResolvedValueOnce({ ok: true, json: async () => [] })
       .mockResolvedValueOnce({
@@ -196,6 +197,6 @@ describe('useApiCollection', () => {
     });
     expect(success).toBe(false);
     expect(result.current.error).toBe('action');
-    expect(result.current.lastMutationErrorCode).toBeNull();
+    expect(result.current.lastMutationErrorCode).toBe('netwerkfout');
   });
 });

@@ -1402,4 +1402,30 @@ describe('KunstwerkenSection', () => {
       expect(screen.getByTestId('kunstwerk-modal-opslaan')).not.toBeDisabled();
     });
   });
+
+  describe('foutmelding na een mislukte mutatie', () => {
+    async function faalOpslaan(actionErrorCode: string | null) {
+      const onUpdate = vi.fn().mockResolvedValue(false);
+      renderSection({ onUpdate, actionErrorCode });
+      fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+      fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
+      return await screen.findByTestId('kunstwerk-modal-error');
+    }
+
+    it('vertaalt een code die het scherm kent', async () => {
+      expect(await faalOpslaan('not-found')).toHaveTextContent('bestaat niet meer');
+    });
+
+    it('vertelt dat de sessie verlopen is bij unauthorized', async () => {
+      expect(await faalOpslaan('unauthorized')).toHaveTextContent('sessie is verlopen');
+    });
+
+    it('noemt de technische code letterlijk bij een onbekende code', async () => {
+      expect(await faalOpslaan('iets-heel-nieuws')).toHaveTextContent('foutcode: iets-heel-nieuws');
+    });
+
+    it('valt terug op de algemene tekst zonder code', async () => {
+      expect(await faalOpslaan(null)).toHaveTextContent('Er is iets misgegaan');
+    });
+  });
 });

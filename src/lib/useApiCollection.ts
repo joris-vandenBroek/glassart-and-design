@@ -11,8 +11,7 @@ export interface UseApiCollectionResult<T> {
   error: 'load' | 'action' | null;
   // De foutcode uit de laatste mislukte mutatie (add/update/remove), bijv. 'code-bestaat-al'.
   // Additief naast `error`: bestaande callers die alleen de boolean van add/update/remove
-  // gebruiken zien geen verschil. `null` zolang er geen mislukte mutatie is geweest, of
-  // wanneer de server geen `error`-veld in de responsebody teruggaf.
+  // gebruiken zien geen verschil. `null` zolang er geen mislukte mutatie is geweest.
   lastMutationErrorCode: string | null;
   add: (data: Omit<T, 'id'>) => Promise<boolean>;
   update: (id: string, data: Partial<Omit<T, 'id'>>) => Promise<boolean>;
@@ -21,16 +20,20 @@ export interface UseApiCollectionResult<T> {
 }
 
 /**
- * Leest `error` uit een niet-ok responsebody, zonder te gooien als de body geen
- * (geldige) JSON is -- een generieke 500 van bijvoorbeeld een proxy heeft dat niet.
+ * Levert altijd een code op. `error` uit de responsebody als die er is; anders de
+ * HTTP-status, want een mislukte mutatie zonder herkenbare code was voorheen niet te
+ * onderscheiden van "er is niets misgegaan" -- en het scherm kon er dus alleen "er ging
+ * iets mis" van maken. Gooit niet als de body geen geldige JSON is; een generieke 502 van
+ * een proxy heeft dat niet.
  */
-async function leesFoutcode(response: Response): Promise<string | null> {
+async function leesFoutcode(response: Response): Promise<string> {
   try {
     const body = (await response.clone().json()) as { error?: unknown };
-    return typeof body.error === 'string' ? body.error : null;
+    if (typeof body.error === 'string') return body.error;
   } catch {
-    return null;
+    // geen JSON-body -- de status hieronder is dan het enige wat we hebben
   }
+  return `http-${response.status}`;
 }
 
 export function useApiCollection<T extends { id: string }>(
@@ -79,6 +82,9 @@ export function useApiCollection<T extends { id: string }>(
         }
         return await fetchItems();
       } catch {
+        // Alleen invullen als er nog niets staat: bij een niet-ok response is de code
+        // hierboven al gezet en gooien we zelf, en die eigen worp mag hem niet overschrijven.
+        setLastMutationErrorCode((huidig) => huidig ?? 'netwerkfout');
         setError('action');
         return false;
       }
@@ -103,6 +109,9 @@ export function useApiCollection<T extends { id: string }>(
         }
         return await fetchItems();
       } catch {
+        // Alleen invullen als er nog niets staat: bij een niet-ok response is de code
+        // hierboven al gezet en gooien we zelf, en die eigen worp mag hem niet overschrijven.
+        setLastMutationErrorCode((huidig) => huidig ?? 'netwerkfout');
         setError('action');
         return false;
       }
@@ -123,6 +132,9 @@ export function useApiCollection<T extends { id: string }>(
         }
         return await fetchItems();
       } catch {
+        // Alleen invullen als er nog niets staat: bij een niet-ok response is de code
+        // hierboven al gezet en gooien we zelf, en die eigen worp mag hem niet overschrijven.
+        setLastMutationErrorCode((huidig) => huidig ?? 'netwerkfout');
         setError('action');
         return false;
       }

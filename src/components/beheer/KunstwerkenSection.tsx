@@ -621,11 +621,32 @@ export function KunstwerkenSection({
   // juiste tekst verschijnt zodra `actionErrorCode` binnenkomt, ook al gebeurt dat een
   // render later dan de boolean die add/update/remove teruggeven.
   function mutatieFoutmelding(): string {
-    if (actionErrorCode === 'code-bestaat-al') return t('kunstwerkenCodeBestaatAl');
-    if (actionErrorCode === 'code-in-bestelling' || actionErrorCode === 'in-use-bestelling') {
-      return t('kunstwerkenCodeVast');
+    switch (actionErrorCode) {
+      case 'code-bestaat-al':
+        return t('kunstwerkenCodeBestaatAl');
+      case 'code-in-bestelling':
+      case 'in-use-bestelling':
+        return t('kunstwerkenCodeVast');
+      case 'code-verplicht':
+        return t('kunstwerkenCodeVerplicht');
+      case 'dubbele-relatie':
+        return t('kunstwerkenDubbeleRelatie');
+      case 'not-found':
+        return t('kunstwerkenNietGevonden');
+      case 'unauthorized':
+        return t('kunstwerkenSessieVerlopen');
+      case 'server-error':
+        return t('kunstwerkenServerfout');
+      case 'netwerkfout':
+        return t('kunstwerkenNetwerkfout');
+      case null:
+        return t('kunstwerkenActionError');
+      default:
+        // Een code die dit scherm niet kent hoort niet stil te verdwijnen achter "er ging
+        // iets mis" -- dan is een melding van een medewerker niet na te trekken. Hij komt
+        // letterlijk in de tekst te staan.
+        return t('kunstwerkenOnbekendeFout', { code: actionErrorCode });
     }
-    return t('kunstwerkenActionError');
   }
 
   const alleMateriaalIds = (materialen ?? []).map((materiaal) => materiaal.id);
