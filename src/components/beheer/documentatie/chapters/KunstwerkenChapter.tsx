@@ -28,8 +28,8 @@ export function KunstwerkenChapter() {
           />
           <Screenshot
             src="/documentatie/kunstwerken-code-na.png"
-            alt="Het veld Prefix met GLA-JAC gekozen, en de code GLA-JAC-0001 automatisch voorgesteld"
-            caption="2. Prefix &quot;GLA-JAC&quot; gekozen — de code GLA-JAC-0001 wordt automatisch voorgesteld"
+            alt="Het veld Prefix met GLA-JAC gekozen, en de code GLA-JAC-0011 automatisch voorgesteld"
+            caption="2. Prefix &quot;GLA-JAC&quot; gekozen — de code GLA-JAC-0011 wordt automatisch voorgesteld, het eerstvolgende vrije nummer"
           />
         </div>
         <P>
@@ -96,6 +96,11 @@ export function KunstwerkenChapter() {
           wordt nog geüpload&quot;, zonder tabblad — even wachten dus. Zodra het probleem is
           opgelost verdwijnt die regel; is de lijst leeg, dan kun je opslaan.
         </P>
+        <Screenshot
+          src="/documentatie/kunstwerken-opslaan.png"
+          alt="De onderrand van het kunstwerk-formulier met de grijze knop Opslaan en daarboven de lijst &quot;Opslaan kan nog niet&quot; met vier regels: foto ontbreekt, formaat niet gekozen, kunstenaar niet gekozen en Nederlandse omschrijving ontbreekt, elk met het tabblad erachter"
+          caption="De code is hier al ingevuld, dus die regel is verdwenen; de vier andere blijven staan tot ze ingevuld zijn"
+        />
         <P>
           Gaat het bij het opslaan zelf mis, dan verschijnt er een melding die de reden zelf
           noemt — bijvoorbeeld dat de code al bestaat, dat de code vastligt omdat er al besteld

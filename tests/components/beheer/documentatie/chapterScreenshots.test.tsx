@@ -44,6 +44,11 @@ describe('hoofdstuk-screenshots', () => {
     expectImageOnDisk(container, '/documentatie/kunstwerken-code-na.png');
   });
 
+  it('KunstwerkenChapter toont de opsomming waarom opslaan nog niet kan', () => {
+    const { container } = render(<KunstwerkenChapter />);
+    expectImageOnDisk(container, '/documentatie/kunstwerken-opslaan.png');
+  });
+
   it('DrukkersChapter toont een screenshot van een bekeken zending', () => {
     const { container } = render(<DrukkersChapter />);
     expectImageOnDisk(container, '/documentatie/drukkers-zending-bekijken.png');

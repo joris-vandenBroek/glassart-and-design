@@ -6,6 +6,12 @@ export const SCREENSHOT_BRONNEN: Record<string, string[]> = {
   'public/documentatie/kunstwerken.png': ['src/components/beheer/KunstwerkenSection.tsx', 'src/components/ProductModal.tsx'],
   'public/documentatie/kunstwerken-code-voor.png': ['src/components/beheer/KunstwerkenSection.tsx'],
   'public/documentatie/kunstwerken-code-na.png': ['src/components/beheer/KunstwerkenSection.tsx'],
+  // Ook Modal.tsx: de opsomming staat in het footergebied, dus een wijziging aan die
+  // voettekst verandert dit plaatje net zo goed als een wijziging aan de lijst zelf.
+  'public/documentatie/kunstwerken-opslaan.png': [
+    'src/components/beheer/KunstwerkenSection.tsx',
+    'src/components/Modal.tsx',
+  ],
   'public/documentatie/kunstenaars.png': ['src/components/beheer/KunstenaarsSection.tsx'],
   'public/documentatie/drukkers.png': ['src/components/beheer/DrukkerModal.tsx'],
   'public/documentatie/drukkers-zending-bekijken.png': ['src/components/beheer/ZendingBekijkenModal.tsx'],
