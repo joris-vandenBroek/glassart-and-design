@@ -423,6 +423,41 @@ describe('ProductModal', () => {
     expect(screen.getByTestId('product-modal-materiaal-tekst')).toHaveTextContent('4mm Veiligheidsglas');
   });
 
+  it('valt terug op het eerste actieve materiaal als het veiligheidsglasmateriaal zelf inactief is', () => {
+    // Dekt de tak die de vorige test niet raakt: hier is het veiligheidsglasmateriaal
+    // (mat-1) zelf inactief, dus de voorrangsregel voor veiligheidsglas kan niet gelden en
+    // de nieuwe fallback (actieveVoorKunstwerk[0]?.id) moet het eerste ACTIEVE materiaal
+    // kiezen -- niet kunstwerk.materiaalIds[0], dat still op het inactieve mat-1 zou wijzen.
+    renderModal(
+      () => {},
+      { ...KUNSTWERK, materiaalIds: ['mat-1', 'mat-2', 'mat-3'] },
+      KUNSTENAARS,
+      SEGMENTEN,
+      STIJLEN,
+      CATEGORIEEN,
+      'dialog',
+      KUNSTWERK_PRIJZEN,
+      [
+        { ...MATERIAAL_1, actief: false },
+        { ...MATERIAAL_2, actief: true },
+        MATERIAAL_3,
+      ]
+    );
+    const select = screen.getByTestId('product-modal-materiaal');
+    expect(select).toHaveValue('mat-2');
+    const options = select.querySelectorAll('option');
+    expect(Array.from(options).map((option) => option.getAttribute('value'))).toEqual(['mat-2', 'mat-3']);
+    // De select zelf valt in jsdom terug op de eerste optie zodra de gezette waarde niet bij
+    // een <option> hoort, dus die alleen checken zou ook slagen als de state stiekem nog op
+    // het inactieve mat-1 staat. De omschrijving hangt wél af van de echte React-state
+    // (geselecteerdMateriaal = beschikbareMaterialen.find(m => m.id === materiaalId)), en
+    // verdwijnt zodra materiaalId niet meer voorkomt in beschikbareMaterialen -- dat maakt dit
+    // de assertion die de oude en nieuwe implementatie daadwerkelijk uit elkaar trekt.
+    expect(screen.getByTestId('product-modal-materiaal-omschrijving')).toHaveTextContent(
+      'Lichtgewicht en flexibel voor grote oppervlaktes.'
+    );
+  });
+
   it('includes the materiaalsoort name alongside the dikte in each materiaal option', () => {
     renderModal();
     const options = screen.getByTestId('product-modal-materiaal').querySelectorAll('option');
