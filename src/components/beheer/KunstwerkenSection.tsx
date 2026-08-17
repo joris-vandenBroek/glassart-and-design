@@ -1114,17 +1114,13 @@ export function KunstwerkenSection({
             </legend>
             <button
               type="button"
-              onClick={() => {
-                const alleIds = (materialen ?? []).map((materiaal) => materiaal.id);
-                setMateriaalIds(alleGeselecteerd(alleIds, materiaalIds) ? [] : alleIds);
-              }}
+              onClick={() =>
+                setMateriaalIds(alleGeselecteerd(alleMateriaalIds, materiaalIds) ? [] : alleMateriaalIds)
+              }
               data-testid="kunstwerk-modal-materialen-allesToggle"
               className="text-xs text-white/60 underline hover:text-white"
             >
-              {alleGeselecteerd(
-                (materialen ?? []).map((materiaal) => materiaal.id),
-                materiaalIds
-              )
+              {alleGeselecteerd(alleMateriaalIds, materiaalIds)
                 ? t('kunstwerkenAllesDeselecteren')
                 : t('kunstwerkenAllesSelecteren')}
             </button>
