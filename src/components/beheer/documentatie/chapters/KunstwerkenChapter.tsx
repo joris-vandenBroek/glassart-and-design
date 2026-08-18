@@ -91,11 +91,12 @@ export function KunstwerkenChapter() {
           deselecteren&quot; waarmee je in één klik alle beschikbare opties voor die lijst aan- of uitvinkt.
         </P>
         <P>
-          Vink je geen enkel materiaal aan, dan verschijnt in plaats daarvan een veld &quot;prijs per
-          m²&quot; op dit scherm — dat gebruiken we voor producten zonder materiaal, zoals akoestische
-          stof. Heb je wél een materiaal gekozen maar geen vaste maat (bijvoorbeeld voor een product
-          waarbij de klant zelf zijn breedte en hoogte opgeeft), dan komt de prijs per m² niet van dit
-          scherm maar van het gekozen materiaal — zie{' '}
+          Vink je geen enkel materiaal aan, dan verschijnt onder de materiaallijst een veld &quot;prijs per
+          m²&quot; — dat gebruiken we voor producten zonder materiaal, zoals akoestische stof. Het
+          tabblad Maten gaat dan uit: zo'n product heeft geen vaste maten, want de klant geeft zelf
+          breedte en hoogte op en betaalt per m². Heb je wél een materiaal gekozen maar geen vaste maat
+          (bijvoorbeeld voor een product waarbij de klant zijn eigen afmeting opgeeft), dan komt de prijs
+          per m² niet van dit scherm maar van het gekozen materiaal — zie{' '}
           <DocLink anchor="stamgegevens-materialen">Materialen</DocLink>.
         </P>
       </SubSection>

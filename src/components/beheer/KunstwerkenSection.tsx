@@ -862,8 +862,8 @@ export function KunstwerkenSection({
               tabs={[
                 { id: 'algemeen', label: t('kunstwerkenTabAlgemeen'), hasError: algemeenHeeftFout },
                 { id: 'kenmerken', label: t('kunstwerkenTabKenmerken') },
-                { id: 'materialen', label: t('kunstwerkenTabMaterialen') },
-                { id: 'maten', label: t('kunstwerkenTabMaten'), hasError: prijsPerM2HeeftFout },
+                { id: 'materialen', label: t('kunstwerkenTabMaterialen'), hasError: prijsPerM2HeeftFout },
+                { id: 'maten', label: t('kunstwerkenTabMaten') },
                 { id: 'omschrijvingen', label: t('kunstwerkenTabOmschrijvingen'), hasError: omschrijvingenHeeftFout },
               ]}
               activeTabId={activeTab}
@@ -1222,59 +1222,10 @@ export function KunstwerkenSection({
               );
             })}
           </fieldset>
-              </div>
 
-              <div className={activeTab === 'maten' ? 'flex flex-col gap-3' : 'hidden'}>
-          <fieldset className="flex flex-col gap-1">
-            <legend className="text-xs uppercase tracking-wide text-white/60">{t('kunstwerkenLabelMaten')}</legend>
-            {(() => {
-              const compatibeleMaatIds = (maten ?? [])
-                .filter((maat) => {
-                  if (formaat === null || formaat === 'alle') return true;
-                  return formaat === 'vierkant' ? isVierkanteMaat(maat) : !isVierkanteMaat(maat);
-                })
-                .map((maat) => maat.id);
-
-              return (
-                <>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setMaatIds(alleGeselecteerd(compatibeleMaatIds, maatIds) ? [] : compatibeleMaatIds)
-                    }
-                    data-testid="kunstwerk-modal-maten-allesToggle"
-                    className="self-start text-left text-xs text-white/60 underline hover:text-white"
-                  >
-                    {alleGeselecteerd(compatibeleMaatIds, maatIds)
-                      ? t('kunstwerkenAllesDeselecteren')
-                      : t('kunstwerkenAllesSelecteren')}
-                  </button>
-                  {(maten ?? []).map((maat) => {
-                    const incompatibel =
-                      formaat !== null &&
-                      formaat !== 'alle' &&
-                      (formaat === 'vierkant' ? !isVierkanteMaat(maat) : isVierkanteMaat(maat));
-                    return (
-                      <label
-                        key={maat.id}
-                        className={`flex items-center gap-2 text-sm text-white/80 ${incompatibel ? 'opacity-40' : ''}`}
-                      >
-                        <input
-                          type="checkbox"
-                          disabled={incompatibel}
-                          checked={maatIds.includes(maat.id)}
-                          onChange={() => setMaatIds((current) => toggle(current, maat.id))}
-                          data-testid={`kunstwerk-modal-maat-${maat.id}`}
-                        />
-                        {`${maat.breedte}×${maat.hoogte} cm`}
-                      </label>
-                    );
-                  })}
-                </>
-              );
-            })()}
-          </fieldset>
-
+          {/* Hoort hier en niet bij Maten: dit veld verschijnt juist omdat er geen materiaal
+              gekozen is, en die keuze maak je hierboven. Op het matentabblad stond oorzaak
+              en gevolg op twee verschillende plekken. */}
           {isMateriaalloos && (
             <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/60">
               <span>
@@ -1300,6 +1251,73 @@ export function KunstwerkenSection({
               )}
             </label>
           )}
+              </div>
+
+              <div className={activeTab === 'maten' ? 'flex flex-col gap-3' : 'hidden'}>
+          <fieldset className="flex flex-col gap-1">
+            <legend className="text-xs uppercase tracking-wide text-white/60">{t('kunstwerkenLabelMaten')}</legend>
+            {(() => {
+              const compatibeleMaatIds = (maten ?? [])
+                .filter((maat) => {
+                  if (formaat === null || formaat === 'alle') return true;
+                  return formaat === 'vierkant' ? isVierkanteMaat(maat) : !isVierkanteMaat(maat);
+                })
+                .map((maat) => maat.id);
+
+              return (
+                <>
+                  {/* Een kunstwerk zonder materiaal wordt altijd zonder maten opgeslagen
+                      (zie buildKunstwerkData): de klant geeft daar zelf breedte en hoogte op
+                      en betaalt per m2. De lijst hier laten aanvinken zou dus vinkjes tonen
+                      die bij het opslaan verdwijnen. */}
+                  {isMateriaalloos && (
+                    <p
+                      data-testid="kunstwerk-modal-maten-materiaalloos"
+                      className="text-xs normal-case tracking-normal text-white/50"
+                    >
+                      {t('kunstwerkenMatenMateriaalloos')}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    disabled={isMateriaalloos}
+                    onClick={() =>
+                      setMaatIds(alleGeselecteerd(compatibeleMaatIds, maatIds) ? [] : compatibeleMaatIds)
+                    }
+                    data-testid="kunstwerk-modal-maten-allesToggle"
+                    className="self-start text-left text-xs text-white/60 underline hover:text-white disabled:no-underline disabled:opacity-40 disabled:hover:text-white/60"
+                  >
+                    {alleGeselecteerd(compatibeleMaatIds, maatIds)
+                      ? t('kunstwerkenAllesDeselecteren')
+                      : t('kunstwerkenAllesSelecteren')}
+                  </button>
+                  {(maten ?? []).map((maat) => {
+                    const incompatibel =
+                      formaat !== null &&
+                      formaat !== 'alle' &&
+                      (formaat === 'vierkant' ? !isVierkanteMaat(maat) : isVierkanteMaat(maat));
+                    const uitgeschakeld = incompatibel || isMateriaalloos;
+                    return (
+                      <label
+                        key={maat.id}
+                        className={`flex items-center gap-2 text-sm text-white/80 ${uitgeschakeld ? 'opacity-40' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          disabled={uitgeschakeld}
+                          checked={!isMateriaalloos && maatIds.includes(maat.id)}
+                          onChange={() => setMaatIds((current) => toggle(current, maat.id))}
+                          data-testid={`kunstwerk-modal-maat-${maat.id}`}
+                        />
+                        {`${maat.breedte}×${maat.hoogte} cm`}
+                      </label>
+                    );
+                  })}
+                </>
+              );
+            })()}
+          </fieldset>
+
               </div>
 
               <div className={activeTab === 'omschrijvingen' ? 'flex flex-col gap-3' : 'hidden'}>
