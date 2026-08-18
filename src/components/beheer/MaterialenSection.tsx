@@ -58,6 +58,7 @@ export function MaterialenSection({
   // await leest, ving nog de oude waarde. Zelfde patroon als KunstwerkenSection.
   const [mutationFailed, setMutationFailed] = useState(false);
   const [activerenVoorId, setActiverenVoorId] = useState<string | null>(null);
+  const [deactiverenBevestiging, setDeactiverenBevestiging] = useState(false);
   const [koppelFout, setKoppelFout] = useState<string | null>(null);
   const [koppelBezig, setKoppelBezig] = useState(false);
   // Een net toegevoegd materiaal heeft nog geen id in dit component: onAdd geeft alleen
@@ -150,6 +151,20 @@ export function MaterialenSection({
 
   async function handleSave() {
     if (!modalState) return;
+    const wasActiefBijOpenen =
+      modalState.mode === 'edit' ? isMateriaalActief(modalState.materiaal) : false;
+    // Deactiveren koppelt het materiaal server-side los bij álle kunstwerken. Dat is te
+    // ingrijpend om als bijeffect van een opslagknop te laten gebeuren, dus eerst vragen --
+    // spiegelbeeld van de koppelvraag bij activeren.
+    if (wasActiefBijOpenen && !actief) {
+      setDeactiverenBevestiging(true);
+      return;
+    }
+    await voerOpslagUit();
+  }
+
+  async function voerOpslagUit() {
+    if (!modalState) return;
     // Vastleggen vóór de await: daarna is de lijst mogelijk al ververst met het nieuwe
     // materiaal erin, en dan is het verschil niet meer te zien.
     const bestaandeIds = (materialen ?? []).map((materiaal) => materiaal.id);
@@ -178,8 +193,16 @@ export function MaterialenSection({
       omschrijvingNl
     );
     const wordtGeactiveerd = actief && !wasActief;
+    const wordtGedeactiveerd = wasActief && !actief;
     const bewerktId = modalState.mode === 'edit' ? modalState.materiaal.id : null;
     closeModal();
+    if (wordtGedeactiveerd) {
+      // De server heeft zojuist alle koppelrijen van dit materiaal weggehaald; zonder
+      // verversing werkt het kunstwerkformulier verder met materiaalIds die niet meer
+      // bestaan.
+      onKunstwerkenChanged();
+      return;
+    }
     if (!wordtGeactiveerd) return;
     setKoppelFout(null);
     if (bewerktId) {
@@ -226,6 +249,7 @@ export function MaterialenSection({
   // tekst verschijnt zodra `actionErrorCode` binnenkomt.
   function mutatieFoutmelding(): string {
     if (actionErrorCode === 'in-use-open-bestelling') return t('materialenDeactiverenGeblokkeerd');
+    if (actionErrorCode === 'laatste-materiaal') return t('materialenDeactiverenLaatsteMateriaal');
     return t('materialenActionError');
   }
 
@@ -457,6 +481,39 @@ export function MaterialenSection({
             </p>
           )}
         </div>
+      </Modal>
+      <Modal
+        isOpen={deactiverenBevestiging}
+        onClose={() => setDeactiverenBevestiging(false)}
+        closeLabel={t('modalClose')}
+        title={t('materialenDeactiverenTitel')}
+        footerActions={
+          <>
+            <button
+              type="button"
+              onClick={async () => {
+                setDeactiverenBevestiging(false);
+                await voerOpslagUit();
+              }}
+              data-testid="materialen-deactiveren-bevestigen"
+              className="btn-beheer-primary rounded-sm bg-silver px-4 py-2 text-xs tracking-wide text-ink"
+            >
+              {t('materialenDeactiverenBevestigen')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeactiverenBevestiging(false)}
+              data-testid="materialen-deactiveren-annuleren"
+              className="btn-beheer-secondary rounded-sm border border-white/20 px-4 py-2 text-xs tracking-wide text-white/70 hover:border-white/40 hover:text-white"
+            >
+              {t('materialenDeactiverenAnnuleren')}
+            </button>
+          </>
+        }
+      >
+        <p data-testid="materialen-deactiveren-dialog" className="text-sm text-white/80">
+          {t('materialenDeactiverenVraag')}
+        </p>
       </Modal>
     </div>
   );
