@@ -198,6 +198,7 @@ CREATE TABLE kunstwerken (
   omschrijvingEn TEXT,
   aiGegenereerd BOOLEAN DEFAULT FALSE,
   prijsPerM2 DECIMAL(10,2),
+  toonInCollectie BOOLEAN NOT NULL DEFAULT TRUE,
   UNIQUE KEY uniek_code (code),
   FOREIGN KEY (kunstenaarnr) REFERENCES kunstenaars(kunstenaarnr)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

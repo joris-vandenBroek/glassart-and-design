@@ -18,7 +18,8 @@ import { resolveKunstenaarOmschrijving, appendKunstenaarWebsiteZin } from '@/lib
 import { resolveOmschrijving } from '@/lib/resolveOmschrijving';
 import { LinkifiedText } from './LinkifiedText';
 import type { Segment, Kunstwerk, Materiaal, Maat, Materiaalsoort, KunstwerkFormaat, Stijl, Categorie } from './beheer/materiaalTypes';
-import { isMateriaalActief } from './beheer/materiaalTypes';
+import { isMateriaalActief, toontKunstwerkInCollectie } from './beheer/materiaalTypes';
+import { heeftExclusiefRecht } from '@/lib/resolveOrderRight';
 import type { Kunstenaar } from './beheer/kunstenaarTypes';
 
 const CARD_ASPECT_CLASS: Record<Exclude<KunstwerkFormaat, 'alle'>, string> = {
@@ -84,7 +85,15 @@ export function ProductsGrid() {
     return null;
   }
 
-  const allKunstwerken = kunstwerken.items;
+  // Een kunstwerk dat beheer uit de collectie heeft gehaald bestaat verder gewoon: het is
+  // nog bestelbaar via beheer en oude bestelregels blijven kloppen. Alleen de klant die het
+  // exclusieve recht op deze kunstenaar heeft ziet het hier nog wél -- vaak juist het
+  // exclusieve werk dat niet in de open collectie thuishoort.
+  const allKunstwerken = kunstwerken.items.filter(
+    (kunstwerk) =>
+      toontKunstwerkInCollectie(kunstwerk) ||
+      heeftExclusiefRecht(kunstwerk.kunstenaarnr, kunstenaars.items, user?.uid)
+  );
 
   function matchesSegment(kunstwerk: Kunstwerk) {
     return activeFilter === ALL_FILTER || kunstwerk.segmentIds.includes(activeFilter);

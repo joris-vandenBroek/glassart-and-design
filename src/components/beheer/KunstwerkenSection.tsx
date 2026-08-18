@@ -12,7 +12,7 @@ import { useKunstwerkFotoUpload } from '@/lib/useKunstwerkFotoUpload';
 import { useAdminAuth } from '@/lib/useAdminAuth';
 import { logActiviteit } from '@/lib/logActiviteit';
 import type { Kunstwerk, Segment, Materiaal, Materiaalsoort, Maat, KunstwerkFormaat, Stijl, Categorie } from './materiaalTypes';
-import { isVierkanteMaat, isMateriaalActief } from './materiaalTypes';
+import { isVierkanteMaat, isMateriaalActief, toontKunstwerkInCollectie } from './materiaalTypes';
 import type { Kunstenaar } from './kunstenaarTypes';
 import { detectFormaatFromFile, detectFormaatFromImageUrl } from '@/lib/detectKunstwerkFormaat';
 import { stelVolgendeCodeVoor, vindBekendePrefixen } from '@/lib/kunstwerkCodeVoorstel';
@@ -68,6 +68,7 @@ const LEGE_FORM = {
   stijlIds: [] as string[],
   categorieIds: [] as string[],
   aiGegenereerd: false,
+  toonInCollectie: true,
   prijsPerM2: '',
   omschrijvingNl: '',
   omschrijvingFr: '',
@@ -110,6 +111,7 @@ export function KunstwerkenSection({
   const [stijlIds, setStijlIds] = useState<string[]>(LEGE_FORM.stijlIds);
   const [categorieIds, setCategorieIds] = useState<string[]>(LEGE_FORM.categorieIds);
   const [aiGegenereerd, setAiGegenereerd] = useState<boolean>(LEGE_FORM.aiGegenereerd);
+  const [toonInCollectie, setToonInCollectie] = useState<boolean>(LEGE_FORM.toonInCollectie);
   const [nieuweSegmentNaam, setNieuweSegmentNaam] = useState('');
   const [pendingNieuweSegmentNaam, setPendingNieuweSegmentNaam] = useState<string | null>(null);
   const [segmentToevoegenError, setSegmentToevoegenError] = useState<string | null>(null);
@@ -307,6 +309,7 @@ export function KunstwerkenSection({
       stijlIds,
       categorieIds,
       aiGegenereerd,
+      toonInCollectie,
       omschrijvingNl,
       omschrijvingFr,
       omschrijvingDe,
@@ -332,6 +335,7 @@ export function KunstwerkenSection({
       stijlIds,
       categorieIds,
       aiGegenereerd,
+      toonInCollectie,
       prijsPerM2,
       omschrijvingNl,
       omschrijvingFr,
@@ -402,6 +406,7 @@ export function KunstwerkenSection({
     setStijlIds(LEGE_FORM.stijlIds);
     setCategorieIds(LEGE_FORM.categorieIds);
     setAiGegenereerd(LEGE_FORM.aiGegenereerd);
+    setToonInCollectie(LEGE_FORM.toonInCollectie);
     setNieuweStijlNaam('');
     setNieuweCategorieNaam('');
     setPendingNieuweStijlNaam(null);
@@ -438,6 +443,7 @@ export function KunstwerkenSection({
     setStijlIds(kunstwerk.stijlIds ?? []);
     setCategorieIds(kunstwerk.categorieIds ?? []);
     setAiGegenereerd(kunstwerk.aiGegenereerd ?? false);
+    setToonInCollectie(toontKunstwerkInCollectie(kunstwerk));
     setPrijsPerM2(kunstwerk.prijsPerM2 != null ? String(kunstwerk.prijsPerM2) : '');
     setOmschrijvingNl(kunstwerk.omschrijvingNl);
     setOmschrijvingFr(kunstwerk.omschrijvingFr);
@@ -707,6 +713,11 @@ export function KunstwerkenSection({
     { key: 'kunstenaarNaam', label: t('kunstwerkenColKunstenaar') },
     { key: 'segmentNamen', label: t('kunstwerkenColSegmenten') },
     { key: 'omschrijvingNl', label: t('kunstwerkenColOmschrijving') },
+    {
+      key: 'toonInCollectie',
+      label: t('kunstwerkenColGetoond'),
+      render: (row) => (toontKunstwerkInCollectie(row) ? 'Ja' : 'Nee'),
+    },
   ];
 
   return (
@@ -1013,6 +1024,16 @@ export function KunstwerkenSection({
               </span>
             )}
           </fieldset>
+
+          <label className="flex items-center gap-2 px-2 text-sm text-white/80">
+            <input
+              type="checkbox"
+              checked={toonInCollectie}
+              onChange={(event) => setToonInCollectie(event.target.checked)}
+              data-testid="kunstwerk-modal-toon-in-collectie"
+            />
+            {t('kunstwerkenLabelToonInCollectie')}
+          </label>
               </div>
 
               <div className={activeTab === 'kenmerken' ? 'flex flex-col gap-3' : 'hidden'}>

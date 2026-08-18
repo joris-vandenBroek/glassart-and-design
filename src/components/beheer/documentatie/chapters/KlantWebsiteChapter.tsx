@@ -25,7 +25,10 @@ export function KlantWebsiteChapter() {
         <DocLink anchor="kunstwerken">de kunstwerken die jij aanmaakt</DocLink>; de filters komen uit{' '}
         <DocLink anchor="stamgegevens">de overige stamgegevens</DocLink>. Een kunstwerk waarvan geen
         enkel materiaal meer <DocLink anchor="stamgegevens-materialen">actief</DocLink> is, verschijnt
-        hier niet meer.
+        hier niet meer. Hetzelfde geldt voor een kunstwerk waarbij je{' '}
+        <DocLink anchor="kunstwerken-tonen">&quot;Tonen op collectiepagina&quot;</DocLink> hebt
+        uitgezet — met één uitzondering: de klant die het exclusieve recht heeft op de kunstenaar van
+        dat kunstwerk ziet het na inloggen wél staan.
       </P>
       <SubSection id="klant-website-bestellen" title="Een kunstwerk bestellen">
         <P>

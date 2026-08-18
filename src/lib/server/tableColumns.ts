@@ -111,6 +111,7 @@ export const TABLE_COLUMNS: Record<string, readonly string[]> = {
     'omschrijvingEn',
     'aiGegenereerd',
     'prijsPerM2',
+    'toonInCollectie',
   ],
   instellingen: ['id', 'data'],
   counters: ['id', 'value'],

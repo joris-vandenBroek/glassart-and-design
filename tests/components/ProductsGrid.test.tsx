@@ -547,6 +547,36 @@ describe('ProductsGrid', () => {
     expect(screen.queryByText('Verborgen paneel')).not.toBeInTheDocument();
   });
 
+  it('verbergt een kunstwerk dat niet op de collectiepagina getoond mag worden', async () => {
+    mockCollections({
+      kunstwerken: [
+        { ...KUNSTWERKEN[0], id: 'kw-1', omschrijvingNl: 'Zichtbaar paneel' },
+        { ...KUNSTWERKEN[1], id: 'kw-2', toonInCollectie: false, omschrijvingNl: 'Verborgen paneel' },
+      ],
+    });
+    renderProductsGrid();
+    expect(await screen.findByText('Zichtbaar paneel')).toBeInTheDocument();
+    expect(screen.queryByText('Verborgen paneel')).not.toBeInTheDocument();
+  });
+
+  it('toont een verborgen kunstwerk wél aan de ingelogde klant met exclusief recht', async () => {
+    authUser = { id: 'uid-1', email: 'klant@example.com', status: 'Goedgekeurd', companyName: 'Testbedrijf BV' };
+    mockCollections({
+      kunstwerken: [
+        {
+          ...KUNSTWERKEN[0],
+          id: 'kw-1',
+          kunstenaarnr: 'KU-00001',
+          toonInCollectie: false,
+          omschrijvingNl: 'Exclusief paneel',
+        },
+      ],
+      kunstenaars: [{ ...KUNSTENAARS[0], exclusieveKlantIds: ['uid-1'] }],
+    });
+    renderProductsGrid();
+    expect(await screen.findByText('Exclusief paneel')).toBeInTheDocument();
+  });
+
   it('blijft een materiaalloos kunstwerk tonen', async () => {
     mockCollections({
       kunstwerken: [{ ...KUNSTWERKEN[0], id: 'kw-3', materiaalIds: [], omschrijvingNl: 'Akoestisch paneel' }],
