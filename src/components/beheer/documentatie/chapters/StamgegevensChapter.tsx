@@ -33,8 +33,12 @@ export function StamgegevensChapter() {
           materialen, dan is het niet meer bestelbaar en wordt het niet meer getoond.
         </P>
         <P>
-          Een materiaal op inactief zetten kan niet zolang er nog openstaande bestellingen met dat
-          materiaal zijn. Rond die bestellingen eerst af of wijs ze af.
+          Op inactief zetten doet meer dan de vlag omzetten: het materiaal wordt meteen bij alle
+          kunstwerken losgekoppeld. Daarom vraagt het scherm eerst om bevestiging. Twee dingen
+          kunnen het tegenhouden. Er mogen geen openstaande bestellingen met dat materiaal zijn —
+          rond die eerst af of wijs ze af. En het materiaal mag bij geen enkel kunstwerk het
+          <strong>enige actieve materiaal</strong> zijn, want dan zou dat kunstwerk zonder materiaal
+          achterblijven; koppel daar eerst een ander materiaal aan.
         </P>
         <P>
           Zet je een materiaal weer op actief, dan vraagt het scherm of het bij alle kunstwerken
@@ -43,13 +47,18 @@ export function StamgegevensChapter() {
           ongemoeid.
         </P>
         <P>
-          In beheer zelf blijft een inactief materiaal gewoon in beeld — dat is bewust zo. In het
-          kunstwerkformulier staat het nog steeds in de materiaallijst, aanvinkbaar, met
-          &quot;(inactief)&quot; erachter, en &quot;Alles selecteren&quot; vinkt het gewoon mee aan; zo blijven
-          bestaande koppelingen bewaard. Bij een bestelregel geldt hetzelfde voor een materiaal dat al
-          op die regel gekozen was: het blijft een geldige optie, met &quot;(inactief)&quot; erachter, zodat
-          een oude bestelling openen die keuze niet stilzwijgend leegmaakt. Voeg je een nieuwe
-          bestelregel toe, dan is een inactief materiaal wél verdwenen uit de keuze.
+          In het kunstwerkformulier blijft een inactief materiaal zichtbaar in de materiaallijst, maar
+          uitgevinkt en grijs, met &quot;(inactief)&quot; erachter — je kunt het niet aanvinken, en
+          &quot;Alles selecteren&quot; slaat het over. Zo zie je wel dát het materiaal bestaat, maar kun je
+          een kunstwerk er niet aan koppelen zolang het niet leverbaar is. Elk kunstwerk moet
+          minstens één actief materiaal hebben; de enige uitzondering is een product zonder materiaal
+          (zoals Akoestische stof), en dat heeft in plaats daarvan een eigen prijs per m² nodig.
+        </P>
+        <P>
+          Bij een bestelregel ligt het anders: een materiaal dat al op een bestaande regel gekozen was
+          blijft daar een geldige optie, met &quot;(inactief)&quot; erachter, zodat het openen van een oude
+          bestelling die keuze niet stilzwijgend leegmaakt. Voeg je een nieuwe bestelregel toe, dan is
+          een inactief materiaal wél verdwenen uit de keuze.
         </P>
       </SubSection>
       <SubSection id="stamgegevens-maten" title="Maten">

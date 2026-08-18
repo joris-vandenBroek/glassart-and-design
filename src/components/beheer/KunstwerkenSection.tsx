@@ -401,7 +401,9 @@ export function KunstwerkenSection({
     setNieuweSegmentNaam('');
     setPendingNieuweSegmentNaam(null);
     setSegmentToevoegenError(null);
-    setMateriaalIds((materialen ?? []).map((materiaal) => materiaal.id));
+    // Alleen de actieve voorselecteren: een nieuw kunstwerk mag nooit gekoppeld raken aan
+    // een materiaal dat niet leverbaar is.
+    setMateriaalIds((materialen ?? []).filter(isMateriaalActief).map((materiaal) => materiaal.id));
     setMaatIds((maten ?? []).map((maat) => maat.id));
     setStijlIds(LEGE_FORM.stijlIds);
     setCategorieIds(LEGE_FORM.categorieIds);
@@ -438,7 +440,13 @@ export function KunstwerkenSection({
     setCode(kunstwerk.code ?? '');
     setKunstenaarnr(kunstwerk.kunstenaarnr ?? '');
     setSegmentIds(kunstwerk.segmentIds);
-    setMateriaalIds(kunstwerk.materiaalIds);
+    // Inactieve koppelingen uit oudere data vallen hier af, zodat de formulierstate
+    // gelijk is aan wat het scherm toont -- opslaan ruimt zo'n restant meteen op.
+    setMateriaalIds(
+      kunstwerk.materiaalIds.filter((id) =>
+        (materialen ?? []).some((materiaal) => materiaal.id === id && isMateriaalActief(materiaal))
+      )
+    );
     setMaatIds(kunstwerk.maatIds);
     setStijlIds(kunstwerk.stijlIds ?? []);
     setCategorieIds(kunstwerk.categorieIds ?? []);
@@ -655,7 +663,9 @@ export function KunstwerkenSection({
     }
   }
 
-  const alleMateriaalIds = (materialen ?? []).map((materiaal) => materiaal.id);
+  // Alleen de actieve: "Alles selecteren" mag geen materiaal aanvinken dat niet leverbaar
+  // is, en de backfill hieronder mag er evenmin een terugzetten die net is losgekoppeld.
+  const alleMateriaalIds = (materialen ?? []).filter(isMateriaalActief).map((materiaal) => materiaal.id);
   const alleMaatIds = (maten ?? []).map((maat) => maat.id);
   const kunstwerkenZonderAlleMaterialenMaten = kunstwerken.filter(
     (kunstwerk) =>
@@ -1188,20 +1198,29 @@ export function KunstwerkenSection({
                 ? t('kunstwerkenAllesDeselecteren')
                 : t('kunstwerkenAllesSelecteren')}
             </button>
-            {(materialen ?? []).map((materiaal) => (
-              <label key={materiaal.id} className="flex items-center gap-2 text-sm text-white/80">
-                <input
-                  type="checkbox"
-                  checked={materiaalIds.includes(materiaal.id)}
-                  onChange={() => setMateriaalIds((current) => toggle(current, materiaal.id))}
-                  data-testid={`kunstwerk-modal-materiaal-${materiaal.id}`}
-                />
-                {materiaalLabel(materiaal)}
-                {!isMateriaalActief(materiaal) && (
-                  <span className="text-white/40">{t('materiaalInactiefSuffix')}</span>
-                )}
-              </label>
-            ))}
+            {(materialen ?? []).map((materiaal) => {
+              // Een inactief materiaal is bij het deactiveren overal losgekoppeld, dus het
+              // hoort hier uit te staan en niet aanklikbaar te zijn: aanvinken zou een
+              // kunstwerk koppelen aan iets wat niemand kan bestellen. De regel blijft wel
+              // staan, zodat zichtbaar is dat het materiaal bestaat maar niet leverbaar is.
+              const actief = isMateriaalActief(materiaal);
+              return (
+                <label
+                  key={materiaal.id}
+                  className={`flex items-center gap-2 text-sm ${actief ? 'text-white/80' : 'text-white/35'}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={actief && materiaalIds.includes(materiaal.id)}
+                    disabled={!actief}
+                    onChange={() => setMateriaalIds((current) => toggle(current, materiaal.id))}
+                    data-testid={`kunstwerk-modal-materiaal-${materiaal.id}`}
+                  />
+                  {materiaalLabel(materiaal)}
+                  {!actief && <span className="text-white/35">{t('materiaalInactiefSuffix')}</span>}
+                </label>
+              );
+            })}
           </fieldset>
               </div>
 

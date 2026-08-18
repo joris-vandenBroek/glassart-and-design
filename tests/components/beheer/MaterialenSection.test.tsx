@@ -340,6 +340,7 @@ describe('MaterialenSection', () => {
     fireEvent.click(screen.getByText('Glas'));
     fireEvent.click(screen.getByTestId('materiaal-modal-actief'));
     fireEvent.click(screen.getByTestId('materiaal-modal-opslaan'));
+    fireEvent.click(await screen.findByTestId('materialen-deactiveren-bevestigen'));
     expect(
       await screen.findByText(
         'Dit materiaal kan niet op inactief gezet worden zolang er openstaande bestellingen met dit materiaal zijn.'
@@ -482,6 +483,7 @@ describe('MaterialenSection', () => {
     fireEvent.click(screen.getByText('Glas'));
     fireEvent.click(screen.getByTestId('materiaal-modal-actief'));
     fireEvent.click(screen.getByTestId('materiaal-modal-opslaan'));
+    fireEvent.click(await screen.findByTestId('materialen-deactiveren-bevestigen'));
     expect(await screen.findByTestId('materiaal-modal-error')).toHaveTextContent(
       'Er is iets misgegaan. Probeer het opnieuw.'
     );
@@ -492,7 +494,31 @@ describe('MaterialenSection', () => {
     );
   });
 
-  it('vraagt niets bij het deactiveren van een materiaal', async () => {
+  it('vraagt eerst om bevestiging bij het deactiveren van een materiaal', async () => {
+    const onUpdate = vi.fn().mockResolvedValue(true);
+    const onKunstwerkenChanged = vi.fn();
+    renderSection({
+      materialen: [{ ...MATERIAAL, id: 'mat-a', omschrijvingNl: 'Glas', actief: true }],
+      onUpdate,
+      onKunstwerkenChanged,
+    });
+    fireEvent.click(screen.getByText('Glas'));
+    fireEvent.click(screen.getByTestId('materiaal-modal-actief'));
+    fireEvent.click(screen.getByTestId('materiaal-modal-opslaan'));
+
+    // Nog niets opgeslagen: eerst de vraag, want deactiveren koppelt het materiaal
+    // bij alle kunstwerken los.
+    expect(await screen.findByTestId('materialen-deactiveren-dialog')).toBeInTheDocument();
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('materialen-activeren-dialog')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('materialen-deactiveren-bevestigen'));
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledWith('mat-a', expect.objectContaining({ actief: false })));
+    // De koppelingen zijn server-side weg, dus de kunstwerken moeten opnieuw opgehaald.
+    await waitFor(() => expect(onKunstwerkenChanged).toHaveBeenCalled());
+  });
+
+  it('slaat niets op als het deactiveren wordt geannuleerd', async () => {
     const onUpdate = vi.fn().mockResolvedValue(true);
     renderSection({
       materialen: [{ ...MATERIAAL, id: 'mat-a', omschrijvingNl: 'Glas', actief: true }],
@@ -501,7 +527,25 @@ describe('MaterialenSection', () => {
     fireEvent.click(screen.getByText('Glas'));
     fireEvent.click(screen.getByTestId('materiaal-modal-actief'));
     fireEvent.click(screen.getByTestId('materiaal-modal-opslaan'));
-    await waitFor(() => expect(onUpdate).toHaveBeenCalled());
-    expect(screen.queryByTestId('materialen-activeren-dialog')).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByTestId('materialen-deactiveren-annuleren'));
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it('toont de melding wanneer het materiaal ergens het laatste actieve is', async () => {
+    const onUpdate = vi.fn().mockResolvedValue(false);
+    renderSection({
+      materialen: [{ ...MATERIAAL, id: 'mat-a', omschrijvingNl: 'Glas', actief: true }],
+      onUpdate,
+      actionErrorCode: 'laatste-materiaal',
+    });
+    fireEvent.click(screen.getByText('Glas'));
+    fireEvent.click(screen.getByTestId('materiaal-modal-actief'));
+    fireEvent.click(screen.getByTestId('materiaal-modal-opslaan'));
+    fireEvent.click(await screen.findByTestId('materialen-deactiveren-bevestigen'));
+    expect(
+      await screen.findByText(
+        'Dit materiaal kan niet op inactief gezet worden: bij een of meer kunstwerken is het het enige actieve materiaal. Koppel daar eerst een ander materiaal aan.'
+      )
+    ).toBeInTheDocument();
   });
 });

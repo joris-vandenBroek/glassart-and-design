@@ -16,6 +16,7 @@ const createdMateriaalIds: string[] = [];
 const createdMateriaalsoortIds: string[] = [];
 const createdHeaderIds: string[] = [];
 const createdKlantEmails: string[] = [];
+const createdKunstwerkIds: string[] = [];
 let klantTeller = 0;
 
 afterEach(async () => {
@@ -35,6 +36,14 @@ afterEach(async () => {
       getPool().query('DELETE FROM klanten WHERE email IN (?)', [createdKlantEmails])
     );
     createdKlantEmails.length = 0;
+  }
+  if (createdKunstwerkIds.length > 0) {
+    // Cascadeert naar kunstwerkMaterialen; moet vóór de materialen zodat die koppelrijen
+    // sowieso weg zijn, ook als een materiaal-delete zou falen.
+    await veiligOpruimen('kunstwerken (materialen)', () =>
+      getPool().query('DELETE FROM kunstwerken WHERE id IN (?)', [createdKunstwerkIds])
+    );
+    createdKunstwerkIds.length = 0;
   }
   if (createdMateriaalIds.length > 0) {
     await veiligOpruimen('materialen', () =>
@@ -86,6 +95,33 @@ async function maakMateriaal(extra: Record<string, unknown> = {}): Promise<strin
   } as never);
   createdMateriaalIds.push(materiaal.id);
   return materiaal.id;
+}
+
+async function maakKunstwerk(materiaalIds: string[]): Promise<string> {
+  const kunstwerk = await insertRow<{ id: string }>('kunstwerken', {
+    code: `AUTOTEST-MAT-${++klantTeller}`,
+    foto: '',
+    omschrijvingNl: 'AUTOTEST Kunstwerk',
+    omschrijvingFr: '',
+    omschrijvingDe: '',
+    omschrijvingEn: '',
+  } as never);
+  createdKunstwerkIds.push(kunstwerk.id);
+  for (const [volgorde, materiaalId] of materiaalIds.entries()) {
+    await getPool().query(
+      'INSERT INTO kunstwerkMaterialen (kunstwerkId, materiaalId, volgorde) VALUES (?, ?, ?)',
+      [kunstwerk.id, materiaalId, volgorde]
+    );
+  }
+  return kunstwerk.id;
+}
+
+async function gekoppeldeMaterialen(kunstwerkId: string): Promise<string[]> {
+  const [rows] = await getPool().query(
+    'SELECT materiaalId FROM kunstwerkMaterialen WHERE kunstwerkId = ? ORDER BY volgorde',
+    [kunstwerkId]
+  );
+  return (rows as Array<{ materiaalId: string }>).map((row) => row.materiaalId);
 }
 
 async function maakBestellijn(materiaalId: string, status: string): Promise<void> {
@@ -248,6 +284,54 @@ describe('/api/materialen', () => {
       params: { id: materiaalId },
     });
     expect(response.status).toBe(200);
+  });
+
+  it('koppelt het materiaal bij het deactiveren los van alle kunstwerken', async () => {
+    const cookie = await medewerkerCookie();
+    const teDeactiveren = await maakMateriaal();
+    const blijftActief = await maakMateriaal();
+    const kunstwerkId = await maakKunstwerk([teDeactiveren, blijftActief]);
+
+    const response = await patchMateriaal(jsonRequest('PATCH', { actief: false }, cookie), {
+      params: { id: teDeactiveren },
+    });
+    expect(response.status).toBe(200);
+
+    // Alleen het gedeactiveerde materiaal is losgekoppeld; het andere blijft staan.
+    expect(await gekoppeldeMaterialen(kunstwerkId)).toEqual([blijftActief]);
+  });
+
+  it('weigert deactiveren als het materiaal bij een kunstwerk het enige actieve is', async () => {
+    const cookie = await medewerkerCookie();
+    const enigeMateriaal = await maakMateriaal();
+    const kunstwerkId = await maakKunstwerk([enigeMateriaal]);
+
+    const response = await patchMateriaal(jsonRequest('PATCH', { actief: false }, cookie), {
+      params: { id: enigeMateriaal },
+    });
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toBe('laatste-materiaal');
+
+    // Niets veranderd: vlag nog aan en koppeling nog intact.
+    const gelezen = await (await getMateriaal(jsonRequest('GET'), { params: { id: enigeMateriaal } })).json();
+    expect(Boolean(gelezen.actief)).toBe(true);
+    expect(await gekoppeldeMaterialen(kunstwerkId)).toEqual([enigeMateriaal]);
+  });
+
+  it('telt een al inactief materiaal niet mee als tweede materiaal', async () => {
+    const cookie = await medewerkerCookie();
+    const actiefMateriaal = await maakMateriaal();
+    const alInactief = await maakMateriaal({ actief: false });
+    const kunstwerkId = await maakKunstwerk([actiefMateriaal, alInactief]);
+
+    // Het kunstwerk heeft twee koppelingen, maar slechts één actief materiaal -- dus
+    // deactiveren zou het zonder bestelbaar materiaal achterlaten.
+    const response = await patchMateriaal(jsonRequest('PATCH', { actief: false }, cookie), {
+      params: { id: actiefMateriaal },
+    });
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toBe('laatste-materiaal');
+    expect(await gekoppeldeMaterialen(kunstwerkId)).toEqual([actiefMateriaal, alInactief]);
   });
 
   it('laat een naamwijziging ongemoeid bij een openstaande bestelling', async () => {

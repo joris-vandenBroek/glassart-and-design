@@ -193,7 +193,7 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-maat-maat-2')).toBeChecked();
   });
 
-  it('toont een inactief materiaal met een markering en houdt het aanvinkbaar', () => {
+  it('toont een inactief materiaal uitgevinkt en niet aanklikbaar', () => {
     renderSection({
       materialen: [
         { ...MATERIALEN[0], id: 'mat-1', actief: true },
@@ -201,15 +201,39 @@ describe('KunstwerkenSection', () => {
       ],
     });
     fireEvent.click(screen.getByTestId('kunstwerken-add'));
-    const checkbox = screen.getByTestId('kunstwerk-modal-materiaal-mat-2');
-    expect(checkbox.closest('label')).toHaveTextContent('(inactief)');
-    expect(screen.getByTestId('kunstwerk-modal-materiaal-mat-1').closest('label')).not.toHaveTextContent(
-      '(inactief)'
-    );
-    fireEvent.click(checkbox);
-    expect(checkbox).not.toBeChecked();
-    fireEvent.click(checkbox);
-    expect(checkbox).toBeChecked();
+    const inactief = screen.getByTestId('kunstwerk-modal-materiaal-mat-2');
+    expect(inactief.closest('label')).toHaveTextContent('(inactief)');
+    expect(inactief).toBeDisabled();
+    expect(inactief).not.toBeChecked();
+    // Een uitgeschakelde checkbox negeert de klik; het materiaal blijft dus uit.
+    fireEvent.click(inactief);
+    expect(inactief).not.toBeChecked();
+
+    // Een nieuw kunstwerk start met alle actieve materialen aangevinkt, en met geen enkel
+    // inactief materiaal -- ook niet in de formulierstate.
+    const actief = screen.getByTestId('kunstwerk-modal-materiaal-mat-1');
+    expect(actief.closest('label')).not.toHaveTextContent('(inactief)');
+    expect(actief).toBeEnabled();
+    expect(actief).toBeChecked();
+    fireEvent.click(actief);
+    expect(actief).not.toBeChecked();
+  });
+
+  it('laat "Alles selecteren" de inactieve materialen ongemoeid', () => {
+    renderSection({
+      materialen: [
+        { ...MATERIALEN[0], id: 'mat-1', actief: true },
+        { ...MATERIALEN[1], id: 'mat-2', actief: false },
+      ],
+    });
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    // Alles staat al aan bij een nieuw kunstwerk, dus de toggle deselecteert eerst...
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materialen-allesToggle'));
+    expect(screen.getByTestId('kunstwerk-modal-materiaal-mat-1')).not.toBeChecked();
+    // ...en selecteert daarna alleen het actieve materiaal terug.
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materialen-allesToggle'));
+    expect(screen.getByTestId('kunstwerk-modal-materiaal-mat-1')).toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-materiaal-mat-2')).not.toBeChecked();
   });
 
   it('shows the required-field legend when the modal is open', () => {
