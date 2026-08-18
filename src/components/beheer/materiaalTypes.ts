@@ -80,10 +80,20 @@ export interface Kunstwerk {
   categorieIds?: string[];
   aiGegenereerd?: boolean;
   prijsPerM2?: number;
+  toonInCollectie?: boolean;
   omschrijvingNl: string;
   omschrijvingFr: string;
   omschrijvingDe: string;
   omschrijvingEn: string;
+}
+
+/**
+ * Zelfde 0/1-valkuil als bij `isMateriaalActief`: `mysql2` geeft een BOOLEAN-kolom
+ * als getal terug. Een ontbrekende waarde telt als tonen -- de kolom is NOT NULL
+ * DEFAULT TRUE, dus dat kan alleen bij een testfixture van vóór deze vlag.
+ */
+export function toontKunstwerkInCollectie(kunstwerk: Pick<Kunstwerk, 'toonInCollectie'>): boolean {
+  return kunstwerk.toonInCollectie === undefined ? true : Boolean(kunstwerk.toonInCollectie);
 }
 
 export interface Prijsgroep {

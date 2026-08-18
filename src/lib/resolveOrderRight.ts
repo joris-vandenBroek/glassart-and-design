@@ -21,6 +21,29 @@ export interface OrderRight {
  * zelf een gekoppeld klantaccount heeft dat er niet in staat. Er is bewust géén
  * automatische "kunstenaar mag altijd eigen werk bestellen"-uitzondering meer.
  */
+/**
+ * Heeft déze klant het exclusieve recht op werk van deze kunstenaar?
+ *
+ * Bewust smaller dan `resolveOrderRight`: die zegt óók "ja" bij een kunstenaar zonder
+ * exclusiviteit. Hier gaat het om het tegenovergestelde -- alleen de klanten die
+ * expliciet in `exclusieveKlantIds` staan. Dat is wat een kunstwerk dat uit de collectie
+ * is gehaald tóch zichtbaar mag maken. Een nog niet geladen kunstenaarslijst levert
+ * `false`: dan blijft het kunstwerk verborgen in plaats van kort op te flitsen.
+ *
+ * `GET /api/kunstenaars` redigeert de lijst voor niet-medewerkers (zie
+ * `redigeerExclusieveKlantIds`), maar juist het antwoord op "sta ik erin" blijft
+ * daarna kloppen.
+ */
+export function heeftExclusiefRecht(
+  kunstenaarnr: string | null,
+  kunstenaars: Kunstenaar[] | null,
+  userUid: string | undefined
+): boolean {
+  if (!kunstenaarnr || !kunstenaars || userUid == null) return false;
+  const kunstenaar = kunstenaars.find((item) => item.kunstenaarnr === kunstenaarnr) ?? null;
+  return (kunstenaar?.exclusieveKlantIds ?? []).includes(userUid);
+}
+
 export function resolveOrderRight(
   kunstenaarnr: string | null,
   kunstenaars: Kunstenaar[] | null,

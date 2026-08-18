@@ -6,7 +6,7 @@ export function KunstwerkenChapter() {
       <P>Elk product dat een klant kan bestellen, is een &quot;kunstwerk&quot; in beheer.</P>
       <Screenshot
         src="/documentatie/kunstwerken.png"
-        alt="Het kunstwerk-formulier, tabblad Algemeen, van kunstwerk GLA-ANI-0018 (&quot;Cheetah Gala&quot;) van kunstenaar Glassart&amp;Design, met foto, code, kunstenaar en formaat, met live voorbeeld van de collectiepagina ernaast met artiest, code, collectie, stijl, categorie, materiaal, maat, prijs en aantal"
+        alt="Het kunstwerk-formulier, tabblad Algemeen, van kunstwerk GLA-ANI-0018 (&quot;Cheetah Gala&quot;) van kunstenaar Glassart&amp;Design, met foto, code, kunstenaar, formaat en het aangevinkte &quot;Tonen op collectiepagina&quot;, met live voorbeeld van de collectiepagina ernaast met artiest, code, collectie, stijl, categorie, materiaal, maat, prijs en aantal"
         caption="Het kunstwerk-formulier, tabblad Algemeen (hier: kunstwerk GLA-ANI-0018, &quot;Cheetah Gala&quot;)"
       />
       <SubSection id="kunstwerken-foto" title="Foto">
@@ -57,6 +57,25 @@ export function KunstwerkenChapter() {
           kunstenaar heeft, dan hoef je die niet alsnog te koppelen om je wijziging op te slaan.
           Koppel je wél een kunstenaar, dan gelden voor dit kunstwerk meteen diens
           kunstenaarsopslag en exclusiviteitsregels — zie het hoofdstuk over kunstenaars.
+        </P>
+      </SubSection>
+      <SubSection id="kunstwerken-tonen" title="Tonen op collectiepagina">
+        <P>
+          Met het vinkje &quot;Tonen op collectiepagina&quot; bepaal je of klanten dit kunstwerk in de
+          <DocLink anchor="klant-website"> webshop</DocLink> te zien krijgen. Bij een nieuw kunstwerk
+          staat het vinkje aan. Zet je het uit, dan verdwijnt het kunstwerk uit Collecties — handig voor
+          werk dat je nog niet wilt tonen, of dat je uit de verkoop haalt zonder het te verwijderen. In
+          de kunstwerkenlijst zie je in de kolom &quot;Getoond&quot; in één oogopslag hoe het bij elk
+          kunstwerk staat.
+        </P>
+        <P>
+          Twee dingen blijven gewoon werken. Je kunt het kunstwerk in beheer nog steeds op een bestelling
+          zetten, bijvoorbeeld voor een klant die er telefonisch om vraagt, en bestaande bestellingen
+          waarin het al staat veranderen niet. En heeft een klant het{' '}
+          <DocLink anchor="kunstenaars-exclusiviteit">exclusieve recht</DocLink> op de kunstenaar van dit
+          kunstwerk, dan ziet die klant het na inloggen tóch in Collecties staan — precies waar zo&apos;n
+          vinkje voor bedoeld is: werk uit de open collectie halen zonder het weg te nemen bij de klant
+          die er recht op heeft.
         </P>
       </SubSection>
       <SubSection id="kunstwerken-formaat" title="Formaat en maten">

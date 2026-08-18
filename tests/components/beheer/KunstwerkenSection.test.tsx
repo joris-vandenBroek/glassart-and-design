@@ -314,6 +314,7 @@ describe('KunstwerkenSection', () => {
         stijlIds: [],
         categorieIds: [],
         aiGegenereerd: false,
+        toonInCollectie: true,
         omschrijvingNl: 'Nieuw kunstwerk',
         omschrijvingFr: '',
         omschrijvingDe: '',
@@ -346,11 +347,25 @@ describe('KunstwerkenSection', () => {
         stijlIds: [],
         categorieIds: [],
         aiGegenereerd: false,
+        toonInCollectie: true,
         omschrijvingNl: 'Hotel paneel 1',
         omschrijvingFr: '',
         omschrijvingDe: '',
         omschrijvingEn: '',
       })
+    );
+  });
+
+  it('slaat een uitgevinkt "tonen op collectiepagina" op', async () => {
+    const { onUpdate } = renderSection();
+    fireEvent.click(screen.getByTestId('data-table-row-kw-1'));
+    expect(screen.getByTestId('kunstwerk-modal-toon-in-collectie')).toBeChecked();
+
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-toon-in-collectie'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-opslaan'));
+
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith('kw-1', expect.objectContaining({ toonInCollectie: false }))
     );
   });
 
@@ -615,6 +630,7 @@ describe('KunstwerkenSection', () => {
         stijlIds: [],
         categorieIds: [],
         aiGegenereerd: false,
+        toonInCollectie: true,
         prijsPerM2: 180,
         omschrijvingNl: 'Verbetert de akoestiek.',
         omschrijvingFr: '',
