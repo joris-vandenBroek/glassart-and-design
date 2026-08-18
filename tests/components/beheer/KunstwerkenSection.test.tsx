@@ -1239,15 +1239,38 @@ describe('KunstwerkenSection', () => {
     expect(screen.getByTestId('kunstwerk-modal-tab-materialen')).toHaveAttribute('aria-selected', 'false');
   });
 
-  it('shows an error dot on the Maten tab when materiaalloos and prijs-per-m² is missing, but never on Materialen', async () => {
+  it('zet het foutbolletje op Materialen zolang een kunstwerk zonder materiaal geen prijs per m² heeft', async () => {
     renderSection();
     fireEvent.click(screen.getByTestId('kunstwerken-add'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-1'));
     fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
-    expect(screen.getByTestId('kunstwerk-modal-tab-maten-error-dot')).toBeInTheDocument();
-    expect(screen.queryByTestId('kunstwerk-modal-tab-materialen-error-dot')).not.toBeInTheDocument();
-    fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-per-m2'), { target: { value: '120' } });
+    // Het bolletje hoort op het tabblad waar de oorzaak zit -- de materiaalkeuze --
+    // en niet bij Maten, waar niets fout is gegaan.
+    expect(screen.getByTestId('kunstwerk-modal-tab-materialen-error-dot')).toBeInTheDocument();
     expect(screen.queryByTestId('kunstwerk-modal-tab-maten-error-dot')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('kunstwerk-modal-prijs-per-m2'), { target: { value: '120' } });
+    expect(screen.queryByTestId('kunstwerk-modal-tab-materialen-error-dot')).not.toBeInTheDocument();
+  });
+
+  it('schakelt de matenlijst uit zolang er geen materiaal gekozen is', async () => {
+    renderSection();
+    fireEvent.click(screen.getByTestId('kunstwerken-add'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-tab-maten'));
+    // Met materialen gekozen is de lijst gewoon bruikbaar.
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).toBeEnabled();
+    expect(screen.queryByTestId('kunstwerk-modal-maten-materiaalloos')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-tab-materialen'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-1'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-materiaal-mat-2'));
+    fireEvent.click(screen.getByTestId('kunstwerk-modal-tab-maten'));
+
+    // Zonder materiaal worden de maten toch niet opgeslagen, dus de lijst gaat uit met
+    // een uitleg erboven in plaats van vinkjes te tonen die verdwijnen.
+    expect(screen.getByTestId('kunstwerk-modal-maten-materiaalloos')).toBeInTheDocument();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).toBeDisabled();
+    expect(screen.getByTestId('kunstwerk-modal-maat-maat-1')).not.toBeChecked();
+    expect(screen.getByTestId('kunstwerk-modal-maten-allesToggle')).toBeDisabled();
   });
 
   it('links to the kunstwerken-code chapter of the gebruikershandleiding', () => {
