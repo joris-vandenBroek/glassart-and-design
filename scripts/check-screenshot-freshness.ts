@@ -4,6 +4,7 @@ export const SCREENSHOT_BRONNEN: Record<string, string[]> = {
   'public/documentatie/klant-registratie.png': ['src/components/beheer/KlantModal.tsx'],
   'public/documentatie/bestelproces.png': ['src/components/beheer/BestellingModal.tsx'],
   'public/documentatie/kunstwerken.png': ['src/components/beheer/KunstwerkenSection.tsx', 'src/components/ProductModal.tsx'],
+  'public/documentatie/kunstwerken-materialen.png': ['src/components/beheer/KunstwerkenSection.tsx'],
   'public/documentatie/kunstwerken-code-voor.png': ['src/components/beheer/KunstwerkenSection.tsx'],
   'public/documentatie/kunstwerken-code-na.png': ['src/components/beheer/KunstwerkenSection.tsx'],
   // Ook Modal.tsx: de opsomming staat in het footergebied, dus een wijziging aan die
@@ -19,6 +20,7 @@ export const SCREENSHOT_BRONNEN: Record<string, string[]> = {
   'public/documentatie/instellingen.png': ['src/components/beheer/InstellingenSection.tsx'],
   'public/documentatie/prijsmatrix.png': ['src/components/beheer/PrijsmatrixSection.tsx'],
   'public/documentatie/stamgegevens.png': ['src/components/beheer/MaterialenSection.tsx', 'src/components/beheer/BeheerNav.tsx'],
+  'public/documentatie/stamgegevens-deactiveren.png': ['src/components/beheer/MaterialenSection.tsx'],
   'public/documentatie/klant-website.png': ['src/components/ProductsGrid.tsx'],
 };
 

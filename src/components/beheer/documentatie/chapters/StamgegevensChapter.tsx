@@ -40,6 +40,11 @@ export function StamgegevensChapter() {
           <strong>enige actieve materiaal</strong> zijn, want dan zou dat kunstwerk zonder materiaal
           achterblijven; koppel daar eerst een ander materiaal aan.
         </P>
+        <Screenshot
+          src="/documentatie/stamgegevens-deactiveren.png"
+          alt="De vraag die verschijnt bij het op inactief zetten van een materiaal"
+          caption="Voordat een materiaal op inactief gaat, vraagt beheer om bevestiging — het wordt namelijk bij alle kunstwerken losgekoppeld."
+        />
         <P>
           Zet je een materiaal weer op actief, dan vraagt het scherm of het bij alle kunstwerken
           aangevinkt moet worden. Kies je ja, dan wordt het materiaal gekoppeld aan elk kunstwerk dat

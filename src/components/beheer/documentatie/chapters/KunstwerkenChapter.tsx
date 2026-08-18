@@ -99,6 +99,11 @@ export function KunstwerkenChapter() {
           per m² niet van dit scherm maar van het gekozen materiaal — zie{' '}
           <DocLink anchor="stamgegevens-materialen">Materialen</DocLink>.
         </P>
+        <Screenshot
+          src="/documentatie/kunstwerken-materialen.png"
+          alt="Het tabblad Materialen van een kunstwerk, met inactieve materialen uitgevinkt en grijs"
+          caption="Materialen die op inactief staan, zijn grijs en niet aan te vinken — je ziet wél dat ze bestaan."
+        />
       </SubSection>
       <SubSection id="kunstwerken-voorbeeld" title="Live voorbeeld">
         <P>

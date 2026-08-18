@@ -7,7 +7,10 @@
  * op disk -- vandaar deze omweg.
  *
  * Gebruik:
- *   node scripts/dev/screenshot-handleiding.mjs <uitvoer.png> [kunstwerkcode] [basis-url]
+ *   node scripts/dev/screenshot-handleiding.mjs <uitvoer.png> [kunstwerkcode] [basis-url] [tabblad]
+ *
+ * `tabblad` is optioneel en is de id uit de ModalTabs: algemeen (standaard), kenmerken,
+ * materialen, maten of omschrijvingen.
  *
  * Voorbeeld (staging, zoals de handleiding-screenshot gemaakt is):
  *   node scripts/dev/screenshot-handleiding.mjs shot.png GLA-ANI-0018 https://staging.glassartanddesign.com
@@ -23,7 +26,7 @@ import path from 'node:path';
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 
-const [uitvoer, code = 'GLA-ANI-0018', basisUrl = 'http://localhost:3000'] = process.argv.slice(2);
+const [uitvoer, code = 'GLA-ANI-0018', basisUrl = 'http://localhost:3000', tabblad = null] = process.argv.slice(2);
 if (!uitvoer) {
   console.error('Geef een uitvoerpad op, bijvoorbeeld: node scripts/dev/screenshot-handleiding.mjs shot.png');
   process.exit(1);
@@ -136,6 +139,21 @@ try {
   );
   if (geopend !== 'ok') throw new Error(geopend);
   await wacht(5000);
+
+  if (tabblad) {
+    const gewisseld = await evalueer(
+      ws,
+      `(() => {
+         const testid = 'kunstwerk-modal-tab-' + ${JSON.stringify(tabblad)};
+         const knop = document.querySelector('[data-testid="' + testid + '"]');
+         if (!knop) return 'tabblad niet gevonden: ' + testid;
+         knop.click();
+         return 'ok';
+       })()`
+    );
+    if (gewisseld !== 'ok') throw new Error(gewisseld);
+    await wacht(1500);
+  }
 
   // Het modal-frame zelf, zonder de donkere backdrop eromheen.
   const kader = await evalueer(
