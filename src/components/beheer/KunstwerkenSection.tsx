@@ -1192,7 +1192,7 @@ export function KunstwerkenSection({
                 setMateriaalIds(alleGeselecteerd(alleMateriaalIds, materiaalIds) ? [] : alleMateriaalIds)
               }
               data-testid="kunstwerk-modal-materialen-allesToggle"
-              className="text-xs text-white/60 underline hover:text-white"
+              className="self-start text-left text-xs text-white/60 underline hover:text-white"
             >
               {alleGeselecteerd(alleMateriaalIds, materiaalIds)
                 ? t('kunstwerkenAllesDeselecteren')
@@ -1243,7 +1243,7 @@ export function KunstwerkenSection({
                       setMaatIds(alleGeselecteerd(compatibeleMaatIds, maatIds) ? [] : compatibeleMaatIds)
                     }
                     data-testid="kunstwerk-modal-maten-allesToggle"
-                    className="text-xs text-white/60 underline hover:text-white"
+                    className="self-start text-left text-xs text-white/60 underline hover:text-white"
                   >
                     {alleGeselecteerd(compatibeleMaatIds, maatIds)
                       ? t('kunstwerkenAllesDeselecteren')
